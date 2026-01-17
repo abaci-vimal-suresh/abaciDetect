@@ -1,0 +1,140 @@
+.room-box-3d {
+    .room-wall {
+        border: 2px solid;
+        backdrop-filter: blur(4px);
+        transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+        backface-visibility: visible;
+        box-sizing: border-box;
+
+        &:hover {
+            opacity: 1 !important;
+        }
+    }
+
+    .room-floor {
+        transition: opacity 0.3s ease;
+    }
+
+    .room-ceiling {
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        transition: opacity 0.3s ease;
+
+        .room-info-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            animation: floatLabel 3s ease-in-out infinite;
+
+            .room-label {
+                background: rgba(0, 0, 0, 0.6);
+                color: white;
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 600;
+                backdrop-filter: blur(4px);
+                white-space: nowrap;
+            }
+
+            .room-settings-btn {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                transition: transform 0.5s ease;
+
+                &:hover {
+                    transform: rotate(180deg) scale(1.1);
+                    background: rgba(255, 255, 255, 0.4);
+                }
+            }
+        }
+    }
+}
+
+.room-config-modal {
+    .modal-content {
+        background: #1a1a2e;
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+        .btn-close {
+            filter: invert(1);
+        }
+    }
+
+    .modal-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .form-control {
+        background: #2a2a4e;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+
+        &:focus {
+            background: #2a2a4e;
+            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+        }
+    }
+}
+
+@keyframes floatLabel {
+
+    0%,
+    100% {
+        transform: translateZ(10px) translateY(0);
+    }
+
+    50% {
+        transform: translateZ(20px) translateY(-10px);
+    }
+}
+
+@keyframes roomGlowPulse {
+
+    0%,
+    100% {
+        transform: scale(0.6);
+        opacity: 0.2;
+        filter: blur(5px);
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.5;
+        filter: blur(2px);
+    }
+}
+
+@keyframes smokeDrift {
+    0% {
+        background-position: 0% 0%;
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 0.9;
+    }
+
+    100% {
+        background-position: 0% 10%;
+        opacity: 0.8;
+    }
+}
+
+.room-glow-pulse {
+    pointer-events: none;
+    mix-blend-mode: screen;
+}
