@@ -1,0 +1,139 @@
+// stylelint-disable annotation-no-unknown
+
+//  Aside Config
+$aside: (
+	mobile-breakpoint: md,
+	width: 17rem,
+	// Slightly wider for professional feel
+	background-color: $light,
+	border-size: 0,
+	border-color: transparent,
+	minimize: (width: 5rem,
+	),
+	head: (padding-y: 1.5,
+		padding-x: $spacer,
+	),
+	body: (padding-y: $spacer,
+		padding-x: $spacer * 0.5,
+	),
+	foot: (padding-y: 1,
+		padding-x: $spacer,
+	),
+	hover: (blur: 0,
+		opacity: 1,
+	),
+	shadow: true,
+	) !default;
+
+$brand: (
+	) !default;
+
+$avatar: (
+	padding-y: $spacer,
+	padding-x: $spacer,
+	avatar: (space: $spacer * 0.75,
+		background-color: $primary,
+		color-weight: 85%,
+		size: 2.5rem,
+	),
+	name: (font-size: 0.9rem,
+	),
+	subt-title: (font-size: 0.7rem,
+	),
+	) !default;
+
+$header: (
+	height: 5rem,
+	background-color: $white,
+	dark-background-color: shade-color($dark-body-bg, 70%),
+	color: #808191,
+	color-dark: $dark,
+	opacity: 0.5,
+	blur: 0.5rem,
+	border-size: 0,
+	border-color: $gray-100,
+	box-shadow: $box-shadow,
+	padding-y: 0,
+	padding-x: $grid-gutter-width * 0.5,
+	dropdown: (width: 15rem,
+		border-radius: 1.5rem,
+	),
+	mobile: (height: 5rem,
+		blur: 0.5rem,
+		color: null,
+		dark-color: null,
+		background-color: #fff,
+		dark-background-color: shade-color($dark-body-bg, 70%),
+		opacity: 0.7,
+		left: (background-color: $white,
+			dark-background-color: shade-color($dark-body-bg, 70%),
+			opacity: 0.9,
+		),
+		right: (opacity: 0.9,
+		),
+	),
+	) !default;
+
+$subheader: (
+	height: 4rem,
+	background-color: $light,
+	dark-background-color: shade-color($dark-body-bg, 70%),
+	color: $body-color,
+	color-dark: $dark,
+	opacity: 0.5,
+	blur: 0.5rem,
+	border-size: 1px,
+	border-color: $gray-100,
+	dark-border-color: $gray-900,
+	padding-y: 0,
+	padding-x: $grid-gutter-width * 0.5,
+	separator: (border-color: $gray-500,
+	),
+	) !default;
+
+$content: (
+	padding-y: 0,
+	padding-x: 0,
+	) !default;
+
+$page: (
+	padding-y: $grid-gutter-width,
+	) !default;
+
+$footer: (
+	height: 3rem,
+	background-color: $white,
+	dark-background-color: shade-color($dark-body-bg, 70%),
+	color: $body-color,
+	color-dark: $dark-body-color,
+	opacity: 0.5,
+	blur: 0.5rem,
+	border-size: 1px,
+	border-color: $gray-100,
+	dark-border-color: $gray-900,
+	padding-y: 0,
+	padding-x: $grid-gutter-width * 0.5,
+	) !default;
+
+$navigation: (
+	padding-y: $spacer * 0.5,
+	padding-x: $spacer * 0.75,
+	margin-y: $spacer * 0.25,
+	margin-x: $spacer * 0.5,
+	item: (height: 2.75rem,
+		font-size: 0.875rem,
+		border-radius: 50rem, // Pill shape
+		background-color: null,
+		color-dark: $dark,
+		color-light: $light,
+		active: (background-color: $primary,
+		),
+		icon: (size: 1.25rem,
+			space: 1.25rem,
+		),
+		arrow: (size: 1.2rem,
+		),
+	),
+	) !default;
+
+// stylelint-enable annotation-no-unknown
