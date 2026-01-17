@@ -1,0 +1,428 @@
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Page from '../../../layout/Page/Page';
+import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
+import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
+import Card, { CardBody, CardHeader, CardTitle, CardActions } from '../../../components/bootstrap/Card';
+import Button from '../../../components/bootstrap/Button';
+import Icon from '../../../components/icon/Icon';
+import Badge from '../../../components/bootstrap/Badge';
+import Spinner from '../../../components/bootstrap/Spinner';
+import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../components/bootstrap/Modal';
+import FormGroup from '../../../components/bootstrap/forms/FormGroup';
+import Input from '../../../components/bootstrap/forms/Input';
+import { useAreas, useCreateArea, useAddSensorToSubArea, useSensors, useUsers } from '../../../api/sensors.api';
+import { Area, User } from '../../../types/sensor';
+import TreeCard from '../../../components/halo/TreeCard';
+import Checks from '../../../components/bootstrap/forms/Checks';
+import Label from '../../../components/bootstrap/forms/Label';
+
+const SensorMainArea = () => {
+
+    const navigate = useNavigate();
+
+    const { data: areas, isLoading } = useAreas();
+    const { data: allSensors, isLoading: sensorsLoading } = useSensors();
+    const { data: users } = useUsers();
+    const createAreaMutation = useCreateArea();
+    const addSensorMutation = useAddSensorToSubArea();
+
+    const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
+    const [isSensorModalOpen, setIsSensorModalOpen] = useState(false);
+    const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+    const [selectedSensorId, setSelectedSensorId] = useState('');
+    const [areaName, setAreaName] = useState('');
+    const [personInChargeIds, setPersonInChargeIds] = useState<number[]>([]);
+    const [error, setError] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<'grid' | 'tree'>('grid');
+
+    // Get main areas (areas with no parent)
+    const mainAreas = useMemo(() => {
+        return areas?.filter(area => !area.parent_id || area.parent_id === null) || [];
+    }, [areas]);
+
+    // Get available sensors (sensors with no area assigned)
+    const availableSensors = useMemo(() => {
+        return allSensors?.filter(sensor => !sensor.area && !sensor.area_name) || [];
+    }, [allSensors]);
+
+    // Filter main areas based on search term
+    const filteredMainAreas = useMemo(() => {
+        return mainAreas.filter(area =>
+            area.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [mainAreas, searchTerm]);
+
+    const handleCreateArea = () => {
+        if (!areaName.trim()) {
+            setError('Area name is required');
+            return;
+        }
+
+        createAreaMutation.mutate(
+            {
+                name: areaName,
+                person_in_charge_ids: personInChargeIds
+            },
+            {
+                onSuccess: () => {
+                    setIsAreaModalOpen(false);
+                    setAreaName('');
+                    setPersonInChargeIds([]);
+                    setError('');
+                },
+            }
+        );
+    };
+
+    const handleAddSensor = () => {
+        if (!selectedSensorId || !selectedAreaId) return;
+        addSensorMutation.mutate(
+            { sensorId: selectedSensorId, subAreaId: selectedAreaId },
+            {
+                onSuccess: () => {
+                    setIsSensorModalOpen(false);
+                    setSelectedSensorId('');
+                    setSelectedAreaId('');
+                },
+            }
+        );
+    };
+
+    const handleCardClick = (areaId: number) => {
+        navigate(`/halo/sensors/areas/${areaId}/subzones`);
+    };
+
+    if (isLoading || sensorsLoading) {
+        return (
+            <PageWrapper title='Sensor Areas'>
+                <div className='d-flex justify-content-center align-items-center' style={{ minHeight: '400px' }}>
+                    <Spinner color='primary' size='3rem' />
+                </div>
+            </PageWrapper>
+        );
+    }
+
+    return (
+        <PageWrapper title='Sensor Areas'>
+            <SubHeader>
+                <SubHeaderLeft>
+                    <Icon icon='LocationCity' className='me-2 fs-4' />
+                    <span className='h4 mb-0 fw-bold'>Sensor Coverage Areas</span>
+                </SubHeaderLeft>
+                <SubHeaderRight>
+                    <Button
+                        color={viewMode === 'grid' ? 'primary' : 'secondary'}
+                        icon='GridView'
+                        isLight={viewMode !== 'grid'}
+                        className='me-2'
+                        onClick={() => setViewMode('grid')}
+                        title='Grid View'
+                    >
+                        Grid
+                    </Button>
+                    <Button
+                        color={viewMode === 'tree' ? 'primary' : 'light'}
+                        icon='AccountTree'
+                        isLight={viewMode !== 'tree'}
+                        className='me-2'
+                        onClick={() => setViewMode('tree')}
+                        title='Tree View'
+                    >
+                        Tree
+                    </Button>
+                    <Button
+                        color='info'
+                        icon='Add'
+                        className='me-2'
+                        onClick={() => setIsAreaModalOpen(true)}
+                    >
+                        Create New Area
+                    </Button>
+                    <Button
+                        color='primary'
+                        icon='Sensors'
+                        onClick={() => setIsSensorModalOpen(true)}
+                    >
+                        Add Sensor to Area
+                    </Button>
+                </SubHeaderRight>
+            </SubHeader>
+            <Page container='fluid'>
+                {viewMode === 'tree' ? (
+                    /* Tree View */
+                    <TreeCard data={areas || []} sensors={allSensors || []} users={users || []} />
+                ) : (
+                    /* Grid View */
+                    <>
+                        {/* Filter Section */}
+                        <div className='row mb-4'>
+                            <div className='col-12'>
+                                <Card>
+                                    <CardBody>
+                                        <div className='row g-3 align-items-end'>
+                                            <div className='col-md-9'>
+                                                <FormGroup label='Search Areas'>
+                                                    <div className='input-group'>
+                                                        <span className='input-group-text'>
+                                                            <Icon icon='Search' />
+                                                        </span>
+                                                        <Input
+                                                            type='text'
+                                                            placeholder='Search by area name...'
+                                                            value={searchTerm}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </FormGroup>
+                                            </div>
+                                            <div className='col-md-3'>
+                                                <Button
+                                                    // color='light'
+                                                    className='w-100'
+                                                    onClick={() => setSearchTerm('')}
+                                                >
+                                                    Clear Search
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardBody>
+                                </Card>
+                            </div>
+                        </div>
+
+                        {/* Main Areas Section */}
+                        <div className='d-flex align-items-center justify-content-between mb-3'>
+                            <div className='d-flex align-items-center'>
+                                <Icon icon='LocationCity' className='me-2 fs-4' />
+                                <span className='h5 mb-0 fw-bold'>All Areas</span>
+                            </div>
+                            <Badge color='info' isLight className='fs-6'>
+                                {filteredMainAreas.length} of {mainAreas.length}
+                            </Badge>
+                        </div>
+
+                        <div className='row g-4'>
+                            {filteredMainAreas?.map(area => (
+                                <div key={area.id} className='col-md-6 col-lg-4 col-xl-3'>
+                                    <Card
+                                        stretch
+                                        className='cursor-pointer transition-shadow'
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => handleCardClick(area.id)}
+                                    >
+                                        <CardHeader>
+                                            <CardTitle>{area.name}</CardTitle>
+                                            <CardActions>
+                                                <Badge color='success' isLight>
+                                                    Active
+                                                </Badge>
+                                            </CardActions>
+                                        </CardHeader>
+                                        <CardBody>
+                                            <div className='d-flex justify-content-between align-items-center mb-3'>
+                                                <div className='text-muted'>
+                                                    <Icon icon='Sensors' size='sm' className='me-1' />
+                                                    Total Sensors
+                                                </div>
+                                                <div className='fw-bold fs-4'>{area.sensor_count || 0}</div>
+                                            </div>
+
+                                            <div className='border-top border-light pt-3 mt-3'>
+                                                <div className='text-muted small mb-2'>
+                                                    <Icon icon='AssignmentInd' size='sm' className='me-1' />
+                                                    Persons in Charge
+                                                </div>
+                                                <div className='d-flex flex-wrap gap-1'>
+                                                    {area.person_in_charge_ids && area.person_in_charge_ids.length > 0 ? (
+                                                        area.person_in_charge_ids.map(userId => {
+                                                            const user = users?.find(u => u.id === userId);
+                                                            return user ? (
+                                                                <Badge key={userId} color='primary' isLight className='rounded-pill'>
+                                                                    {user.first_name} {user.last_name}
+                                                                </Badge>
+                                                            ) : null;
+                                                        })
+                                                    ) : (
+                                                        <span className='text-muted small italic'>Unassigned</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </CardBody>
+                                    </Card>
+                                </div>
+                            ))}
+
+                            {filteredMainAreas?.length === 0 && searchTerm && (
+                                <div className='col-12'>
+                                    <Card>
+                                        <CardBody className='text-center py-4'>
+                                            <Icon icon='SearchOff' className='fs-1 text-muted mb-2' />
+                                            <p className='text-muted mb-0'>No areas match your search</p>
+                                        </CardBody>
+                                    </Card>
+                                </div>
+                            )}
+
+                            {mainAreas?.length === 0 && (
+                                <div className='col-12'>
+                                    <Card>
+                                        <CardBody className='text-center py-5'>
+                                            <Icon icon='LocationCity' className='display-1 text-muted mb-3' />
+                                            <h4>No areas found</h4>
+                                            <p className='text-muted'>Click "Create New Area" to add your first area.</p>
+                                            <Button
+                                                color='primary'
+                                                icon='Add'
+                                                className='mt-3'
+                                                onClick={() => setIsAreaModalOpen(true)}
+                                            >
+                                                Create New Area
+                                            </Button>
+                                        </CardBody>
+                                    </Card>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </Page>
+
+            {/* Create Area Modal */}
+            <Modal isOpen={isAreaModalOpen} setIsOpen={setIsAreaModalOpen} isCentered>
+                <ModalHeader setIsOpen={setIsAreaModalOpen}>
+                    <ModalTitle id='create-area-title'>Create New Area</ModalTitle>
+                </ModalHeader>
+                <ModalBody>
+                    <FormGroup label='Area Name'>
+                        <input
+                            type='text'
+                            className={`form-control ${error ? 'is-invalid' : ''}`}
+                            placeholder='e.g. Building A, Ground Floor, etc.'
+                            value={areaName}
+                            onChange={(e) => {
+                                setAreaName(e.target.value);
+                                setError('');
+                            }}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') handleCreateArea();
+                            }}
+                        />
+                        {error && <div className='invalid-feedback'>{error}</div>}
+                    </FormGroup>
+
+                    <div className='mt-4'>
+                        <Label>Assign Persons In Charge</Label>
+                        <p className='text-muted small mb-2'>Assign one or more users to manage this area.</p>
+                        <div className='p-3 border rounded bg-light bg-opacity-10' style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                            {users?.map((user: User) => (
+                                <div key={user.id} className='mb-2'>
+                                    <Checks
+                                        id={`user-${user.id}`}
+                                        label={`${user.first_name} ${user.last_name} (@${user.username})`}
+                                        checked={personInChargeIds.includes(user.id)}
+                                        onChange={() => {
+                                            setPersonInChargeIds(prev =>
+                                                prev.includes(user.id)
+                                                    ? prev.filter(id => id !== user.id)
+                                                    : [...prev, user.id]
+                                            );
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                            {(!users || users.length === 0) && (
+                                <div className='text-muted small'>No users found.</div>
+                            )}
+                        </div>
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button
+                        color='light'
+                        onClick={() => {
+                            setIsAreaModalOpen(false);
+                            setAreaName('');
+                            setError('');
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        color='primary'
+                        onClick={handleCreateArea}
+                        isDisable={createAreaMutation.isPending}
+                    >
+                        {createAreaMutation.isPending && <Spinner isSmall inButton />}
+                        Create Area
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+            {/* Add Sensor Modal */}
+            <Modal isOpen={isSensorModalOpen} setIsOpen={setIsSensorModalOpen} isCentered>
+                <ModalHeader setIsOpen={setIsSensorModalOpen}>
+                    <ModalTitle id='add-sensor-to-area-title'>Add Sensor to Area</ModalTitle>
+                </ModalHeader>
+                <ModalBody>
+                    <div className='mb-3'>
+                        <label className='form-label'>Select Area</label>
+                        <select
+                            className='form-select mb-3'
+                            value={selectedAreaId}
+                            onChange={(e) => setSelectedAreaId(e.target.value)}
+                        >
+                            <option value=''>Choose an area...</option>
+                            {mainAreas.map(area => (
+                                <option key={area.id} value={area.id}>
+                                    {area.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className='mb-3'>
+                        <label className='form-label'>Select Available Sensor</label>
+                        <select
+                            className='form-select'
+                            value={selectedSensorId}
+                            onChange={(e) => setSelectedSensorId(e.target.value)}
+                            disabled={!selectedAreaId}
+                        >
+                            <option value=''>Choose a sensor...</option>
+                            {availableSensors.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.name} - {s.mac_address} ({s.sensor_type})
+                                </option>
+                            ))}
+                        </select>
+                        {availableSensors.length === 0 && (
+                            <div className='text-muted small mt-2'>
+                                No unassigned sensors available. All sensors are already assigned.
+                            </div>
+                        )}
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color='light' onClick={() => {
+                        setIsSensorModalOpen(false);
+                        setSelectedSensorId('');
+                        setSelectedAreaId('');
+                    }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        color='primary'
+                        onClick={handleAddSensor}
+                        isDisable={!selectedSensorId || !selectedAreaId || addSensorMutation.isPending}
+                    >
+                        {addSensorMutation.isPending && <Spinner isSmall inButton />}
+                        Add Sensor
+                    </Button>
+                </ModalFooter>
+            </Modal>
+        </PageWrapper >
+    );
+};
+
+export default SensorMainArea;

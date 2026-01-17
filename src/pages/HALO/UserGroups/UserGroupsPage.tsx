@@ -1,0 +1,204 @@
+import React, { useContext, useState } from 'react';
+import MaterialTable from '@material-table/core';
+import { ThemeProvider } from '@mui/material/styles';
+
+import Page from '../../../layout/Page/Page';
+import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
+import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
+import Card, { CardBody } from '../../../components/bootstrap/Card';
+import Button from '../../../components/bootstrap/Button';
+import Icon from '../../../components/icon/Icon';
+
+import ThemeContext from '../../../contexts/themeContext';
+import useTablestyle from '../../../hooks/shared/useTablestyles';
+import useColumnHiding from '../../../hooks/shared/useColumnHiding';
+import { updateHiddenColumnsInLocalStorage } from '../../../helpers/functions';
+
+import { useUserGroups, useDeleteUserGroup } from '../../../api/sensors.api';
+import UserGroupCreateModal from './modals/UserGroupCreateModal';
+import UserGroupEditModal from './modals/UserGroupEditModal';
+import ManageGroupMembersModal from './modals/ManageGroupMembersModal';
+
+const UserGroupsPage = () => {
+    const { data: groups, isLoading } = useUserGroups();
+    const deleteGroupMutation = useDeleteUserGroup();
+    const { darkModeStatus } = useContext(ThemeContext);
+    const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
+
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [editGroupId, setEditGroupId] = useState<number | null>(null);
+    const [manageGroupId, setManageGroupId] = useState<number | null>(null);
+
+    const staticColumns = [
+        {
+            title: 'Group Name',
+            field: 'name',
+            render: (rowData: any) => (
+                <div className="d-flex align-items-center gap-3">
+                    <div
+                        className="rounded-circle d-flex align-items-center justify-content-center"
+                        style={{
+                            width: 38,
+                            height: 38,
+                            background: darkModeStatus
+                                ? 'rgba(77,105,250,0.2)'
+                                : 'rgba(77,105,250,0.15)',
+                            fontWeight: 600
+                        }}
+                    >
+                        <Icon icon="Groups" size="lg" />
+                    </div>
+                    <div>
+                        <div className="fw-bold">{rowData.name}</div>
+                        {rowData.description && (
+                            <div className="small text-muted">{rowData.description}</div>
+                        )}
+                    </div>
+                </div>
+            )
+        },
+        {
+            title: 'Members',
+            field: 'member_count',
+            render: (rowData: any) => (
+                <span
+                    className="px-3 py-1 rounded-pill"
+                    style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        background: darkModeStatus
+                            ? 'rgba(70,188,170,0.2)'
+                            : 'rgba(70,188,170,0.15)',
+                        color: '#2d8478'
+                    }}
+                >
+                    {rowData.member_count} {rowData.member_count === 1 ? 'member' : 'members'}
+                </span>
+            )
+        },
+        {
+            title: 'Created',
+            field: 'created_at',
+            render: (rowData: any) => (
+                <div className="small">
+                    {new Date(rowData.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    })}
+                </div>
+            )
+        }
+    ];
+
+    /* ---------------- Actions ---------------- */
+    const actionButtons = [
+        {
+            title: 'Actions',
+            field: 'actions',
+            sorting: false,
+            filtering: false,
+            render: (rowData: any) => (
+                <div className="d-flex gap-2">
+                    <Button
+                        color="info"
+                        isLight
+                        icon="Group"
+                        title="Manage Members"
+                        onClick={() => setManageGroupId(rowData.id)}
+                        style={{ width: 36, height: 36, borderRadius: 8 }}
+                    />
+                    <Button
+                        color="primary"
+                        isLight
+                        icon="Edit"
+                        title="Edit"
+                        onClick={() => setEditGroupId(rowData.id)}
+                        style={{ width: 36, height: 36, borderRadius: 8 }}
+                    />
+                    <Button
+                        color="danger"
+                        isLight
+                        icon="Delete"
+                        title="Delete"
+                        onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete "${rowData.name}"?`)) {
+                                deleteGroupMutation.mutate(rowData.id);
+                            }
+                        }}
+                        style={{ width: 36, height: 36, borderRadius: 8 }}
+                    />
+                </div>
+            )
+        }
+    ];
+
+    const columns = useColumnHiding({
+        oldValue: staticColumns,
+        hiddenColumnArray: JSON.parse(localStorage.getItem('userGroupsColumns') || '[]'),
+        buttonArray: actionButtons
+    });
+
+    return (
+        <PageWrapper title="User Groups">
+            <SubHeader>
+                <SubHeaderLeft>
+                    <Icon icon="Groups" className="me-2 fs-4" />
+                    <span className="h4 fw-bold mb-0">User Groups</span>
+                </SubHeaderLeft>
+                <SubHeaderRight>
+                    <Button color="primary" icon="Add" onClick={() => setIsCreateOpen(true)}>
+                        Create Group
+                    </Button>
+                </SubHeaderRight>
+            </SubHeader>
+
+            <Page container="fluid">
+                <Card stretch className="border-0">
+                    <CardBody className="p-0">
+                        <ThemeProvider theme={theme}>
+                            <MaterialTable
+                                title=" "
+                                columns={columns}
+                                data={groups || []}
+                                isLoading={isLoading}
+                                onChangeColumnHidden={(column, hidden) =>
+                                    updateHiddenColumnsInLocalStorage(
+                                        column,
+                                        hidden,
+                                        'userGroupsColumns'
+                                    )
+                                }
+                                options={{
+                                    headerStyle: headerStyles(),
+                                    rowStyle: rowStyles(),
+                                    search: true,
+                                    pageSize: 10,
+                                    columnsButton: true,
+                                    actionsColumnIndex: -1,
+                                    searchFieldStyle: searchFieldStyle()
+                                }}
+                            />
+                        </ThemeProvider>
+                    </CardBody>
+                </Card>
+            </Page>
+
+            {/* Modals */}
+            <UserGroupCreateModal isOpen={isCreateOpen} setIsOpen={setIsCreateOpen} />
+            <UserGroupEditModal
+                isOpen={!!editGroupId}
+                setIsOpen={() => setEditGroupId(null)}
+                groupId={editGroupId}
+            />
+            <ManageGroupMembersModal
+                isOpen={!!manageGroupId}
+                setIsOpen={() => setManageGroupId(null)}
+                groupId={manageGroupId}
+            />
+        </PageWrapper>
+    );
+};
+
+export default UserGroupsPage;
+
