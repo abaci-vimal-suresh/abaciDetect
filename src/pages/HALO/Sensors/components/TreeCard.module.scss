@@ -1,0 +1,282 @@
+.treeContainer {
+  width: 100%;
+  height: calc(100vh - 250px);
+  min-height: 600px;
+  position: relative;
+  overflow: hidden;
+  background: var(--bs-body-bg);
+  border-radius: 1rem;
+  border: 1px solid var(--bs-border-color);
+}
+
+.treeCanvas {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  cursor: grab;
+  transition: transform 0.1s ease-out;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.treeContent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+}
+
+.zoomControls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.zoomButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    background: var(--bs-primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      background: var(--bs-body-bg);
+      color: var(--bs-body-color);
+      transform: none;
+    }
+  }
+}
+
+.zoomLevel {
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 0.25rem;
+  background: var(--bs-body-bg);
+  border-radius: 0.25rem;
+  border: 1px solid var(--bs-border-color);
+}
+
+.treeNode {
+  position: absolute;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nodeCard {
+  min-width: 280px;
+  max-width: 280px;
+  background: var(--bs-body-bg);
+  border: 2px solid var(--bs-border-color);
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: var(--bs-primary);
+  }
+
+  &.hasChildren {
+    border-left: 4px solid var(--bs-primary);
+  }
+
+  &.sensor {
+    border-left: 4px solid var(--bs-success);
+    min-width: 240px;
+    max-width: 240px;
+  }
+}
+
+.nodeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.nodeName {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--bs-body-color);
+  margin: 0;
+  flex: 1;
+}
+
+.nodeActions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.expandButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bs-primary);
+    color: white;
+  }
+
+  &.expanded {
+    background: var(--bs-primary);
+    color: white;
+  }
+}
+
+.nodeStats {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.nodeStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .label {
+    font-size: 0.75rem;
+    color: var(--bs-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--bs-primary);
+  }
+}
+
+.sensorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+
+  .infoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .infoLabel {
+      color: var(--bs-secondary);
+    }
+
+    .infoValue {
+      font-weight: 600;
+      color: var(--bs-body-color);
+    }
+  }
+}
+
+.connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.connectionLine {
+  stroke: var(--bs-border-color);
+  stroke-width: 2;
+  fill: none;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+
+  &.highlighted {
+    stroke: var(--bs-primary);
+    stroke-width: 3;
+    opacity: 1;
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--bs-secondary);
+
+  svg {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  h4 {
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    margin: 0;
+    opacity: 0.7;
+  }
+}
+
+.viewToggle {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+// Dark mode adjustments
+[data-theme="dark"] {
+  .nodeCard {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  .zoomButton {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+  }
+}

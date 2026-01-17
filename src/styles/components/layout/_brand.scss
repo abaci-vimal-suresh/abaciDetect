@@ -1,0 +1,113 @@
+//
+//  Brand
+//
+
+@use 'sass:map';
+
+.brand {
+	display: flex;
+	height: auto;
+	min-height: map.get($header, height);
+	flex-direction: column;
+	align-items: center;
+	padding: 1.5rem 0.5rem;
+	position: relative;
+	color: inherit;
+
+	@include dark-mode {
+		color: $white;
+	}
+
+	@include aside-close {
+		justify-content: center;
+		padding: 1.5rem 0;
+
+		.brand-aside-toggle {
+			position: relative;
+			top: auto;
+			right: auto;
+			margin-top: 1rem;
+		}
+	}
+
+	&-logo {
+		width: 100%;
+		display: flex;
+		justify-content: center;
+
+		.brand-icon {
+			font-size: 3rem;
+		}
+
+		@include aside-close {
+			.brand-text {
+				display: none;
+			}
+
+			.brand-icon {
+				font-size: 2rem;
+			}
+		}
+	}
+
+	&-title-main {
+		@include font-size(1.25rem);
+		letter-spacing: 1.5px;
+		line-height: 1.1;
+	}
+
+	&-title-sub {
+		@include font-size(0.75rem);
+		letter-spacing: 4px;
+		margin-top: 0.25rem;
+	}
+
+	&-aside-toggle {
+		@include font-size(1.5rem);
+		position: absolute;
+		top: 0.5rem;
+		right: 0.25rem;
+
+		padding: 0.375rem;
+		border-radius: 2rem;
+		cursor: pointer;
+		line-height: 0;
+
+		// Mobile Status
+		@include media-breakpoint-down(map-get($aside, mobile-breakpoint)) {
+			display: none;
+		}
+
+		&:hover {
+			background-color: auto-shade-tint(map-deep-get($aside, background-color), 8%);
+
+			@include dark-mode {
+				background-color: rgba($white, 0.08);
+			}
+		}
+
+		&:focus {
+			box-shadow: none;
+		}
+
+		svg {
+			color: color-contrast(shadow-color(map.get($aside, background-color)));
+
+			@include dark-mode {
+				color: $white;
+			}
+		}
+	}
+
+	&-aside-toggle-close {
+		@at-root .aside:not(.open) & {
+			display: none;
+		}
+	}
+
+	&-aside-toggle-open {
+		@at-root .aside.open & {
+			display: none;
+		}
+	}
+}
