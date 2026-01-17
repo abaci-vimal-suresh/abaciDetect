@@ -1,0 +1,663 @@
+// Complete Card View Styles - All styles included
+
+.sensorGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+// Neumorphic Card Base
+.neuCard {
+    background: var(--bs-card-bg);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow:
+        8px 8px 16px rgba(0, 0, 0, 0.1),
+        -8px -8px 16px rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow:
+            12px 12px 24px rgba(0, 0, 0, 0.15),
+            -12px -12px 24px rgba(255, 255, 255, 0.6);
+    }
+
+    :global([data-bs-theme='dark']) & {
+        background: var(--bs-dark-card-bg);
+        box-shadow:
+            8px 8px 16px rgba(0, 0, 0, 0.3),
+            -8px -8px 16px rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+
+        &:hover {
+            box-shadow:
+                12px 12px 24px rgba(0, 0, 0, 0.4),
+                -12px -12px 24px rgba(255, 255, 255, 0.03);
+        }
+    }
+}
+
+// Glossy overlay effect
+.glossyCard {
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 50%;
+        background: linear-gradient(180deg,
+                rgba(255, 255, 255, 0.1) 0%,
+                rgba(255, 255, 255, 0) 100%);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    :global([data-bs-theme='dark']) &::before {
+        background: linear-gradient(180deg,
+                rgba(255, 255, 255, 0.03) 0%,
+                rgba(255, 255, 255, 0) 100%);
+    }
+}
+
+// Card Header
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    position: relative;
+    z-index: 2;
+
+    :global([data-bs-theme='dark']) & {
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+
+    h6 {
+        font-size: 0.875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0;
+        color: rgba(0, 0, 0, 0.7);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+}
+
+// Help Icon
+.helpIcon {
+    opacity: 0.3;
+    cursor: help;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+        opacity: 0.7;
+    }
+}
+
+// Metrics Grid
+.metricsGrid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr);
+    position: relative;
+    z-index: 2;
+
+    &.twoCol {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    &.threeCol {
+        grid-template-columns: repeat(2, 1fr);
+
+        @media (min-width: 768px) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    &.fourCol {
+        grid-template-columns: repeat(2, 1fr);
+
+        @media (min-width: 768px) {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+}
+
+// Metric Item
+.metricItem {
+    text-align: center;
+    padding: 0.75rem 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: rgba(0, 0, 0, 0.02);
+
+        :global([data-bs-theme='dark']) & {
+            background: rgba(255, 255, 255, 0.02);
+        }
+    }
+}
+
+// Metric Label
+.metricLabel {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.5);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+
+    :global([data-bs-theme='dark']) & {
+        color: rgba(255, 255, 255, 0.5);
+    }
+}
+
+// Metric Value
+.metricValue {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.9);
+    line-height: 1.1;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+
+    :global([data-bs-theme='dark']) & {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .unit {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.5);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.5);
+        }
+    }
+}
+
+// Large Metric (for AQI and Health Index cards)
+.largeMetric {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 1rem;
+    position: relative;
+    z-index: 2;
+
+    :global([data-bs-theme='dark']) & {
+        background: rgba(255, 255, 255, 0.02);
+    }
+}
+
+// Metric Icon (large number display)
+.metricIcon {
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1;
+    min-width: 80px;
+    text-align: center;
+
+    &.success {
+        color: #46bcaa;
+    }
+
+    &.info {
+        color: #4d69fa;
+    }
+
+    &.warning {
+        color: #ffcf52;
+    }
+
+    &.danger {
+        color: #f35421;
+    }
+}
+
+// Metric Content
+.metricContent {
+    flex: 1;
+}
+
+// Metric Status Badge
+.metricStatus {
+    margin-top: 0.5rem;
+    display: inline-block;
+}
+
+// Factors List (for AQI and Health Index breakdowns)
+.factorsList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    position: relative;
+    z-index: 2;
+
+    @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+// Factor Item
+.factorItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+
+    :global([data-bs-theme='dark']) & {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    &:hover {
+        background: rgba(0, 0, 0, 0.05);
+        transform: translateX(2px);
+
+        :global([data-bs-theme='dark']) & {
+            background: rgba(255, 255, 255, 0.05);
+        }
+    }
+}
+
+// Factor Label
+.factorLabel {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+
+    :global([data-bs-theme='dark']) & {
+        color: rgba(255, 255, 255, 0.6);
+    }
+}
+
+// Factor Value
+.factorValue {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.9);
+
+    :global([data-bs-theme='dark']) & {
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+
+// ========================================
+// Status Colors
+// ========================================
+
+.success {
+    color: #46bcaa !important;
+}
+
+.warning {
+    color: #ffcf52 !important;
+}
+
+.danger {
+    color: #f35421 !important;
+}
+
+.info {
+    color: #4d69fa !important;
+}
+
+.primary {
+    color: #7a3a6f !important;
+}
+
+.secondary {
+    color: #a87ca1 !important;
+}
+
+// AQI Status Colors
+.good {
+    color: #46bcaa;
+}
+
+.moderate {
+    color: #ffcf52;
+}
+
+.unhealthy {
+    color: #f35421;
+}
+
+.veryUnhealthy {
+    color: #ff0000;
+}
+
+// ========================================
+// Threshold Highlights
+// ========================================
+
+.thresholdSafe {
+    border: 2px solid #46bcaa !important;
+    box-shadow: 0 0 20px rgba(70, 188, 170, 0.2) !important;
+}
+
+.thresholdWarning {
+    border: 2px solid #ffcf52 !important;
+    box-shadow: 0 0 20px rgba(255, 207, 82, 0.2) !important;
+}
+
+.thresholdDanger {
+    border: 2px solid #f35421 !important;
+    box-shadow: 0 0 20px rgba(243, 84, 33, 0.3) !important;
+}
+
+.criticalAlert {
+    animation: pulseAlert 2s ease-in-out infinite;
+}
+
+@keyframes pulseAlert {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(243, 84, 33, 0.3);
+        border-color: #f35421;
+    }
+
+    50% {
+        box-shadow: 0 0 30px rgba(243, 84, 33, 0.6);
+        border-color: #ff6b3d;
+    }
+}
+
+// Alert LED
+.alertLed {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f35421;
+    margin-right: 8px;
+    animation: pulseLed 1.5s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(243, 84, 33, 0.6);
+}
+
+@keyframes pulseLed {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+// ========================================
+// Modal Styles
+// ========================================
+
+.scrollableModalBody {
+    max-height: 60vh;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+    }
+
+    :global([data-bs-theme='dark']) & {
+        &::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+    }
+}
+
+// Device Info
+.deviceInfo {
+    .infoRow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+        :global([data-bs-theme='dark']) & {
+            border-bottom-color: rgba(255, 255, 255, 0.05);
+        }
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+
+    .infoLabel {
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.6);
+        font-size: 0.875rem;
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    }
+
+    .infoValue {
+        font-weight: 600;
+        color: rgba(0, 0, 0, 0.9);
+        font-size: 0.875rem;
+        text-align: right;
+        word-break: break-word;
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.9);
+        }
+    }
+}
+
+// Threshold List
+.thresholdList {
+    .thresholdInfo {
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 0.75rem;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+
+        :global([data-bs-theme='dark']) & {
+            background: rgba(255, 255, 255, 0.02);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+    }
+
+    .thresholdRow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .thresholdLabel {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.6);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    }
+
+    .thresholdValue {
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: rgba(0, 0, 0, 0.9);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        &.safe {
+            color: #46bcaa;
+        }
+
+        &.warning {
+            color: #ffcf52;
+        }
+
+        &.danger {
+            color: #f35421;
+        }
+    }
+
+    .thresholdProgress {
+        height: 8px;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+
+        :global([data-bs-theme='dark']) & {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    }
+
+    .thresholdBar {
+        height: 100%;
+        transition: width 0.3s ease;
+        border-radius: 4px;
+
+        &.safe {
+            background: linear-gradient(90deg, #46bcaa 0%, #5cd4be 100%);
+        }
+
+        &.warning {
+            background: linear-gradient(90deg, #ffcf52 0%, #ffd96b 100%);
+        }
+
+        &.danger {
+            background: linear-gradient(90deg, #f35421 0%, #ff6b3d 100%);
+        }
+    }
+}
+
+// ========================================
+// Animations
+// ========================================
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.neuCard {
+    animation: fadeIn 0.3s ease-out;
+}
+
+// ========================================
+// Responsive Adjustments
+// ========================================
+
+@media (max-width: 768px) {
+    .neuCard {
+        padding: 1.25rem;
+    }
+
+    .cardHeader h6 {
+        font-size: 0.8rem;
+    }
+
+    .metricValue {
+        font-size: 1.5rem;
+    }
+
+    .metricIcon {
+        font-size: 2.5rem;
+        min-width: 60px;
+    }
+
+    .largeMetric {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+
+    .metricsGrid {
+        gap: 0.75rem;
+    }
+
+    .factorsList {
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .metricValue {
+        font-size: 1.25rem;
+    }
+
+    .metricLabel {
+        font-size: 0.7rem;
+    }
+
+    .factorItem {
+        padding: 0.4rem 0.6rem;
+    }
+
+    .factorLabel,
+    .factorValue {
+        font-size: 0.7rem;
+    }
+}

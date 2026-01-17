@@ -1,0 +1,349 @@
+.dashboardGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+
+    @media (max-width: 1600px) {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (max-width: 1200px) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.gaugeCard {
+    grid-column: span 1;
+    min-height: 280px;
+    background: var(--bs-card-bg);
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    :global(.card-body) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+    }
+}
+
+.barChartCard {
+    grid-column: span 1;
+    background: var(--bs-card-bg);
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+
+    &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    :global(.card-header) {
+        background: transparent;
+        border-bottom: 1px solid;
+        border-color: rgba(0, 0, 0, 0.08);
+        padding: 1rem 1.5rem;
+
+        :global([data-bs-theme='dark']) & {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+
+    :global(.card-title) {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin: 0;
+        color: rgba(0, 0, 0, 0.7);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+
+    :global(.card-body) {
+        padding: 1.5rem;
+    }
+}
+
+.centralGaugeCard {
+    grid-column: span 2;
+    grid-row: span 2;
+    background: var(--bs-card-bg);
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at center, rgba(77, 105, 250, 0.05) 0%, transparent 70%);
+        pointer-events: none;
+
+        :global([data-bs-theme='dark']) & {
+            background: radial-gradient(circle at center, rgba(77, 105, 250, 0.08) 0%, transparent 70%);
+        }
+    }
+
+    :global(.card-body) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        position: relative;
+        z-index: 1;
+    }
+}
+
+.generatorCard {
+    grid-column: span 2;
+    grid-row: span 2;
+    background: var(--bs-card-bg);
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    :global(.card-header) {
+        background: transparent;
+        border-bottom: 1px solid;
+        border-color: rgba(0, 0, 0, 0.08);
+        padding: 1rem 1.5rem;
+
+        :global([data-bs-theme='dark']) & {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+
+    :global(.card-title) {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin: 0;
+        color: rgba(0, 0, 0, 0.7);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+
+    :global(.card-body) {
+        padding: 1.5rem;
+    }
+}
+
+.scrSystemCard {
+    grid-column: span 3;
+    background: var(--bs-card-bg);
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    @media (max-width: 1600px) {
+        grid-column: span 2;
+    }
+
+    @media (max-width: 1200px) {
+        grid-column: span 2;
+    }
+
+    @media (max-width: 768px) {
+        grid-column: span 1;
+    }
+
+    :global(.card-header) {
+        background: transparent;
+        border-bottom: 1px solid;
+        border-color: rgba(0, 0, 0, 0.08);
+        padding: 1rem 1.5rem;
+
+        :global([data-bs-theme='dark']) & {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+
+    :global(.card-title) {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin: 0;
+        color: rgba(0, 0, 0, 0.7);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+
+    :global(.card-body) {
+        padding: 1.5rem;
+    }
+}
+
+.miscCard {
+    grid-column: span 1;
+    background: var(--bs-card-bg);
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    @media (max-width: 1600px) {
+        grid-column: span 1;
+    }
+
+    @media (max-width: 1200px) {
+        grid-column: span 2;
+    }
+
+    @media (max-width: 768px) {
+        grid-column: span 1;
+    }
+
+    :global(.card-header) {
+        background: transparent;
+        border-bottom: 1px solid;
+        border-color: rgba(0, 0, 0, 0.08);
+        padding: 1rem 1.5rem;
+
+        :global([data-bs-theme='dark']) & {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+
+    :global(.card-title) {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin: 0;
+        color: rgba(0, 0, 0, 0.7);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+
+    :global(.card-body) {
+        padding: 1.5rem;
+    }
+}
+
+.healthIndexCard {
+    grid-column: span 2;
+    background: var(--bs-card-bg);
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    @media (max-width: 1600px) {
+        grid-column: span 2;
+    }
+
+    @media (max-width: 1200px) {
+        grid-column: span 2;
+    }
+
+    @media (max-width: 768px) {
+        grid-column: span 1;
+    }
+
+    :global(.card-header) {
+        background: transparent;
+        border-bottom: 1px solid;
+        border-color: rgba(0, 0, 0, 0.08);
+        padding: 1rem 1.5rem;
+
+        :global([data-bs-theme='dark']) & {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+
+    :global(.card-title) {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin: 0;
+        color: rgba(0, 0, 0, 0.7);
+
+        :global([data-bs-theme='dark']) & {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+
+    :global(.card-body) {
+        padding: 1.5rem;
+    }
+}
+
+// Dark mode adjustments
+:global([data-bs-theme='dark']) {
+
+    .gaugeCard,
+    .barChartCard,
+    .centralGaugeCard,
+    .generatorCard,
+    .scrSystemCard,
+    .miscCard,
+    .healthIndexCard {
+        background: var(--bs-dark-card-bg);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+        &:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        }
+    }
+}
+
+// Animations
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gaugeCard,
+.barChartCard,
+.centralGaugeCard,
+.generatorCard,
+.scrSystemCard,
+.miscCard {
+    animation: fadeIn 0.5s ease-out;
+}

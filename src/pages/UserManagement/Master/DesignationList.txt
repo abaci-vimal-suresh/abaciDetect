@@ -1,0 +1,167 @@
+import React, { FC, useCallback, useEffect, useRef, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { Spinner } from 'reactstrap';
+import Card, { CardBody, CardHeader, CardLabel, CardTitle } from '../../../components/bootstrap/Card';
+import { authAxios } from '../../../axiosInstance';
+import Error from '../../../helpers/Error';
+import Moments from '../../../helpers/Moment';
+import useDarkMode from '../../../hooks/useDarkMode';
+import classNames from 'classnames';
+import { getFirstLetters } from '../../../helpers/helpers';
+
+
+
+const DesignationListItem: FC<any> = (props) => {
+	const { darkModeStatus } = useDarkMode();
+	const navigate = useNavigate();
+
+	return (
+		<div className='col-12 prevent-userselect  mb-2'   
+		role="button" 
+		tabIndex={0} // Makes the div focusable for keyboard users
+
+		// onClick={() =>navigate(`/invitations/${props?.id}`)}
+		// onKeyDown={(e) => {
+		// 	if (e.key === 'Enter' || e.key === ' ') {
+		// 	  navigate(`/invitations/${props?.id}`)
+		// 	}}}
+>
+			<div className='row'>
+				<div className='col d-flex align-items-center'>
+					<div className='flex-shrink-0'>
+						<div className='ratio ratio-1x1 me-3' style={{ width: 48, }}>
+							<div
+								className={classNames(
+									'rounded-2',
+									'd-flex align-items-center justify-content-center',
+									{
+										'bg-l10-dark': !darkModeStatus,
+										'bg-l90-dark': darkModeStatus,
+									},
+								)}>
+								<span className='fw-bold'>{props?.name && getFirstLetters(props?.name)}</span>
+							</div>
+						</div>
+						{/* <img
+                         style={{width:"40px",height:"40px",borderRadius:"10px",marginRight:"10px"}}
+						 alt=''
+                         /> */}
+					</div>
+					<div className='flex-grow-1'>
+						<div className='fs-6'>{props?.name}</div>
+						{/* <div className='text-muted'>
+							<small>{props?.tenant?.tenant_name}</small>
+						</div> */}
+						<div className='text-muted'>
+							{props?.visiting?.name && <small>{`Appointment : ${props?.visiting?.name}`}</small>}
+						</div>
+						<div className='text-muted'>
+							<small>{props?.tower?.tower_name}</small>
+						</div>
+					</div>
+				</div>
+				<div className='col-auto text-end'>
+					<div className='mt-2 '>
+						{/* <Badge
+							color='danger'>
+							{props?.tenant?.tenant_name}
+						</Badge> */}
+						{/* <strong>{priceFormat(price)}</strong> */}
+					</div>
+					
+				
+				</div>
+			</div>
+		</div>
+	);
+};
+const DesignationList = () => {
+    const dispatch = useDispatch();
+    const listRef = useRef<HTMLDivElement>(null);
+    const [designationList, setDesignationList] = useState<any[]>([{name: "Designer"}, {name: "Developer"}]);
+    const [pageCount, setPageCount] = useState(0);
+    const [limit] = useState(5);
+    const [hasNextPage, setHasNextPage] = useState(true);
+    const [isFetching, setIsFetching] = useState(false);
+
+    // useEffect(() => {
+    //     fetchVehicles();
+    // }, []);
+
+    const fetchVehicles = useCallback(async () => {
+        if (!hasNextPage || isFetching) return;
+        setIsFetching(true);
+
+        try {
+            const response = await authAxios.get(`/api/vehicles/violation_vehicles?limit=${limit}&offset=${pageCount * limit}`);
+            const newVehicles = response.data.results;
+            setDesignationList((prev) => [...prev, ...newVehicles]);
+            setPageCount((prev) => prev + 1);
+            setHasNextPage(newVehicles.length === limit);
+        } catch (error) {
+            const errorMsg = Error(error);
+            // showNotification("Error", errorMsg, "danger");
+        } finally {
+            setIsFetching(false);
+        }
+    }, [hasNextPage, isFetching, limit, pageCount]);
+
+
+    const handleScroll = () => {
+        if (listRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+            if (scrollTop + clientHeight >= scrollHeight - 20) {
+                fetchVehicles();
+            }
+        }
+    };
+
+
+    useEffect(() => {
+        if (listRef.current) {
+            const { scrollHeight, clientHeight } = listRef.current;
+            // If content is not scrollable yet, fetch more
+            if (scrollHeight <= clientHeight && hasNextPage) {
+                fetchVehicles();
+            }
+        }
+    }, [designationList]); // runs whenever vehicle list changes
+
+    return (
+        <Card stretch className='prevent-userselect' borderSize={2}>
+            <CardHeader>
+                <CardLabel>
+                    <CardTitle tag='div' className='h3'>
+                        Designations
+                    </CardTitle>
+                </CardLabel>
+            </CardHeader>
+            <CardBody>
+                {designationList?.length === 0 ? (
+                    <div style={{ position: 'relative', width: '100%', height: '300px' }}>
+                        <p className='position_centered' style={{ marginTop: "-20px" }}>No Designation added !</p>
+                    </div>
+                ) : (
+                    <div
+                        ref={listRef}
+                        style={{ height: '300px', overflowY: 'scroll', overflowX: 'hidden' }}
+                        className="hide-scrollbar"
+                        onScroll={handleScroll}
+                    >
+                        {designationList.map((data: any, index: number) => (
+                          <DesignationListItem key={data.id} {...data}/>
+                        ))}
+                        {isFetching && (
+                            <div style={{ display: 'flex', justifyContent: 'center' }} className="loader">
+                                <Spinner animation="grow" size="sm" />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </CardBody>
+        </Card>
+    );
+};
+
+export default DesignationList;
