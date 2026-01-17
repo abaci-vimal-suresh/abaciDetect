@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Modal, { ModalHeader, ModalBody, ModalTitle } from '../../components/bootstrap/Modal';
 import Icon from '../../components/icon/Icon';
 import { authAxios } from '../../axiosInstance';
-import useToasterNotification from '../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../hooks/useToasterNotification';
 import ContractLogSkeleton from '../../components/CustomComponent/Skeleton/ContractLogSkelton';
 import Moments from '../../helpers/Moment';
 
@@ -176,4 +176,3 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
 };
 
 export default NotificationDetailModal;
-

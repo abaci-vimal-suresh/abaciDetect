@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import useTablestyle from '../../../hooks/shared/useTablestyles'
+import useTablestyle from '../../../hooks/useTablestyles'
 import { ThemeProvider } from '@mui/material';
 import MaterialTable from '@material-table/core';
 import { generateQueryParams } from '../../../helpers/utils';

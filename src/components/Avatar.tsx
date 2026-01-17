@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { randomColor } from '../helpers/helpers';
 import Popovers from './bootstrap/Popovers';
-import useDarkMode from '../hooks/shared/useDarkMode';
+import useDarkMode from '../hooks/useDarkMode';
 import { TColor } from '../type/color-type';
 
 interface IAvatarGroupProps {
@@ -204,4 +204,3 @@ Avatar.defaultProps = {
 };
 
 export default Avatar;
-

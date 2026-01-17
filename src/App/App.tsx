@@ -5,14 +5,13 @@ import { useFullscreen } from 'react-use';
 import { TourProvider } from '@reactour/tour';
 import { ToastContainer } from 'react-toastify';
 import ThemeContext from '../contexts/themeContext';
+import useDarkMode from '../hooks/shared/useDarkMode';
+
 import Wrapper from '../layout/Wrapper/Wrapper';
 import Portal from '../layout/Portal/Portal';
-import useDarkMode from '../hooks/shared/useDarkMode';
 import COLORS from '../common/data/enumColors';
-import { getOS } from '../helpers/helpers';
-// import steps, { styles } from '../steps';
-import AsideRoutes from '../layout/Aside/AsideRoutes';
 import { ToastCloseButton } from '../components/bootstrap/Toasts';
+import AsideRoutes from '../layout/Aside/AsideRoutes';
 
 const App = () => {
 	useEffect(() => {

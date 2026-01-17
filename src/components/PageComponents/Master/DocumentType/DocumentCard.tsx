@@ -6,7 +6,7 @@ import Dropdown, { DropdownMenu, DropdownToggle,DropdownItem } from '../../../bo
 import Badge from '../../../bootstrap/Badge';
 import Icon from '../../../icon/Icon';
 import Button from '../../../bootstrap/Button';
-import useDarkMode from '../../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../../hooks/useDarkMode';
 import { getFirstLetters } from '../../../../helpers/helpers';
 import { badgeColorOptions } from '../../../../helpers/constants';
 

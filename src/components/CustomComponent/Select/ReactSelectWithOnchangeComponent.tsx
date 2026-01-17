@@ -3,7 +3,7 @@ import Select from 'react-select'
 import { Controller } from 'react-hook-form';
 import FormGroup from '../../bootstrap/forms/FormGroup';
 import useSelectStyles from '../../../hooks/useSelectStyle';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 const ReactSelectWithOnchangeComponent = ({control,name,isMulti,field_name,getValues,errors,options, isRequired,onChangeFunction,isDisable}:any) => {
 	// const reactSelectStyle = useSelectStyles(isMulti);
@@ -113,4 +113,3 @@ const ReactSelectWithOnchangeComponent = ({control,name,isMulti,field_name,getVa
 }
 
 export default ReactSelectWithOnchangeComponent
-

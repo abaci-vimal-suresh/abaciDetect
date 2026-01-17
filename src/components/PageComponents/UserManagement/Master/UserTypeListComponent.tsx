@@ -3,12 +3,12 @@ import MaterialTable, { Column } from '@material-table/core';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { ThemeProvider } from '@mui/material/styles';
 import { authAxios } from '../../../../axiosInstance';
-import useTablestyle from '../../../../hooks/shared/useTablestyles';
-import useToasterNotification from '../../../../hooks/shared/useToasterNotification';
+import useTablestyle from '../../../../hooks/useTablestyles';
+import useToasterNotification from '../../../../hooks/useToasterNotification';
 import { formatFilters, updateHiddenColumnsInLocalStorage } from '../../../../helpers/functions';
 import StatusButton from '../../../CustomComponent/Buttons/StatusButton';
 import DeleteButton from '../../../CustomComponent/Buttons/DeleteButton';
-import useColumnHiding from '../../../../hooks/shared/useColumnHiding';
+import useColumnHiding from '../../../../hooks/useColumnHiding';
 
 export interface UserTypeListTableData {
     id: number;

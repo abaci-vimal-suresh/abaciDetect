@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import Swal from 'sweetalert2';
 import Card, { CardBody } from '../../../components/bootstrap/Card';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import CropModal from './CropModal';
 import ViewImageModal from './ViewImageModal';
 import SingleImageMode from './SingleImageMode';
@@ -327,4 +327,3 @@ const ImageUpload = ({
 };
 
 export default ImageUpload;
-

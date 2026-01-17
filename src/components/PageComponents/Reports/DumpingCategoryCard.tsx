@@ -1,7 +1,7 @@
 import React from 'react';
 import classNames from 'classnames';
 import Card, { CardBody } from '../../bootstrap/Card';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 import Icon from '../../icon/Icon';
 import Badge from '../../bootstrap/Badge';
 

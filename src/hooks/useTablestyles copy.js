@@ -1,7 +1,6 @@
 import { createTheme } from '@mui/material/styles';
-
+import useDarkMode from './useDarkMode';
 import { tableStyleOverrideConstant } from '../helpers/constants';
-import useDarkMode from './shared/useDarkMode';
 
 const useTablestyle = () => {
 	const { themeStatus } = useDarkMode();
@@ -91,14 +90,14 @@ const useTablestyle = () => {
 					},
 				},
 			},
-			MuiToolbar: {
-				styleOverrides: {
-					// root: {
-
-					//     color: 'white',
-					// },
-				},
-			},
+			 MuiToolbar: {
+        styleOverrides: {
+            // root: {
+                
+            //     color: 'white',
+            // },
+        },
+    },
 			MuiPopover: {
 				styleOverrides: {
 					paper: {
@@ -156,9 +155,9 @@ const useTablestyle = () => {
 		fontSize: '0.99rem',
 		fontFamily: 'inherit',
 		padding: '15px',
-
+		
 		whiteSpace: 'nowrap',
-		paddingLeft: '40px !important'
+		paddingLeft:'40px !important'
 		// color: themeStatus !== 'dark' ? '#73613F' : 'white'
 
 
@@ -170,8 +169,8 @@ const useTablestyle = () => {
 				backgroundColor: themeStatus !== 'dark' ? '#F5F5F5' : '',
 				borderRadius: '10px',
 				paddingleft: 0,
-
-
+				
+			
 			};
 		}
 		return {};
@@ -195,8 +194,8 @@ const useTablestyle = () => {
 			index % 2 !== 0
 				? '#222222'
 				: themeStatus !== 'dark'
-					? '#FBF6F4'
-					: '#222222',
+				? '#FBF6F4'
+				: '#222222',
 		zIndex: 1,
 		textAlign: columnIndex === 0 ? 'left' : 'center',
 	});

@@ -8,7 +8,7 @@ import base64toFile from '../../helpers/base64toFile';
 import { authAxiosFileUpload } from '../../axiosInstance';
 import AuthContext from '../../contexts/authContext';
 import { Spinner } from 'reactstrap';
-import useToasterNotification from '../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../hooks/useToasterNotification';
 
 
 const ProfilePicUpload = ({ image, setImage, isProfile = false, isEdit = false }: any) => {

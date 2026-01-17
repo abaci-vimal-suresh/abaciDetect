@@ -4,8 +4,8 @@ import classNames from 'classnames';
 import Button from '../../bootstrap/Button'; // Adjust the import according to your setup
 import { authAxios } from '../../../axiosInstance';
 import { buttonColor } from '../../../helpers/constants';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useDarkMode from '../../../hooks/useDarkMode';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 interface ResendButtonProps {
   id: any;
@@ -60,4 +60,3 @@ const ResendButton: React.FC<ResendButtonProps> = ({  id }) => {
 };
 
 export default ResendButton;
-

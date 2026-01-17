@@ -5,23 +5,24 @@ import classNames from 'classnames';
 import { useWindowSize } from 'react-use';
 import { DropdownItem, DropdownMenu } from '../../components/bootstrap/Dropdown';
 import Button from '../../components/bootstrap/Button';
-import useDarkMode from '../../hooks/shared/useDarkMode';
+import useDarkMode from '../../hooks/useDarkMode';
 import Collapse from '../../components/bootstrap/Collapse';
 import { NavigationLine } from '../Navigation/Navigation';
 import Icon from '../../components/icon/Icon';
-import useNavigationItemHandle from '../../hooks/shared/useNavigationItemHandle';
+import useNavigationItemHandle from '../../hooks/useNavigationItemHandle';
 import AuthContext from '../../contexts/authContext';
 import ThemeContext from '../../contexts/themeContext';
 import urlMaker from '../../helpers/UrlMaker';
 import ProfilePic from "../../assets/img/Avatar.svg"
 import { authAxios } from '../../axiosInstance';
-import showNotification from '../../components/extras/showNotification';
+import useToasterNotification from '../../hooks/useToasterNotification';
 import useErrorHandler from '../../hooks/useErrorHandler';
-import {  imageURL } from '../../helpers/baseURL';
+import { imageURL } from '../../helpers/baseURL';
 
 
 const User = () => {
 
+	const { showNotification } = useToasterNotification();
 	const { handleError } = useErrorHandler();
 	const { width } = useWindowSize();
 	const { setAsideStatus } = useContext(ThemeContext);
@@ -34,9 +35,9 @@ const User = () => {
 
 	function getAvatarSrc() {
 		if (userData?.avatar_thumbnail) {
-			if(userData?.avatar_thumbnail.includes('http')){
+			if (userData?.avatar_thumbnail.includes('http')) {
 				return userData?.avatar_thumbnail
-			}else{
+			} else {
 				return imageURL + userData?.avatar_thumbnail
 			}
 			// return userData?.avatar_thumbnail
@@ -53,16 +54,16 @@ const User = () => {
 		// const url = 'api/users/logout'
 		// authAxios.post(url)
 		// 	.then(() => {
-				setLogOut()
-			// })
-			// .catch(err => {
-			// 	if (err?.response?.status === 403 || err?.response?.status === 401) {
-			// 		setLogOut()
-			// 	} else {
-			// 		showNotification('Error', handleError(err), 'danger')
-			// 	}
+		setLogOut()
+		// })
+		// .catch(err => {
+		// 	if (err?.response?.status === 403 || err?.response?.status === 401) {
+		// 		setLogOut()
+		// 	} else {
+		// 		showNotification('Error', handleError(err), 'danger')
+		// 	}
 
-			// })
+		// })
 
 	}
 
@@ -92,10 +93,10 @@ const User = () => {
 						display: 'block',
 						maxWidth: '100%'
 					}} >
-						{`${userData?.first_name ||''} ${userData?.last_name ||''} `}
+						{`${userData?.first_name || ''} ${userData?.last_name || ''} `}
 						<Icon icon='Verified' className='ms-1' color='info' />
 					</div>
-					
+
 					<div className='user-sub-title-email text-light ' >{userData?.email}</div>
 
 
@@ -123,7 +124,7 @@ const User = () => {
 
 						{darkModeStatus ? 'Dark Mode' : 'Light Mode'}
 
-						
+
 					</Button>
 				</DropdownItem>
 			</DropdownMenu>
@@ -205,4 +206,3 @@ const User = () => {
 };
 
 export default User;
-

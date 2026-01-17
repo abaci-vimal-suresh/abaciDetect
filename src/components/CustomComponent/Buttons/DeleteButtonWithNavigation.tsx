@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../bootstrap/Button'; // Adjust the import according to your setup
 import { authAxios } from '../../../axiosInstance';
 import { buttonColor } from '../../../helpers/constants';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 interface DeleteButtonProps {
   apiEndpoint: string;
@@ -63,4 +63,3 @@ const DeleteButtonWithNavigation: React.FC<DeleteButtonProps> = ({  apiEndpoint,
 };
 
 export default DeleteButtonWithNavigation;
-

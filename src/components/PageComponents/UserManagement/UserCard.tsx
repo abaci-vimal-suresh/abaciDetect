@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { setUserDetails } from '../../../store/user';
 import ProfilePic from "../../../assets/img/11539820.png"
 import { getFirstLetters } from '../../../helpers/helpers';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 import Icon from '../../icon/Icon';
 import Badge from '../../bootstrap/Badge';
 import { partyTypeOptions } from '../../../helpers/constants';
@@ -141,4 +141,3 @@ const UserCard = ({ user }) => {
 };
 
 export default UserCard;
-

@@ -97,7 +97,7 @@ const UserDetailPage = () => {
                                             <span className="display-4 fw-bold">{user.username.charAt(0).toUpperCase()}</span>
                                         </div>
                                         <h3 className="fw-bold mb-1">@{user.username}</h3>
-                                        <Badge color={user.role === 'admin' ? 'secondary' : 'info'} isLight className="px-3 py-2 rounded-pill mb-4 uppercase small">
+                                        <Badge color={user.role === 'Admin' ? 'secondary' : 'info'} isLight className="px-3 py-2 rounded-pill mb-4 uppercase small">
                                             {user.role} Role
                                         </Badge>
 

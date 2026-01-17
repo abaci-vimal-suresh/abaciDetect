@@ -1,6 +1,6 @@
 import React from 'react'
 import Button from '../../bootstrap/Button';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 const AddButton = ({modalShow,name ,icon}:any) => {
   const { darkModeStatus } = useDarkMode();
@@ -19,4 +19,3 @@ const AddButton = ({modalShow,name ,icon}:any) => {
 }
 
 export default AddButton
-

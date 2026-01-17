@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import Button, { ButtonGroup } from "../../bootstrap/Button";
-import useDarkMode from "../../../hooks/shared/useDarkMode";
+import useDarkMode from "../../../hooks/useDarkMode";
 import { IconButton } from "@mui/material";
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -87,4 +87,3 @@ const ButtonFilterOnHeader = ({ FilterStatus, activeTab, handleFilterStatus, sty
 };
 
 export default ButtonFilterOnHeader;
-

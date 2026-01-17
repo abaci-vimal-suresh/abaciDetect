@@ -4,7 +4,7 @@ import {
 	customStyles,
 	customStylesDark,
 } from '../helpers/constants';
-import useDarkMode from './shared/useDarkMode';
+import useDarkMode from './useDarkMode';
 
 const useSelectStyles = (isMulti = false) => {
 	const { darkModeStatus } = useDarkMode();

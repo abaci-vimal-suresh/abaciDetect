@@ -2,7 +2,7 @@ import React, { FC } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import Card, { CardBody } from './bootstrap/Card';
-import useDarkMode from '../hooks/shared/useDarkMode';
+import useDarkMode from '../hooks/useDarkMode';
 
 export type TTransferActionStatus = 'Completed' | 'Processing' | 'Failed';
 interface ITransferActionProps {
@@ -96,4 +96,3 @@ TransferAction.defaultProps = {
 };
 
 export default TransferAction;
-

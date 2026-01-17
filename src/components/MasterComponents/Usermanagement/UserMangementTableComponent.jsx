@@ -1,35 +1,35 @@
-import React, { useMemo, useState } from 'react';
+import React, {  useMemo, useState } from 'react';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import PropTypes from 'prop-types';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { authAxios } from '../../../axiosInstance';
-import { statusColorCodes, userTypes } from '../../../helpers/constants';
-import useTablestyle from '../../../hooks/shared/useTablestyles';
+import {  statusColorCodes, userTypes } from '../../../helpers/constants';
+import useTablestyle from '../../../hooks/useTablestyles';
 import StatusButton from '../../CustomComponent/Buttons/StatusButton';
 import EditButton from '../../CustomComponent/Buttons/EditButton';
 import CustomBadge from '../../CustomComponent/CustomBadge';
 import { formatFilters } from '../../../helpers/functions';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import ResendButton from '../../CustomComponent/Buttons/ResendButton';
 import usePermissionHook from '../../../hooks/userPermissionHook';
 
 const UserManagementTableComponent = (props) => {
-	const { tableRef, editModalToggle, urlBackup } = props;
+	const { tableRef, editModalToggle ,urlBackup} = props;
 	const [filterEnabled, setFilterEnabled] = useState(false);
 	const [pageSize, setPageSize] = useState(5);
-	const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
+	const { theme, rowStyles, headerStyles,searchFieldStyle } = useTablestyle();
 	const { showErrorNotification } = useToasterNotification();
-	const isSuperUser = usePermissionHook('is_super_user');
+    const isSuperUser=usePermissionHook('is_super_user');
 
 
-	const staticColumns = [
+	const staticColumns  = [
 		{
 			title: 'Name',
 			field: 'full_name',
 			render: (rowData) => (rowData?.full_name ? rowData.full_name : '----'),
 		},
-
+		
 		{
 			title: 'Email',
 			field: 'email',
@@ -44,9 +44,9 @@ const UserManagementTableComponent = (props) => {
 		{
 			title: 'User type',
 			field: 'user_type',
-			render: (rowData) => rowData?.user_type ? userTypes[rowData.user_type] : '----',
+			render: (rowData) => rowData?.user_type? userTypes[rowData.user_type] :'----',
 		},
-
+		
 		{
 			title: 'Status',
 			field: 'status',
@@ -80,8 +80,8 @@ const UserManagementTableComponent = (props) => {
 						/>
 					)}
 
-					{rowData?.status === 'Invited' && (
-						<ResendButton id={rowData.id} />
+                    {rowData?.status === 'Invited' && (
+                         <ResendButton id={rowData.id}/>						
 					)}
 					<EditButton modalShow={editModalToggle} id={rowData.id} />
 				</div>
@@ -90,12 +90,12 @@ const UserManagementTableComponent = (props) => {
 	];
 
 	const columns = useMemo(() => {
-		return [...staticColumns, ...actionButtons];
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+        return [...staticColumns , ...actionButtons];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
 
-
+	
 	return (
 		<div
 			style={{
@@ -108,12 +108,12 @@ const UserManagementTableComponent = (props) => {
 					columns={columns}
 					tableRef={tableRef}
 					onChangeRowsPerPage={setPageSize}
-					onRowClick={(event, rowData) => rowData.status !== "Deleted" && editModalToggle(rowData.id)}
+					onRowClick={(event, rowData)=>rowData.status!=="Deleted"&&editModalToggle(rowData.id)}
 					localization={{
 						pagination: {
-							labelRowsPerPage: '',
+						  labelRowsPerPage: '',
 						}
-					}}
+					  }}
 					// data={(query) => {
 					// 	return new Promise((resolve, reject) => {
 					// 		let orderBy = '';
@@ -125,7 +125,7 @@ const UserManagementTableComponent = (props) => {
 					// 					? `&ordering=-${query.orderBy?.field}`
 					// 					: `&ordering=${query.orderBy?.field}`;
 					// 		}
-					//          if(isSuperUser){
+                    //          if(isSuperUser){
 					// 			usersList='Admin,User,Superuser,Assistant User'
 					// 		 }
 					// 		 const url=''
@@ -168,7 +168,7 @@ const UserManagementTableComponent = (props) => {
 					options={{
 						headerStyle: headerStyles(),
 						rowStyle: rowStyles(),
-						searchFieldStyle: searchFieldStyle(),
+						searchFieldStyle:searchFieldStyle(),
 						actionsColumnIndex: -1,
 						debounceInterval: 500,
 						filtering: filterEnabled,
@@ -188,4 +188,3 @@ UserManagementTableComponent.propTypes = {
 };
 /* eslint-enable react/forbid-prop-types */
 export default UserManagementTableComponent;
-

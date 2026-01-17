@@ -6,7 +6,7 @@ import Swal from 'sweetalert2'; // adjust the import according to your setup
 import { buttonColor } from '../../../helpers/constants';
 import { authAxios } from '../../../axiosInstance';
 import Button from '../../bootstrap/Button';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 interface ApproveORRejectProps {
   fieldKey: string;
@@ -102,4 +102,3 @@ const ApproveOrRejectButton: React.FC<ApproveORRejectProps> = ({ fieldKey,tableR
 };
 
 export default ApproveOrRejectButton;
-

@@ -13,9 +13,9 @@ import classNames from 'classnames';
 import { AnimatePresence, motion } from 'framer-motion';
 import Portal from '../../layout/Portal/Portal';
 import TagWrapper from '../TagWrapper';
-import useEventListener from '../../hooks/shared/useEventListener';
+import useEventListener from '../../hooks/useEventListener';
 import ThemeContext from '../../contexts/themeContext';
-import useDeviceScreen from '../../hooks/shared/useDeviceScreen';
+import useDeviceScreen from '../../hooks/useDeviceScreen';
 import { TOffCanvasPlacement } from '../../type/offCanvas-type';
 
 interface IOffCanvasTitleProps extends HTMLAttributes<HTMLElement> {
@@ -280,4 +280,3 @@ OffCanvas.defaultProps = {
 };
 
 export default OffCanvas;
-

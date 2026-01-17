@@ -13,7 +13,7 @@ import Modal, {
 } from '../../../components/bootstrap/Modal';
 import Button from '../../../components/bootstrap/Button';
 import { authAxios } from '../../../axiosInstance';	
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import TimeZoneSelector from '../../CustomComponent/TimeZoneSelector';
 import { t } from 'i18next';
 
@@ -110,4 +110,3 @@ EditSettings.defaultProps = {
 	item: null, // or a more suitable default value
 };
 export default EditSettings;
-

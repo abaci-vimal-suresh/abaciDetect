@@ -12,7 +12,7 @@ import Button from '../../components/bootstrap/Button';
 import useDarkMode from '../../hooks/shared/useDarkMode';
 import { publicAxios } from '../../axiosInstance';
 import validateEmail from '../../helpers/emailValidator';
-import showNotification from '../../components/extras/showNotification';
+// import showNotification from '../../components/extras/showNotification';
 import useToasterNotification from '../../hooks/shared/useToasterNotification';
 // import lottie from '../../assets/Lottie/Fogwatch Lottie.json';
 import lottie from '../../assets/Lottie/FOGwatch Lottie.json'
@@ -26,8 +26,8 @@ const CreateOrganizaton = () => {
 	const { darkModeStatus } = useDarkMode();
 	const [waitingForAxios, setWaitingForAxios] = useState(false);
 	const [singUpStatus] = useState();
-    const {showErrorNotification}=useToasterNotification()
-	const navigate=useNavigate()
+	const { showErrorNotification, showNotification } = useToasterNotification();
+	const navigate = useNavigate()
 
 	const handleFormSubmit = (formData) => {
 
@@ -42,8 +42,8 @@ const CreateOrganizaton = () => {
 				"last_name": formData.lastName,
 				"phone": formData.phone,
 				"password": formData.newPassword
-			  }
-		  }
+			}
+		}
 		setWaitingForAxios(true);
 		const url = '/organization/setup/';
 		publicAxios
@@ -63,22 +63,22 @@ const CreateOrganizaton = () => {
 		enableReinitialize: true,
 		initialValues: {
 			email: '',
-            lastName: '',
-            firstName: '',
-            phone: '',
-            organizationName: '',
-            organizationEmail: '',
-            organizationPhone: '',
-            organizationAddress: '',
-            organizationCity: '',
-            organizationState: '',
-            organizationZip: '',
-            organizationCountry: '',
+			lastName: '',
+			firstName: '',
+			phone: '',
+			organizationName: '',
+			organizationEmail: '',
+			organizationPhone: '',
+			organizationAddress: '',
+			organizationCity: '',
+			organizationState: '',
+			organizationZip: '',
+			organizationCountry: '',
 			newPassword: '',
 			confirmPassword: '',
 		},
 		validate: (values) => {
-			const errors:any = {};
+			const errors: any = {};
 			const emailError = validateEmail(values.email);
 			const orgEmailError = validateEmail(values.organizationEmail);
 
@@ -94,7 +94,7 @@ const CreateOrganizaton = () => {
 			if (!values.organizationPhone) {
 				errors.organizationPhone = 'Organization phone is required';
 			}
-			if(!values.organizationPhone.match(/^\+?[1-9]\d{1,14}$/)) {
+			if (!values.organizationPhone.match(/^\+?[1-9]\d{1,14}$/)) {
 				errors.organizationPhone = 'Invalid phone number';
 			}
 			if (!values.organizationEmail) {
@@ -112,7 +112,7 @@ const CreateOrganizaton = () => {
 			if (!values.phone) {
 				errors.phone = 'Phone number is required';
 			}
-			if(values.phone && !values.phone.match(/^\+?[1-9]\d{1,14}$/)) {
+			if (values.phone && !values.phone.match(/^\+?[1-9]\d{1,14}$/)) {
 				errors.phone = 'Invalid phone number';
 			}
 
@@ -178,9 +178,9 @@ const CreateOrganizaton = () => {
 											src={lottie}
 											autoplay
 											keepLastFrame
-											style={{ width: 400, height: 140 ,marginTop:'-25px'}}
+											style={{ width: 400, height: 140, marginTop: '-25px' }}
 										/>
-										</Link>
+									</Link>
 								</div>
 								<div
 									className={classNames('rounded-3', {
@@ -188,29 +188,29 @@ const CreateOrganizaton = () => {
 										'bg-dark': darkModeStatus,
 									})}
 								/>
-                            <div className='text-center h5 fw-bold mt-3 mb-3'>
-                                    <AnimatedText
-                                        text={`Welcome to ${import.meta.env.VITE_SITE_NAME}`}
-                                        className="h5 fw-bold"
-                                    />
-                                </div>
-                                <div className='text-center h5 text-muted mb-5 mt-0'>
-                                    <AnimatedText
-                                        text='This system is not yet activated.To begin, please create  the organization to activate the platform!'
-                                        className="h6 text-muted"
-                                        delay={0.5}
-                                    />
-                                </div>
+								<div className='text-center h5 fw-bold mt-3 mb-3'>
+									<AnimatedText
+										text={`Welcome to ${import.meta.env.VITE_SITE_NAME}`}
+										className="h5 fw-bold"
+									/>
+								</div>
+								<div className='text-center h5 text-muted mb-5 mt-0'>
+									<AnimatedText
+										text='This system is not yet activated.To begin, please create  the organization to activate the platform!'
+										className="h6 text-muted"
+										delay={0.5}
+									/>
+								</div>
 								<form className='row g-4 mb-4' onSubmit={formik.handleSubmit}>
-                                <div className='col-12'>
+									<div className='col-12'>
 										<FormGroup
 											id='organizationName'
 											isFloating
 											label='Organization Name'
-											// className={classNames({
-											// 	'd-none': signInPassword,
-											// })}
-                                            >
+										// className={classNames({
+										// 	'd-none': signInPassword,
+										// })}
+										>
 											<Input
 												autoComplete='organizationName'
 												value={formik.values.organizationName}
@@ -230,7 +230,7 @@ const CreateOrganizaton = () => {
 											id='organizationAddress'
 											isFloating
 											label='Organization Address'
-                                            >
+										>
 											<textarea
 												value={formik.values.organizationAddress}
 												className='form-control'
@@ -245,9 +245,9 @@ const CreateOrganizaton = () => {
 												onFocus={() => {
 													formik.setErrors({});
 												}}
-											 />
-											</FormGroup>
-										<br/>
+											/>
+										</FormGroup>
+										<br />
 										<FormGroup id='organizationPhone' isFloating label='Organization Contact No'>
 											<Input
 												// type='password'
@@ -261,7 +261,7 @@ const CreateOrganizaton = () => {
 											/>
 										</FormGroup>
 
-										<br/>
+										<br />
 										<FormGroup id='organizationEmail' isFloating label='Organization Email'>
 											<Input
 												// type='password'
@@ -274,68 +274,68 @@ const CreateOrganizaton = () => {
 												onBlur={formik.handleBlur}
 											/>
 										</FormGroup>
-										
-									</div>
-                                    <Row xl={12} className='mt-4'>
-                                        <div className='col-6'>
-                                        <FormGroup
-											id='firstName'
-											isFloating
-											label='First Name'
-											// className={classNames({
-											// 	'd-none': signInPassword,
-											// })}
-                                            >
-											<Input
-												autoComplete='firstName'
-												value={formik.values.firstName}
-												isTouched={formik.touched.firstName}
-												invalidFeedback={formik.errors.firstName}
-												isValid={formik.isValid}
-												onChange={formik.handleChange}
-												onBlur={formik.handleBlur}
-												onFocus={() => {
-													formik.setErrors({});
-												}}
-											/>
-										</FormGroup>
-                                        </div>
-                                        <div className='col-6'>
-                                        <FormGroup
-											id='lastName'
-											isFloating
-											label='Last Name'
-											// className={classNames({
-											// 	'd-none': signInPassword,
-											// })}
-                                            >
-											<Input
-												autoComplete='lastName'
-												value={formik.values.lastName}
-												isTouched={formik.touched.lastName}
-												invalidFeedback={formik.errors.lastName}
-												isValid={formik.isValid}
-												onChange={formik.handleChange}
-												onBlur={formik.handleBlur}
-												onFocus={() => {
-													formik.setErrors({});
-												}}
-											/>
-										</FormGroup>
-                                        </div>
-                                    </Row>
 
-                                    <div className='col-12'>
+									</div>
+									<Row xl={12} className='mt-4'>
+										<div className='col-6'>
+											<FormGroup
+												id='firstName'
+												isFloating
+												label='First Name'
+											// className={classNames({
+											// 	'd-none': signInPassword,
+											// })}
+											>
+												<Input
+													autoComplete='firstName'
+													value={formik.values.firstName}
+													isTouched={formik.touched.firstName}
+													invalidFeedback={formik.errors.firstName}
+													isValid={formik.isValid}
+													onChange={formik.handleChange}
+													onBlur={formik.handleBlur}
+													onFocus={() => {
+														formik.setErrors({});
+													}}
+												/>
+											</FormGroup>
+										</div>
+										<div className='col-6'>
+											<FormGroup
+												id='lastName'
+												isFloating
+												label='Last Name'
+											// className={classNames({
+											// 	'd-none': signInPassword,
+											// })}
+											>
+												<Input
+													autoComplete='lastName'
+													value={formik.values.lastName}
+													isTouched={formik.touched.lastName}
+													invalidFeedback={formik.errors.lastName}
+													isValid={formik.isValid}
+													onChange={formik.handleChange}
+													onBlur={formik.handleBlur}
+													onFocus={() => {
+														formik.setErrors({});
+													}}
+												/>
+											</FormGroup>
+										</div>
+									</Row>
+
+									<div className='col-12'>
 										<FormGroup
 											id='email'
 											isFloating
 											label='Email'
-											// className={classNames({
-											// 	'd-none': signInPassword,
-											// })}
-                                            >
+										// className={classNames({
+										// 	'd-none': signInPassword,
+										// })}
+										>
 											<Input
-                                                type='email'
+												type='email'
 												autoComplete='email'
 												value={formik.values.email}
 												isTouched={formik.touched.email}
@@ -348,13 +348,13 @@ const CreateOrganizaton = () => {
 												}}
 											/>
 										</FormGroup>
-                                        </div>
-                                        <div className='col-12'>
+									</div>
+									<div className='col-12'>
 										<FormGroup
 											id='phone'
 											isFloating
 											label='Phone Number'
-                                            >
+										>
 											<Input
 												autoComplete='phone'
 												value={formik.values.phone}
@@ -368,8 +368,8 @@ const CreateOrganizaton = () => {
 												}}
 											/>
 										</FormGroup>
-                                        </div>
-										<div className='col-12'>
+									</div>
+									<div className='col-12'>
 										<FormGroup id='newPassword' isFloating label='Password'>
 											<Input
 												type='password'
@@ -399,7 +399,7 @@ const CreateOrganizaton = () => {
 												onBlur={formik.handleBlur}
 											/>
 										</FormGroup>
-										</div>
+									</div>
 									<div className={`col-12`}>
 										<Button
 											color='primary'
@@ -408,11 +408,11 @@ const CreateOrganizaton = () => {
 											{waitingForAxios ? <Spinner size='sm' /> : 'Create Organization'}
 										</Button>
 									</div>
-								
+
 								</form>
 							</CardBody>
 						</Card>
-						
+
 					</div>
 				</div>
 			</Page>

@@ -6,14 +6,15 @@ import Spinner from '../../../../components/bootstrap/Spinner';
 import Icon from '../../../../components/icon/Icon';
 import Select from '../../../../components/bootstrap/forms/Select';
 import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration } from '../../../../api/sensors.api';
-import { SensorConfig, SENSOR_CONFIG_CHOICES } from '../../../../types/sensor';
+import { SensorConfig } from '../../../../types/sensor';
 import Badge from '../../../../components/bootstrap/Badge';
 import styles from '../../../../styles/pages/HALO/Settings/ThresholdManagement.module.scss';
 import classNames from 'classnames';
-import { getMetricStatusFromConfig, getStatusColor, getStatusLabel } from '../../../../utils/halo/threshold.utils';
+import { getMetricStatusFromConfig, getStatusColor, getStatusLabel, SENSOR_CONFIG_CHOICES } from '../../../../utils/halo/threshold.utils';
 import ThemeContext from '../../../../contexts/themeContext';
 import Modal, { ModalHeader, ModalTitle, ModalBody, ModalFooter } from '../../../../components/bootstrap/Modal';
-import StatusToggleButton from '../../../../components/CustomComponent/Buttons/StatusToggleButton';
+import StatusToggleButton from '../../../../components/halo/StatusToggleButton';
+
 
 const DEFAULT_SENSOR_VALUES: Record<string, { min: number; max: number; threshold: number }> = {
     temp_c: { min: 0, max: 50, threshold: 28 },
@@ -51,54 +52,49 @@ const DEFAULT_SENSOR_VALUES: Record<string, { min: number; max: number; threshol
 // 🔥 MOCK DATA - Shows UI immediately without API
 const MOCK_CONFIGS: SensorConfig[] = [
     {
-        id: 1,
+        id: '1',
         sensor_name: 'temp_c',
         enabled: true,
         min_value: 0,
         max_value: 50,
         threshold: 28,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        description: 'Temperature',
     },
     {
-        id: 2,
+        id: '2',
         sensor_name: 'humidity',
         enabled: true,
         min_value: 0,
         max_value: 100,
         threshold: 65,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        description: 'Humidity',
     },
     {
-        id: 3,
+        id: '3',
         sensor_name: 'co2',
         enabled: false,
         min_value: 400,
         max_value: 5000,
         threshold: 1200,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        description: 'CO2',
     },
     {
-        id: 4,
+        id: '4',
         sensor_name: 'pm25',
         enabled: true,
         min_value: 0,
         max_value: 1000,
         threshold: 35,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        description: 'PM2.5',
     },
     {
-        id: 5,
+        id: '5',
         sensor_name: 'tvoc',
         enabled: true,
         min_value: 0,
         max_value: 60000,
         threshold: 4000,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        description: 'TVOC',
     }
 ];
 
@@ -139,7 +135,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     const configs = apiConfigs && apiConfigs.length > 0 ? apiConfigs : MOCK_CONFIGS;
     const latestSensor = apiSensor || MOCK_SENSOR_DATA;
 
-    const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
+    const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -191,7 +187,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         }
     }, [selectedConfig]);
 
-    const handleSelectConfig = (configId: number) => {
+    const handleSelectConfig = (configId: string) => {
         if (hasUnsavedChanges) {
             setConfirmModal({
                 isOpen: true,
@@ -480,7 +476,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                                                 <Select
                                                     list={sensorDropdownOptions}
                                                     value={selectedConfigId?.toString() || ''}
-                                                    onChange={(e: any) => handleSelectConfig(parseInt(e.target.value))}
+                                                    onChange={(e: any) => handleSelectConfig(e.target.value)}
                                                     ariaLabel='Select Sensor Configuration'
                                                     className={styles.sensorSelector}
                                                 />

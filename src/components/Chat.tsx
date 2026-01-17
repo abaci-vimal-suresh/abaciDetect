@@ -2,7 +2,7 @@ import React, { FC, HTMLAttributes, ReactNode } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import Avatar from './Avatar';
-import useDarkMode from '../hooks/shared/useDarkMode';
+import useDarkMode from '../hooks/useDarkMode';
 import { TColor } from '../type/color-type';
 
 interface IChatAvatarProps extends HTMLAttributes<HTMLDivElement> {
@@ -360,4 +360,3 @@ Chat.defaultProps = {
 };
 
 export default Chat;
-

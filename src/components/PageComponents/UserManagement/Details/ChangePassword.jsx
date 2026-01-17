@@ -15,12 +15,12 @@ import FormGroup from '../../../bootstrap/forms/FormGroup';
 import Button from '../../../bootstrap/Button';
 import Input from '../../../bootstrap/forms/Input';
 import { authAxios } from '../../../../axiosInstance';
-import showNotification from '../../../extras/showNotification';
-import useToasterNotification from '../../../../hooks/shared/useToasterNotification';
+// import showNotification from '../../../extras/showNotification';
+import useToasterNotification from '../../../../hooks/useToasterNotification';
 
 const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
   const [waitingForAxios, setWaitingForAxios] = useState(false);
-  const { showErrorNotification } = useToasterNotification();
+  const { showErrorNotification, showNotification } = useToasterNotification();
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -32,9 +32,9 @@ const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
     validate: (values) => {
       const errors = {};
       if (isFormProfile) {
-      if (!values.currentPassword) {
-        errors.currentPassword = '*Current Password is required';
-      }
+        if (!values.currentPassword) {
+          errors.currentPassword = '*Current Password is required';
+        }
       }
       if (!values.newPassword) {
         errors.newPassword = '*Password is required';
@@ -98,7 +98,7 @@ const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
             // Two-row layout
             <>
               <div className='row mb-4'>
-                <div className='col-12   mb-2'> 
+                <div className='col-12   mb-2'>
                   <FormGroup id='currentPassword' label='Current password *' isFloating>
                     <Input
                       type='password'
@@ -150,7 +150,7 @@ const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
           ) : (
             // Single-row layout
             <div className='row'>
-           
+
               <div className='col-12 col-md-6 mb-2'>
                 <FormGroup id='newPassword' label='New password *' isFloating>
                   <Input
@@ -205,4 +205,3 @@ const ChangePassword = ({ changePasswordApi, isFormProfile = false }) => {
 
 export default ChangePassword;
 /* eslint-enable @typescript-eslint/no-use-before-define */
-

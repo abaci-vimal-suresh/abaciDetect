@@ -6,7 +6,7 @@ import Swal from 'sweetalert2'; // adjust the import according to your setup
 import { buttonColor } from '../../../helpers/constants';
 import { authAxios } from '../../../axiosInstance';
 import Button from '../../bootstrap/Button';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 interface StatusButtonProps {
   status: string;
@@ -92,4 +92,3 @@ const StatusButton: React.FC<StatusButtonProps> = ({ status,fieldKey,tableRef=nu
 };
 
 export default StatusButton;
-

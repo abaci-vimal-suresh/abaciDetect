@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import Button from '../../bootstrap/Button';
 import { authAxios } from '../../../axiosInstance';
 import { buttonColor } from '../../../helpers/constants';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 interface ActivateDeactivateButtonProps {
   apiEndpoint: string;
@@ -69,4 +69,3 @@ const ActivateAndDeactivate: React.FC<ActivateDeactivateButtonProps> = ({
 };
 
 export default ActivateAndDeactivate;
-

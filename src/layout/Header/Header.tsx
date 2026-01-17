@@ -5,7 +5,7 @@ import { useMeasure, useWindowSize } from 'react-use';
 import ThemeContext from '../../contexts/themeContext';
 import Button from '../../components/bootstrap/Button';
 import Portal from '../Portal/Portal';
-import useDarkMode from '../../hooks/shared/useDarkMode';
+import useDarkMode from '../../hooks/useDarkMode';
 
 interface IHeaderLeftProps {
 	children: ReactNode;
@@ -182,4 +182,3 @@ Header.defaultProps = {
 };
 
 export default Header;
-

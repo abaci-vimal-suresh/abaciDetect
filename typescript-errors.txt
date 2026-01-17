@@ -1,0 +1,38 @@
+src/App/App.tsx(14,25): error TS2307: Cannot find module '../layout/layout/Aside/AsideRoutes' or its corresponding type declarations.
+src/common/data/chartDummyData.ts(1,10): error TS2614: Module '"../../components/extras/Chart"' has no exported member 'IChartOptions'. Did you mean to use 'import IChartOptions from "../../components/extras/Chart"' instead?
+src/common/other/CommonCodePreview.tsx(7,23): error TS2307: Cannot find module '../../components/extras/PrismCode' or its corresponding type declarations.
+src/common/other/CommonHowToUse.tsx(5,23): error TS2307: Cannot find module '../../components/extras/PrismCode' or its corresponding type declarations.
+src/common/other/CommonIconPreview.tsx(5,30): error TS2307: Cannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+src/components/bootstrap/Card.tsx(19,23): error TS2307: Cannot find module '../extras/PrismCode' or its corresponding type declarations.
+src/components/CustomComponent/ImageCropper.jsx(9,30): error TS2307: Cannot find module '../extras/PlaceholderImage' or its corresponding type declarations.
+src/components/Dashboard/GreaseTank.tsx(3,44): error TS2307: Cannot find module '../../utils/themeColors' or its corresponding type declarations.
+src/components/ExportButton.jsx(9,30): error TS2307: Cannot find module './extras/showNotification' or its corresponding type declarations.
+src/components/MasterComponents/Usermanagement/AddUsers.jsx(6,30): error TS2307: Cannot find module '../../extras/showNotification' or its corresponding type declarations.
+src/components/MasterComponents/Usermanagement/EditUsers.jsx(6,30): error TS2307: Cannot find module '../../extras/showNotification' or its corresponding type declarations.
+src/components/PageComponents/UserManagement/Details/ChangePassword.jsx(18,30): error TS2307: Cannot find module '../../../extras/showNotification' or its corresponding type declarations.
+src/helpers/DownloadCsv.js(3,30): error TS2307: Cannot find module '../components/extras/showNotification' or its corresponding type declarations.
+src/helpers/FileDownloader.js(5,30): error TS2307: Cannot find module '../components/extras/showNotification' or its corresponding type declarations.
+src/helpers/FileDownloaderForDynamicFields.js(5,30): error TS2307: Cannot find module '../components/extras/showNotification' or its corresponding type declarations.
+src/layout/Content/ContentRoutes.tsx(5,23): error TS2307: Cannot find module '../../pages/PublicPages/ErrorPage' or its corresponding type declarations.
+src/layout/Content/ContentRoutes.tsx(9,26): error TS2307: Cannot find module '../../pages/PublicPages/Unauthorized' or its corresponding type declarations.
+src/layout/Header/Notification copy.tsx(14,30): error TS2307: Cannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+src/layout/Header/Notification.tsx(14,30): error TS2307: Cannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+src/layout/Header/NotificationsOld.tsx(18,30): error TS2307: Cannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+src/layout/User/User.tsx(18,30): error TS2307: Cannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+src/layout/Wrapper/Wrapper.tsx(8,26): error TS2307: Cannot find module '../layout/Header/HeaderRoutes' or its corresponding type declarations.
+src/layout/Wrapper/Wrapper.tsx(9,26): error TS2307: Cannot find module '../layout/Footer/FooterRoutes' or its corresponding type declarations.
+src/pages/_common/CommonPercentageOfLoadChart.tsx(15,17): error TS2614: Module '"../../components/extras/Chart"' has no exported member 'IChartOptions'. Did you mean to use 'import IChartOptions from "../../components/extras/Chart"' instead?
+src/pages/Auth/CreateOrganization.tsx(15,30): error TS2307: Cannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+src/pages/Auth/ForgotPassword.jsx(16,30): error TS2307: Cannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+src/pages/HALO/Dashboard/Dashboard.tsx(20,29): error TS2307: Cannot find module './ViewerDashboard' or its corresponding type declarations.
+src/pages/HALO/Sensors/SensorGroupDetail.tsx(140,13): error TS2554: Expected 2 arguments, but got 0.
+src/pages/HALO/Sensors/SensorGroupDetail.tsx(152,13): error TS2554: Expected 2 arguments, but got 0.
+src/pages/HALO/Sensors/SensorGroupDetail.tsx(192,13): error TS2554: Expected 2 arguments, but got 0.
+src/pages/HALO/Sensors/SensorGroupDetail.tsx(395,41): error TS2322: Type 'number[]' is not assignable to type 'number[][]'.
+  Type 'number' is not assignable to type 'number[]'.
+src/pages/HALO/Sensors/SensorGroups.tsx(94,21): error TS2554: Expected 2 arguments, but got 0.
+src/pages/HALO/Sensors/SensorGroups.tsx(215,33): error TS2322: Type 'number[]' is not assignable to type 'number[][]'.
+src/pages/HALO/Sensors/SensorGroups.tsx(228,41): error TS2554: Expected 2 arguments, but got 0.
+src/pages/HALO/Sensors/SensorIndividualDetail.tsx(26,28): error TS2307: Cannot find module '../../../components/PersonnelModal' or its corresponding type declarations.
+src/pages/HALO/Sensors/SensorIndividualDetail.tsx(97,17): error TS2554: Expected 2 arguments, but got 0.
+src/pages/HALO/Users/UserDetailPage.tsx(100,55): error TS2367: This comparison appears to be unintentional because the types 'UserRole' and '"admin"' have no overlap.

@@ -4,7 +4,7 @@ import Card, { CardBody, CardFooter, CardFooterRight, CardHeader, CardLabel, Car
 import Button from '../../../bootstrap/Button';
 import { Spinner } from 'reactstrap';
 import { authAxios } from '../../../../axiosInstance';
-// import useToasterNotification from '../../../../hooks/shared/useToasterNotification';
+// import useToasterNotification from '../../../../hooks/useToasterNotification';
 import ReactSelectComponent from '../../../CustomComponent/Select/ReactSelectComponent';
 
 const UserFields = ({ register, errors,watch, control, getValues, setValue, handleSubmit, waitingForAxios, isAdd, isProfile = false }) => {
@@ -257,4 +257,3 @@ const UserFields = ({ register, errors,watch, control, getValues, setValue, hand
 };
 
 export default UserFields;
-

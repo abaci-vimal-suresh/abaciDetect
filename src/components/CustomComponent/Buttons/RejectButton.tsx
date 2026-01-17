@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from '../../bootstrap/Button';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 const RejectButton: React.FC<any> = (props) => {
 	const { darkModeStatus } = useDarkMode();
@@ -20,4 +20,3 @@ const RejectButton: React.FC<any> = (props) => {
 };
 
 export default RejectButton;
-

@@ -1,8 +1,8 @@
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { CardBody } from '../../bootstrap/Card';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useDarkMode from '../../../hooks/useDarkMode';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import { authAxios } from '../../../axiosInstance';
 import CustomPaginationButtons from '../../CustomPaginationButton';
 import Icon from '../../icon/Icon';
@@ -297,4 +297,3 @@ NotificationList.defaultProps = {
 };
 
 export default NotificationList;
-

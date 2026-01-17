@@ -23,7 +23,7 @@ import { mockSensors, saveMockData } from '../../../mockData/sensors';
 import SensorCardView from '../../../components/halo/views/SensorCardView';
 import SensorDashboardView from '../../../components/halo/views/SensorDashboardView';
 import SentinelDashboardView from '../../../components/halo/views/SentinelDashboardView';
-import PersonnelModal from '../../../components/PersonnelModal';
+import PersonnelModal from '../../../components/halo/PersonnelModal';
 
 const SensorIndividualDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -94,7 +94,7 @@ const SensorIndividualDetail = () => {
                     ...personnelData,
                 };
 
-                saveMockData();
+                saveMockData('sensors', mockSensors);
 
                 queryClient.invalidateQueries({
                     queryKey: queryKeys.sensors.detail(sensor.id),

@@ -14,7 +14,7 @@ import Card, {
 } from './bootstrap/Card';
 import Button from './bootstrap/Button';
 import Popovers from './bootstrap/Popovers';
-import useDarkMode from '../hooks/shared/useDarkMode';
+import useDarkMode from '../hooks/useDarkMode';
 import { TColor } from '../type/color-type';
 
 interface IWizardItemProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -196,4 +196,3 @@ Wizard.defaultProps = {
 };
 
 export default Wizard;
-

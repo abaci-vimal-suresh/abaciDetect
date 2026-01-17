@@ -3,7 +3,7 @@ import Select from 'react-select'
 import { Controller } from 'react-hook-form';
 import FormGroup from '../../bootstrap/forms/FormGroup';
 import useSelectStyles from '../../../hooks/useSelectStyle';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 const ReactSelectComponent = ({ control, name, isMulti, field_name, getValues, errors, options, isRequired, isDisable, isClearable = false }: any) => {
     
@@ -114,4 +114,3 @@ console.log(errors)
 }
 
 export default ReactSelectComponent
-

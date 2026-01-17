@@ -1,0 +1,117 @@
+//
+// Login Page Style
+//
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.4s ease;
+
+    background-color: $body-bg;
+
+    @include dark-mode {
+        background-color: $dark-body-bg;
+    }
+
+    .login-card {
+        background-color: $body-bg;
+        border-radius: 2.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 3.5rem;
+        width: 100%;
+        max-width: 480px;
+        box-shadow: $neu-shadow-light;
+        transition: all 0.4s ease;
+
+        @include dark-mode {
+            background-color: $dark-body-bg;
+            box-shadow: $neu-shadow-dark;
+            border-color: rgba($white, 0.05);
+        }
+
+        .login-logo {
+            margin-bottom: 2.5rem;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.05));
+            display: flex;
+            justify-content: center;
+        }
+
+        .form-control {
+            background-color: $body-bg;
+            border: none;
+            border-radius: 1.25rem;
+            box-shadow: $neu-shadow-inset-light;
+            padding: 1.25rem 1.5rem;
+            height: auto !important;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+
+            @include dark-mode {
+                background-color: $dark-body-bg;
+                box-shadow: $neu-shadow-inset-dark;
+                color: $light;
+            }
+
+            &:focus {
+                box-shadow: $neu-shadow-inset-light, 0 0 0 2px rgba($primary, 0.1);
+
+                @include dark-mode {
+                    box-shadow: $neu-shadow-inset-dark, 0 0 0 2px rgba($primary, 0.2);
+                }
+            }
+        }
+
+        .btn-login {
+            background-color: $primary;
+            color: #fff;
+            border: none;
+            border-radius: 1.25rem;
+            padding: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            box-shadow: $neu-shadow-light;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 1rem;
+            width: 100%;
+
+            &:hover {
+                transform: translateY(-3px);
+                box-shadow: 12px 12px 24px rgba(0, 0, 0, 0.1), -12px -12px 24px rgba(255, 255, 255, 0.95);
+                color: #fff;
+            }
+
+            &:active {
+                transform: translateY(0);
+                box-shadow: $neu-shadow-inset-light;
+            }
+
+            @include dark-mode {
+                box-shadow: $neu-shadow-dark;
+
+                &:hover {
+                    box-shadow: 12px 12px 24px rgba(0, 0, 0, 0.5), -12px -12px 24px rgba(255, 255, 255, 0.08);
+                }
+
+                &:active {
+                    box-shadow: $neu-shadow-inset-dark;
+                }
+            }
+        }
+
+        .login-title {
+            font-weight: 800;
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+            color: $primary;
+        }
+
+        .login-subtitle {
+            font-weight: 500;
+            margin-bottom: 2.5rem;
+            opacity: 0.7;
+        }
+    }
+}

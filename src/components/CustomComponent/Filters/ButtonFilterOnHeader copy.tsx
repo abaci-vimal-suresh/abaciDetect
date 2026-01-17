@@ -1,6 +1,6 @@
 import React from "react";
 import Button, { ButtonGroup } from "../../bootstrap/Button";
-import useDarkMode from "../../../hooks/shared/useDarkMode";
+import useDarkMode from "../../../hooks/useDarkMode";
 
 const ButtonFilterOnHeader = ({ FilterStatus, activeTab, handleFilterStatus, styles }: any) => {
   const { themeStatus } = useDarkMode();
@@ -25,4 +25,3 @@ const ButtonFilterOnHeader = ({ FilterStatus, activeTab, handleFilterStatus, sty
 };
 
 export default ButtonFilterOnHeader;
-

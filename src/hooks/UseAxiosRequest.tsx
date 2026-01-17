@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
-import useToasterNotification from './shared/useToasterNotification';
+import useToasterNotification from './useToasterNotification';
 import { authAxios } from '../axiosInstance';
 
-const useAxiosRequest = () => {
+ const useAxiosRequest = () => {
 	const [loading, setLoading] = useState(false);
-	const { showErrorNotification } = useToasterNotification();
+	const {showErrorNotification} = useToasterNotification();
 
-	const sendRequest = useCallback(async ({ url, method, data, config, onSuccess }: any) => {
+	const sendRequest = useCallback(async ({ url, method, data, config, onSuccess }:any) => {
 		setLoading(true);
 		try {
 			const response = await authAxios({
@@ -17,13 +17,13 @@ const useAxiosRequest = () => {
 			});
 			if (onSuccess) onSuccess(response);
 		} catch (err) {
-			showErrorNotification(err)
+			showErrorNotification(err)	
 		} finally {
 			setLoading(false);
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
+	  // eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	return { sendRequest, loading };
 };
-export default useAxiosRequest
+export default  useAxiosRequest

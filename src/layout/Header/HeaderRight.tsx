@@ -1,6 +1,5 @@
 import React, { FC, ReactNode, useContext, useEffect, useLayoutEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { selectUnreadCount } from '../../store/sensorEventsSlice';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useTour } from '@reactour/tour';
@@ -8,9 +7,10 @@ import Button, { IButtonProps } from '../../components/bootstrap/Button';
 import { HeaderRight } from './Header';
 import Icon from '../../components/icon/Icon';
 import ThemeContext from '../../contexts/themeContext';
-import useDarkMode from '../../hooks/shared/useDarkMode';
+import useDarkMode from '../../hooks/useDarkMode';
 import Popovers from '../../components/bootstrap/Popovers';
-
+import { authAxios } from '../../axiosInstance';
+import useToasterNotification from '../../hooks/useToasterNotification';
 import Notifications from './Notification';
 
 interface IMainHeaderRightProps {
@@ -18,10 +18,13 @@ interface IMainHeaderRightProps {
 	afterChildren?: ReactNode;
 }
 const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChildren }) => {
-	// Use new selector for unread count
-	const unreadCount = useSelector(selectUnreadCount);
+	const NotificationList = useSelector((state: any) => state?.NotificationSlice?.notifications);
 	const { darkModeStatus, setDarkModeStatus } = useDarkMode();
 	const { fullScreenStatus, setFullScreenStatus, privacyShield, setPrivacyShield } = useContext(ThemeContext);
+	// Add state for unread count
+	const [unreadCount, setUnreadCount] = useState(0);
+	const updateNotification = useSelector((state: any) => state?.NotificationSlice?.updateNotification);
+	const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
 	const styledBtn: IButtonProps = {
 		color: darkModeStatus ? 'dark' : 'light',
@@ -40,7 +43,20 @@ const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChild
 	});
 
 	const { setIsOpen } = useTour();
+	// Add useEffect to fetch unread count
+	// useEffect(() => {
+	// 	const fetchUnreadCount = async () => {
+	// 		try {
+	// 			const response = await authAxios.get('/region/notification-users/unread-count/');
+	// 			setUnreadCount(response.data.data.unread_count || 0);
+	// 		} catch (error) {
+	// 			showErrorNotification(Error(error))
+	// 		}
+	// 	};
 
+	// 	fetchUnreadCount();
+
+	// }, [updateNotification]);
 	return (
 		<>
 			<HeaderRight>
@@ -98,21 +114,42 @@ const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChild
 					</div>
 
 					{/*	Notifications */}
-					<div className='col-auto'>
-						<div className='col-auto position-relative'>
-							{unreadCount > 0 && (
-								<div className='position-absolute start-85 mt-2 top-0 translate-middle badge rounded-pill bg-danger notification_icon_styles'>
-									{unreadCount > 99 ? '99+' : unreadCount}
-								</div>
-							)}
-							<Button
-								{...styledBtn}
-								icon='Notifications'
-								onClick={() => setOffcanvasStatus(true)}
-								aria-label='Notifications'
-							/>
-						</div>
+					{/* <div className='col-auto'>
+					<div className='col-auto position-relative'>
+						{unreadCount > 0 && (
+							<div className='position-absolute start-85 mt-2 top-0 translate-middle badge rounded-pill bg-danger notification_icon_styles'>
+								{unreadCount > 99 ? '99+' : unreadCount}
+							</div>
+						)}
+						<Button
+							// eslint-disable-next-line react/jsx-props-no-spreading
+							{...styledBtn}
+							icon='Notifications'
+							onClick={() => setOffcanvasStatus(true)}
+							aria-label='Notifications'
+						/>
+
 					</div>
+				</div> */}
+					{/*	Notifications */}
+					{/* <div className='col-auto'>
+				<div className='col-auto position-relative'>
+                {NotificationList.length!==0&&
+						<Icon
+							icon='Circle'
+							className='animate__animated animate__heartBeat animate__infinite animate__slower position-absolute start-65 text-danger notification_icon_styles'
+							/>
+					}
+					<Button
+						// eslint-disable-next-line react/jsx-props-no-spreading
+						{...styledBtn}
+						icon='Notifications'
+						onClick={() => setOffcanvasStatus(true)}
+						aria-label='Notifications'
+						/>
+					
+				</div>
+				</div> */}
 					{afterChildren}
 				</div>
 				{/* {offcanvasStatus&&
@@ -142,4 +179,3 @@ MainHeaderRight.defaultProps = {
 };
 
 export default MainHeaderRight;
-

@@ -10,14 +10,14 @@ import Icon from '../../../components/icon/Icon';
 import Badge from '../../../components/bootstrap/Badge';
 import Progress from '../../../components/bootstrap/Progress';
 import Spinner from '../../../components/bootstrap/Spinner';
-import Chart from '../../../components/extras/Chart';
 
 import useTablestyle from '../../../hooks/shared/useTablestyles';
 import ThemeContext from '../../../contexts/themeContext';
 import { useSensors, useAreas } from '../../../api/sensors.api';
 import { ApexOptions } from 'apexcharts';
 import AuthContext from '../../../contexts/authContext';
-import ViewerDashboard from './ViewerDashboard';
+import ViewerDashboard from '../../../components/halo/views/ViewerDashboard';
+import Chart from '../../../components/extras/Chart';
 
 const Dashboard = () => {
     const { userData } = useContext(AuthContext);

@@ -2,11 +2,11 @@ import React, { useState, MutableRefObject } from 'react';
 import MaterialTable, { Column } from '@material-table/core';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { ThemeProvider } from '@mui/material/styles';
-import useTablestyle from '../../../../hooks/shared/useTablestyles';
-import useToasterNotification from '../../../../hooks/shared/useToasterNotification';
+import useTablestyle from '../../../../hooks/useTablestyles';
+import useToasterNotification from '../../../../hooks/useToasterNotification';
 import {  updateHiddenColumnsInLocalStorage } from '../../../../helpers/functions';
 import DeleteButton from '../../../CustomComponent/Buttons/DeleteButton';
-import useColumnHiding from '../../../../hooks/shared/useColumnHiding';
+import useColumnHiding from '../../../../hooks/useColumnHiding';
 import StatusButton from '../../../CustomComponent/Buttons/StatusButton';
 
 export interface ContractListTableData {
@@ -245,4 +245,3 @@ const ContractListTable: React.FC<ContractListTableProps> = ({
 };
 
 export default ContractListTable;
-

@@ -6,8 +6,8 @@ import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from './bootst
 import Button from './bootstrap/Button';
 import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from './bootstrap/Dropdown';
 import Error from '../helpers/Error';
-import showNotification from './extras/showNotification';
-import useDarkMode from '../hooks/shared/useDarkMode';
+import useToasterNotification from '../hooks/useToasterNotification';
+import useDarkMode from '../hooks/useDarkMode';
 import { authAxios } from '../axiosInstance';
 import Spinner from './bootstrap/Spinner';
 import { setExportReport } from '../store/notifications';
@@ -21,6 +21,7 @@ const successMessage =
 
 const ExportButton = ({ url, hiddenColumnsKey }) => {
 	// console.log(url)
+	const { showNotification } = useToasterNotification();
 	const { setLogOut } = useContext(AuthContext);
 
 	const dispatch = useDispatch();
@@ -47,7 +48,7 @@ const ExportButton = ({ url, hiddenColumnsKey }) => {
 		const exportUrl = `${url.current}&${report}&excluded_columns=${localStorage.getItem(hiddenColumnsKey)}&unique_id=${uniqueId}`;
 		authAxios
 			.get(exportUrl)
-			.then(() => {})
+			.then(() => { })
 			.catch((error) => {
 				const errorMsg = Error(error, setLogOut);
 				showNotification('Error', errorMsg, 'danger');
@@ -79,7 +80,7 @@ const ExportButton = ({ url, hiddenColumnsKey }) => {
 				</DropdownMenu>
 			</Dropdown>
 			{isExportReportModal && (
-                // @ts-ignore
+				// @ts-ignore
 				<Modal isOpen={isExportReportModal} setIsOpen={setIsExportModal} size='md'>
 					<ModalHeader className='p-4' setIsOpen={setIsExportModal}>
 						<ModalTitle id='export_report_modal_title'>
@@ -117,4 +118,3 @@ ExportButton.propTypes = {
 /* eslint-enable react/forbid-prop-types */
 
 export default ExportButton;
-

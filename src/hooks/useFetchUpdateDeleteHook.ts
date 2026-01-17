@@ -3,22 +3,22 @@ import axios from 'axios';
 import { useDispatch } from 'react-redux';
 // import { ErrorAlert, SuccessAlert, Toastr } from './Alert';
 import Error from '../helpers/Error';
-import useToasterNotification from './shared/useToasterNotification';
+import useToasterNotification from './useToasterNotification';
 // import { ErrorAlert,SuccessAlert,Toastr } from '../helpers/Alert';
 // import Error from './Error';
 
 const useFetchUpdateDeleteHook = () => {
-  const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
 
-  const handleFetchUpdateDelete = (url, data, reduxFunction, method, message, id, tableRef) => {
+  const handleFetchUpdateDelete = (url, data, reduxFunction, method,message, id,tableRef) => {
     setLoading(true);
 
     // Validate the method parameter to ensure it's a valid HTTP method.
-    const validMethods = ['get', 'post', 'put', 'delete', 'patch'];
+    const validMethods = ['get', 'post', 'put', 'delete','patch'];
     if (!validMethods.includes(method.toLowerCase())) {
-      showErrorNotification('Invalid HTTP method specified.');
+        showErrorNotification( 'Invalid HTTP method specified.');
       setLoading(false);
       return;
     }
@@ -29,12 +29,12 @@ const useFetchUpdateDeleteHook = () => {
 
         // The tableREF comes from the pages where the table is using custom pagination so we need to refresh the content 
         // for reflecting the data changes rather than editing the state inside the redux store,in pagination we are not managing the state or sotring it anywhere
-        if (tableRef) {
+        if(tableRef){
           tableRef.current.onQueryChange();
         }
-        else {
+        else{
 
-          if (reduxFunction) {
+          if(reduxFunction){
             if (method === 'delete' || id) {
               dispatch(reduxFunction(id));
             } else {
@@ -42,9 +42,9 @@ const useFetchUpdateDeleteHook = () => {
             }
           }
           // props.tableRef.current.onQueryChange();
-
+         
         }
-        if (method !== 'get') {
+        if(method !== 'get'){
           showSuccessNotification(message);
         }
       })

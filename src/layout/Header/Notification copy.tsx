@@ -5,16 +5,16 @@ import { v4 as uuidv4 } from 'uuid';
 
 import Alert from '../../components/bootstrap/Alert';
 import Button from '../../components/bootstrap/Button';
-import useDarkMode from '../../hooks/shared/useDarkMode';
+import useDarkMode from '../../hooks/useDarkMode';
 import fileDownloader from '../../helpers/FileDownloader';
 import { addNotifications, deleteReportNotification, toggleUpdateNotification } from '../../store/notifications';
 import noNotification from "../../assets/Lottie/notification.json"
 import Icon from '../../components/icon/Icon';
 import { authAxios } from '../../axiosInstance';
-import showNotification from '../../components/extras/showNotification';
+
 import Error from '../../helpers/Error';
 import AuthContext from '../../contexts/authContext';
-import useToasterNotification from '../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../hooks/useToasterNotification';
 import ButtonFiltter from '../../components/CustomComponent/Filters/ButtonFiltter';
 import { useCallback } from 'react';
 import { Tooltip } from '@mui/material';
@@ -389,14 +389,14 @@ const Notifications: FC<any> = ({ isOpen, setIsOpen }) => {
                       <div key={data.id} onClick={() => handleNotificationClick(data.id)}>
                         <div className='d-flex gap-3 align-items-center py-4 border-bottom'>
                           <div className='d-flex align-items-center justify-content-center  p-3 rounded-circle'
-                          style={{backgroundColor:'#EBEBEB'}}
+                            style={{ backgroundColor: '#EBEBEB' }}
                           >
                             <Icon icon='NotificationIcon' size='2x' />
                           </div>
                           <div>
-                         
-                              <small className=' fs-5'>{data?.notification?.title?data?.notification?.title:'No title'}</small>
-                            
+
+                            <small className=' fs-5'>{data?.notification?.title ? data?.notification?.title : 'No title'}</small>
+
                             {/* <p
                               className='mt-2 mb-2'
                               style={{

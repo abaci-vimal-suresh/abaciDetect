@@ -3,7 +3,7 @@ import classNames from 'classnames';
 import { motion, MotionStyle } from 'framer-motion';
 import ThemeContext from '../../contexts/themeContext';
 import Tooltips from '../../components/bootstrap/Tooltips';
-import useAsideTouch from '../../hooks/shared/useAsideTouch';
+import useAsideTouch from '../../hooks/useAsideTouch';
 
 interface IAsideHeadProps {
 	children: ReactNode;
@@ -83,4 +83,3 @@ const Aside: FC<IAsideProps> = ({ children }) => {
 };
 
 export default Aside;
-

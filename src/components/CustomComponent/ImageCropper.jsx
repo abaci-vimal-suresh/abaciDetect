@@ -6,11 +6,11 @@ import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 import Input from '../bootstrap/forms/Input';
 import Button from '../bootstrap/Button';
+import useDarkMode from '../../hooks/useDarkMode';
 import PlaceholderImage from '../extras/PlaceholderImage';
-import useDarkMode from '../../hooks/shared/useDarkMode';
 
 const ImageCropper = (props) => {
-	const { setCroppedImage, croppedImage, withoutRatio,setValue } = props;
+	const { setCroppedImage, croppedImage, withoutRatio, setValue } = props;
 	const [isSave, setSave] = useState(false);
 	const [image, setImage] = useState(null);
 	const [cropper, setCropper] = useState(null);
@@ -36,7 +36,7 @@ const ImageCropper = (props) => {
 		setImage(null);
 		setCroppedImage(null);
 		setSave(false);
-		setValue('is_delete_image',true)
+		setValue('is_delete_image', true)
 	};
 
 	const renderContent = () => {
@@ -119,7 +119,7 @@ const ImageCropper = (props) => {
 				</>
 			);
 		}
-     return null
+		return null
 		// This part will execute if the above conditions are false
 	};
 
@@ -165,4 +165,3 @@ ImageCropper.defaultProps = {
 	croppedImage: null,
 };
 export default ImageCropper;
-

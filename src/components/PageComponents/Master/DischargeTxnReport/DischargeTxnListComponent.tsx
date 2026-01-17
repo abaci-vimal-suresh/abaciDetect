@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { ThemeProvider } from '@mui/material/styles';
-import useTablestyle from '../../../../hooks/shared/useTablestyles';
-import useToasterNotification from '../../../../hooks/shared/useToasterNotification';
+import useTablestyle from '../../../../hooks/useTablestyles';
+import useToasterNotification from '../../../../hooks/useToasterNotification';
 import { authAxios } from '../../../../axiosInstance';
 import CustomBadgeWithIcon from '../../../../components/CustomComponent/BadgeWithIcon';
 import { formatFiltersWithOptions, updateHiddenColumnsInLocalStorage } from '../../../../helpers/functions';
-import useColumnHiding from '../../../../hooks/shared/useColumnHiding';
+import useColumnHiding from '../../../../hooks/useColumnHiding';
 import Avatar from '../../../../components/Avatar';
 import ProfilePic from '../../../../assets/img/Noimages.png';
 import Moments from '../../../../helpers/Moment';
@@ -375,4 +375,3 @@ DischargeTxnListComponent.defaultProps = {
     date: null, // Default value
 };
 export default DischargeTxnListComponent;
-

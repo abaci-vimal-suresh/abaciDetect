@@ -12,7 +12,7 @@ import classNames from 'classnames';
 import { AnimatePresence, motion } from 'framer-motion';
 import Portal from '../../layout/Portal/Portal';
 import TagWrapper from '../TagWrapper';
-import useEventListener from '../../hooks/shared/useEventListener';
+import useEventListener from '../../hooks/useEventListener';
 import { TModalFullScreen, TModalSize } from '../../type/modal-type';
 
 interface IModalTitleProps extends HTMLAttributes<HTMLElement> {
@@ -138,9 +138,9 @@ ModalFooter.defaultProps = {
 
 interface IModalProps extends Record<string, any> {
 	children:
-	| ReactElement<IModalHeaderProps>[]
-	| ReactElement<IModalBodyProps>[]
-	| ReactElement<IModalFooterProps>[];
+		| ReactElement<IModalHeaderProps>[]
+		| ReactElement<IModalBodyProps>[]
+		| ReactElement<IModalFooterProps>[];
 	isOpen: boolean;
 	setIsOpen(...args: unknown[]): unknown;
 	id?: string | undefined;
@@ -151,7 +151,6 @@ interface IModalProps extends Record<string, any> {
 	size?: TModalSize;
 	fullScreen?: TModalFullScreen;
 	isAnimation?: boolean;
-	isBackgroundBlur?: boolean;
 }
 const Modal: FC<IModalProps> = ({
 	children,
@@ -165,7 +164,6 @@ const Modal: FC<IModalProps> = ({
 	size,
 	fullScreen,
 	isAnimation,
-	isBackgroundBlur,
 	...props
 }) => {
 	const refModal = useRef(null);
@@ -214,11 +212,11 @@ const Modal: FC<IModalProps> = ({
 
 	const ANIMATION_PROPS = isAnimation
 		? {
-			initial: { opacity: 0, y: '-50%' },
-			animate: { opacity: 1, x: '0%', y: '0%' },
-			exit: { opacity: 0, y: '-50%' },
-			transition: { ease: 'easeInOut', duration: 0.3 },
-		}
+				initial: { opacity: 0, y: '-50%' },
+				animate: { opacity: 1, x: '0%', y: '0%' },
+				exit: { opacity: 0, y: '-50%' },
+				transition: { ease: 'easeInOut', duration: 0.3 },
+			}
 		: null;
 
 	return (
@@ -248,18 +246,15 @@ const Modal: FC<IModalProps> = ({
 									'modal-dialog-scrollable': isScrollable,
 									'modal-dialog-centered': isCentered,
 									[`modal-${size}`]: size,
-									[`modal-fullscreen${typeof fullScreen === 'string' ? `-${fullScreen}-down` : ''
-										}`]: fullScreen,
+									[`modal-fullscreen${
+										typeof fullScreen === 'string' ? `-${fullScreen}-down` : ''
+									}`]: fullScreen,
 								})}>
 								<div className='modal-content'>{children}</div>
 							</div>
 						</motion.div>
 						<div
 							className={classNames('modal-backdrop', { fade: isAnimation }, 'show')}
-							style={!isBackgroundBlur ? {
-								// backdropFilter: 'blur(8px)',
-								WebkitBackdropFilter: 'blur(8px)'
-							} : {}}
 						/>
 					</>
 				)}
@@ -285,7 +280,7 @@ Modal.propTypes = {
 	 */
 	isStaticBackdrop: PropTypes.bool,
 	/**
-	 * When modals become too long for the user's viewport or device, they scroll independent of the page itself.
+	 * When modals become too long for the user’s viewport or device, they scroll independent of the page itself.
 	 */
 	isScrollable: PropTypes.bool,
 	/**
@@ -305,10 +300,6 @@ Modal.propTypes = {
 		PropTypes.bool,
 	]),
 	isAnimation: PropTypes.bool,
-	/**
-	 * Apply blur effect to the background
-	 */
-	isBackgroundBlur: PropTypes.bool,
 };
 Modal.defaultProps = {
 	id: undefined,
@@ -319,7 +310,6 @@ Modal.defaultProps = {
 	fullScreen: false,
 	isAnimation: true,
 	titleId: undefined,
-	isBackgroundBlur: false,
 };
 
 export default Modal;

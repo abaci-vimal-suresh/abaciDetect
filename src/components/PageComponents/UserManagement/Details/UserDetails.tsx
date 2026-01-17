@@ -9,7 +9,7 @@ import UserFields from './UserFields'
 import ChangePassword from './ChangePassword';
 import Button from '../../../bootstrap/Button';
 import { authAxios } from '../../../../axiosInstance';
-import useToasterNotification from '../../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../../hooks/useToasterNotification';
 import { setUserDetails } from '../../../../store/user';
 import ProfilePicUploadWithState from '../../../CustomComponent/ProfilePicUploadWithState';
 
@@ -189,4 +189,3 @@ const UserDetails = ({ isAdd = false, }) => {
 }
 
 export default UserDetails
-

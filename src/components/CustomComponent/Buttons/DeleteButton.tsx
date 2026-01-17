@@ -5,8 +5,8 @@ import { useDispatch } from 'react-redux';
 import Button from '../../bootstrap/Button'; // Adjust the import according to your setup
 import { authAxios } from '../../../axiosInstance';
 import { buttonColor } from '../../../helpers/constants';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useDarkMode from '../../../hooks/useDarkMode';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 interface DeleteButtonProps {
   apiEndpoint: string;
@@ -69,4 +69,3 @@ const DeleteButton: React.FC<DeleteButtonProps> = ({  apiEndpoint, tableRef,text
 };
 
 export default DeleteButton;
-

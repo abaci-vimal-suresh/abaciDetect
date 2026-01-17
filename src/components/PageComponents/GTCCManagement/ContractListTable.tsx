@@ -3,14 +3,14 @@ import MaterialTable, { Column } from '@material-table/core';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { ThemeProvider } from '@mui/material/styles';
 import { authAxios } from '../../../axiosInstance';
-import useTablestyle from '../../../hooks/shared/useTablestyles';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useTablestyle from '../../../hooks/useTablestyles';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import { formatFilters, updateHiddenColumnsInLocalStorage } from '../../../helpers/functions';
 import usePermissionHook from '../../../hooks/userPermissionHook';
 import StatusButton from '../../CustomComponent/Buttons/StatusButton';
 import DeleteButton from '../../CustomComponent/Buttons/DeleteButton';
 import CustomBadgeWithIcon from '../../CustomComponent/BadgeWithIcon';
-import useColumnHiding from '../../../hooks/shared/useColumnHiding';
+import useColumnHiding from '../../../hooks/useColumnHiding';
 
 export interface ContractListTableData {
     id:number;
@@ -249,4 +249,3 @@ const ContractListTable: React.FC<ContractListTableProps> = ({
 };
 
 export default ContractListTable;
-

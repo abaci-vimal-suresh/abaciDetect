@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { TColor } from '../../../../type/color-type'
 import classNames from 'classnames'
-import useDarkMode from '../../../../hooks/shared/useDarkMode'
+import useDarkMode from '../../../../hooks/useDarkMode'
 import Icon from '../../../../components/icon/Icon'
 import { FormControlLabel, Switch, Tooltip } from '@mui/material'
 import { useForm } from 'react-hook-form'

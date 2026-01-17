@@ -13,7 +13,7 @@ import useDarkMode from '../../hooks/shared/useDarkMode';
 import AuthContext from '../../contexts/authContext';
 import { publicAxios } from '../../axiosInstance';
 import validateEmail from '../../helpers/emailValidator';
-import showNotification from '../../components/extras/showNotification';
+// import showNotification from '../../components/extras/showNotification';
 import EnterEmailComponent from '../../components/CustomComponent/Fields/EnterEmailComponent';
 import EnterOtpComponent from '../../components/CustomComponent/Fields/EnterOtpComponent';
 import ConfirmPassword from '../../components/CustomComponent/Fields/ConfirmPassword';
@@ -23,7 +23,7 @@ import lottie from '../../assets/Lottie/FOGwatch Lottie.json'
 
 
 
-const ForgotPassword = ({ setIsForgotPasswordPage,currentTab }) => {
+const ForgotPassword = ({ setIsForgotPasswordPage, currentTab }) => {
 	const { setLogOut } = useContext(AuthContext);
 	const { darkModeStatus } = useDarkMode();
 	const [waitingForAxios, setWaitingForAxios] = useState(false);
@@ -31,7 +31,7 @@ const ForgotPassword = ({ setIsForgotPasswordPage,currentTab }) => {
 	const [activeTab, setActiveTab] = useState(currentTab);
 	const [otp, setOtp] = useState(['', '', '', '', '', '']);
 	const isOtpValid = otp.every((value) => value !== '');
-    const {showErrorNotification}=useToasterNotification()
+	const { showErrorNotification, showNotification } = useToasterNotification();
 	const handleFormSubmit = (formData, api) => {
 		setWaitingForAxios(true);
 		publicAxios
@@ -49,11 +49,11 @@ const ForgotPassword = ({ setIsForgotPasswordPage,currentTab }) => {
 					return state;
 				});
 
-				if (activeTab === 'Confirm Password'||activeTab === 'Change Password') {
+				if (activeTab === 'Confirm Password' || activeTab === 'Change Password') {
 					// navigate('/login');
 					setIsForgotPasswordPage(false);
 				}
-				
+
 			})
 			.catch((error) => {
 				setWaitingForAxios(false);
@@ -111,20 +111,20 @@ const ForgotPassword = ({ setIsForgotPasswordPage,currentTab }) => {
 			switch (activeTab) {
 				case 'Enter email':
 					return handleFormSubmit(
-						{ email: values.email,action:"request_otp" },
+						{ email: values.email, action: "request_otp" },
 						'api/users/forgot-password/',
 					);
 				case 'Enter Otp':
 					return handleFormSubmit(
-						{ otp: otp.join(''), email: values.email,action:"verify_otp" },
-					'api/users/forgot-password/',
+						{ otp: otp.join(''), email: values.email, action: "verify_otp" },
+						'api/users/forgot-password/',
 					);
 				case 'Confirm Password':
 					return handleFormSubmit(
-						{ email: values.email, password: values.confirmPassword ,action:"reset_password",otp: Number(otp.join(''))},
+						{ email: values.email, password: values.confirmPassword, action: "reset_password", otp: Number(otp.join('')) },
 						'api/users/forgot-password/',
 					);
-					case 'Change Password':
+				case 'Change Password':
 					return handleFormSubmit(
 						{ email: values.email, password: values.confirmPassword },
 						'api/users/update_new_password',
@@ -179,7 +179,7 @@ const ForgotPassword = ({ setIsForgotPasswordPage,currentTab }) => {
 											keepLastFrame
 											style={{ width: 400, height: 140 }}
 										/>
-										</Link>
+									</Link>
 								</div>
 								<div
 									className={classNames('rounded-3', {
@@ -191,7 +191,7 @@ const ForgotPassword = ({ setIsForgotPasswordPage,currentTab }) => {
 								<form className='row g-4' onSubmit={formik.handleSubmit}>
 									{Components[activeTab]}
 
-									<div className={`col-12 ${activeTab==='Change Password'?'mb-3':''}`}>
+									<div className={`col-12 ${activeTab === 'Change Password' ? 'mb-3' : ''}`}>
 										<Button
 											// color='warning'
 											// color='secondary'
@@ -201,26 +201,26 @@ const ForgotPassword = ({ setIsForgotPasswordPage,currentTab }) => {
 											{waitingForAxios ? <Spinner size='sm' /> : 'Continue'}
 										</Button>
 									</div>
-								
+
 									{/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */}
-										{activeTab!=='Change Password'&&
-									<div className='text-center'>
-										{/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-										<p className='user-select-none'>
+									{activeTab !== 'Change Password' &&
+										<div className='text-center'>
 											{/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-											<u
-												className='cursor-pointer'
-												onClick={() => setIsForgotPasswordPage(false)}>
-												Go to login
-											</u>
-										</p>
-									</div>
-                                     }
+											<p className='user-select-none'>
+												{/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+												<u
+													className='cursor-pointer'
+													onClick={() => setIsForgotPasswordPage(false)}>
+													Go to login
+												</u>
+											</p>
+										</div>
+									}
 									{/* eslint-enable jsx-a11y/no-noninteractive-element-interactions */}
 								</form>
 							</CardBody>
 						</Card>
-						
+
 					</div>
 				</div>
 			</Page>

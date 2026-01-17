@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Form } from 'reactstrap';
 import { useForm } from 'react-hook-form';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import { authAxiosFileUpload } from '../../../axiosInstance';
 import OffCanvasComponent from '../../OffCanvasComponent';
 import Card, { CardBody } from '../../bootstrap/Card';
@@ -166,4 +166,3 @@ const BulkUpload = ({ isOpen, setIsOpen, tableRef, title,api,fileName }:any) => 
 
 
 export default BulkUpload;
-

@@ -16,7 +16,7 @@ import { Manager, Popper, Reference } from 'react-popper';
 import classNames from 'classnames';
 // @ts-ignore
 import useEventOutside from '@omtanke/react-use-event-outside';
-import useDarkMode from '../../hooks/shared/useDarkMode';
+import useDarkMode from '../../hooks/useDarkMode';
 // eslint-disable-next-line import/no-cycle
 import { IButtonProps } from './Button';
 import { TDropdownDirection } from '../../type/dropdown-type';
@@ -408,4 +408,3 @@ Dropdown.defaultProps = {
 };
 
 export default Dropdown;
-

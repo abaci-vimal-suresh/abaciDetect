@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { debounceIntervalForTable } from '../../../../helpers/constants';
-import useTablestyle from '../../../../hooks/shared/useTablestyles';
+import useTablestyle from '../../../../hooks/useTablestyles';
 import { pageSizeOptions } from '../../../../helpers/constants';
 import { ThemeProvider } from '@mui/material';
 import MaterialTable from '@material-table/core';

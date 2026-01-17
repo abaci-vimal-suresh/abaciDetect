@@ -91,7 +91,7 @@ const SensorGroups = () => {
             },
             {
                 onSuccess: () => {
-                    saveMockData();
+                    saveMockData('areas', mockAreas);
                     queryClient.invalidateQueries({ queryKey: ['areas'] });
                     setIsSubAreaModalOpen(false);
                     setSubAreaName('');
@@ -225,7 +225,7 @@ const SensorGroups = () => {
                                         if (targetArea && targetArea.floor_level !== undefined) {
                                             mockSensors[sensorIndex].floor_level = targetArea.floor_level;
                                         }
-                                        saveMockData();
+                                        saveMockData('sensors', mockSensors);
                                         queryClient.invalidateQueries({ queryKey: ['sensors'] });
                                     }
                                 }}

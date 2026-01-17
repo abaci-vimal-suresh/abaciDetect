@@ -137,7 +137,7 @@ const SensorGroupDetail = () => {
             console.log('📡 [TELEMETRY] Sensor placement payload:', payload);
 
             // ✅ PERSIST to localStorage and refresh queries
-            saveMockData();
+            saveMockData('sensors', mockSensors);
             queryClient.invalidateQueries({ queryKey: ['sensors'] });
         }
     };
@@ -149,7 +149,7 @@ const SensorGroupDetail = () => {
             console.log(`📐 [MOCK] Updated boundary for ${sensorId}`, boundary);
 
             // ✅ PERSIST to localStorage and refresh queries
-            saveMockData();
+            saveMockData('sensors', mockSensors);
             queryClient.invalidateQueries({ queryKey: ['sensors'] });
         }
     };
@@ -189,7 +189,7 @@ const SensorGroupDetail = () => {
             }
 
             // ✅ PERSIST to localStorage
-            saveMockData();
+            saveMockData('areas', mockAreas);
         }
         console.log('🖼️ [MOCK] Floor plan uploaded and persisted:', file.name);
     };

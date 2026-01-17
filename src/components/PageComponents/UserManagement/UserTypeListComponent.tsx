@@ -2,22 +2,22 @@ import React, { useState, MutableRefObject, useEffect } from 'react';
 import MaterialTable, { Column } from '@material-table/core';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { ThemeProvider } from '@mui/material/styles';
-import { authAxios } from '../../../axiosInstance';
-import useTablestyle from '../../../hooks/shared/useTablestyles';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
-import { formatFilters, updateHiddenColumnsInLocalStorage } from '../../../helpers/functions';
-import StatusButton from '../../CustomComponent/Buttons/StatusButton';
-import DeleteButton from '../../CustomComponent/Buttons/DeleteButton';
-import useColumnHiding from '../../../hooks/shared/useColumnHiding';
+import { authAxios } from '../../../axiosInstance'; 
+import useTablestyle from '../../../hooks/useTablestyles'; 
+import useToasterNotification from '../../../hooks/useToasterNotification'; 
+import { formatFilters, updateHiddenColumnsInLocalStorage } from '../../../helpers/functions'; 
+import StatusButton from '../../CustomComponent/Buttons/StatusButton'; 
+import DeleteButton from '../../CustomComponent/Buttons/DeleteButton'; 
+import useColumnHiding from '../../../hooks/useColumnHiding'; 
 export interface UserTypeListTableData { id: number; name: string; description?: string; status?: string; created_at?: string; }
 interface UserTypeListComponentProps { tableRef: MutableRefObject<any>; activeTab: string; urlBackup: MutableRefObject<string>; }
 
 const UserTypeListComponent: React.FC<UserTypeListComponentProps> = ({ tableRef, activeTab, urlBackup, }) => {
-    const [pageSize, setPageSize] = useState<number>(5);
-    const { showErrorNotification } = useToasterNotification();
-    const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
-    const [filterEnabled, setFilterEnabled] = useState<boolean>(false);
-    const staticColumns: Column<UserTypeListTableData>[] = [{ title: 'Name', field: 'name', render: (rowData) => rowData?.name || '----', }, { title: 'Description', field: 'description', render: (rowData) => rowData?.description || '----', }, { title: 'Status', field: 'status', render: (rowData) => rowData?.status || '----', }, { title: 'Created At', field: 'created_at', render: (rowData) => rowData?.created_at || '----', },];
+    const [pageSize, setPageSize] = useState<number>(5); 
+    const { showErrorNotification } = useToasterNotification(); 
+    const { theme, rowStyles, headerStyles,searchFieldStyle } = useTablestyle(); 
+    const [filterEnabled, setFilterEnabled] = useState<boolean>(false); 
+    const staticColumns: Column<UserTypeListTableData>[] = [{ title: 'Name', field: 'name', render: (rowData) => rowData?.name || '----', }, { title: 'Description', field: 'description', render: (rowData) => rowData?.description || '----', }, { title: 'Status', field: 'status', render: (rowData) => rowData?.status || '----', }, { title: 'Created At', field: 'created_at', render: (rowData) => rowData?.created_at || '----', },]; 
     const actionButtons: Column<UserTypeListTableData>[] = [{
         title: 'Actions',
         align: 'right',
@@ -72,9 +72,9 @@ const UserTypeListComponent: React.FC<UserTypeListComponentProps> = ({ tableRef,
                     tableRef={tableRef}
                     localization={{
                         pagination: {
-                            labelRowsPerPage: '',
+                          labelRowsPerPage: '',
                         }
-                    }}
+                      }}
                     // @ts-ignore
                     onChangeRowsPerPage={(page) => setPageSize(page)}
 
@@ -116,11 +116,11 @@ const UserTypeListComponent: React.FC<UserTypeListComponentProps> = ({ tableRef,
                     //             });
                     //     })
                     // }
-                    data={[]}
+                    data ={[]}
                     options={{
                         headerStyle: headerStyles(),
                         rowStyle: rowStyles(),
-                        searchFieldStyle: searchFieldStyle(),
+                        searchFieldStyle:searchFieldStyle(),
                         actionsColumnIndex: -1,
                         debounceInterval: 500,
                         filtering: filterEnabled,

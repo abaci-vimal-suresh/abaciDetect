@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../../../components/bootstrap/Modal';
 import { authAxios } from '../../../../axiosInstance';
-import useToasterNotification from '../../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../../hooks/useToasterNotification';
 import Moments from '../../../../helpers/Moment';
 import ContractLogSkelton from '../../../../components/CustomComponent/Skeleton/ContractLogSkelton';
 import CustomBadgeWithIcon from '../../../../components/CustomComponent/BadgeWithIcon';
@@ -284,4 +284,3 @@ const DischargeTxnInfoShowModal: React.FC<DischargeTxnInfoShowModalProps> = ({
 };
 
 export default DischargeTxnInfoShowModal;
-

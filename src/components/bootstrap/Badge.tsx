@@ -1,7 +1,7 @@
 import React, { FC, ReactNode } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
-import useDarkMode from '../../hooks/shared/useDarkMode';
+import useDarkMode from '../../hooks/useDarkMode';
 import { TColor } from '../../type/color-type';
 
 interface IBadgeProps extends Record<string, any> {
@@ -98,4 +98,3 @@ Badge.defaultProps = {
 };
 
 export default Badge;
-

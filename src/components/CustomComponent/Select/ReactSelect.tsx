@@ -1,6 +1,6 @@
 import React from 'react'
 import Select from 'react-select'
-import useDarkMode from '../../../hooks/shared/useDarkMode'
+import useDarkMode from '../../../hooks/useDarkMode'
 
 const ReactSelectWithState = ({ options, value, setValue, isClearable = false, placeholder, isMulti = false }: any) => {
     const { darkModeStatus } = useDarkMode();
@@ -81,4 +81,3 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
 }
 
 export default ReactSelectWithState
-

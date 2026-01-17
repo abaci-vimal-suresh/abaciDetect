@@ -1,0 +1,165 @@
+[96msrc/common/data/chartDummyData.ts[0m:[93m1[0m:[93m10[0m - [91merror[0m[90m TS2614: [0mModule '"../../components/extras/Chart"' has no exported member 'IChartOptions'. Did you mean to use 'import IChartOptions from "../../components/extras/Chart"' instead?
+
+[7m1[0m import { IChartOptions } from '../../components/extras/Chart';
+[7m [0m [91m         ~~~~~~~~~~~~~[0m
+
+[96msrc/common/other/CommonCodePreview.tsx[0m:[93m7[0m:[93m23[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../components/extras/PrismCode' or its corresponding type declarations.
+
+[7m7[0m import PrismCode from '../../components/extras/PrismCode';
+[7m [0m [91m                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/common/other/CommonHowToUse.tsx[0m:[93m5[0m:[93m23[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../components/extras/PrismCode' or its corresponding type declarations.
+
+[7m5[0m import PrismCode from '../../components/extras/PrismCode';
+[7m [0m [91m                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/common/other/CommonIconPreview.tsx[0m:[93m5[0m:[93m30[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+
+[7m5[0m import showNotification from '../../components/extras/showNotification';
+[7m [0m [91m                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/bootstrap/Card.tsx[0m:[93m19[0m:[93m23[0m - [91merror[0m[90m TS2307: [0mCannot find module '../extras/PrismCode' or its corresponding type declarations.
+
+[7m19[0m import PrismCode from '../extras/PrismCode';
+[7m  [0m [91m                      ~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/CustomComponent/ImageCropper.jsx[0m:[93m9[0m:[93m30[0m - [91merror[0m[90m TS2307: [0mCannot find module '../extras/PlaceholderImage' or its corresponding type declarations.
+
+[7m9[0m import PlaceholderImage from '../extras/PlaceholderImage';
+[7m [0m [91m                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/Dashboard/GreaseTank.tsx[0m:[93m3[0m:[93m44[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../utils/themeColors' or its corresponding type declarations.
+
+[7m3[0m import { getThemeColors, shadeColor } from '../../utils/themeColors';
+[7m [0m [91m                                           ~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/layout/Header/Notification copy.tsx[0m:[93m14[0m:[93m30[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+
+[7m14[0m import showNotification from '../../components/extras/showNotification';
+[7m  [0m [91m                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/layout/Header/NotificationsOld.tsx[0m:[93m18[0m:[93m30[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../components/extras/showNotification' or its corresponding type declarations.
+
+[7m18[0m import showNotification from '../../components/extras/showNotification';
+[7m  [0m [91m                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/_common/CommonPercentageOfLoadChart.tsx[0m:[93m15[0m:[93m17[0m - [91merror[0m[90m TS2614: [0mModule '"../../components/extras/Chart"' has no exported member 'IChartOptions'. Did you mean to use 'import IChartOptions from "../../components/extras/Chart"' instead?
+
+[7m15[0m import Chart, { IChartOptions } from '../../components/extras/Chart';
+[7m  [0m [91m                ~~~~~~~~~~~~~[0m
+
+[96msrc/pages/HALO/Dashboard/Dashboard.tsx[0m:[93m20[0m:[93m29[0m - [91merror[0m[90m TS2307: [0mCannot find module './ViewerDashboard' or its corresponding type declarations.
+
+[7m20[0m import ViewerDashboard from './ViewerDashboard';
+[7m  [0m [91m                            ~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/HALO/Sensors/SensorGroupDetail.tsx[0m:[93m140[0m:[93m13[0m - [91merror[0m[90m TS2554: [0mExpected 2 arguments, but got 0.
+
+[7m140[0m             saveMockData();
+[7m   [0m [91m            ~~~~~~~~~~~~~~[0m
+
+  [96msrc/mockData/sensors.ts[0m:[93m229[0m:[93m30[0m
+    [7m229[0m export const saveMockData = (key: string, data: any) => {
+    [7m   [0m [96m                             ~~~~~~~~~~~[0m
+    An argument for 'key' was not provided.
+
+[96msrc/pages/HALO/Sensors/SensorGroupDetail.tsx[0m:[93m152[0m:[93m13[0m - [91merror[0m[90m TS2554: [0mExpected 2 arguments, but got 0.
+
+[7m152[0m             saveMockData();
+[7m   [0m [91m            ~~~~~~~~~~~~~~[0m
+
+  [96msrc/mockData/sensors.ts[0m:[93m229[0m:[93m30[0m
+    [7m229[0m export const saveMockData = (key: string, data: any) => {
+    [7m   [0m [96m                             ~~~~~~~~~~~[0m
+    An argument for 'key' was not provided.
+
+[96msrc/pages/HALO/Sensors/SensorGroupDetail.tsx[0m:[93m192[0m:[93m13[0m - [91merror[0m[90m TS2554: [0mExpected 2 arguments, but got 0.
+
+[7m192[0m             saveMockData();
+[7m   [0m [91m            ~~~~~~~~~~~~~~[0m
+
+  [96msrc/mockData/sensors.ts[0m:[93m229[0m:[93m30[0m
+    [7m229[0m export const saveMockData = (key: string, data: any) => {
+    [7m   [0m [96m                             ~~~~~~~~~~~[0m
+    An argument for 'key' was not provided.
+
+[96msrc/pages/HALO/Sensors/SensorGroupDetail.tsx[0m:[93m395[0m:[93m41[0m - [91merror[0m[90m TS2322: [0mType 'number[]' is not assignable to type 'number[][]'.
+  Type 'number' is not assignable to type 'number[]'.
+
+[7m395[0m                                         roomBoundaries={mockRoomBoundaries[subzoneId ? Number(subzoneId) : Number(areaId)]}
+[7m   [0m [91m                                        ~~~~~~~~~~~~~~[0m
+
+  [96msrc/components/halo/FloorPlanCanvas.tsx[0m:[93m26[0m:[93m5[0m
+    [7m26[0m     roomBoundaries?: number[][];
+    [7m  [0m [96m    ~~~~~~~~~~~~~~[0m
+    The expected type comes from property 'roomBoundaries' which is declared here on type 'IntrinsicAttributes & FloorPlanCanvasProps'
+
+[96msrc/pages/HALO/Sensors/SensorGroups.tsx[0m:[93m94[0m:[93m21[0m - [91merror[0m[90m TS2554: [0mExpected 2 arguments, but got 0.
+
+[7m94[0m                     saveMockData();
+[7m  [0m [91m                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/mockData/sensors.ts[0m:[93m229[0m:[93m30[0m
+    [7m229[0m export const saveMockData = (key: string, data: any) => {
+    [7m   [0m [96m                             ~~~~~~~~~~~[0m
+    An argument for 'key' was not provided.
+
+[96msrc/pages/HALO/Sensors/SensorGroups.tsx[0m:[93m215[0m:[93m33[0m - [91merror[0m[90m TS2322: [0mType 'number[]' is not assignable to type 'number[][]'.
+
+[7m215[0m                                 roomBoundaries={mockRoomBoundaries[Number(areaId)]}
+[7m   [0m [91m                                ~~~~~~~~~~~~~~[0m
+
+  [96msrc/components/halo/FloorPlanCanvas.tsx[0m:[93m26[0m:[93m5[0m
+    [7m26[0m     roomBoundaries?: number[][];
+    [7m  [0m [96m    ~~~~~~~~~~~~~~[0m
+    The expected type comes from property 'roomBoundaries' which is declared here on type 'IntrinsicAttributes & FloorPlanCanvasProps'
+
+[96msrc/pages/HALO/Sensors/SensorGroups.tsx[0m:[93m228[0m:[93m41[0m - [91merror[0m[90m TS2554: [0mExpected 2 arguments, but got 0.
+
+[7m228[0m                                         saveMockData();
+[7m   [0m [91m                                        ~~~~~~~~~~~~~~[0m
+
+  [96msrc/mockData/sensors.ts[0m:[93m229[0m:[93m30[0m
+    [7m229[0m export const saveMockData = (key: string, data: any) => {
+    [7m   [0m [96m                             ~~~~~~~~~~~[0m
+    An argument for 'key' was not provided.
+
+[96msrc/pages/HALO/Sensors/SensorIndividualDetail.tsx[0m:[93m26[0m:[93m28[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../../components/PersonnelModal' or its corresponding type declarations.
+
+[7m26[0m import PersonnelModal from '../../../components/PersonnelModal';
+[7m  [0m [91m                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/HALO/Sensors/SensorIndividualDetail.tsx[0m:[93m97[0m:[93m17[0m - [91merror[0m[90m TS2554: [0mExpected 2 arguments, but got 0.
+
+[7m97[0m                 saveMockData();
+[7m  [0m [91m                ~~~~~~~~~~~~~~[0m
+
+  [96msrc/mockData/sensors.ts[0m:[93m229[0m:[93m30[0m
+    [7m229[0m export const saveMockData = (key: string, data: any) => {
+    [7m   [0m [96m                             ~~~~~~~~~~~[0m
+    An argument for 'key' was not provided.
+
+[96msrc/pages/HALO/Users/UserDetailPage.tsx[0m:[93m100[0m:[93m55[0m - [91merror[0m[90m TS2367: [0mThis comparison appears to be unintentional because the types 'UserRole' and '"admin"' have no overlap.
+
+[7m100[0m                                         <Badge color={user.role === 'admin' ? 'secondary' : 'info'} isLight className="px-3 py-2 rounded-pill mb-4 uppercase small">
+[7m   [0m [91m                                                      ~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+Found 21 errors in 15 files.
+
+Errors  Files
+     1  src/common/data/chartDummyData.ts[90m:1[0m
+     1  src/common/other/CommonCodePreview.tsx[90m:7[0m
+     1  src/common/other/CommonHowToUse.tsx[90m:5[0m
+     1  src/common/other/CommonIconPreview.tsx[90m:5[0m
+     1  src/components/bootstrap/Card.tsx[90m:19[0m
+     1  src/components/CustomComponent/ImageCropper.jsx[90m:9[0m
+     1  src/components/Dashboard/GreaseTank.tsx[90m:3[0m
+     1  src/layout/Header/Notification copy.tsx[90m:14[0m
+     1  src/layout/Header/NotificationsOld.tsx[90m:18[0m
+     1  src/pages/_common/CommonPercentageOfLoadChart.tsx[90m:15[0m
+     1  src/pages/HALO/Dashboard/Dashboard.tsx[90m:20[0m
+     4  src/pages/HALO/Sensors/SensorGroupDetail.tsx[90m:140[0m
+     3  src/pages/HALO/Sensors/SensorGroups.tsx[90m:94[0m
+     2  src/pages/HALO/Sensors/SensorIndividualDetail.tsx[90m:26[0m
+     1  src/pages/HALO/Users/UserDetailPage.tsx[90m:100[0m

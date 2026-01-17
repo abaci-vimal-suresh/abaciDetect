@@ -12,8 +12,8 @@ import Card, {
 import Icon from '../../components/icon/Icon';
 import Button from '../../components/bootstrap/Button';
 import { demoPagesMenu } from '../../menu';
-import Chart, { IChartOptions } from '../../components/extras/Chart';
 import useDarkMode from '../../hooks/shared/useDarkMode';
+import Chart, { IChartOptions } from '../../components/extras/Chart';
 
 const CommonPercentageOfLoadChart = () => {
 	const { darkModeStatus } = useDarkMode();
@@ -101,8 +101,8 @@ const CommonPercentageOfLoadChart = () => {
 					<Button
 						color='primary'
 						tag='a'
-						// to={`../${demoPagesMenu.appointment.subMenu.employeeList.path}`}
-						>
+					// to={`../${demoPagesMenu.appointment.subMenu.employeeList.path}`}
+					>
 						View Employees
 					</Button>
 				</CardActions>

@@ -1,6 +1,6 @@
 import React from 'react'
 import Button from '../../bootstrap/Button';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 import { useNavigate } from 'react-router-dom';
 
 const AddButtonWthNavigate = ({name ,icon,link}:any) => {
@@ -22,4 +22,3 @@ const AddButtonWthNavigate = ({name ,icon,link}:any) => {
 }
 
 export default AddButtonWthNavigate
-

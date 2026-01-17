@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import classNames from 'classnames';
 import Button from '../../bootstrap/Button';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 interface CustomIconButtonProps {
   onClick: () => void;
@@ -32,4 +32,3 @@ const CustomIconButton: React.FC<CustomIconButtonProps> = ({ onClick, icon }) =>
 };
 
 export default CustomIconButton;
-

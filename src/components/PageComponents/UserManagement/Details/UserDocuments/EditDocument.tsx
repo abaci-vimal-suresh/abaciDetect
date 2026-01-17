@@ -10,7 +10,7 @@ import Modal, {
 import Button from '../../../../bootstrap/Button';
 import { authAxios, authAxiosFileUpload } from '../../../../../axiosInstance';
 import SaveIconButton from '../../../../CustomComponent/Buttons/SaveIconButton';
-import useToasterNotification from '../../../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../../../hooks/useToasterNotification';
 import FormGroup from '../../../../bootstrap/forms/FormGroup';
 import ReactSelectComponent from '../../../../CustomComponent/Select/ReactSelectComponent';
 
@@ -168,4 +168,3 @@ const EditDocument = ({ isOpen, setIsOpen, title, tableRef,item }) => {
 };
 
 export default EditDocument;
-

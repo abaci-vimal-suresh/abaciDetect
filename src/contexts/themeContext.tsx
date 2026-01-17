@@ -1,6 +1,6 @@
 import React, { createContext, useLayoutEffect, useState, useMemo, FC, ReactNode } from 'react';
 import PropTypes from 'prop-types';
-import useDeviceScreen from '../hooks/shared/useDeviceScreen';
+import useDeviceScreen from '../hooks/useDeviceScreen';
 
 export interface IThemeContextProps {
 	asideStatus: boolean;
@@ -112,4 +112,3 @@ ThemeContextProvider.propTypes = {
 };
 
 export default ThemeContext;
-

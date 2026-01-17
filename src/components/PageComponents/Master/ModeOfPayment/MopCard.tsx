@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 // import { setUserDetails } from '../../../store/user';
 import ProfilePic from "../../../assets/img/11539820.png"
 import { getFirstLetters } from '../../../../helpers/helpers';
-import useDarkMode from '../../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../../hooks/useDarkMode';
 import Icon from '../../../icon/Icon';
 import Badge from '../../../bootstrap/Badge';
 import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../../bootstrap/Dropdown';
@@ -145,4 +145,3 @@ const MopCard = ({ mop_data, handleDelete, handleStatusUpdate, handleEdit }) => 
 };
 
 export default MopCard;
-

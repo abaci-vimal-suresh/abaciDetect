@@ -1,5 +1,5 @@
 import React from 'react'
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 
 type Status = {
   label: string;

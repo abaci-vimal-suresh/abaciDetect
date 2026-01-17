@@ -12,8 +12,8 @@ const USE_MOCK_DATA = true;
 const mockPersonnelData: { [sensorId: string]: { name: string; contact: string; email: string } } = {};
 
 const mockUserActivities: UserActivity[] = [
-    { id: 1, user_id: 1, action: 'System Setup', timestamp: new Date().toISOString(), details: 'Admin created the system' },
-    { id: 2, user_id: 2, action: 'Login', timestamp: new Date().toISOString(), details: 'John Doe logged in' }
+    { id: '1', userId: '1', userName: 'Admin', action: 'System Setup', timestamp: new Date().toISOString(), details: 'Admin created the system' },
+    { id: '2', userId: '2', userName: 'John Doe', action: 'Login', timestamp: new Date().toISOString(), details: 'John Doe logged in' }
 ];
 
 export const useUsers = () => {
@@ -163,7 +163,7 @@ export const useUserActivity = (userId: string) => {
         queryFn: async () => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                return mockUserActivities.filter(a => a.user_id === Number(userId));
+                return mockUserActivities.filter(a => a.userId === userId);
             }
             const { data } = await axiosInstance.get(`/users/${userId}/activity`);
             return data as UserActivity[];
@@ -239,7 +239,7 @@ export const useCreateArea = () => {
                     person_in_charge_ids: data.person_in_charge_ids || []
                 };
                 mockAreas.push(newArea);
-                saveMockData();
+                saveMockData('areas', mockAreas);
                 return newArea;
             }
             const response = await axiosInstance.post('/areas/', data);
@@ -279,7 +279,7 @@ export const useAddSensorToSubArea = () => {
                             sensor.floor_level = targetArea.floor_level;
                         }
                     }
-                    saveMockData();
+                    saveMockData('sensors', mockSensors);
                 }
                 return { success: true };
             }
@@ -325,7 +325,7 @@ export const useCreateSubArea = () => {
                     person_in_charge_ids: data.person_in_charge_ids || []
                 };
                 mockAreas.push(newArea);
-                saveMockData();
+                saveMockData('areas', mockAreas);
                 return newArea;
             }
             const response = await axiosInstance.post(`/areas/`, {
@@ -360,7 +360,7 @@ export const useUpdateArea = () => {
                 const areaIndex = mockAreas.findIndex(a => a.id === areaId);
                 if (areaIndex > -1) {
                     mockAreas[areaIndex] = { ...mockAreas[areaIndex], ...data };
-                    saveMockData();
+                    saveMockData('areas', mockAreas);
                     return mockAreas[areaIndex];
                 }
                 throw new Error('Area not found');
@@ -535,7 +535,7 @@ export const useUpdateSensorConfiguration = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ sensorId, configId, config }: { sensorId: string; configId: number; config: Partial<SensorConfig> }) => {
+        mutationFn: async ({ sensorId, configId, config }: { sensorId: string; configId: string; config: Partial<SensorConfig> }) => {
             // PUT/PATCH /api/sensors/{id}/configurations/{config_id}/
             const { data } = await axiosInstance.patch(`/sensors/${sensorId}/configurations/${configId}/`, config);
             return data as SensorConfig;
@@ -559,7 +559,7 @@ export const useDeleteSensorConfiguration = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ sensorId, configId }: { sensorId: string; configId: number }) => {
+        mutationFn: async ({ sensorId, configId }: { sensorId: string; configId: string }) => {
             // DELETE /api/sensors/{id}/configurations/{config_id}/
             await axiosInstance.delete(`/sensors/${sensorId}/configurations/${configId}/`);
         },
@@ -622,7 +622,7 @@ export const useUpdateSensorPersonnel = () => {
                     if (personnelData.personnel_email !== undefined) {
                         sensor.personnel_email = personnelData.personnel_email;
                     }
-                    saveMockData();
+                    saveMockData('sensors', mockSensors);
                     return sensor;
                 }
                 throw new Error('Sensor not found');
@@ -666,7 +666,7 @@ export const useUpdatePersonnelInCharge = () => {
                 const sensor = mockSensors.find(s => s.id == sensorId);
                 if (sensor) {
                     sensor.personnel_in_charge = personnelName;
-                    saveMockData();
+                    saveMockData('sensors', mockSensors);
                     return sensor;
                 }
                 throw new Error('Sensor not found');
@@ -810,15 +810,13 @@ export const useCreateUserGroup = () => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 const newId = Math.max(...mockUserGroups.map(g => g.id), 0) + 1;
-                const members = data.member_ids
-                    ? mockUsers.filter(u => data.member_ids!.includes(u.id))
-                    : [];
+                const user_ids = data.user_ids || [];
                 const newGroup: UserGroup = {
                     id: newId,
                     name: data.name,
                     description: data.description || '',
-                    members,
-                    member_count: members.length,
+                    user_ids,
+                    user_count: user_ids.length,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 };
@@ -853,15 +851,15 @@ export const useUpdateUserGroup = () => {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 const groupIndex = mockUserGroups.findIndex(g => g.id === groupId);
                 if (groupIndex > -1) {
-                    const members = data.member_ids
-                        ? mockUsers.filter(u => data.member_ids!.includes(u.id))
-                        : mockUserGroups[groupIndex].members;
+                    const user_ids = data.user_ids
+                        ? data.user_ids
+                        : mockUserGroups[groupIndex].user_ids;
 
                     mockUserGroups[groupIndex] = {
                         ...mockUserGroups[groupIndex],
                         ...data,
-                        members,
-                        member_count: members.length,
+                        user_ids,
+                        user_count: user_ids.length,
                         updated_at: new Date().toISOString(),
                     };
                     return mockUserGroups[groupIndex];
@@ -892,17 +890,16 @@ export const useAddGroupMembers = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ groupId, member_ids }: { groupId: number; member_ids: number[] }) => {
+        mutationFn: async ({ groupId, user_ids }: { groupId: number; user_ids: number[] }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 const groupIndex = mockUserGroups.findIndex(g => g.id === groupId);
                 if (groupIndex > -1) {
-                    const newMembers = mockUsers.filter(u => member_ids.includes(u.id));
-                    const existingMemberIds = mockUserGroups[groupIndex].members.map((m: User) => m.id);
-                    const uniqueNewMembers = newMembers.filter(m => !existingMemberIds.includes(m.id));
+                    const existingUserIds = mockUserGroups[groupIndex].user_ids;
+                    const uniqueNewUserIds = user_ids.filter(id => !existingUserIds.includes(id));
 
-                    mockUserGroups[groupIndex].members.push(...uniqueNewMembers);
-                    mockUserGroups[groupIndex].member_count = mockUserGroups[groupIndex].members.length;
+                    mockUserGroups[groupIndex].user_ids.push(...uniqueNewUserIds);
+                    mockUserGroups[groupIndex].user_count = mockUserGroups[groupIndex].user_ids.length;
                     mockUserGroups[groupIndex].updated_at = new Date().toISOString();
 
                     return mockUserGroups[groupIndex];
@@ -910,7 +907,7 @@ export const useAddGroupMembers = () => {
                 throw new Error('Group not found');
             }
 
-            const { data } = await axiosInstance.post(`/user-groups/${groupId}/add_members/`, { member_ids });
+            const { data } = await axiosInstance.post(`/user-groups/${groupId}/add_members/`, { user_ids });
             return data as UserGroup;
         },
         onSuccess: (_, { groupId }) => {
@@ -933,15 +930,15 @@ export const useRemoveGroupMembers = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ groupId, member_ids }: { groupId: number; member_ids: number[] }) => {
+        mutationFn: async ({ groupId, user_ids }: { groupId: number; user_ids: number[] }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 const groupIndex = mockUserGroups.findIndex(g => g.id === groupId);
                 if (groupIndex > -1) {
-                    mockUserGroups[groupIndex].members = mockUserGroups[groupIndex].members.filter(
-                        (m: User) => !member_ids.includes(m.id)
+                    mockUserGroups[groupIndex].user_ids = mockUserGroups[groupIndex].user_ids.filter(
+                        (id) => !user_ids.includes(id)
                     );
-                    mockUserGroups[groupIndex].member_count = mockUserGroups[groupIndex].members.length;
+                    mockUserGroups[groupIndex].user_count = mockUserGroups[groupIndex].user_ids.length;
                     mockUserGroups[groupIndex].updated_at = new Date().toISOString();
 
                     return mockUserGroups[groupIndex];
@@ -949,7 +946,7 @@ export const useRemoveGroupMembers = () => {
                 throw new Error('Group not found');
             }
 
-            const { data } = await axiosInstance.post(`/user-groups/${groupId}/remove_members/`, { member_ids });
+            const { data } = await axiosInstance.post(`/user-groups/${groupId}/remove_members/`, { user_ids });
             return data as UserGroup;
         },
         onSuccess: (_, { groupId }) => {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardBody, CardTitle, Badge } from 'reactstrap';
 import classNames from 'classnames';
 import useTourStep from '../../../hooks/useTourStep';
-import useDarkMode from '../../../hooks/shared/useDarkMode';
+import useDarkMode from '../../../hooks/useDarkMode';
 import TruckImage from '../../../assets/img/truck.jpg'; // Placeholder image
  // or define inline
 export interface VehicleCardProps {
@@ -83,4 +83,3 @@ export const VehicleCard: FC<VehicleCardProps> = ({
 };
 
 export default VehicleCard;
-

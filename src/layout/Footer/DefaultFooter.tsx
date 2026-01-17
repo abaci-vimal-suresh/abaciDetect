@@ -2,7 +2,7 @@ import React from 'react';
 import footerLogoWhite from '../../assets/Abaci Powered White.svg'
 import footerLogoDark from '../../assets/AbaciPoweredByDark.svg'
 import Footer from './Footer';
-import useDarkMode from '../../hooks/shared/useDarkMode';
+import useDarkMode from '../../hooks/useDarkMode';
 
 const DefaultFooter = () => {
 	const { darkModeStatus } = useDarkMode();
@@ -28,4 +28,3 @@ const DefaultFooter = () => {
 };
 
 export default DefaultFooter;
-

@@ -5,7 +5,7 @@ import Dropdown, { DropdownItem, DropdownMenu, DropdownToggle } from '../../boot
 import Spinner from '../../bootstrap/Spinner';
 import { authAxios } from '../../../axiosInstance';
 import pdfGenerator  from '../../../helpers/PDFReportGenerator';
-import useToasterNotification from '../../../hooks/shared/useToasterNotification';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 import downloadHandler from '../../../helpers/DownloadCsv';
 
 
@@ -70,4 +70,3 @@ ExportButton.propTypes = {
 /* eslint-enable react/forbid-prop-types */
 
 export default ExportButton;
-

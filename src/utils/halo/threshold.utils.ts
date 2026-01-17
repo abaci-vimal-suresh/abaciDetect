@@ -190,3 +190,39 @@ export const getStatusLabel = (status: MetricStatus | BootstrapStatus): string =
             return 'Unknown';
     }
 };
+
+/**
+ * Available sensor configuration choices for UI Dropdowns.
+ */
+export const SENSOR_CONFIG_CHOICES = [
+    { value: 'temp_c', label: 'Temperature (°C)' },
+    { value: 'temp_f', label: 'Temperature (°F)' },
+    { value: 'humidity', label: 'Humidity (%)' },
+    { value: 'pm1', label: 'PM 1.0' },
+    { value: 'pm10', label: 'PM 10' },
+    { value: 'pm25', label: 'PM 2.5' },
+    { value: 'tvoc', label: 'TVOC' },
+    { value: 'co2', label: 'CO₂' },
+    { value: 'co', label: 'CO' },
+    { value: 'no2', label: 'NO₂' },
+    { value: 'nh3', label: 'NH₃' },
+    { value: 'aqi', label: 'AQI' },
+    { value: 'pm10aqi', label: 'PM10 AQI' },
+    { value: 'pm25aqi', label: 'PM2.5 AQI' },
+    { value: 'coaqi', label: 'CO AQI' },
+    { value: 'no2aqi', label: 'NO₂ AQI' },
+    { value: 'light', label: 'Light' },
+    { value: 'pressure_hpa', label: 'Pressure (hPa)' },
+    { value: 'noise', label: 'Noise' },
+    { value: 'motion', label: 'Motion' },
+    { value: 'aggression', label: 'Aggression' },
+    { value: 'gunshot', label: 'Gunshot' },
+    { value: 'health_index', label: 'Health Index' },
+    { value: 'hi_co2', label: 'Health Index (CO₂)' },
+    { value: 'hi_hum', label: 'Health Index (Humidity)' },
+    { value: 'hi_pm1', label: 'Health Index (PM 1)' },
+    { value: 'hi_pm10', label: 'Health Index (PM 10)' },
+    { value: 'hi_pm25', label: 'Health Index (PM 2.5)' },
+    { value: 'hi_tvoc', label: 'Health Index (TVOC)' },
+    { value: 'hi_no2', label: 'Health Index (NO₂)' },
+];
