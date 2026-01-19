@@ -27,7 +27,7 @@ export const imageURL = imageURLFunc();
 const baseURLCreator = () => {
 	const url = window.location.origin.split(':3000')[0];
 	if (import.meta.env.MODE === 'development') {
-		return `${url}:3000`;
+		return `${url}:8080`;
 	}
 	return url;
 };
