@@ -115,8 +115,8 @@ export const use3DScene = (containerRef: RefObject<HTMLDivElement>, locked: bool
             const deltaY = e.clientY - dragStart3D.y;
 
             setRotation(prev => ({
-                x: prev.x - deltaY * 0.5,
-                y: prev.y + deltaX * 0.5
+                x: prev.x + deltaY * 0.5,
+                y: prev.y - deltaX * 0.5
             }));
             setDragStart3D({ x: e.clientX, y: e.clientY });
         };

@@ -28,7 +28,6 @@ const SensorGroups = () => {
     const { areaId } = useParams<{ areaId: string }>();
     const navigate = useNavigate();
     const { data: areas, isLoading } = useAreas();
-    const { data: allSensors, isLoading: sensorsLoading } = useSensors();
     const { data: users } = useUsers();
     const createSubAreaMutation = useCreateSubArea();
     const addSensorMutation = useAddSensorToSubArea();
@@ -47,6 +46,13 @@ const SensorGroups = () => {
     const [uploadedFloorPlan, setUploadedFloorPlan] = useState<string | null>(null);
     const [roomSettings, setRoomSettings] = useState<RoomVisibilitySettings>(DEFAULT_ROOM_SETTINGS);
 
+    // Use server-side filtering for sensors
+    const { data: allSensors, isLoading: sensorsLoading } = useSensors({
+        search: searchTerm || undefined,
+        status: filterStatus,
+        areaId: areaId  // Filter by current area
+    });
+
     // Find the current area
     const currentArea = useMemo(() => {
         // If data is flat, we find by ID. If nested, we find at top level (since areaId is main area)
@@ -55,7 +61,7 @@ const SensorGroups = () => {
 
     const subAreas = currentArea?.subareas || [];
 
-    // Get sensors that belong to this area
+    // Get sensors that belong to this area (already filtered by API)
     const areaSensors = useMemo(() => {
         return getSensorsByArea(allSensors || [], areaId, currentArea?.name);
     }, [allSensors, areaId, currentArea]);
@@ -72,10 +78,8 @@ const SensorGroups = () => {
         );
     }, [subAreas, searchTerm]);
 
-    // Filter sensors based on search term and status
-    const filteredSensors = useMemo(() => {
-        return filterSensors(areaSensors, searchTerm, filterStatus);
-    }, [areaSensors, searchTerm, filterStatus]);
+    // Sensors are already filtered by API, no need for client-side filtering
+    const filteredSensors = areaSensors;
 
     const handleCreateSubArea = () => {
         if (!subAreaName.trim()) {

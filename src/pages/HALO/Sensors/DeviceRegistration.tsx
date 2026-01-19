@@ -35,14 +35,29 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
 
     const formValues = watch();
 
-    const onSubmit = (data: SensorRegistrationData) => {
-        registerSensorMutation.mutate(data, {
+    const onSubmit = (data: any) => {
+        console.log('Form data received:', data);
+
+        // Filter out fields not expected by the API
+        const { terms, ...apiData } = data;
+
+        console.log('Cleaned API payload:', apiData);
+
+        registerSensorMutation.mutate(apiData as SensorRegistrationData, {
             onSuccess: () => {
+                console.log('Sensor registered successfully');
                 setStep(1);
                 reset();
                 onSuccess();
             },
+            onError: (error) => {
+                console.error('Sensor registration failed:', error);
+            }
         });
+    };
+
+    const onFormError = (err: any) => {
+        console.warn('Form validation errors:', err);
     };
 
     const steps = [
@@ -52,7 +67,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
     ];
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className='device-registration-form'>
+        <form onSubmit={handleSubmit(onSubmit, onFormError)} className='device-registration-form'>
             {/* Step Indicator */}
             <div className='step-indicator' data-step={step}>
                 {steps.map((s) => (
@@ -125,9 +140,10 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                         className={`form-control input-with-icon font-monospace ${errors.mac_address ? 'is-invalid' : ''}`}
                                         placeholder='00:1A:2B:3C:4D:5E'
                                         {...register('mac_address', {
-                                            pattern: {
-                                                value: /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/,
-                                                message: 'Invalid MAC Address format'
+                                            validate: value => {
+                                                if (!value) return true; // Optional
+                                                const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+                                                return macRegex.test(value) || 'Invalid MAC Address format';
                                             },
                                             maxLength: {
                                                 value: 100,
@@ -147,9 +163,10 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                         className={`form-control input-with-icon font-monospace ${errors.ip_address ? 'is-invalid' : ''}`}
                                         placeholder='192.168.1.100'
                                         {...register('ip_address', {
-                                            pattern: {
-                                                value: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
-                                                message: 'Invalid IP Address format'
+                                            validate: value => {
+                                                if (!value) return true; // Optional
+                                                const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+                                                return ipRegex.test(value) || 'Invalid IP Address format';
                                             },
                                             maxLength: {
                                                 value: 100,
@@ -219,15 +236,22 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                         </div>
 
                         <div className='review-card'>
-                            <input
-                                className='form-check-input'
-                                type='checkbox'
-                                id='terms'
-                                required
-                            />
-                            <label className='form-check-label' htmlFor='terms'>
-                                I confirm that this device is physically installed securely and ready for commissioning.
-                            </label>
+                            <div className='form-check'>
+                                <input
+                                    className={`form-check-input ${(errors as any).terms ? 'is-invalid' : ''}`}
+                                    type='checkbox'
+                                    id='terms'
+                                    {...register('terms' as any, { required: 'You must confirm before registering' })}
+                                />
+                                <label className='form-check-label' htmlFor='terms'>
+                                    I confirm that this device is physically installed securely and ready for commissioning.
+                                </label>
+                                {(errors as any).terms && (
+                                    <div className='invalid-feedback d-block'>
+                                        {(errors as any).terms.message}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
