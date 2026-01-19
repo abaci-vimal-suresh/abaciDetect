@@ -66,7 +66,7 @@ const App = () => {
 	}), [fullScreenStatus]);
 
 	useLayoutEffect(() => {
-		if (import.meta.env.VITE_MODERN_DESGIN === 'true') {
+		if (import.meta.env.VITE_MODERN_DESIGN === 'true') {
 			document.body.classList.add('modern-design');
 		} else {
 			document.body.classList.remove('modern-design');

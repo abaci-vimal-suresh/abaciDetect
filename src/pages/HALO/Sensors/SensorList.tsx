@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import MaterialTable from '@material-table/core';
@@ -12,25 +12,60 @@ import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
 import Badge from '../../../components/bootstrap/Badge';
 import Spinner from '../../../components/bootstrap/Spinner';
-import Modal, { ModalHeader, ModalBody, ModalTitle } from '../../../components/bootstrap/Modal';
+import Modal, { ModalHeader, ModalBody, ModalTitle, ModalFooter } from '../../../components/bootstrap/Modal';
 
 import useTablestyle from '../../../hooks/useTablestyles';
 import useColumnHiding from '../../../hooks/useColumnHiding';
 import { updateHiddenColumnsInLocalStorage } from '../../../helpers/functions';
 import ThemeContext from '../../../contexts/themeContext';
-import { useSensors, useTriggerSensor } from '../../../api/sensors.api';
+import { useSensors, useTriggerSensor, useDeleteSensor } from '../../../api/sensors.api';
 import { getSensorStatusTheme, getSensorStatusLabel, getSensorOnlineLabel } from '../utils/sensorStatus.utils';
 import { formatLastHeartbeat } from '../utils/format.utils';
 import DeviceRegistration from './DeviceRegistration';
 
 const SensorList = () => {
-    const { data: sensors, isLoading, refetch } = useSensors();
     const { fullScreenStatus, darkModeStatus } = useContext(ThemeContext);
     const triggerSensorMutation = useTriggerSensor();
     const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
 
+    // Filter states
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [sensorTypeFilter, setSensorTypeFilter] = useState<string>('');
+    const [onlineFilter, setOnlineFilter] = useState<boolean | undefined>(undefined);
+    const [showFilters, setShowFilters] = useState(false);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [sensorToDelete, setSensorToDelete] = useState<any>(null);
     const [triggeringId, setTriggeringId] = useState<number | null>(null);
+
+    const deleteSensorMutation = useDeleteSensor();
+
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    // Use server-side filtering
+    const { data: sensors, isLoading, refetch } = useSensors({
+        search: debouncedSearch || undefined,
+        sensor_type: sensorTypeFilter || undefined,
+        is_online: onlineFilter
+    });
+
+    // Clear all filters
+    const handleClearFilters = useCallback(() => {
+        setSearchTerm('');
+        setSensorTypeFilter('');
+        setOnlineFilter(undefined);
+    }, []);
+
+    // Check if any filters are active
+    const hasActiveFilters = searchTerm || sensorTypeFilter || onlineFilter !== undefined;
 
     const handleTriggerSensor = (sensor: any) => {
         if (!sensor.ip_address) {
@@ -51,6 +86,23 @@ const SensorList = () => {
                 }
             }
         );
+    };
+
+    const handleDeleteClick = (sensor: any) => {
+        setSensorToDelete(sensor);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!sensorToDelete) return;
+
+        deleteSensorMutation.mutate(sensorToDelete.id, {
+            onSuccess: () => {
+                setIsDeleteModalOpen(false);
+                setSensorToDelete(null);
+                refetch();
+            }
+        });
     };
 
     const staticColumns = [
@@ -295,6 +347,41 @@ const SensorList = () => {
                             e.currentTarget.style.boxShadow = 'none';
                         }}
                     />
+
+                    <Button
+                        color='danger'
+                        isLight
+                        icon='Delete'
+                        onClick={() => handleDeleteClick(rowData)}
+                        title='Delete Sensor'
+                        style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: darkModeStatus ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)',
+                            border: darkModeStatus
+                                ? 'none'
+                                : '1px solid rgba(239, 79, 79, 0.3)',
+                            color: darkModeStatus ? '#ef4f4f' : '#cf3b3b',
+                            transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e: any) => {
+                            e.currentTarget.style.background = darkModeStatus ? 'rgba(239, 79, 79, 0.25)' : 'rgba(239, 79, 79, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = darkModeStatus
+                                ? '0 4px 8px rgba(0, 0, 0, 0.3)'
+                                : '0 4px 8px rgba(239, 79, 79, 0.2)';
+                        }}
+                        onMouseLeave={(e: any) => {
+                            e.currentTarget.style.background = darkModeStatus ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                        }}
+                    />
                 </div>
             )
         }
@@ -338,6 +425,124 @@ const SensorList = () => {
                 </SubHeaderRight>
             </SubHeader>
             <Page container='fluid'>
+                {/* Filter Controls */}
+                <Card className='mb-4'>
+                    <CardBody>
+                        <div className='d-flex justify-content-between align-items-center mb-3'>
+                            <h6 className='mb-0 fw-bold'>
+                                <Icon icon='FilterList' className='me-2' />
+                                Filters
+                            </h6>
+                            <div className='d-flex gap-2'>
+                                {hasActiveFilters && (
+                                    <Badge color='info' isLight>
+                                        {[searchTerm, sensorTypeFilter, onlineFilter !== undefined].filter(Boolean).length} active
+                                    </Badge>
+                                )}
+                                <Button
+                                    color='link'
+                                    size='sm'
+                                    icon={showFilters ? 'ExpandLess' : 'ExpandMore'}
+                                    onClick={() => setShowFilters(!showFilters)}
+                                >
+                                    {showFilters ? 'Hide' : 'Show'} Filters
+                                </Button>
+                            </div>
+                        </div>
+
+                        {showFilters && (
+                            <div className='row g-3'>
+                                {/* Search Input */}
+                                <div className='col-md-4'>
+                                    <label className='form-label small text-muted'>Search</label>
+                                    <div className='input-group'>
+                                        <span className='input-group-text'>
+                                            <Icon icon='Search' />
+                                        </span>
+                                        <input
+                                            type='text'
+                                            className='form-control'
+                                            placeholder='Search by name, location, MAC...'
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                        {searchTerm && (
+                                            <button
+                                                className='btn btn-outline-secondary'
+                                                type='button'
+                                                onClick={() => setSearchTerm('')}
+                                            >
+                                                <Icon icon='Close' />
+                                            </button>
+                                        )}
+                                    </div>
+                                    {searchTerm && debouncedSearch !== searchTerm && (
+                                        <small className='text-muted'>Searching...</small>
+                                    )}
+                                </div>
+
+                                {/* Sensor Type Filter */}
+                                <div className='col-md-3'>
+                                    <label className='form-label small text-muted'>Sensor Type</label>
+                                    <select
+                                        className='form-select'
+                                        value={sensorTypeFilter}
+                                        onChange={(e) => setSensorTypeFilter(e.target.value)}
+                                    >
+                                        <option value=''>All Types</option>
+                                        <option value='HALO_3C'>HALO 3C</option>
+                                        <option value='HALO_IOT'>HALO IOT</option>
+                                        <option value='HALO_SMART'>HALO Smart</option>
+                                        <option value='HALO_CUSTOM'>HALO Custom</option>
+                                    </select>
+                                </div>
+
+                                {/* Online Status Filter */}
+                                <div className='col-md-3'>
+                                    <label className='form-label small text-muted'>Online Status</label>
+                                    <select
+                                        className='form-select'
+                                        value={onlineFilter === undefined ? '' : onlineFilter.toString()}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setOnlineFilter(value === '' ? undefined : value === 'true');
+                                        }}
+                                    >
+                                        <option value=''>All Sensors</option>
+                                        <option value='true'>Online Only</option>
+                                        <option value='false'>Offline Only</option>
+                                    </select>
+                                </div>
+
+                                {/* Clear Filters Button */}
+                                <div className='col-md-2 d-flex align-items-end'>
+                                    <Button
+                                        color='light'
+                                        className='w-100'
+                                        icon='FilterAltOff'
+                                        onClick={handleClearFilters}
+                                        isDisable={!hasActiveFilters}
+                                    >
+                                        Clear All
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Results Summary */}
+                        {!isLoading && (
+                            <div className='mt-3 pt-3 border-top'>
+                                <small className='text-muted'>
+                                    <Icon icon='Sensors' size='sm' className='me-1' />
+                                    Showing <strong>{sensors?.length || 0}</strong> sensor{sensors?.length !== 1 ? 's' : ''}
+                                    {hasActiveFilters && ' (filtered)'}
+                                </small>
+                            </div>
+                        )}
+                    </CardBody>
+                </Card>
+
+                {/* Sensor Table */}
                 <Card stretch className='border-0'>
                     <CardBody className='table-responsive p-0'>
                         <div
@@ -403,6 +608,40 @@ const SensorList = () => {
                         onCancel={() => setIsModalOpen(false)}
                     />
                 </ModalBody>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} isCentered>
+                <ModalHeader setIsOpen={setIsDeleteModalOpen}>
+                    <ModalTitle id='deleteSensorModal'>Delete Sensor</ModalTitle>
+                </ModalHeader>
+                <ModalBody>
+                    <div className='alert alert-danger d-flex align-items-center mb-3'>
+                        <Icon icon='Warning' className='me-2' size='2x' />
+                        <div>
+                            <strong>Warning:</strong> This action cannot be undone.
+                        </div>
+                    </div>
+                    <p>
+                        Are you sure you want to delete the sensor <strong>"{sensorToDelete?.name}"</strong>?
+                    </p>
+                    <p className='text-muted small'>
+                        This will permanently remove the device from the system.
+                    </p>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color='light' onClick={() => setIsDeleteModalOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        color='danger'
+                        onClick={handleDeleteConfirm}
+                        isDisable={deleteSensorMutation.isPending}
+                    >
+                        {deleteSensorMutation.isPending && <Spinner isSmall inButton />}
+                        Delete Sensor
+                    </Button>
+                </ModalFooter>
             </Modal>
         </PageWrapper>
     );
