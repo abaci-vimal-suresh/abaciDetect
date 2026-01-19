@@ -11,7 +11,7 @@ const baseURLFunc = () => {
 // export const baseURL = baseURLFunc();
 
 
-export const baseURL = 'http://192.168.1.171:8002/api'; // Your backend URL
+export const baseURL = 'http://111.92.105.222:8081/api'; // Your backend URL
 
 const imageURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
