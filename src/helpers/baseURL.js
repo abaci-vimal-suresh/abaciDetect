@@ -12,6 +12,7 @@ const baseURLFunc = () => {
 
 
 export const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://111.92.105.222:8081/api'; // Fallback to hardcoded if env missing
+console.log('BASE URL debug:', baseURL, 'Env:', import.meta.env.VITE_API_BASE_URL);
 
 const imageURLFunc = () => {
 	const url = window.location.origin.split(':3000')[0];
