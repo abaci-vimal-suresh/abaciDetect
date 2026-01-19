@@ -43,7 +43,7 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
-    allowedHosts: true, // Allow any host for debugging purposes
+    allowedHosts: ['192.168.1.200', 'localhost', '127.0.0.1'], // Allow local network access explicitly
     fs: {
       strict: false, // Less restrictive for file access
     },
