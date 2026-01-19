@@ -20,6 +20,8 @@ const HaloSensorGroups = lazy(() => import('../pages/HALO/Sensors/SensorGroups')
 const HaloSensorGroupManager = lazy(() => import('../pages/HALO/Sensors/SensorGroupManager'));
 const HaloTimeTravel = lazy(() => import('../pages/HALO/TimeTravel/TimeTravelPlayback'));
 
+const HaloSensorMonitoringDashboard = lazy(() => import('../pages/HALO/Sensors/SensorMonitoringDashboard'));
+
 // User Pages
 const Profile = lazy(() => import('../pages/Profile/Index'));
 const UserListPage = lazy(() => import('../pages/HALO/Users/UserListPage'));
@@ -109,7 +111,7 @@ const RouteConfig: CustomRouteConfig[] = [
 	},
 	{
 		path: '/halo/monitoring',
-		element: <HaloLiveMonitoring />,
+		element: <HaloSensorMonitoringDashboard />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
 	{

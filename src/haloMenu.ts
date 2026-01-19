@@ -24,6 +24,12 @@ export const haloMenu = {
                 path: '/halo/sensors/areas',
                 icon: 'GroupWork',
             },
+            groups: {
+                id: 'sensor-groups',
+                text: 'Filter Groups',
+                path: '/halo/sensors/groups',
+                icon: 'FilterList',
+            },
             // firmware: {
             //     id: 'sensor-firmware',
             //     text: 'Firmware Update',
@@ -34,9 +40,9 @@ export const haloMenu = {
     },
     monitoring: {
         id: 'halo-monitoring',
-        text: 'Live Monitoring',
+        text: 'Real-Time Monitoring',
         path: '/halo/monitoring',
-        icon: 'LiveTv',
+        icon: 'Monitor',
         subMenu: null,
     },
     timetravel: {

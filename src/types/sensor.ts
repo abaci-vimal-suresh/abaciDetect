@@ -204,13 +204,28 @@ export interface SensorAnalytics {
 }
 
 export interface SensorGroup {
-    id: string;
+    id: number;
     name: string;
     description?: string;
-    sensorCount: number;
-    activeAlerts: number;
-    status: 'Normal' | 'Warning' | 'Critical';
-    createdAt: string;
+    sensor_list: number[];
+    sensor_object_list: Sensor[];
+    sensor_count: number;
+    activeAlerts?: number;
+    status?: 'Normal' | 'Warning' | 'Critical' | string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface SensorGroupCreateData {
+    name: string;
+    description?: string;
+    sensor_list?: string[] | number[];
+}
+
+export interface SensorGroupUpdateData {
+    name?: string;
+    description?: string;
+    sensor_list?: string[] | number[];
 }
 
 export type SensorType = 'HALO_SMART' | 'HALO_3C' | 'HALO_IOT' | 'HALO_CUSTOM';
@@ -329,4 +344,64 @@ export interface UserGroupUpdateData {
 
 export interface AddRemoveMembersData {
     member_ids: number[];
+}
+
+// ============================================
+// SENSOR READINGS & HEARTBEATS
+// ============================================
+
+export interface SensorReading {
+    id: number;
+    sensor_id: number;
+    device_name: string;
+    mac_address: string;
+    timestamp: string;
+    event_id?: number;
+    [key: string]: any;
+}
+
+export interface HeartbeatLog {
+    id: number;
+    sensor_id: number;
+    device_name: string;
+    mac_address: string;
+    is_online: boolean;
+    device_timestamp: string;
+    created_at: string;
+}
+
+// ============================================
+// HALO DATA INGESTION
+// ============================================
+
+export interface HaloDataPayload {
+    device_name: string;
+    mac_address: string;
+    ip_address: string;
+    timestamp: string;
+    sensor_data: Record<string, any>;
+}
+
+export interface HaloHeartbeatPayload {
+    device_name: string;
+    mac_address: string;
+    ip_address: string;
+    device_timestamp: string;
+    is_online: boolean;
+}
+
+// ============================================
+// MONITORING & HEALTH
+// ============================================
+
+export interface HeartbeatStatus {
+    total_sensors: number;
+    online_sensors: number;
+    offline_sensors: number;
+    last_update: string;
+}
+
+export interface DeviceHealth {
+    status: 'healthy' | 'unhealthy';
+    timestamp: string;
 }

@@ -406,7 +406,12 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                         )}
                     </div>
 
-                    {!editMode && <SceneGizmo3D rotation={rotation} onRotationChange={(r) => setRotation(r)} />}
+                    {!editMode && <SceneGizmo3D
+                        rotation={rotation}
+                        zoom={zoom}
+                        onRotationChange={(r) => setRotation(r)}
+                        onZoomChange={(z) => setZoom(z)}
+                    />}
                     <InteractionHints
                         zoom={zoom}
                         editMode={editMode}
