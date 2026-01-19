@@ -1,4 +1,4 @@
-import { Area, Sensor, SubArea, User } from '../types/sensor';
+import { Area, Sensor, SubArea, User, SensorGroup } from '../types/sensor';
 
 export const mockUsers: User[] = [
     {
@@ -66,26 +66,30 @@ export const mockUserGroups: any[] = [
     }
 ];
 
-export const mockSensorGroups: any[] = [
+export const mockSensorGroups: SensorGroup[] = [
     {
-        id: "1",
+        id: 1,
         name: "Ammonia Sensors",
         description: "Sensors monitoring NH3 levels in bathrooms",
         status: "Normal",
-        sensorCount: 0,
+        sensor_list: [],
+        sensor_object_list: [],
+        sensor_count: 0,
         activeAlerts: 0,
-        createdAt: "2026-01-14T10:00:00.000Z",
-        updatedAt: "2026-01-14T10:00:00.000Z"
+        created_at: "2026-01-14T10:00:00.000Z",
+        updated_at: "2026-01-14T10:00:00.000Z"
     },
     {
-        id: "2",
+        id: 2,
         name: "Security Cams",
         description: "Motion detection cameras in hallways",
         status: "Warning",
-        sensorCount: 0,
+        sensor_list: [],
+        sensor_object_list: [],
+        sensor_count: 0,
         activeAlerts: 1,
-        createdAt: "2026-01-14T11:00:00.000Z",
-        updatedAt: "2026-01-14T11:00:00.000Z"
+        created_at: "2026-01-14T11:00:00.000Z",
+        updated_at: "2026-01-14T11:00:00.000Z"
     }
 ];
 
@@ -270,12 +274,12 @@ export const mockRoomBoundaries: Record<number, number[][]> = {
 };
 
 export const mockSensors: Sensor[] = [
-    // UNASSIGNED SENSORS (For Testing Placement)
     {
         id: 'S-NEW-001',
         name: 'New Temp Sensor',
         sensor_type: 'Temperature',
         status: 'Inactive', // Inactive until placed
+        is_online: false,
         ip_address: '192.168.1.101',
         location: 'Production Line A',
         mac_address: '00:1A:2B:3C:4D:01',
@@ -286,6 +290,7 @@ export const mockSensors: Sensor[] = [
         name: 'New Humidity Sensor',
         sensor_type: 'Humidity',
         status: 'Inactive',
+        is_online: true,
         ip_address: '192.168.1.102',
         location: 'Storage Room 4',
         mac_address: '00:1A:2B:3C:4D:02',
@@ -296,6 +301,7 @@ export const mockSensors: Sensor[] = [
         name: 'New Motion Sensor',
         sensor_type: 'Motion',
         status: 'Inactive',
+        is_online: true,
         ip_address: '192.168.1.103',
         location: 'Main Entrance',
         mac_address: '00:1A:2B:3C:4D:03',
@@ -307,6 +313,7 @@ export const mockSensors: Sensor[] = [
         name: 'B3-F1-RoomA Sensor',
         sensor_type: 'Temperature',
         status: 'warning',
+        is_online: true,
         area_id: 302,
         floor_level: 1,
         x_coordinate: 0.25,
@@ -321,6 +328,7 @@ export const mockSensors: Sensor[] = [
         name: 'B3-F2-RoomB Sensor',
         sensor_type: 'CO2',
         status: 'critical',
+        is_online: false,
         area_id: 306,
         floor_level: 2,
         x_coordinate: 0.75,
@@ -346,6 +354,7 @@ export const mockSensors: Sensor[] = [
         name: 'Critical Alert Sensor',
         sensor_type: 'Temperature',
         status: 'critical',
+        is_online: true,
         sensor_data: { val: 45, threshold: 30, sensors: { temp_c: 45 } } as any
     },
     {
@@ -353,6 +362,7 @@ export const mockSensors: Sensor[] = [
         name: 'Warning Level Sensor',
         sensor_type: 'Humidity',
         status: 'warning',
+        is_online: true,
         mac_address: '00:1A:2B:3C:4D:99',
         ip_address: '192.168.1.99',
         firmware_version: '3.4.2',
@@ -401,6 +411,7 @@ export const mockSensors: Sensor[] = [
         name: 'Safe Pulse Sensor',
         sensor_type: 'CO2',
         status: 'safe',
+        is_online: true,
         sensor_data: { val: 450, threshold: 1000, sensors: { co2: 450 } } as any
     },
     {
@@ -408,6 +419,7 @@ export const mockSensors: Sensor[] = [
         name: 'Tactical Acoustic Sensor',
         sensor_type: 'Sound',
         status: 'critical',
+        is_online: false,
         mac_address: '00:DE:AD:BE:EF:01',
         ip_address: '192.168.1.50',
         firmware_version: '4.0.1',
