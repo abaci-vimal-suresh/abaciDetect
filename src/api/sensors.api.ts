@@ -929,7 +929,7 @@ export const useUpdateSensorGroup = () => {
                     if (data.description !== undefined) group.description = data.description;
                     if (data.sensor_list !== undefined) {
                         const newSensors = mockSensors.filter(s => (data.sensor_list as any[]).includes(s.id));
-                        group.sensor_list = newSensors;
+                        // group.sensor_list = newSensors;
                         group.sensor_count = newSensors.length;
                     }
                     return group;

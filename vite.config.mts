@@ -37,7 +37,7 @@ export default defineConfig({
   },
   server: {
     host: "0.0.0.0", // Listen on all network interfaces
-    port: 5173,
+    port: 8080,
     strictPort: true,
     hmr: false, // Bypass WebSocket/HMR completely as requested
     watch: {
