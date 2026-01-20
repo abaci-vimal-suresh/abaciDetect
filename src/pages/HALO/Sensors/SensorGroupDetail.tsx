@@ -205,8 +205,8 @@ const SensorGroupDetail = () => {
 
     // Get sensors that belong to this area
     const areaSensors = useMemo(() => {
-        return getSensorsByArea(allSensors || [], areaId, currentArea?.name);
-    }, [allSensors, areaId, currentArea]);
+        return getSensorsByArea(allSensors || [], areaId, currentArea?.name, areas);
+    }, [allSensors, areaId, currentArea, areas]);
 
     // Filter sensors that belong to this subarea
     const sensors = useMemo(() => {
