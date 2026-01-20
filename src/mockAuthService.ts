@@ -3,22 +3,21 @@
 
 interface MockUser {
   id: number;
+  username: string;
   email: string;
   first_name: string;
   last_name: string;
-  full_name: string;
   role: string;
-  user_class: string;
-  user_status: string;
+  is_active: boolean;
 }
 
 interface LoginCredentials {
-  email: string;
+  username: string;
   password: string;
 }
 
 interface LoginResponse {
-  data: MockUser;
+  user: MockUser;
   message: string;
 }
 
@@ -26,42 +25,37 @@ interface ProfileResponse {
   email: string;
   first_name: string;
   last_name: string;
-  full_name: string;
   role: string;
-  user_status: string;
 }
 
 // Mock users database
 const MOCK_USERS: Record<string, MockUser> = {
-  'admin@gmail.com': {
+  'john_admin': {
     id: 1,
+    username: 'john_admin',
     email: 'admin@gmail.com',
     first_name: 'Arun',
     last_name: '',
-    full_name: 'Arun',
     role: 'Admin',
-    user_class: 'Envirol',
-    user_status: 'ACTIVE'
+    is_active: true
   },
-  'viewer@gmail.com': {
+  'vimal_viewer': {
     id: 2,
+    username: 'vimal_viewer',
     email: 'viewer@gmail.com',
     first_name: 'Vimal',
     last_name: '',
-    full_name: 'Vimal',
     role: 'Viewer',
-    user_class: 'Envirol',
-    user_status: 'ACTIVE'
+    is_active: true
   },
-  'gold@gmail.com': {
+  'gold_viewer': {
     id: 3,
+    username: 'gold_viewer',
     email: 'gold@gmail.com',
     first_name: 'Gold',
     last_name: 'Smith',
-    full_name: 'Gold Smith',
     role: 'Viewer',
-    user_class: 'Envirol',
-    user_status: 'ACTIVE'
+    is_active: true
   }
 };
 
@@ -103,15 +97,15 @@ export const mockAuthService = {
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     await delay(800); // Simulate network delay
 
-    const { email, password } = credentials;
-    const user = MOCK_USERS[email.toLowerCase()];
+    const { username, password } = credentials;
+    const user = MOCK_USERS[username];
 
     // Validate credentials
     if (!user) {
       throw {
         response: {
           status: 401,
-          data: { message: 'Invalid email or password' }
+          data: { message: 'Invalid username or password' }
         }
       };
     }
@@ -126,23 +120,23 @@ export const mockAuthService = {
       };
     }
 
-    // Simulate wrong password (optional: make password = "password123" for all)
+    // Simulate wrong password
     if (password !== 'password123') {
       throw {
         response: {
           status: 401,
-          data: { message: 'Invalid email or password' }
+          data: { message: 'Invalid username or password' }
         }
       };
     }
 
-    // Set session (simulates HttpOnly cookie set by backend)
-    sessionManager.setSession(email);
+    // Set session
+    sessionManager.setSession(username);
 
-    console.log('Mock Login Success:', user.email);
+    console.log('Mock Login Success:', user.username);
 
     return {
-      data: user,
+      user: user,
       message: 'Login successful'
     };
   },
@@ -182,9 +176,7 @@ export const mockAuthService = {
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      full_name: user.full_name,
-      role: user.role,
-      user_status: user.user_status
+      role: user.role
     };
   },
 

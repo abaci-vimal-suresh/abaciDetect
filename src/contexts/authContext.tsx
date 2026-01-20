@@ -1,7 +1,7 @@
 import React, { createContext, FC, ReactNode, useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useProfile, useLogout, useCheckOrganization, authConfig } from '../api/auth.api';
+import { useProfile, useLogout, authConfig, autoLoginMock } from '../api/auth.api';
 import AbaciLoader from '../components/AbaciLoader/AbaciLoader';
 
 export interface IAuthContextProps {
@@ -24,7 +24,7 @@ interface IAuthContextProviderProps {
 export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children }) => {
   const [user, setUser] = useState<string>('');
   const [userData, setUserData] = useState<null | any>(null);
-  const [organizationExists, setOrganizationExists] = useState<boolean | null>(null);
+  const [organizationExists, setOrganizationExists] = useState<boolean | null>(true);
   const [isCheckingOrganization, setIsCheckingOrganization] = useState<boolean>(true);
 
   const navigate = useNavigate();
@@ -47,17 +47,11 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
     refetch: refetchProfile,
   } = useProfile({ enabled: !isPublicRoute && authConfig.isAuthenticated() });
 
-  // Use organization check query (disabled for public routes)
-  const {
-    data: orgData,
-    isLoading: isLoadingOrg,
-    refetch: refetchOrganization,
-  } = useCheckOrganization({ enabled: !isPublicRoute });
 
   const clearAuthData = () => {
     setUser('');
     setUserData(null);
-    setOrganizationExists(null);
+    setOrganizationExists(true);
     setIsCheckingOrganization(false);
   };
 
@@ -76,27 +70,10 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
     });
   };
 
-  // Function to check if organization exists
+  // Function to check if organization exists (Dummy implementation)
   const checkOrganizationStatus = async (): Promise<void> => {
-    try {
-      setIsCheckingOrganization(true);
-      const { data } = await refetchOrganization();
-      const orgExists = data?.organization_exists ?? false;
-
-      setOrganizationExists(orgExists);
-
-      // Redirect logic
-      if (!orgExists && !location.pathname.includes('/create-organization')) {
-        navigate('/create-organization');
-      } else if (orgExists && location.pathname.includes('/create-organization')) {
-        navigate('/');
-      }
-    } catch (error: any) {
-      console.error('Error checking organization status:', error);
-      setOrganizationExists(false);
-    } finally {
-      setIsCheckingOrganization(false);
-    }
+    setOrganizationExists(true);
+    setIsCheckingOrganization(false);
   };
 
   // Update user data when profile is fetched
@@ -107,12 +84,6 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
     }
   }, [profileData]);
 
-  // Update organization status when org data is fetched
-  useEffect(() => {
-    if (orgData) {
-      setOrganizationExists(orgData.organization_exists);
-    }
-  }, [orgData]);
 
   // Handle profile fetch errors (redirect to login)
   useEffect(() => {
@@ -132,6 +103,9 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
         return;
       }
 
+      // Auto-login if in mock mode
+      autoLoginMock();
+
       // Check if user is authenticated
       if (!authConfig.isAuthenticated()) {
         setIsCheckingOrganization(false);
@@ -141,7 +115,7 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
 
       // Profile will be fetched automatically by useProfile hook
       // Wait for it to complete
-      setIsCheckingOrganization(isLoadingProfile || isLoadingOrg);
+      setIsCheckingOrganization(isLoadingProfile);
     };
 
     initializeAuth();
@@ -151,9 +125,9 @@ export const AuthContextProvider: FC<IAuthContextProviderProps> = ({ children })
   // Update checking status based on query states
   useEffect(() => {
     if (!isPublicRoute) {
-      setIsCheckingOrganization(isLoadingProfile || isLoadingOrg);
+      setIsCheckingOrganization(isLoadingProfile);
     }
-  }, [isLoadingProfile, isLoadingOrg, isPublicRoute]);
+  }, [isLoadingProfile, isPublicRoute]);
 
   const value = useMemo(
     () => ({

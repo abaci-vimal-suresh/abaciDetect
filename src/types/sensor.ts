@@ -207,8 +207,7 @@ export interface SensorGroup {
     id: number;
     name: string;
     description?: string;
-    sensor_list: number[];
-    sensor_object_list: Sensor[];
+    sensor_list: Sensor[]; // Backend returns objects
     sensor_count: number;
     activeAlerts?: number;
     status?: 'Normal' | 'Warning' | 'Critical' | string;
@@ -219,13 +218,13 @@ export interface SensorGroup {
 export interface SensorGroupCreateData {
     name: string;
     description?: string;
-    sensor_list?: string[] | number[];
+    sensor_ids?: number[];
 }
 
 export interface SensorGroupUpdateData {
     name?: string;
     description?: string;
-    sensor_list?: string[] | number[];
+    sensor_ids?: number[];
 }
 
 export type SensorType = 'HALO_SMART' | 'HALO_3C' | 'HALO_IOT' | 'HALO_CUSTOM';
@@ -306,6 +305,31 @@ export interface User {
     created_at: string;
     last_login?: string;
     assigned_area_ids: number[]; // IDs of areas this user manages
+    head_id?: number | null; // ID of the head user
+    head?: User | null; // Head user object
+}
+
+export interface UserCreateData {
+    username: string;
+    email: string;
+    password?: string;
+    first_name?: string;
+    last_name?: string;
+    role: string;
+    is_active?: boolean;
+    head_id?: number | null;
+    assigned_area_ids?: number[];
+}
+
+export interface UserUpdateData {
+    username?: string;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+    role?: string;
+    is_active?: boolean;
+    head_id?: number | null;
+    assigned_area_ids?: number[];
 }
 
 export interface UserActivity {

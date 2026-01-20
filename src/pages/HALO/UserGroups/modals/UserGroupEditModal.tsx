@@ -59,7 +59,7 @@ const UserGroupEditModal: FC<UserGroupEditModalProps> = ({ isOpen, setIsOpen, gr
             formik.setValues({
                 name: group.name,
                 description: group.description || '',
-                member_ids: group.members.map((m) => m.id),
+                member_ids: (group.members || []).map((m) => m.id),
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps

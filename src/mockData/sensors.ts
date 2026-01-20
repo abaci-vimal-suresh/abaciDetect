@@ -7,10 +7,12 @@ export const mockUsers: User[] = [
         email: 'admin@gmail.com',
         first_name: 'Arun',
         last_name: '',
-        role: 'Admin',
+        role: 'admin',
         is_active: true,
         created_at: new Date().toISOString(),
-        assigned_area_ids: []
+        assigned_area_ids: [],
+        head_id: null,
+        head: null
     },
     {
         id: 2,
@@ -18,10 +20,12 @@ export const mockUsers: User[] = [
         email: 'viewer@gmail.com',
         first_name: 'Vimal',
         last_name: '',
-        role: 'Viewer',
+        role: 'viewer',
         is_active: true,
         created_at: new Date().toISOString(),
-        assigned_area_ids: [101, 201] // Assigned to Ground Floor A and Ground Floor B
+        assigned_area_ids: [101, 201], // Assigned to Ground Floor A and Ground Floor B
+        head_id: 1,
+        head: null
     },
     {
         id: 3,
@@ -29,10 +33,12 @@ export const mockUsers: User[] = [
         email: 'rooney@gmail.com',
         first_name: 'Rooney',
         last_name: 'Sullivan',
-        role: 'Viewer',
+        role: 'viewer',
         is_active: true,
         created_at: new Date().toISOString(),
-        assigned_area_ids: [102] // Assigned to First Floor A
+        assigned_area_ids: [102], // Assigned to First Floor A
+        head_id: 1,
+        head: null
     }
 ];
 
@@ -73,7 +79,6 @@ export const mockSensorGroups: SensorGroup[] = [
         description: "Sensors monitoring NH3 levels in bathrooms",
         status: "Normal",
         sensor_list: [],
-        sensor_object_list: [],
         sensor_count: 0,
         activeAlerts: 0,
         created_at: "2026-01-14T10:00:00.000Z",
@@ -85,7 +90,6 @@ export const mockSensorGroups: SensorGroup[] = [
         description: "Motion detection cameras in hallways",
         status: "Warning",
         sensor_list: [],
-        sensor_object_list: [],
         sensor_count: 0,
         activeAlerts: 1,
         created_at: "2026-01-14T11:00:00.000Z",

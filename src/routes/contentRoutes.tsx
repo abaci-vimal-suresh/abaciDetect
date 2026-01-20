@@ -31,7 +31,7 @@ const UserGroupsPage = lazy(() => import('../pages/HALO/UserGroups/UserGroupsPag
 
 const RootRedirect = () => {
 	const { userData } = useContext(AuthContext);
-	if (userData?.role === 'Admin') {
+	if (userData?.role?.toLowerCase() === 'admin') {
 		return <Navigate to='/halo/dashboard' replace />;
 	}
 	return <Navigate to='/profile' replace />;

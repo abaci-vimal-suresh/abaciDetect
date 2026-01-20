@@ -62,9 +62,11 @@ export const updateToken = (newToken) => {
 // Request interceptor to ensure token is always present if cookie exists
 const addTokenInterceptor = (instance) => {
 	instance.interceptors.request.use((config) => {
-		const tokenFromCookie = Cookies.get('token');
-		if (tokenFromCookie && !config.headers.Authorization) {
-			config.headers.Authorization = `Bearer ${tokenFromCookie}`;
+		// Try different common cookie names for tokens
+		const token = Cookies.get('token') || Cookies.get('access_token') || Cookies.get('access');
+
+		if (token && !config.headers.Authorization) {
+			config.headers.Authorization = `Bearer ${token}`;
 		}
 		return config;
 	});

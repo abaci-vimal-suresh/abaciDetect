@@ -65,7 +65,10 @@ const ContentRoutes = () => {
         {RouteConfig.map((page) => {
           // Check if route has role restrictions
           if (page.allowedTo) {
-            if (page.allowedTo?.includes(userData?.role)) {
+            const userRole = userData?.role?.toLowerCase();
+            const hasAccess = page.allowedTo.some(role => role.toLowerCase() === userRole);
+
+            if (hasAccess) {
               return (
                 <Route
                   path={page.path}

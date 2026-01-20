@@ -6,10 +6,12 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Label from '../../../../components/bootstrap/forms/Label';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Checks from '../../../../components/bootstrap/forms/Checks';
-import { useAddUser, useAreas } from '../../../../api/sensors.api';
+import { useAddUser, useAreas, useUsers } from '../../../../api/sensors.api';
 import { Area } from '../../../../types/sensor';
 import useDarkMode from '../../../../hooks/useDarkMode';
 import Card, { CardBody, CardHeader, CardTitle } from '../../../../components/bootstrap/Card';
+import Select from '../../../../components/bootstrap/forms/Select';
+import Option from '../../../../components/bootstrap/Option';
 
 interface UserCreateModalProps {
     isOpen: boolean;
@@ -19,6 +21,7 @@ interface UserCreateModalProps {
 const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) => {
     const { darkModeStatus } = useDarkMode();
     const { data: areas } = useAreas();
+    const { data: users } = useUsers();
     const addUserMutation = useAddUser();
 
     const [formData, setFormData] = useState({
@@ -31,7 +34,8 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
         role: 'Viewer' as 'Admin' | 'Viewer',
         assigned_area_ids: [] as number[],
         sendWelcomeEmail: true,
-        mustChangePassword: true
+        mustChangePassword: true,
+        head_id: null as number | null
     });
 
     const resetForm = () => {
@@ -45,7 +49,8 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
             role: 'Viewer' as 'Admin' | 'Viewer',
             assigned_area_ids: [] as number[],
             sendWelcomeEmail: true,
-            mustChangePassword: true
+            mustChangePassword: true,
+            head_id: null
         });
     };
 
@@ -78,7 +83,8 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 role: formData.role,
-                assigned_area_ids: formData.assigned_area_ids
+                assigned_area_ids: formData.assigned_area_ids,
+                head_id: formData.head_id
             });
             handleClose();
         } catch (err) {
@@ -195,6 +201,23 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
                                                     onChange={(e: any) => setFormData({ ...formData, last_name: e.target.value })}
                                                     placeholder="Optional"
                                                 />
+                                            </FormGroup>
+                                        </div>
+                                        <div className="col-12">
+                                            <FormGroup label="Head User (Manager)">
+                                                <Select
+                                                    ariaLabel="Select Head User"
+                                                    placeholder="Select head user..."
+                                                    value={formData.head_id ? String(formData.head_id) : ""}
+                                                    onChange={(e: any) => setFormData({ ...formData, head_id: e.target.value ? Number(e.target.value) : null })}
+                                                >
+                                                    <Option value="">No Head User</Option>
+                                                    {users?.map(user => (
+                                                        <Option key={user.id} value={String(user.id)}>
+                                                            {`${user.first_name} ${user.last_name} (${user.username})`}
+                                                        </Option>
+                                                    ))}
+                                                </Select>
                                             </FormGroup>
                                         </div>
                                     </div>

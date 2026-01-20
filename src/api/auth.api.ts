@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { publicAxios, authAxios } from '../axiosInstance';
-import { mockAuthService } from '../mockAuthService';
+import { mockAuthService, __mockSessionManager } from '../mockAuthService';
 import useToasterNotification from '../hooks/useToasterNotification';
 import Cookies from 'js-cookie';
+import { USE_MOCK_DATA } from './sensors.api';
 
 // ============================================
 // CONFIGURATION
@@ -20,46 +21,43 @@ type AuthStrategy = 'httponly' | 'js-cookie';
 const AUTH_STRATEGY: AuthStrategy =
     (import.meta.env.VITE_AUTH_STRATEGY as AuthStrategy) || 'httponly';
 
-const USE_MOCK_AUTH = import.meta.env.VITE_USE_MOCK_AUTH === 'true' || false;
+const USE_MOCK_AUTH = USE_MOCK_DATA;
 
 // ============================================
 // TYPESCRIPT INTERFACES
 // ============================================
 
 export interface LoginCredentials {
-    email: string;
+    username: string;
     password: string;
 }
 
 export interface UserData {
     id: number;
+    username: string;
     email: string;
     first_name: string;
     last_name: string;
-    full_name: string;
     role: string;
-    user_class: string;
-    user_status: string;
+    is_active: boolean;
 }
 
 export interface LoginResponse {
-    data: UserData;
+    user: UserData;
     message: string;
-    token?: string; // Only present for js-cookie strategy
+    token?: string;
+    access?: string;
+    refresh?: string;
+    refresh_token?: string;
 }
 
 export interface ProfileResponse {
     email: string;
     first_name: string;
     last_name: string;
-    full_name: string;
     role: string;
-    user_status: string;
 }
 
-export interface OrganizationCheckResponse {
-    organization_exists: boolean;
-}
 
 // ============================================
 // HELPER FUNCTIONS
@@ -68,10 +66,13 @@ export interface OrganizationCheckResponse {
 /**
  * Store authentication token (only for js-cookie strategy)
  */
-const storeToken = (token: string): void => {
-    if (AUTH_STRATEGY === 'js-cookie') {
-        Cookies.set('token', token, {
-            expires: 7, // 7 days
+/**
+ * Store authentication tokens in cookies
+ */
+const storeToken = (name: 'token' | 'refresh_token', value: string): void => {
+    if (AUTH_STRATEGY === 'js-cookie' || true) { // Always store as fallback if returned in body
+        Cookies.set(name, value, {
+            expires: name === 'refresh_token' ? 7 : 1, // 7 days for refresh, 1 day for access
             sameSite: 'Lax',
             secure: import.meta.env.PROD // Only secure in production
         });
@@ -105,6 +106,16 @@ export const isAuthenticated = (): boolean => {
     return true; // Assume authenticated, let backend validate
 };
 
+/**
+ * Auto-login a mock user when USE_MOCK_DATA is true
+ */
+export const autoLoginMock = () => {
+    if (USE_MOCK_AUTH && !__mockSessionManager.isAuthenticated()) {
+        __mockSessionManager.setSession('john_admin');
+        console.log('🚀 Auto-logged in as mock user (john_admin)');
+    }
+};
+
 // ============================================
 // REACT QUERY HOOKS
 // ============================================
@@ -127,9 +138,15 @@ export const useLogin = () => {
             // Real API call
             const { data } = await publicAxios.post<LoginResponse>('/users/login/', credentials);
 
-            // Store token if using js-cookie strategy
-            if (AUTH_STRATEGY === 'js-cookie' && data.token) {
-                storeToken(data.token);
+            // Capture tokens if returned in the response body
+            const accessToken = data.access || data.token;
+            const refreshToken = data.refresh || data.refresh_token;
+
+            if (accessToken) {
+                storeToken('token', accessToken);
+            }
+            if (refreshToken) {
+                storeToken('refresh_token', refreshToken);
             }
 
             return data;
@@ -211,7 +228,7 @@ export const useProfile = (options?: { enabled?: boolean }) => {
             }
 
             // Real API call
-            const { data } = await authAxios.get<ProfileResponse>('/users/profile/');
+            const { data } = await authAxios.get<ProfileResponse>('/users/profile/me/');
             return data;
         },
         enabled: options?.enabled !== false,
@@ -221,27 +238,6 @@ export const useProfile = (options?: { enabled?: boolean }) => {
     });
 };
 
-/**
- * Organization Check Hook
- * Checks if an organization exists for the current user
- */
-export const useCheckOrganization = (options?: { enabled?: boolean }) => {
-    return useQuery({
-        queryKey: ['auth', 'organization'],
-        queryFn: async (): Promise<OrganizationCheckResponse> => {
-            if (USE_MOCK_AUTH) {
-                const response = await mockAuthService.checkOrganization();
-                return response;
-            }
-
-            // Real API call
-            const { data } = await publicAxios.get<OrganizationCheckResponse>('/organization/check');
-            return data;
-        },
-        enabled: options?.enabled !== false,
-        staleTime: 10 * 60 * 1000, // 10 minutes
-    });
-};
 
 /**
  * Password Reset Hook
