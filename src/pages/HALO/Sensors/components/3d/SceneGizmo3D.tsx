@@ -8,9 +8,9 @@ interface Point {
 
 interface SceneGizmo3DProps {
     rotation: Point;
-    zoom: number; // Add main scene zoom
+    zoom: number;
     onRotationChange?: (rotation: Point) => void;
-    onZoomChange?: (zoom: number) => void; // Add zoom change handler
+    onZoomChange?: (zoom: number) => void;
 }
 
 const SceneGizmo3D: React.FC<SceneGizmo3DProps> = ({

@@ -5,23 +5,14 @@ import checker from 'vite-plugin-checker';
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "path";
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(),
   tsconfigPaths(),
   svgr({
     svgrOptions: {
-      // svgr options (optional)
     },
   }),
-    // checker({
-    //   typescript: {
-    //     tsconfigPath: './tsconfig.json',
-    //   },
-    //   // eslint: {
-    //     //   lintCommand: "eslint --ext .js,.jsx,.ts,.tsx src", // ESLint for `.js`, `.jsx`, `.ts`, `.tsx`
-    //   // },
-    // })
+
   ],
   base: process.env.PUBLIC_URL || "/",
   resolve: {
@@ -36,16 +27,16 @@ export default defineConfig({
     },
   },
   server: {
-    host: "0.0.0.0", // Listen on all network interfaces
+    host: "0.0.0.0",
     port: 8000,
     strictPort: true,
-    hmr: false, // Bypass WebSocket/HMR completely as requested
+    hmr: false,
     watch: {
       usePolling: true,
     },
-    allowedHosts: true, // Allow any host for debugging purposes
+    allowedHosts: true,
     fs: {
-      strict: false, // Less restrictive for file access
+      strict: false,
     },
     proxy: {
       '/api': {
@@ -63,11 +54,11 @@ export default defineConfig({
 
       output: {
         manualChunks: {
-          reactVendor: ["react", "react-dom"], // Separate React
-          mui: ["@mui/material", "@mui/icons-material", "@mui/lab", "@mui/styles"], // Separate MUI
-          lodash: ["lodash-es"], // Separate Lodash
-          highlight: ["highlight.js"], // Separate Highlight.js
-          materialTable: ["@material-table/core"], // Separate Material-Table
+          reactVendor: ["react", "react-dom"],
+          mui: ["@mui/material", "@mui/icons-material", "@mui/lab", "@mui/styles"],
+          lodash: ["lodash-es"],
+          highlight: ["highlight.js"],
+          materialTable: ["@material-table/core"],
           jspdf: ["jspdf"],
           apexcharts: ["react-apexcharts", "apexcharts"],
         },
@@ -75,7 +66,7 @@ export default defineConfig({
     },
   },
   define: {
-    global: 'window' // Polyfill global for browser use
+    global: 'window'
   }
 
 })

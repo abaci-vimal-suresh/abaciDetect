@@ -1,6 +1,7 @@
 import React from 'react';
 import Sensor3DMarker from './Sensor3DMarker';
 import { Area, Sensor } from '../../../../../types/sensor';
+import { VisionMode } from '../FloorPlanCanvas';
 import { RoomVisibilitySettings } from '../RoomSettingsPanel';
 import Room3DBox from '../Room3DBox';
 
@@ -20,6 +21,7 @@ interface MultiFloorBuildingProps {
     darkModeStatus: boolean;
     focusedFloorLevel?: number | null;
     rotation: { x: number; y: number };
+    visionMode?: VisionMode;
 }
 
 
@@ -38,7 +40,8 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
     getStatusColor,
     darkModeStatus,
     focusedFloorLevel,
-    rotation
+    rotation,
+    visionMode = 'none'
 }) => {
     // Get visible floors (deduplicated)
     const buildingFloors = Array.from(new Set(areas
@@ -83,10 +86,24 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
                 );
                 const currentFloorPlan = floorArea?.floor_plan_url || (idx === 0 ? floorPlanUrl : null);
 
-                // Apply appropriate filter based on mode (Fixed default for dark mode clarity)
-                const appliedFilter = (currentFloorPlan && darkModeStatus)
-                    ? 'grayscale(1) invert(1) brightness(0.85) contrast(1.6) sepia(0.35) hue-rotate(190deg) saturate(1.4)'
-                    : 'none';
+                // Image filter logic based on visionMode
+                let appliedFilter = 'none';
+
+                if (visionMode === 'invert') {
+                    appliedFilter = 'invert(1)';
+                } else if (visionMode === 'sepia') {
+                    appliedFilter = 'sepia(1)';
+                } else if (visionMode === 'negative') {
+                    appliedFilter = 'invert(1) hue-rotate(180deg)';
+                } else if (visionMode === 'dog') {
+                    // Dog view: Dichromatic (mostly yellow/blue), higher contrast
+                    appliedFilter = 'contrast(1.4) saturate(0.6) hue-rotate(-20deg) brightness(1.1)';
+                } else if (visionMode === 'batman') {
+                    // Batman: High contrast, bluish-black "detective mode" style
+                    appliedFilter = 'brightness(0.4) contrast(3) grayscale(1) sepia(1) hue-rotate(200deg) saturate(6) brightness(0.8)';
+                } else if (darkModeStatus) {
+                    appliedFilter = 'grayscale(1) invert(1) brightness(0.85) contrast(1.6) sepia(0.35) hue-rotate(190deg) saturate(1.4)';
+                }
 
                 return (
                     <div
