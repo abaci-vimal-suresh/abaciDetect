@@ -1,45 +1,36 @@
 const baseURLFunc = () => {
-	const url = window.location.origin.split(':3000')[0];
-	// console.log(url)
-	// console.log(import.meta.env);
-	if (import.meta.env.MODE === 'development') {
-		return `${url}:8000/api`;
+	// Priority 1: Environment Variable (set in .env.development or .env.production)
+	if (import.meta.env.VITE_API_BASE_URL) {
+		return import.meta.env.VITE_API_BASE_URL;
 	}
-	return `${url}/api`;
+	// Priority 2: Hardcoded Production Fallback
+	return 'http://111.92.105.222:8081/api';
 };
 
-// export const baseURL = baseURLFunc();
-
-
-export const baseURL = 'http://192.168.1.171:8002/api'; // Your backend URL
+export const baseURL = baseURLFunc();
+console.log('BASE URL:', baseURL);
 
 const imageURLFunc = () => {
-	const url = window.location.origin.split(':3000')[0];
-	if (import.meta.env.MODE === 'development') {
-		return `${url}:8000`;
+	if (import.meta.env.VITE_API_BASE_URL) {
+		const url = new URL(import.meta.env.VITE_API_BASE_URL);
+		return `${url.protocol}//${url.hostname}:${url.port}`;
 	}
-	return url;
+	return 'http://111.92.105.222:8081';
 };
 export const imageURL = imageURLFunc();
-// export const baseURL = 'https://envirol.abacitechs.com'
-// export const baseURL = window.location.origin
 
 const baseURLCreator = () => {
-	const url = window.location.origin.split(':3000')[0];
-	if (import.meta.env.MODE === 'development') {
-		return `${url}:3000`;
-	}
-	return url;
+	return window.location.origin;
 };
 
 export const baseURLForFrontend = baseURLCreator();
 
 const baseURLForSocketIO = () => {
-	const url = window.location.origin.split(':3000')[0];
-	if (import.meta.env.MODE === 'development') {
-		// Fallback to the known backend port if env var is missing
+	// Priority 1: Explicit Env Var
+	if (import.meta.env.VITE_BACKEND_HOST_FOR_SOCKET_IO) {
 		return import.meta.env.VITE_BACKEND_HOST_FOR_SOCKET_IO;
 	}
-	return url;
+	// Priority 2: Derived from Base URL logic (Hardcoded fallback)
+	return 'http://111.92.105.222:8081';
 };
 export const wsUrl = baseURLForSocketIO();
