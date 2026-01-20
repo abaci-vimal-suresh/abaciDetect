@@ -5,7 +5,7 @@ import { Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, User
 import useToasterNotification from '../hooks/useToasterNotification';
 import { mockAreas, mockSubAreas, mockSensors, saveMockData, mockUsers, mockUserGroups, mockSensorGroups } from '../mockData/sensors';
 
-const USE_MOCK_DATA = false;
+const USE_MOCK_DATA = true;
 
 const mockPersonnelData: { [sensorId: string]: { name: string; contact: string; email: string } } = {};
 
@@ -929,14 +929,22 @@ export const useUpdateSensorGroup = () => {
                     if (data.description !== undefined) group.description = data.description;
                     if (data.sensor_list !== undefined) {
                         const newSensors = mockSensors.filter(s => (data.sensor_list as any[]).includes(s.id));
-                        group.sensor_list = newSensors;
+                        // group.sensor_list = newSensors;
                         group.sensor_count = newSensors.length;
                     }
                     return group;
                 }
                 throw new Error('Sensor group not found');
             }
-            const { data: response } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, data);
+
+            // Transform payload: sensor_list -> sensor_ids
+            const payload: any = { ...data };
+            if (payload.sensor_list) {
+                payload.sensor_ids = payload.sensor_list;
+                delete payload.sensor_list;
+            }
+
+            const { data: response } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, payload);
             return response as SensorGroup;
         },
         onSuccess: (_, { groupId }) => {
@@ -960,7 +968,7 @@ export const useAddSensorGroupMembers = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ groupId, sensor_list }: { groupId: string | number; sensor_list: any[] }) => {
+        mutationFn: async ({ groupId, sensor_ids }: { groupId: string | number; sensor_ids: any[] }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 const group = mockSensorGroups.find(g => g.id.toString() === groupId.toString());
@@ -968,7 +976,7 @@ export const useAddSensorGroupMembers = () => {
                     if (!group.sensor_list) group.sensor_list = [];
                     if (!group.sensor_object_list) group.sensor_object_list = [];
 
-                    const newSensors = mockSensors.filter(s => sensor_list.includes(s.id));
+                    const newSensors = mockSensors.filter(s => sensor_ids.includes(s.id));
                     const currentIds = (group.sensor_list as number[]).map(id => id);
                     const toAddObj = newSensors.filter(s => !currentIds.includes(Number(s.id)));
 
@@ -981,7 +989,7 @@ export const useAddSensorGroupMembers = () => {
                 throw new Error('Sensor group not found');
             }
             // Consolidate to standard PATCH endpoint as per documentation
-            const { data } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, { sensor_list });
+            const { data } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, { sensor_ids });
             return data;
         },
         onSuccess: (_, { groupId }) => {
@@ -1005,14 +1013,14 @@ export const useRemoveSensorGroupMembers = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ groupId, sensor_list }: { groupId: string | number; sensor_list: any[] }) => {
+        mutationFn: async ({ groupId, sensor_ids }: { groupId: string | number; sensor_ids: any[] }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 const group = mockSensorGroups.find(g => g.id.toString() === groupId.toString());
                 if (group) {
                     if (group.sensor_list) {
-                        group.sensor_list = (group.sensor_list as number[]).filter(id => !sensor_list.includes(id));
-                        group.sensor_object_list = group.sensor_object_list?.filter(s => !sensor_list.includes(Number(s.id)));
+                        group.sensor_list = (group.sensor_list as number[]).filter(id => !sensor_ids.includes(id));
+                        group.sensor_object_list = group.sensor_object_list?.filter(s => !sensor_ids.includes(Number(s.id)));
                         group.sensor_count = (group.sensor_list as number[]).length;
                     }
                     group.updated_at = new Date().toISOString();
@@ -1020,8 +1028,7 @@ export const useRemoveSensorGroupMembers = () => {
                 }
                 throw new Error('Sensor group not found');
             }
-            // Consolidate to standard PATCH endpoint as per documentation
-            const { data } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, { sensor_list });
+            const { data } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, { sensor_ids });
             return data;
         },
         onSuccess: (_, { groupId }) => {
