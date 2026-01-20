@@ -37,13 +37,13 @@ export default defineConfig({
   },
   server: {
     host: "0.0.0.0", // Listen on all network interfaces
-    port: 8080,
+    port: 5173,
     strictPort: true,
     hmr: false, // Bypass WebSocket/HMR completely as requested
     watch: {
       usePolling: true,
     },
-    allowedHosts: ['192.168.1.200', 'localhost', '127.0.0.1'], // Allow local network access explicitly
+    allowedHosts: true, // Allow any host for debugging purposes
     fs: {
       strict: false, // Less restrictive for file access
     },

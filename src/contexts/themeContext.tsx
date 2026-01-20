@@ -32,7 +32,7 @@ export const ThemeContextProvider: FC<IThemeContextProviderProps> = ({ children 
 	const [darkModeStatus, setDarkModeStatus] = useState(
 		localStorage.getItem('facit_darkModeStatus')
 			? localStorage.getItem('facit_darkModeStatus') === 'true'
-			: true,
+			: import.meta.env.VITE_DARK_MODE === 'true',
 	);
 
 	useLayoutEffect(() => {
