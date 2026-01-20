@@ -9,9 +9,18 @@ export const baseURL = baseURLFunc();
 console.log('BASE URL:', baseURL);
 
 const imageURLFunc = () => {
-	if (import.meta.env.VITE_API_BASE_URL) {
-		const url = new URL(import.meta.env.VITE_API_BASE_URL);
-		return `${url.protocol}//${url.hostname}:${url.port}`;
+	const apiUrl = import.meta.env.VITE_API_BASE_URL;
+	if (apiUrl) {
+		if (apiUrl.startsWith('http')) {
+			try {
+				const url = new URL(apiUrl);
+				return `${url.protocol}//${url.hostname}:${url.port}`;
+			} catch (e) {
+				return apiUrl;
+			}
+		}
+		// If relative path like /api, return current origin
+		return window.location.origin;
 	}
 	return 'http://111.92.105.222:8081';
 };

@@ -40,7 +40,7 @@ const ManageGroupMembersModal: FC<ManageGroupMembersModalProps> = ({
 
     // Get users that are not already in the group
     const availableUsers = allUsers?.filter(
-        (u) => !group?.members.some((m) => m.id === u.id)
+        (u) => !(group?.members || []).some((m) => m.id === u.id)
     );
 
     const handleAddMembers = () => {

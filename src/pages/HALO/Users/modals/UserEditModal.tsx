@@ -6,10 +6,12 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Label from '../../../../components/bootstrap/forms/Label';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Checks from '../../../../components/bootstrap/forms/Checks';
-import { useUser, useUpdateUser, useAreas } from '../../../../api/sensors.api';
+import { useUser, useUpdateUser, useAreas, useUsers } from '../../../../api/sensors.api';
 import { Area } from '../../../../types/sensor';
 import useDarkMode from '../../../../hooks/useDarkMode';
 import Card, { CardBody, CardHeader, CardTitle } from '../../../../components/bootstrap/Card';
+import Select from '../../../../components/bootstrap/forms/Select';
+import Option from '../../../../components/bootstrap/Option';
 
 interface UserEditModalProps {
     isOpen: boolean;
@@ -21,6 +23,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
     const { darkModeStatus } = useDarkMode();
     const { data: user, isLoading: isUserLoading } = useUser(userId?.toString() || '');
     const { data: areas } = useAreas();
+    const { data: users } = useUsers();
     const updateUserMutation = useUpdateUser();
 
     const [formData, setFormData] = useState({
@@ -30,7 +33,8 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
         last_name: '',
         role: 'Viewer' as 'Admin' | 'Viewer',
         assigned_area_ids: [] as number[],
-        is_active: true
+        is_active: true,
+        head_id: null as number | null
     });
 
     useEffect(() => {
@@ -42,7 +46,8 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                 last_name: user.last_name || '',
                 role: (user.role?.toLowerCase() === 'admin' ? 'Admin' : 'Viewer') as 'Admin' | 'Viewer',
                 assigned_area_ids: user.assigned_area_ids || [],
-                is_active: user.is_active
+                is_active: user.is_active,
+                head_id: user.head_id || null
             });
         }
     }, [user, isOpen]);
@@ -73,7 +78,8 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                     last_name: formData.last_name,
                     role: formData.role,
                     assigned_area_ids: formData.assigned_area_ids,
-                    is_active: formData.is_active
+                    is_active: formData.is_active,
+                    head_id: formData.head_id
                 }
             });
             handleClose();
@@ -182,6 +188,23 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                                                         value={formData.last_name}
                                                         onChange={(e: any) => setFormData({ ...formData, last_name: e.target.value })}
                                                     />
+                                                </FormGroup>
+                                            </div>
+                                            <div className="col-12">
+                                                <FormGroup label="Head User (Manager)">
+                                                    <Select
+                                                        ariaLabel="Select Head User"
+                                                        placeholder="Select head user..."
+                                                        value={formData.head_id ? String(formData.head_id) : ""}
+                                                        onChange={(e: any) => setFormData({ ...formData, head_id: e.target.value ? Number(e.target.value) : null })}
+                                                    >
+                                                        <Option value="">No Head User</Option>
+                                                        {users?.filter(u => u.id !== userId)?.map(user => (
+                                                            <Option key={user.id} value={String(user.id)}>
+                                                                {`${user.first_name} ${user.last_name} (${user.username})`}
+                                                            </Option>
+                                                        ))}
+                                                    </Select>
                                                 </FormGroup>
                                             </div>
                                         </div>

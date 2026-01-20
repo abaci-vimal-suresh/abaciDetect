@@ -41,18 +41,18 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
 
     // Get sensors that are not already in the group
     const availableSensors = allSensors?.filter(
-        (s) => !group?.sensor_list?.some((mId) => String(mId) === String(s.id))
+        (s) => !group?.sensor_list?.some((sensor) => String(sensor.id) === String(s.id))
     );
 
     const handleAddMembers = () => {
         if (!groupId || selectedSensorIds.length === 0 || !group) return;
 
         // Calculate the full list of sensors (existing + new)
-        const currentIds = group.sensor_list?.map(s => s.id) || [];
-        const updatedSensorIds = Array.from(new Set([...currentIds, ...selectedSensorIds]));
+        const currentIds = group.sensor_list?.map(s => Number(s.id)) || [];
+        const updatedSensorIds = Array.from(new Set([...currentIds, ...selectedSensorIds.map(id => Number(id))]));
 
         addMembersMutation.mutate(
-            { groupId, sensor_list: updatedSensorIds },
+            { groupId, sensor_ids: updatedSensorIds },
             {
                 onSuccess: () => {
                     setSelectedSensorIds([]);
@@ -66,10 +66,10 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
 
         if (window.confirm('Are you sure you want to remove this sensor from the group?')) {
             // Calculate the full list of sensors minus the one being removed
-            const currentIds = group.sensor_list?.map(s => s.id) || [];
-            const updatedSensorIds = currentIds.filter(id => id !== sensorId);
+            const currentIds = group.sensor_list?.map(s => Number(s.id)) || [];
+            const updatedSensorIds = currentIds.filter(id => String(id) !== String(sensorId));
 
-            removeMembersMutation.mutate({ groupId, sensor_list: updatedSensorIds });
+            removeMembersMutation.mutate({ groupId, sensor_ids: updatedSensorIds });
         }
     };
 
@@ -98,12 +98,12 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
                                 </h6>
                             </div>
 
-                            {group?.sensor_object_list && group.sensor_object_list.length > 0 ? (
+                            {group?.sensor_list && group.sensor_list.length > 0 ? (
                                 <div
                                     className="border rounded"
                                     style={{ maxHeight: '300px', overflowY: 'auto' }}
                                 >
-                                    {group.sensor_object_list.map((sensor) => (
+                                    {group.sensor_list.map((sensor) => (
                                         <div
                                             key={sensor.id}
                                             className="d-flex justify-content-between align-items-center p-3 border-bottom"

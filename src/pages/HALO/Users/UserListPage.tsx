@@ -69,7 +69,7 @@ const UserList = () => {
                         fontSize: '0.75rem',
                         fontWeight: 500,
                         background:
-                            rowData.role === 'Admin'
+                            rowData.role?.toLowerCase() === 'admin'
                                 ? darkModeStatus
                                     ? 'rgba(122,58,111,0.2)'
                                     : 'rgba(122,58,111,0.15)'
@@ -77,7 +77,7 @@ const UserList = () => {
                                     ? 'rgba(70,188,170,0.2)'
                                     : 'rgba(70,188,170,0.15)',
                         color:
-                            rowData.role === 'Admin'
+                            rowData.role?.toLowerCase() === 'admin'
                                 ? '#7a3a6f'
                                 : '#2d8478'
                     }}

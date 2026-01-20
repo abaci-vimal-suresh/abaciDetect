@@ -13,6 +13,7 @@ import validateEmail from '../../helpers/emailValidator';
 import AbaciLoader from '../../components/AbaciLoader/AbaciLoader';
 import Icon from '../../components/icon/Icon';
 import { useLogin, authConfig } from '../../api/auth.api';
+import { updateToken } from '../../axiosInstance';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -48,7 +49,6 @@ const Login = () => {
         },
         validate: (values) => {
             const errors: any = {};
-            const emailError = validateEmail(values.loginUsername);
 
             if (!values.loginUsername) {
                 errors.loginUsername = 'Required';
@@ -56,10 +56,6 @@ const Login = () => {
 
             if (!values.loginPassword) {
                 errors.loginPassword = 'Required';
-            }
-
-            if (emailError) {
-                errors.loginUsername = emailError;
             }
 
             return errors;
@@ -72,29 +68,31 @@ const Login = () => {
     const handleSignin = (values: any) => {
         loginMutation.mutate(
             {
-                email: values.loginUsername,
+                username: values.loginUsername,
                 password: values.loginPassword,
             },
             {
                 onSuccess: (response) => {
                     console.log('✅ Login Success:', response);
 
-                    // Handle invited user status
-                    if (response.data.user_status === 'INVITED') {
-                        // User needs to change password
-                        // You can add password reset flow here if needed
-                        console.log('User invited, should change password');
-                    } else {
-                        // Update React state with user data
-                        setUser(response.data.email);
-                        setUserData({ ...response.data, user_class: 'Envirol' });
+                    // Update React state with user data (nested under 'user' key)
+                    setUser(response.user.email);
+                    setUserData({ ...response.user, user_class: 'Envirol' });
 
-                        // Role-based redirection
-                        if (response.data.role === 'Admin') {
-                            navigate('/');
-                        } else {
-                            navigate('/profile');
-                        }
+                    // Explicitly update token in axios instance for immediate effect
+                    const token = response.access || response.token;
+                    const refreshToken = response.refresh || response.refresh_token;
+
+                    if (token) {
+                        updateToken(token);
+                    }
+                    // Refresh token is handled by the auth.api.ts mutationFn already via storeToken
+
+                    // Role-based redirection
+                    if (response.user.role.toLowerCase() === 'admin') {
+                        navigate('/');
+                    } else {
+                        navigate('/profile');
                     }
                 },
                 onError: (error: any) => {
@@ -144,7 +142,7 @@ const Login = () => {
                     {authConfig.useMock && (
                         <div className='alert alert-info border-0 rounded-4 mb-4' style={{ background: 'rgba(77, 105, 250, 0.08)' }}>
                             <div className='small text-center'>
-                                <strong>Admin:</strong> admin@gmail.com / password123
+                                <strong>Admin:</strong> john_admin / password123
                             </div>
                         </div>
                     )}
@@ -159,12 +157,12 @@ const Login = () => {
                         }}>
                         <div className='col-12'>
                             <div className="mb-4">
-                                <label className="form-label fw-bold small ms-2 opacity-75">Email Address</label>
+                                <label className="form-label fw-bold small ms-2 opacity-75">Username</label>
                                 <input
-                                    type="email"
+                                    type="text"
                                     className={classNames('form-control', { 'is-invalid': formik.touched.loginUsername && formik.errors.loginUsername })}
                                     name="loginUsername"
-                                    placeholder="name@example.com"
+                                    placeholder="Username"
                                     onChange={formik.handleChange}
                                     onBlur={formik.handleBlur}
                                     value={formik.values.loginUsername}

@@ -47,6 +47,13 @@ export default defineConfig({
     fs: {
       strict: false, // Less restrictive for file access
     },
+    proxy: {
+      '/api': {
+        target: 'http://111.92.105.222:8081',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 
   cacheDir: "node_modules/.vite_cache",

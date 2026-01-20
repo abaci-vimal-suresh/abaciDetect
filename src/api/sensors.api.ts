@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authAxios as axiosInstance } from '../axiosInstance';
 import { queryKeys } from '../lib/queryClient';
-import { Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, UserActivity, UserRole, UserGroup, UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData } from '../types/sensor';
+import { Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, UserActivity, UserRole, UserGroup, UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData, UserCreateData, UserUpdateData } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 import { mockAreas, mockSubAreas, mockSensors, saveMockData, mockUsers, mockUserGroups, mockSensorGroups } from '../mockData/sensors';
 
-const USE_MOCK_DATA = true;
+export const USE_MOCK_DATA = true;
 
 const mockPersonnelData: { [sensorId: string]: { name: string; contact: string; email: string } } = {};
 
@@ -50,30 +50,26 @@ export const useAddUser = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async (userData: any) => {
+        mutationFn: async (userData: UserCreateData) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                const newId = Math.max(...mockUsers.map(u => u.id)) + 1;
+                const newId = Math.max(...mockUsers.map(u => u.id), 0) + 1;
                 const newUser: User = {
                     ...userData,
                     id: newId,
                     created_at: new Date().toISOString(),
-                    is_active: true,
-                    assigned_area_ids: userData.assigned_area_ids || []
+                    is_active: userData.is_active ?? true,
+                    assigned_area_ids: (userData as any).assigned_area_ids || [], // Keep legacy if needed
+                    head_id: userData.head_id || null,
+                    head: userData.head_id ? mockUsers.find(u => u.id === userData.head_id) || null : null,
+                    role: userData.role as UserRole
                 };
                 mockUsers.push(newUser);
                 return newUser;
             }
 
-            // Format payload to match backend spec
-            const { assigned_area_ids, ...rest } = userData;
-            const payload = {
-                ...rest,
-                role: rest.role?.toLowerCase(), // Ensure 'admin' or 'viewer'
-            };
-
             // Spec: POST /api/users/create/
-            const { data } = await axiosInstance.post('/users/create/', payload);
+            const { data } = await axiosInstance.post('/users/create/', userData);
             return data as User;
         },
         onSuccess: (newUser) => {
@@ -91,7 +87,7 @@ export const useUpdateUser = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ userId, userData }: { userId: number; userData: Partial<User> }) => {
+        mutationFn: async ({ userId, userData }: { userId: number; userData: UserUpdateData }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 const userIndex = mockUsers.findIndex(u => u.id === userId);
@@ -99,7 +95,9 @@ export const useUpdateUser = () => {
                     const updatedUser = {
                         ...mockUsers[userIndex],
                         ...userData,
-                        role: userData.role ? (userData.role.toLowerCase() === 'admin' ? 'Admin' : 'Viewer') : mockUsers[userIndex].role
+                        head_id: userData.head_id !== undefined ? userData.head_id : mockUsers[userIndex].head_id,
+                        head: userData.head_id ? mockUsers.find(u => u.id === userData.head_id) || null : (userData.head_id === null ? null : mockUsers[userIndex].head),
+                        role: userData.role ? (userData.role.toLowerCase() === 'admin' ? 'admin' : 'viewer') : mockUsers[userIndex].role
                     } as User;
                     mockUsers[userIndex] = updatedUser;
                     return mockUsers[userIndex];
@@ -107,13 +105,7 @@ export const useUpdateUser = () => {
                 throw new Error('User not found');
             }
 
-            const { assigned_area_ids, ...rest } = userData;
-            const payload = {
-                ...rest,
-                ...(rest.role && { role: rest.role.toLowerCase() as UserRole }),
-            };
-
-            const { data } = await axiosInstance.patch(`/users/detail/${userId}/`, payload);
+            const { data } = await axiosInstance.patch(`/users/detail/${userId}/`, userData);
             return data as User;
         },
         onSuccess: (updatedUser) => {
@@ -528,7 +520,7 @@ export const useTriggerSensor = () => {
                 console.log(`Mock trigger sensor ${data.sensorId} with event ${data.event} at ${data.ip}`);
                 return { success: true, message: 'Sensor triggered (Mock)' };
             }
-            const response = await axiosInstance.post(`/trigger/sensor`, {
+            const response = await axiosInstance.post(`/devices/trigger/`, {
                 event: data.event,
                 ip_address: data.ip
             });
@@ -861,16 +853,15 @@ export const useCreateSensorGroup = () => {
                 const newId = mockSensorGroups.length + 1;
 
                 // Fetch sensors for mock data if IDs provided
-                const groupSensors = data.sensor_list
-                    ? mockSensors.filter(s => (data.sensor_list as any[]).includes(s.id))
+                const groupSensors = data.sensor_ids
+                    ? mockSensors.filter(s => data.sensor_ids!.includes(Number(s.id)))
                     : [];
 
                 const newGroup: SensorGroup = {
                     id: newId,
                     name: data.name,
                     description: data.description || '',
-                    sensor_list: (groupSensors.map(s => Number(s.id)) as number[]),
-                    sensor_object_list: groupSensors,
+                    sensor_list: groupSensors,
                     sensor_count: groupSensors.length,
                     activeAlerts: 0,
                     created_at: new Date().toISOString(),
@@ -881,7 +872,7 @@ export const useCreateSensorGroup = () => {
             }
             // POST /api/devices/sensor-groups/
             const { data: response } = await axiosInstance.post('/devices/sensor-groups/', data);
-            return response;
+            return response as SensorGroup;
         },
         onSuccess: (newGroup) => {
             queryClient.invalidateQueries({ queryKey: ['sensorGroups'] });
@@ -927,8 +918,8 @@ export const useUpdateSensorGroup = () => {
                 if (group) {
                     if (data.name !== undefined) group.name = data.name;
                     if (data.description !== undefined) group.description = data.description;
-                    if (data.sensor_list !== undefined) {
-                        const newSensors = mockSensors.filter(s => (data.sensor_list as any[]).includes(s.id));
+                    if (data.sensor_ids !== undefined) {
+                        const newSensors = mockSensors.filter(s => data.sensor_ids!.includes(Number(s.id)));
                         // group.sensor_list = newSensors;
                         group.sensor_count = newSensors.length;
                     }
@@ -937,14 +928,8 @@ export const useUpdateSensorGroup = () => {
                 throw new Error('Sensor group not found');
             }
 
-            // Transform payload: sensor_list -> sensor_ids
-            const payload: any = { ...data };
-            if (payload.sensor_list) {
-                payload.sensor_ids = payload.sensor_list;
-                delete payload.sensor_list;
-            }
 
-            const { data: response } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, payload);
+            const { data: response } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, data);
             return response as SensorGroup;
         },
         onSuccess: (_, { groupId }) => {
@@ -974,14 +959,12 @@ export const useAddSensorGroupMembers = () => {
                 const group = mockSensorGroups.find(g => g.id.toString() === groupId.toString());
                 if (group) {
                     if (!group.sensor_list) group.sensor_list = [];
-                    if (!group.sensor_object_list) group.sensor_object_list = [];
 
                     const newSensors = mockSensors.filter(s => sensor_ids.includes(s.id));
-                    const currentIds = (group.sensor_list as number[]).map(id => id);
+                    const currentIds = group.sensor_list.map(s => Number(s.id));
                     const toAddObj = newSensors.filter(s => !currentIds.includes(Number(s.id)));
 
-                    group.sensor_list.push(...toAddObj.map(s => Number(s.id)));
-                    group.sensor_object_list.push(...toAddObj);
+                    group.sensor_list.push(...toAddObj);
                     group.sensor_count = group.sensor_list.length;
                     group.updated_at = new Date().toISOString();
                     return { success: true };
@@ -990,7 +973,7 @@ export const useAddSensorGroupMembers = () => {
             }
             // Consolidate to standard PATCH endpoint as per documentation
             const { data } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, { sensor_ids });
-            return data;
+            return data as SensorGroup;
         },
         onSuccess: (_, { groupId }) => {
             queryClient.invalidateQueries({ queryKey: ['sensorGroups', groupId] });
@@ -1019,9 +1002,8 @@ export const useRemoveSensorGroupMembers = () => {
                 const group = mockSensorGroups.find(g => g.id.toString() === groupId.toString());
                 if (group) {
                     if (group.sensor_list) {
-                        group.sensor_list = (group.sensor_list as number[]).filter(id => !sensor_ids.includes(id));
-                        group.sensor_object_list = group.sensor_object_list?.filter(s => !sensor_ids.includes(Number(s.id)));
-                        group.sensor_count = (group.sensor_list as number[]).length;
+                        group.sensor_list = group.sensor_list.filter(s => !sensor_ids.includes(Number(s.id)));
+                        group.sensor_count = group.sensor_list.length;
                     }
                     group.updated_at = new Date().toISOString();
                     return { success: true };
@@ -1029,7 +1011,7 @@ export const useRemoveSensorGroupMembers = () => {
                 throw new Error('Sensor group not found');
             }
             const { data } = await axiosInstance.patch(`/devices/sensor-groups/${groupId}/`, { sensor_ids });
-            return data;
+            return data as SensorGroup;
         },
         onSuccess: (_, { groupId }) => {
             queryClient.invalidateQueries({ queryKey: ['sensorGroups', groupId] });
@@ -1284,7 +1266,8 @@ export const useDeviceReadings = (deviceId: string) => {
     return useQuery({
         queryKey: ['deviceReadings', deviceId],
         queryFn: async () => {
-            const { data } = await axiosInstance.get(`/devices/devices/${deviceId}/readings/`);
+            // Updated to use standardized readings endpoint with filter
+            const { data } = await axiosInstance.get(`/devices/readings/?device_name=${deviceId}`);
             return data;
         },
         enabled: !!deviceId
