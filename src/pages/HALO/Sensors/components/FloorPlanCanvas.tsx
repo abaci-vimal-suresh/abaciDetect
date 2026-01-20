@@ -18,6 +18,8 @@ import SceneGizmo3D from './3d/SceneGizmo3D';
 import Boundary3DVolume from './3d/Boundary3DVolume';
 import InteractionHints from './3d/InteractionHints';
 
+export type VisionMode = 'none' | 'invert' | 'sepia' | 'negative' | 'dog' | 'batman';
+
 interface FloorPlanCanvasProps {
     areaId: number;
     sensors: Sensor[];
@@ -62,6 +64,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
     const [selectedSensor, setSelectedSensor] = useState<string | null>(null);
     const [showBoundaryHint, setShowBoundaryHint] = useState(false);
+    const [visionMode, setVisionMode] = useState<VisionMode>('none');
 
     const [roomConfigs, setRoomConfigs] = useState<{
         [sensorId: string]: { name: string; color: string; showWalls?: boolean; wallOpacity?: number }
@@ -309,6 +312,31 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                         <Icon icon="3d_rotation" className="me-2 text-primary" />
                         Interactive 3D Sensor Environment
                         {editMode && <Badge color="warning" isLight className="ms-2 px-2 py-1">EDIT MODE</Badge>}
+
+                        {/* Vision Mode Menu */}
+                        <div className="vision-menu ms-4 d-none d-md-flex align-items-center bg-dark bg-opacity-10 rounded-pill p-1 border border-light border-opacity-10">
+                            {[
+                                { id: 'none', label: 'Normal', icon: 'visibility' },
+                                { id: 'invert', label: 'Invert', icon: 'invert_colors' },
+                                { id: 'sepia', label: 'Sepia', icon: 'auto_fix_high' },
+                                { id: 'negative', label: 'Negative', icon: 'difference' },
+                                { id: 'dog', label: 'Dog View', icon: 'pets' },
+                                { id: 'batman', label: 'Batman', icon: 'theater_comedy' }
+                            ].map((mode) => (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => setVisionMode(mode.id as VisionMode)}
+                                    className={`btn btn-sm rounded-pill px-3 py-1 border-0 d-flex align-items-center transition-all ${visionMode === mode.id
+                                        ? 'bg-primary text-white shadow-sm'
+                                        : 'text-muted hover-bg-light'
+                                        }`}
+                                    style={{ fontSize: '0.75rem', fontWeight: 600 }}
+                                >
+                                    <Icon icon={mode.icon} size="sm" className="me-1" />
+                                    {mode.label}
+                                </button>
+                            ))}
+                        </div>
                     </CardTitle>
                     <div className="d-flex gap-2">
                         <Button size="sm" color="info" isLight={!editMode} onClick={() => setShowBoundaryHint(!showBoundaryHint)}>
@@ -387,6 +415,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                             darkModeStatus={darkModeStatus}
                             focusedFloorLevel={focusedFloorLevel}
                             rotation={rotation}
+                            visionMode={visionMode}
                         />
 
                         {/* 3. Selective Boundary Box (Drawing OR Selection Highlight) */}

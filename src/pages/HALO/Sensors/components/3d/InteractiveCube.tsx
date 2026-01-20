@@ -114,7 +114,7 @@ const InteractiveCube: React.FC<InteractiveCubeProps> = ({
     };
 
     // Apply both rotation and zoom
-    const cubeTransform = `rotateX(${-rotation.x}deg) rotateY(${-rotation.y}deg)`;
+    const cubeTransform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`;
 
     return (
         <div
