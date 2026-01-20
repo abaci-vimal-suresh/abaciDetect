@@ -18,8 +18,6 @@ const imageURLFunc = () => {
 export const imageURL = imageURLFunc();
 
 const baseURLCreator = () => {
-	const url = new URL(baseURL);
-	return `${url.protocol}//${url.hostname}:8080`;
 	return window.location.origin;
 };
 
