@@ -43,20 +43,42 @@ export const filterSensors = (
 };
 
 /**
+ * Gets all descendant area IDs for a given area (including the area itself).
+ * This allows us to show sensors from child areas when viewing a parent area.
+ */
+const getAllDescendantAreaIds = (areaId: number, allAreas: any[]): number[] => {
+    const result = [areaId];
+    const children = allAreas.filter(area => area.parent_id === areaId);
+
+    children.forEach(child => {
+        result.push(...getAllDescendantAreaIds(child.id, allAreas));
+    });
+
+    return result;
+};
+
+/**
  * Gets sensors belonging to a specific area by ID or name.
+ * Now includes sensors from all child/descendant areas.
  */
 export const getSensorsByArea = (
     sensors: Sensor[],
     areaId?: string | number,
-    areaName?: string
+    areaName?: string,
+    allAreas?: any[]
 ): Sensor[] => {
     if (!areaId && !areaName) return [];
 
-    return sensors.filter(sensor => {
-        const targetId = Number(areaId);
+    const targetId = Number(areaId);
 
-        // Match by ID
-        if (areaId && (Number(sensor.area?.id) === targetId || Number(sensor.area_id) === targetId)) {
+    // Get all descendant area IDs if areas are provided
+    const areaIds = allAreas
+        ? getAllDescendantAreaIds(targetId, allAreas)
+        : [targetId];
+
+    return sensors.filter(sensor => {
+        // Match by ID (including child areas)
+        if (areaId && areaIds.includes(Number(sensor.area?.id) || Number(sensor.area_id))) {
             return true;
         }
 

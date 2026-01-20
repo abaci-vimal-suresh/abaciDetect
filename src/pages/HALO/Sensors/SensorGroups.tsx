@@ -63,8 +63,8 @@ const SensorGroups = () => {
 
     // Get sensors that belong to this area (already filtered by API)
     const areaSensors = useMemo(() => {
-        return getSensorsByArea(allSensors || [], areaId, currentArea?.name);
-    }, [allSensors, areaId, currentArea]);
+        return getSensorsByArea(allSensors || [], areaId, currentArea?.name, areas);
+    }, [allSensors, areaId, currentArea, areas]);
 
     // Get available sensors (sensors with no area assigned)
     const availableSensors = useMemo(() => {

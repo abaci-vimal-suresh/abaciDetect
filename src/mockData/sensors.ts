@@ -102,7 +102,7 @@ export const mockAreas: Area[] = [
     {
         id: 100,
         name: 'Building A',
-        sensor_count: 5,
+        sensor_count: 8,
         parent_id: null,
         floor_level: null,
         is_room: false,
@@ -560,7 +560,154 @@ export const mockSensors: Sensor[] = [
             }
         } as any
     },
+    // ============================================
+    // BUILDING A - GROUND FLOOR (101)
+    // ============================================
+    {
+        id: 'S-A-G-TEMP-01',
+        name: 'Ground Floor A - Temperature Sensor 1',
+        sensor_type: 'Temperature',
+        status: 'safe',
+        is_online: true,
+        area_id: 101,
+        floor_level: 0,
+        x_coordinate: 0.25,
+        y_coordinate: 0.25,
+        boundary: { x_min: 0.15, x_max: 0.35, y_min: 0.15, y_max: 0.35 },
+        ip_address: '192.168.1.111',
+        location: 'Building A - Ground Floor - Zone A',
+        mac_address: 'AA:BB:CC:DD:EE:11',
+        sensor_data: { val: 22.5, threshold: 25, sensors: { temp_c: 22.5 } } as any
+    },
+    {
+        id: 'S-A-G-HUM-02',
+        name: 'Ground Floor A - Humidity Sensor 2',
+        sensor_type: 'Humidity',
+        status: 'safe',
+        is_online: true,
+        area_id: 101,
+        floor_level: 0,
+        x_coordinate: 0.65,
+        y_coordinate: 0.35,
+        boundary: { x_min: 0.55, x_max: 0.75, y_min: 0.25, y_max: 0.45 },
+        ip_address: '192.168.1.112',
+        location: 'Building A - Ground Floor - Zone B',
+        mac_address: 'AA:BB:CC:DD:EE:12',
+        sensor_data: { val: 45, threshold: 60, sensors: { humidity: 45 } } as any
+    },
+    {
+        id: 'S-A-G-CO2-03',
+        name: 'Ground Floor A - CO2 Sensor 3',
+        sensor_type: 'CO2',
+        status: 'warning',
+        is_online: true,
+        area_id: 101,
+        floor_level: 0,
+        x_coordinate: 0.45,
+        y_coordinate: 0.65,
+        boundary: { x_min: 0.35, x_max: 0.55, y_min: 0.55, y_max: 0.75 },
+        ip_address: '192.168.1.113',
+        location: 'Building A - Ground Floor - Zone C',
+        mac_address: 'AA:BB:CC:DD:EE:13',
+        sensor_data: { val: 950, threshold: 1000, sensors: { co2: 950 } } as any
+    },
+    {
+        id: 'S-A-G-MOTION-04',
+        name: 'Ground Floor A - Motion Sensor 4',
+        sensor_type: 'Motion',
+        status: 'safe',
+        is_online: true,
+        area_id: 101,
+        floor_level: 0,
+        x_coordinate: 0.8,
+        y_coordinate: 0.7,
+        boundary: { x_min: 0.7, x_max: 0.9, y_min: 0.6, y_max: 0.8 },
+        ip_address: '192.168.1.114',
+        location: 'Building A - Ground Floor - Zone D',
+        mac_address: 'AA:BB:CC:DD:EE:14',
+        sensor_data: { val: 1, threshold: 1, sensors: { motion: 1 } } as any
+    },
+    {
+        id: 'S-A-G-MULTI-05',
+        name: 'Ground Floor A - Multi Sensor 5',
+        sensor_type: 'Multi-Sensor',
+        status: 'critical',
+        is_online: true,
+        area_id: 101,
+        floor_level: 0,
+        x_coordinate: 0.15,
+        y_coordinate: 0.75,
+        boundary: { x_min: 0.05, x_max: 0.25, y_min: 0.65, y_max: 0.85 },
+        ip_address: '192.168.1.115',
+        location: 'Building A - Ground Floor - Zone E',
+        mac_address: 'AA:BB:CC:DD:EE:15',
+        sensor_data: {
+            val: 125,
+            threshold: 100,
+            sensors: {
+                temp_c: 38.5, temp_f: 101.3, humidity: 75.5, pressure_hpa: 1002.2, light: 250,
+                pm1: 65.2, pm25: 95.8, pm10: 125.4,
+                co: 8.5, nh3: 85.5, no2: 65.4, co2: 1850, tvoc: 950,
+                aqi: 145, coaqi: 125, no2aqi: 135, pm10aqi: 150, pm25aqi: 155,
+                health_index: 35, hi_co2: 30, hi_tvoc: 35, hi_pm25: 32, hi_no2: 38,
+                motion: 3, noise: 95, aggression: 0, gunshot: 0
+            }
+        } as any
+    },
+    // ============================================
+    // BUILDING A - FIRST FLOOR (102)
+    // ============================================
+    {
+        id: 'S-A-F1-TEMP-01',
+        name: 'First Floor A - Temperature Sensor 1',
+        sensor_type: 'Temperature',
+        status: 'safe',
+        is_online: true,
+        area_id: 102,
+        floor_level: 1,
+        x_coordinate: 0.3,
+        y_coordinate: 0.2,
+        boundary: { x_min: 0.2, x_max: 0.4, y_min: 0.1, y_max: 0.3 },
+        ip_address: '192.168.1.121',
+        location: 'Building A - First Floor - Office Area',
+        mac_address: 'AA:BB:CC:DD:FF:21',
+        sensor_data: { val: 21.8, threshold: 25, sensors: { temp_c: 21.8 } } as any
+    },
+    {
+        id: 'S-A-F1-HUM-02',
+        name: 'First Floor A - Humidity Sensor 2',
+        sensor_type: 'Humidity',
+        status: 'warning',
+        is_online: true,
+        area_id: 102,
+        floor_level: 1,
+        x_coordinate: 0.7,
+        y_coordinate: 0.4,
+        boundary: { x_min: 0.6, x_max: 0.8, y_min: 0.3, y_max: 0.5 },
+        ip_address: '192.168.1.122',
+        location: 'Building A - First Floor - Conference Room',
+        mac_address: 'AA:BB:CC:DD:FF:22',
+        sensor_data: { val: 58, threshold: 60, sensors: { humidity: 58 } } as any
+    },
+    {
+        id: 'S-A-F1-CO2-03',
+        name: 'First Floor A - CO2 Sensor 3',
+        sensor_type: 'CO2',
+        status: 'critical',
+        is_online: false,
+        area_id: 102,
+        floor_level: 1,
+        x_coordinate: 0.5,
+        y_coordinate: 0.75,
+        boundary: { x_min: 0.4, x_max: 0.6, y_min: 0.65, y_max: 0.85 },
+        ip_address: '192.168.1.123',
+        location: 'Building A - First Floor - Server Room',
+        mac_address: 'AA:BB:CC:DD:FF:23',
+        sensor_data: { val: 1650, threshold: 1000, sensors: { co2: 1650 } } as any
+    },
+    // ============================================
     // BUILDING B - GROUND FLOOR (201)
+    // ============================================
     {
         id: 'S-B2-G-SAFE',
         name: 'B2-G Safe Sensor',
