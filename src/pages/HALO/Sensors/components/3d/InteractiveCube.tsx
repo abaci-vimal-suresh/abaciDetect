@@ -89,10 +89,10 @@ const InteractiveCube: React.FC<InteractiveCubeProps> = ({
 
         switch (face) {
             case 'FRONT':
-                targetRotation = { x: 20, y: 0 };
+                targetRotation = { x: 75, y: 0 };
                 break;
             case 'BACK':
-                targetRotation = { x: 25, y: 180 };
+                targetRotation = { x: 75, y: 180 };
                 break;
             case 'LEFT':
                 targetRotation = { x: 25, y: 45 };
@@ -101,10 +101,10 @@ const InteractiveCube: React.FC<InteractiveCubeProps> = ({
                 targetRotation = { x: 25, y: -45 };
                 break;
             case 'TOP':
-                targetRotation = { x: 75, y: 0 };
+                targetRotation = { x: 20, y: 0 };
                 break;
             case 'BOTTOM':
-                targetRotation = { x: -75, y: 0 };
+                targetRotation = { x: -20, y: 0 };
                 break;
             default:
                 return;
@@ -124,12 +124,12 @@ const InteractiveCube: React.FC<InteractiveCubeProps> = ({
         >
             <div className="cube-loader" style={{ transform: cubeTransform }}>
                 <div className="cube-wrapper">
-                    <div className="cube-face front" onClick={(e) => handleFaceClick(e, 'FRONT')}>FRONT</div>
-                    <div className="cube-face back" onClick={(e) => handleFaceClick(e, 'BACK')}>BACK</div>
+                    <div className="cube-face front" onClick={(e) => handleFaceClick(e, 'TOP')}>TOP</div>
+                    <div className="cube-face back" onClick={(e) => handleFaceClick(e, 'BOTTOM')}>BOT</div>
                     <div className="cube-face right" onClick={(e) => handleFaceClick(e, 'RIGHT')}>RIGHT</div>
                     <div className="cube-face left" onClick={(e) => handleFaceClick(e, 'LEFT')}>LEFT</div>
-                    <div className="cube-face top" onClick={(e) => handleFaceClick(e, 'TOP')}>TOP</div>
-                    <div className="cube-face bottom" onClick={(e) => handleFaceClick(e, 'BOTTOM')}>BOTTOM</div>
+                    <div className="cube-face top" onClick={(e) => handleFaceClick(e, 'BACK')}>BACK</div>
+                    <div className="cube-face bottom" onClick={(e) => handleFaceClick(e, 'FRONT')}>FRONT</div>
                 </div>
             </div>
         </div>

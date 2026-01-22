@@ -17,8 +17,8 @@ import MultiFloorBuilding from './3d/MultiFloorBuilding';
 import SceneGizmo3D from './3d/SceneGizmo3D';
 import Boundary3DVolume from './3d/Boundary3DVolume';
 import InteractionHints from './3d/InteractionHints';
-
-export type VisionMode = 'none' | 'invert' | 'sepia' | 'negative' | 'dog' | 'batman';
+import SensorParameterBar, { PARAMETER_STYLE_MAP } from './SensorParameterBar';
+import { getMetricStatus, getAggregatedStatus } from '../../utils/threshold.utils';
 
 interface FloorPlanCanvasProps {
     areaId: number;
@@ -64,7 +64,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
     const [selectedSensor, setSelectedSensor] = useState<string | null>(null);
     const [showBoundaryHint, setShowBoundaryHint] = useState(false);
-    const [visionMode, setVisionMode] = useState<VisionMode>('none');
+    const [selectedParameters, setSelectedParameters] = useState<string[]>(['temp_c', 'humidity', 'co2', 'aqi']);
 
     const [roomConfigs, setRoomConfigs] = useState<{
         [sensorId: string]: { name: string; color: string; showWalls?: boolean; wallOpacity?: number }
@@ -78,8 +78,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
         showFloor: true,
         showCeiling: true,
         showLabels: true,
-        pulseSpeed: 2,
-        wallHeight: 240,
+        wallHeight: 120,
         visibleFloors: [],
         floorSpacing: 400,
         floorOffset: 50,
@@ -89,7 +88,8 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
         sectionCutEnabled: false,
         sectionCutPlane: 'x',
         sectionCutPosition: 1,
-        floorScales: {}
+        floorScales: {},
+        visionMode: 'none'
     });
 
     const roomSettings = externalRoomSettings || localRoomSettings;
@@ -152,6 +152,59 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
         }
     });
 
+    // Find the building context (Root Parent)
+    const activeBuildingAreas = useMemo(() => {
+        if (!areaId || areas.length === 0) return areas;
+        let rootId = areaId;
+        let checkArea = areas.find(a => Number(a.id) === Number(areaId));
+        let depth = 0;
+        while (checkArea && checkArea.parent_id !== null && depth < 5) {
+            rootId = Number(checkArea.parent_id);
+            checkArea = areas.find(a => Number(a.id) === Number(rootId));
+            depth++;
+        }
+        return areas.filter(a => {
+            if (Number(a.id) === Number(rootId)) return true;
+            let pId = a.parent_id;
+            let d2 = 0;
+            while (pId !== null && d2 < 5) {
+                if (Number(pId) === Number(rootId)) return true;
+                pId = areas.find(curr => Number(curr.id) === Number(pId))?.parent_id || null;
+                d2++;
+            }
+            return false;
+        });
+    }, [areaId, areas]);
+
+    const focusedFloorLevel = useMemo(() => {
+        if (!areaId || areas.length === 0) return null;
+        const currentArea = areas.find(a => Number(a.id) === Number(areaId));
+        return (currentArea && currentArea.floor_level !== undefined && currentArea.floor_level !== null)
+            ? Number(currentArea.floor_level)
+            : null;
+    }, [areaId, areas]);
+
+    // Auto-initialize visible floors to show everything when building levels are loaded
+    const [hasInitializedFloors, setHasInitializedFloors] = useState<number | null>(null);
+    useEffect(() => {
+        if (activeBuildingAreas.length > 0 && hasInitializedFloors !== areaId) {
+            const allLevels = Array.from(new Set(activeBuildingAreas
+                .filter(a => a.floor_level !== undefined && a.floor_level !== null)
+                .map(a => Number(a.floor_level))
+            ));
+
+            if (allLevels.length > 0) {
+                const newSettings = { ...roomSettings, visibleFloors: allLevels };
+                if (onSettingsChange) {
+                    onSettingsChange(newSettings);
+                } else {
+                    setLocalRoomSettings(newSettings);
+                }
+                setHasInitializedFloors(areaId);
+            }
+        }
+    }, [activeBuildingAreas, areaId, hasInitializedFloors, onSettingsChange]);
+
     // --- AUTOMATIC CAMERA LOCK ---
     useEffect(() => {
         if (editMode) {
@@ -188,44 +241,80 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                 }
                 if (!isDirect && !rollsUp) return false;
             }
-            if (roomSettings.visibleFloors.length > 0 && marker.sensor.floor_level !== undefined) {
+            if (marker.sensor.floor_level !== undefined) {
                 return roomSettings.visibleFloors.includes(Number(marker.sensor.floor_level));
             }
             return true;
         });
     }, [markersWithDrag, areas, areaId, roomSettings.visibleFloors]);
 
-    // Find the building context (Root Parent)
-    const activeBuildingAreas = useMemo(() => {
-        if (!areaId || areas.length === 0) return areas;
-        let rootId = areaId;
-        let checkArea = areas.find(a => Number(a.id) === Number(areaId));
-        let depth = 0;
-        while (checkArea && checkArea.parent_id !== null && depth < 5) {
-            rootId = Number(checkArea.parent_id);
-            checkArea = areas.find(a => Number(a.id) === Number(rootId));
-            depth++;
-        }
-        return areas.filter(a => {
-            if (Number(a.id) === Number(rootId)) return true;
-            let pId = a.parent_id;
-            let d2 = 0;
-            while (pId !== null && d2 < 5) {
-                if (Number(pId) === Number(rootId)) return true;
-                pId = areas.find(curr => Number(curr.id) === Number(pId))?.parent_id || null;
-                d2++;
-            }
-            return false;
-        });
-    }, [areaId, areas]);
+    const filteredVisibleSensors = useMemo(() => {
+        return visibleSensors.filter(m => {
+            if (selectedParameters.length === 0) return true;
 
-    const focusedFloorLevel = useMemo(() => {
-        if (!areaId || areas.length === 0) return null;
-        const currentArea = areas.find(a => Number(a.id) === Number(areaId));
-        return (currentArea && currentArea.floor_level !== undefined && currentArea.floor_level !== null)
-            ? Number(currentArea.floor_level)
-            : null;
-    }, [areaId, areas]);
+            const sensorData = m.sensor.sensor_data;
+            if (!sensorData || !sensorData.sensors) return false;
+
+            // Check if sensor has any of the selected parameters
+            return selectedParameters.some(param => sensorData.sensors[param] !== undefined);
+        }).map(m => {
+            // Calculate dynamic status based on selected parameters
+            if (selectedParameters.length === 0) return m;
+
+            const sensorData = m.sensor.sensor_data;
+            if (!sensorData || !sensorData.sensors) return m;
+
+            const statuses = selectedParameters
+                .filter(param => sensorData.sensors[param] !== undefined)
+                .map(param => getMetricStatus(param, sensorData.sensors[param]));
+
+            const dynamicStatus = getAggregatedStatus(statuses);
+
+            // We want to show the 'most important' value if multiple selected
+            let displayVal = sensorData.val;
+            let displayType = m.sensor.sensor_type;
+
+            if (selectedParameters.length > 0) {
+                // Find the one with worst status
+                const worstParam = selectedParameters
+                    .filter(param => sensorData.sensors[param] !== undefined)
+                    .sort((a, b) => {
+                        const sA = getMetricStatus(a, sensorData.sensors[a]);
+                        const sB = getMetricStatus(b, sensorData.sensors[b]);
+                        const weights = { critical: 3, warning: 2, safe: 1 };
+                        return (weights[sB] || 0) - (weights[sA] || 0);
+                    })[0];
+
+                if (worstParam) {
+                    displayVal = sensorData.sensors[worstParam];
+                    const choice = PARAMETER_STYLE_MAP[worstParam];
+                    displayType = choice ? choice.label : worstParam;
+                }
+            }
+
+            return {
+                ...m,
+                status: dynamicStatus,
+                displayVal,
+                displayType
+            };
+        });
+    }, [visibleSensors, selectedParameters]);
+
+    const availableParameters = useMemo(() => {
+        const params = new Set<string>();
+        visibleSensors.forEach(m => {
+            const sensorData = m.sensor.sensor_data;
+            if (sensorData && sensorData.sensors) {
+                Object.keys(sensorData.sensors).forEach(key => params.add(key));
+            }
+        });
+
+        // If no dynamic params, fallback to common ones to prevent empty UI
+        if (params.size === 0) return ['temp_c', 'humidity', 'co2', 'aqi', 'tvoc'];
+
+        return Array.from(params);
+    }, [visibleSensors]);
 
     const [image, setImage] = useState<HTMLImageElement | null>(null);
     useEffect(() => {
@@ -313,40 +402,60 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                         Interactive 3D Sensor Environment
                         {editMode && <Badge color="warning" isLight className="ms-2 px-2 py-1">EDIT MODE</Badge>}
 
-                        {/* Vision Mode Menu */}
-                        <div className="vision-menu ms-4 d-none d-md-flex align-items-center bg-dark bg-opacity-10 rounded-pill p-1 border border-light border-opacity-10">
-                            {[
-                                { id: 'none', label: 'Normal', icon: 'visibility' },
-                                { id: 'invert', label: 'Invert', icon: 'invert_colors' },
-                                { id: 'sepia', label: 'Sepia', icon: 'auto_fix_high' },
-                                { id: 'negative', label: 'Negative', icon: 'difference' },
-                                { id: 'dog', label: 'Dog View', icon: 'pets' },
-                                { id: 'batman', label: 'Batman', icon: 'theater_comedy' }
-                            ].map((mode) => (
-                                <button
-                                    key={mode.id}
-                                    onClick={() => setVisionMode(mode.id as VisionMode)}
-                                    className={`btn btn-sm rounded-pill px-3 py-1 border-0 d-flex align-items-center transition-all ${visionMode === mode.id
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'text-muted hover-bg-light'
-                                        }`}
-                                    style={{ fontSize: '0.75rem', fontWeight: 600 }}
-                                >
-                                    <Icon icon={mode.icon} size="sm" className="me-1" />
-                                    {mode.label}
+
+
+                        <div className="d-flex align-items-center gap-2 ms-4 border-start ps-4 border-light border-opacity-10">
+                            {/* View Presets */}
+                            <div className="btn-group btn-group-sm bg-dark bg-opacity-10 rounded-pill p-1 border border-light border-opacity-10">
+                                {[
+                                    { id: 'perspective', label: '3D', icon: '3d_rotation' },
+                                    { id: 'top', label: 'Top', icon: 'expand_less' },
+                                    { id: 'front', label: 'F', icon: 'none' },
+                                    { id: 'back', label: 'B', icon: 'none' },
+                                    { id: 'left', label: 'L', icon: 'none' },
+                                    { id: 'right', label: 'R', icon: 'none' },
+                                    { id: 'bottom', label: 'Bot', icon: 'none' },
+                                ].map((view) => (
+                                    <button
+                                        key={view.id}
+                                        onClick={() => showView(view.id)}
+                                        className="btn btn-sm px-2 py-1 text-muted hover-text-primary d-flex align-items-center border-0"
+                                        title={view.label}
+                                        style={{ fontSize: '0.7rem', fontWeight: 600 }}
+                                    >
+                                        {view.icon !== 'none' ? <Icon icon={view.icon} size="sm" /> : <span>{view.label}</span>}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Reset & Tools */}
+                            <div className="d-flex gap-1 bg-dark bg-opacity-10 rounded-pill p-1 border border-light border-opacity-10">
+                                <button onClick={resetPan} className="btn btn-sm btn-link text-muted p-1" title="Center Pan">
+                                    <Icon icon="center_focus_strong" size="sm" />
                                 </button>
-                            ))}
+                                <button onClick={resetView} className="btn btn-sm btn-link text-muted p-1" title="Reset View">
+                                    <Icon icon="refresh" size="sm" />
+                                </button>
+
+                                <button onClick={() => {
+                                    if (!document.fullscreenElement) {
+                                        containerRef.current?.requestFullscreen();
+                                    } else {
+                                        document.exitFullscreen();
+                                    }
+                                }} className="btn btn-sm btn-link text-muted p-1" title="Fullscreen">
+                                    <Icon icon="fullscreen" size="sm" />
+                                </button>
+                            </div>
                         </div>
+
                     </CardTitle>
                     <div className="d-flex gap-2">
                         <Button size="sm" color="info" isLight={!editMode} onClick={() => setShowBoundaryHint(!showBoundaryHint)}>
                             <Icon icon="Help" />
                         </Button>
-                        <Button size="sm" isLight onClick={toggleFullScreen} title="Toggle Fullscreen">
-                            <Icon icon="Fullscreen" />
-                        </Button>
                         {!editMode && (
-                            <Button size="sm" color="secondary" isLight onClick={resetView}>
+                            <Button size="sm" color="info" isLight onClick={resetView} title="Home">
                                 <Icon icon="Home" />
                             </Button>
                         )}
@@ -355,6 +464,17 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
             </CardHeader>
 
             <CardBody className="p-0 position-relative" style={{ height: '100%', minHeight: '600px', perspective: '1200px' }}>
+                <SensorParameterBar
+                    availableParameters={availableParameters}
+                    selectedParameters={selectedParameters}
+                    onToggleParameter={(param) => {
+                        setSelectedParameters(prev =>
+                            prev.includes(param)
+                                ? prev.filter(p => p !== param)
+                                : [...prev, param]
+                        );
+                    }}
+                />
                 <div
                     ref={containerRef}
                     className="canvas-container-3d h-100"
@@ -369,10 +489,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDrop}
                     style={{
-                        cursor: editMode ? 'crosshair' : 'grab',
-                        background: darkModeStatus
-                            ? 'radial-gradient(circle at center, #1E293B 0%, #0F172A 100%)'
-                            : 'radial-gradient(circle at center, #F1F5F9 0%, #E2E8F0 100%)',
+                        background: 'radial-gradient(circle at center, #0F172A 0%, #050810 100%)',
                     }}
                 >
                     <div className="scene-pivot-3d" style={{
@@ -401,7 +518,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
 
                         <MultiFloorBuilding
                             areas={activeBuildingAreas}
-                            visibleSensors={visibleSensors}
+                            visibleSensors={filteredVisibleSensors}
                             roomSettings={roomSettings}
                             canvasDimensions={canvasDimensions}
                             floorPlanUrl={floorPlanUrl}
@@ -413,9 +530,9 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                             onUpdateRoom={handleUpdateRoom}
                             getStatusColor={getStatusColor}
                             darkModeStatus={darkModeStatus}
-                            focusedFloorLevel={focusedFloorLevel}
                             rotation={rotation}
-                            visionMode={visionMode}
+                            selectedParameters={selectedParameters}
+                            focusedFloorLevel={focusedFloorLevel}
                         />
 
                         {/* 3. Selective Boundary Box (Drawing OR Selection Highlight) */}
@@ -440,6 +557,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                         zoom={zoom}
                         onRotationChange={(r) => setRotation(r)}
                         onZoomChange={(z) => setZoom(z)}
+                        onResetView={resetView}
                     />}
                     <InteractionHints
                         zoom={zoom}

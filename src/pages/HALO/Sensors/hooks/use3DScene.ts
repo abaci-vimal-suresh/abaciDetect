@@ -59,12 +59,12 @@ export const use3DScene = (containerRef: RefObject<HTMLDivElement>, locked: bool
 
     const showView = useCallback((view: string) => {
         switch (view) {
-            case 'back': setRotation({ x: 25, y: 180 }); break;
+            case 'back': setRotation({ x: 75, y: 180 }); break;
             case 'right': setRotation({ x: 25, y: -45 }); break;
             case 'left': setRotation({ x: 25, y: 45 }); break;
-            case 'top': setRotation({ x: 75, y: 0 }); break;
-            case 'bottom': setRotation({ x: -75, y: 0 }); break;
-            case 'front': setRotation({ x: 20, y: 0 }); break;
+            case 'top': setRotation({ x: 20, y: 0 }); break;
+            case 'bottom': setRotation({ x: -20, y: 0 }); break;
+            case 'front': setRotation({ x: 75, y: 0 }); break;
             case 'perspective': setRotation({ x: 45, y: -30 }); break;
         }
     }, []);

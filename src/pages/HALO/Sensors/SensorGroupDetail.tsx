@@ -208,15 +208,11 @@ const SensorGroupDetail = () => {
         return getSensorsByArea(allSensors || [], areaId, currentArea?.name, areas);
     }, [allSensors, areaId, currentArea, areas]);
 
-    // Filter sensors that belong to this subarea
+    // Filter sensors that belong to this subarea (recursive)
     const sensors = useMemo(() => {
-        return allSensors?.filter(sensor => {
-            const targetId = Number(subzoneId);
-            if (Number(sensor.area?.id) === targetId || Number(sensor.area_id) === targetId) return true;
-            if (!sensor.area && !sensor.area_id && sensor.area_name === currentSubArea?.name) return true;
-            return false;
-        }) || [];
-    }, [allSensors, subzoneId, currentSubArea]);
+        const targetId = subzoneId || areaId;
+        return getSensorsByArea(allSensors || [], targetId, currentSubArea?.name, areas);
+    }, [allSensors, subzoneId, areaId, currentSubArea, areas]);
 
     // Get available sensors (sensors with no area assigned)
     const availableSensors = useMemo(() => {

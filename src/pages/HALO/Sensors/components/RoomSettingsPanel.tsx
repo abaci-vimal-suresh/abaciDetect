@@ -15,7 +15,6 @@ export interface RoomVisibilitySettings {
     showFloor: boolean;
     showCeiling: boolean;
     showLabels: boolean;
-    pulseSpeed: number;
     wallHeight: number;
     visibleFloors: number[];
     floorSpacing: number;
@@ -27,6 +26,7 @@ export interface RoomVisibilitySettings {
     sectionCutPlane: 'x' | 'y' | 'z';
     sectionCutPosition: number;
     floorScales: { [key: number]: number };
+    visionMode: 'none' | 'night' | 'batman';
 }
 
 interface RoomSettingsPanelProps {
@@ -125,15 +125,7 @@ const RoomSettingsPanel: React.FC<RoomSettingsPanelProps> = ({
     }, [hierarchyLevel, currentArea, areas]);
 
     const handleChange = (key: keyof RoomVisibilitySettings, value: any) => {
-        if (key === 'floorSpacing') {
-            onSettingsChange({
-                ...settings,
-                floorSpacing: value,
-                wallHeight: Math.floor(value * 0.6)
-            });
-        } else {
-            onSettingsChange({ ...settings, [key]: value });
-        }
+        onSettingsChange({ ...settings, [key]: value });
     };
 
     const toggleFloorVisibility = (floorLevel: number) => {
@@ -384,6 +376,18 @@ const RoomSettingsPanel: React.FC<RoomSettingsPanelProps> = ({
                                 step="0.1"
                                 value={settings.wallOpacity}
                                 onChange={(e) => handleChange('wallOpacity', Number(e.target.value))}
+                            />
+                        </FormGroup>
+
+                        <FormGroup>
+                            <Label>Wall Height: {settings.wallHeight}px</Label>
+                            <Input
+                                type="range"
+                                min="0"
+                                max="500"
+                                step="5"
+                                value={settings.wallHeight}
+                                onChange={(e) => handleChange('wallHeight', Number(e.target.value))}
                             />
                         </FormGroup>
 
