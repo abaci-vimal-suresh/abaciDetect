@@ -19,13 +19,16 @@ interface Room3DBoxProps {
     floorOpacity: number;
     ceilingOpacity: number;
     onUpdateRoom: (sensorId: string, name: string, color: string, showWalls: boolean, wallOpacity?: number) => void;
-    pulseSpeed: number;
     showWalls: boolean;
     hideSettings?: boolean;
     sectionCutEnabled?: boolean;
     sectionCutPlane?: 'x' | 'y' | 'z';
     sectionCutPosition?: number;
     rotation: { x: number; y: number };
+    visionMode?: 'none' | 'night' | 'batman';
+    selectedParameters?: string[];
+    displayVal?: number;
+    displayType?: string;
 }
 
 const Room3DBox = React.memo<Room3DBoxProps>(({
@@ -41,22 +44,29 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
     floorOpacity,
     ceilingOpacity,
     onUpdateRoom,
-    pulseSpeed,
     showWalls,
     hideSettings = false,
     sectionCutEnabled = false,
     sectionCutPlane = 'x',
     sectionCutPosition = 1,
-    rotation
+    rotation,
+    visionMode = 'none',
+    selectedParameters = [],
+    displayVal,
+    displayType
 }) => {
     const { darkModeStatus } = useDarkMode();
     const boundary = sensor.boundary!;
 
     // CLAMP: Force a visible gap between rooms and the floor above
     const wallHeight = Math.min(externalWallHeight, Math.floor(floorSpacing * 0.9));
+
     const applyFilter = (floorPlanUrl && darkModeStatus)
-        ? 'grayscale(1) invert(1) brightness(0.85) contrast(1.6) sepia(0.35) hue-rotate(190deg) saturate(1.4)'
+        ? (visionMode === 'batman'
+            ? 'brightness(0.6) contrast(2) hue-rotate(185deg) saturate(3) brightness(1.2) drop-shadow(0 0 5px #00c8ff)'
+            : 'grayscale(1) invert(1) brightness(0.85) contrast(1.6) sepia(0.35) hue-rotate(190deg) saturate(1.4)')
         : 'none';
+
     // Calculate if this room should be visible based on section cut
     const isVisibleInSection = React.useMemo(() => {
         if (!sectionCutEnabled) return true;
@@ -83,7 +93,7 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
     const clipStyle = React.useMemo(() => {
         if (!sectionCutEnabled) return {};
 
-        const threshold = 0.15; // Fade zone width
+        const threshold = 0.15;
         const centerPos = sectionCutPlane === 'x' ? (boundary.x_min + boundary.x_max) / 2 :
             sectionCutPlane === 'y' ? (boundary.y_min + boundary.y_max) / 2 :
                 sensor.z_coordinate || 0.5;
@@ -116,8 +126,6 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
     const bW = (boundary.x_max - boundary.x_min) * floorW;
     const bH = (boundary.y_max - boundary.y_min) * floorH;
 
-    // Use statusColor for visualization if it's not the default "safe" green,
-    // otherwise use the user-defined roomColor.
     const displayColor = statusColor === '#10B981' ? roomColor : statusColor;
 
     return (
@@ -135,85 +143,100 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
             } as React.CSSProperties}
         >
 
-            {/* Vertical Walls (Volumetric Smoke Effect) */}
+            {/* Vertical Walls */}
             {roomShowWalls && (
                 (() => {
-                    // Vertical Gradient Logic (Top -> Bottom)
-                    // Safe: Green mist at top, fading out.
-                    // Warning: Yellow mist at top, Green mist below, fading out.
-                    // Critical: Red mist at top, Yellow middle, Green bottom (filling room).
+                    // DYNAMIC DATA-DRIVEN OPACITY
+                    let dynamicOpacity = wallOpacity;
+                    const val = displayVal !== undefined ? displayVal : sensor.sensor_data?.val;
+                    const type = displayType || sensor.sensor_type;
 
+                    if (val !== undefined) {
+                        let boost = 0;
+                        if (type === 'Temperature') {
+                            // Scale 20°C (0) to 40°C (0.5)
+                            boost = Math.max(0, Math.min(0.5, (val - 20) / 40));
+                        } else if (type === 'Humidity') {
+                            // Scale 30% (0) to 90% (0.5)
+                            boost = Math.max(0, Math.min(0.5, (val - 30) / 120));
+                        } else if (type === 'CO2') {
+                            // Scale 400 (0) to 2000 (0.5)
+                            boost = Math.max(0, Math.min(0.5, (val - 400) / 3200));
+                        }
+                        dynamicOpacity = Math.min(0.9, wallOpacity + boost);
+                    }
+
+                    // Status boost (overlay on top of value)
+                    // Reduced base boost to match the pulse requirements (Warning: 10-20%, Critical: 20-40%)
+                    if (status === 'critical') dynamicOpacity = Math.max(dynamicOpacity, 0.2);
+                    else if (status === 'warning') dynamicOpacity = Math.max(dynamicOpacity, 0.1);
+
+                    const opacity = dynamicOpacity;
                     let wallBackground = '';
-                    // Using RGBA for better transparency control
                     const cSafe = 'rgba(16, 185, 129,';
                     const cWarn = 'rgba(245, 158, 11,';
                     const cCrit = 'rgba(239, 68, 68,';
 
-                    const opacity = wallOpacity; // User defined max opacity
-
+                    // Standard wall background
                     if (status === 'critical') {
-                        // Solid Red filling the volume
                         wallBackground = `linear-gradient(to bottom, 
-                            ${cCrit} ${opacity}) 0%, 
-                            ${cCrit} ${opacity * 0.5}) 70%, 
-                            ${cCrit} ${opacity * 0.3}) 100%)`;
+                                ${cCrit} ${opacity}) 0%, 
+                                ${cCrit} ${opacity * 0.5}) 70%, 
+                                ${cCrit} ${opacity * 0.3}) 100%)`;
                     } else if (status === 'warning') {
-                        // Solid Yellow spreading to ~70%
                         wallBackground = `linear-gradient(to bottom, 
-                            ${cWarn} ${opacity}) 0%, 
-                            ${cWarn} ${opacity * 0.3}) 50%, 
-                            transparent 75%)`;
+                                ${cWarn} ${opacity}) 0%, 
+                                ${cWarn} ${opacity * 0.3}) 50%, 
+                                transparent 75%)`;
                     } else {
-                        // Solid Green (or custom) spreading to ~20%
                         const isCustom = statusColor !== '#10B981';
                         const startColor = isCustom ? displayColor : '#10B981';
-                        // Convert hex to RGBA if possible or just use opacity
                         const baseColor = isCustom ? displayColor : 'rgba(16, 185, 129,';
 
                         if (baseColor.includes('rgba')) {
                             wallBackground = `linear-gradient(to bottom, ${baseColor} ${opacity}) 0%, ${baseColor} 0) 15%, transparent 35%)`;
                         } else {
-                            // Simple version for hex
                             wallBackground = `linear-gradient(to bottom, ${startColor} 0%, ${startColor} 15%, transparent 35%)`;
                         }
                     }
 
                     const wallStyle = {
-                        width: bW, height: wallHeight,
+                        width: bW,
+                        height: wallHeight,
                         background: wallBackground,
+                        backgroundSize: '100% 200%',
                         transformOrigin: 'top',
                         position: 'absolute',
                         backfaceVisibility: 'visible',
                         pointerEvents: 'none',
-                        // Smoke Drifting Animation
-                        animation: `smokeDrift ${pulseSpeed * 2}s ease-in-out infinite alternate`,
-                        backgroundSize: '100% 200%', // Allow background pos animation to work
+                        opacity: dynamicOpacity
                     } as React.CSSProperties;
 
-                    // Side walls need width swapping
                     const wallStyleSide = { ...wallStyle, width: bH };
 
                     return (
                         <>
                             {/* North Wall */}
-                            <div className="room-wall" style={{
+                            <div className={`room-wall status-${status}`} style={{
                                 ...wallStyle, left: bX, top: bY,
                                 transform: `translateZ(0px) rotateX(90deg)`,
                             }} />
                             {/* South Wall */}
-                            <div className="room-wall" style={{
+                            <div className={`room-wall status-${status}`} style={{
                                 ...wallStyle, left: bX, top: bY + bH,
                                 transform: `translateZ(0px) rotateX(90deg)`,
                             }} />
                             {/* East Wall */}
-                            <div className="room-wall" style={{
+                            <div className={`room-wall status-${status}`} style={{
                                 ...wallStyleSide, left: bX + bW, top: bY,
-                                transform: `translateZ(0px) rotateX(90deg) rotateY(90deg)`, transformOrigin: 'top left',
+                                transform: `translateZ(0px) rotateX(90deg) rotateY(90deg)`,
+                                transformOrigin: 'top left',
                             }} />
                             {/* West Wall */}
-                            <div className="room-wall" style={{
+                            <div className={`room-wall status-${status}`} style={{
                                 ...wallStyleSide, left: bX, top: bY,
-                                transform: `translateZ(0px) rotateX(90deg) rotateY(90deg)`, transformOrigin: 'top left',
+                                transform: `translateZ(0px) rotateX(90deg) rotateY(90deg)`,
+                                transformOrigin: 'top left',
                             }} />
                         </>
                     );
@@ -221,7 +244,7 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
             )}
 
             {/* Internal Floor */}
-            <div className="room-floor" style={{
+            <div className={`room-floor vision-${visionMode}`} style={{
                 position: 'absolute',
                 left: bX,
                 top: bY,
@@ -238,7 +261,6 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
                 filter: applyFilter
             } as React.CSSProperties} />
 
-            {/* Volumetric Glow (matching 2D style) */}
             {statusColor !== '#10B981' && (
                 <div
                     style={{
@@ -262,7 +284,6 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
                                 const cy = (sensor.y_coordinate! * floorH) - bY;
                                 const center = `circle at ${cx}px ${cy}px`;
 
-                                // Colors
                                 const cSafe = '#10B981';
                                 const cWarn = '#F59E0B';
                                 const cCrit = '#EF4444';
@@ -272,27 +293,22 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
                                 } else if (status === 'warning') {
                                     return `radial-gradient(${center}, ${cWarn} 0%, ${cWarn} 30%, transparent 70%)`;
                                 } else {
-                                    // Use displayColor (which is room color if safe, otherwise statusColor)
                                     return `radial-gradient(${center}, ${displayColor} 0%, ${displayColor} 20%, transparent 40%)`;
                                 }
                             })(),
-                            opacity: 0.8,
-                            animation: `roomGlowPulse ${pulseSpeed}s ease-in-out infinite`,
+                            opacity: 0.4
                         } as React.CSSProperties}
                     />
                 </div>
             )}
 
-            {/* Ceiling Layer (Matching Floor Image) */}
+            {/* Ceiling Layer */}
             <div className="room-ceiling" style={{
                 position: 'absolute',
                 left: bX,
                 top: bY,
                 width: bW,
                 height: bH,
-                backgroundImage: floorPlanUrl ? `url(${floorPlanUrl})` : 'none',
-                backgroundPosition: `-${bX}px -${bY}px`,
-                backgroundSize: `${floorW}px ${floorH}px`,
                 backgroundColor: displayColor,
                 opacity: ceilingOpacity,
                 border: `1px solid ${displayColor}`,
@@ -300,7 +316,7 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
                 backfaceVisibility: 'visible'
             } as React.CSSProperties} />
 
-            {/* Room Label Container (separate from ceiling opacity) */}
+            {/* Room Label Container */}
             <div
                 className="room-info-wrapper"
                 style={{
@@ -386,17 +402,20 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
             </Modal>
         </div>
     );
-}, (prevProps, nextProps) => {
-    return prevProps.rotation.x === nextProps.rotation.x &&
-        prevProps.rotation.y === nextProps.rotation.y &&
-        prevProps.sensor.id === nextProps.sensor.id &&
-        prevProps.wallOpacity === nextProps.wallOpacity &&
-        prevProps.statusColor === nextProps.statusColor &&
-        prevProps.sectionCutEnabled === nextProps.sectionCutEnabled &&
-        prevProps.sectionCutPosition === nextProps.sectionCutPosition &&
-        prevProps.sectionCutPlane === nextProps.sectionCutPlane &&
-        prevProps.floorW === nextProps.floorW &&
-        prevProps.floorH === nextProps.floorH;
-});
+}
+    , (prevProps, nextProps) => {
+        return prevProps.rotation.x === nextProps.rotation.x &&
+            prevProps.rotation.y === nextProps.rotation.y &&
+            prevProps.sensor.id === nextProps.sensor.id &&
+            prevProps.wallOpacity === nextProps.wallOpacity &&
+            prevProps.statusColor === nextProps.statusColor &&
+            prevProps.sectionCutEnabled === nextProps.sectionCutEnabled &&
+            prevProps.sectionCutPosition === nextProps.sectionCutPosition &&
+            prevProps.sectionCutPlane === nextProps.sectionCutPlane &&
+            prevProps.floorW === nextProps.floorW &&
+            prevProps.floorH === nextProps.floorH &&
+            prevProps.displayVal === nextProps.displayVal &&
+            prevProps.displayType === nextProps.displayType;
+    });
 
 export default Room3DBox;

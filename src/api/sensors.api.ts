@@ -396,7 +396,20 @@ export const useSensors = (filters?: {
 
                 // Apply filters to mock data
                 if (filters?.areaId) {
-                    sensors = sensors.filter((s: Sensor) => s.area_id === Number(filters.areaId));
+                    const targetAreaId = Number(filters.areaId);
+
+                    // Recursive helper to get all child area IDs
+                    const getAllChildAreaIds = (id: number, all: Area[]): number[] => {
+                        const ids = [id];
+                        const children = all.filter(a => a.parent_id === id);
+                        children.forEach(child => {
+                            ids.push(...getAllChildAreaIds(child.id, all));
+                        });
+                        return ids;
+                    };
+
+                    const descendantIds = getAllChildAreaIds(targetAreaId, mockAreas);
+                    sensors = sensors.filter((s: Sensor) => descendantIds.includes(Number(s.area_id)));
                 }
                 if (filters?.status && filters.status !== 'all') {
                     sensors = sensors.filter((s: Sensor) => s.is_active === (filters.status === 'active'));

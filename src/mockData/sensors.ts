@@ -287,7 +287,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.101',
         location: 'Production Line A',
         mac_address: '00:1A:2B:3C:4D:01',
-        sensor_data: { val: 0, threshold: 30.0, sensors: { temp_c: 0 } } as any,
+        sensor_data: { val: 0, threshold: 30.0, sensors: { temp_c: 24.5, temp_f: 76.1, humidity: 45.0, pressure_hpa: 1013, co2: 600, tvoc: 100, aqi: 45, pm25: 12, pm1: 5, pm10: 15, noise: 40, light: 500, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 98, hi_co2: 98, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any,
     },
     {
         id: 'S-NEW-002',
@@ -298,7 +298,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.102',
         location: 'Storage Room 4',
         mac_address: '00:1A:2B:3C:4D:02',
-        sensor_data: { val: 0, threshold: 60.0, sensors: { humidity: 0 } } as any,
+        sensor_data: { val: 0, threshold: 60.0, sensors: { temp_c: 22.5, temp_f: 72.5, humidity: 45, pressure_hpa: 1013, co2: 550, tvoc: 80, aqi: 40, pm25: 10, pm1: 5, pm10: 12, noise: 35, light: 450, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 99, hi_co2: 99, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any,
     },
     {
         id: 'S-NEW-003',
@@ -309,7 +309,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.103',
         location: 'Main Entrance',
         mac_address: '00:1A:2B:3C:4D:03',
-        sensor_data: { val: 0, threshold: 1, sensors: { motion: 0 } } as any,
+        sensor_data: { val: 0, threshold: 1, sensors: { temp_c: 23.0, temp_f: 73.4, humidity: 42.0, pressure_hpa: 1013, co2: 580, tvoc: 90, aqi: 42, pm25: 11, pm1: 5, pm10: 14, noise: 38, light: 480, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 98, hi_co2: 98, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any,
     },
     // TEST SENSORS FOR BUILDING 3
     {
@@ -325,7 +325,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '10.0.1.20',
         location: 'Building 3 - Floor 1 - Room A',
         mac_address: 'B3:F1:R1:00:01',
-        sensor_data: { val: 28, threshold: 25.0, sensors: { temp_c: 28 } } as any,
+        sensor_data: { val: 28, threshold: 25.0, sensors: { temp_c: 28, temp_f: 82.4, humidity: 48.0, pressure_hpa: 1010, co2: 750, tvoc: 150, aqi: 55, pm25: 18, pm1: 8, pm10: 22, noise: 50, light: 550, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 90, hi_co2: 95, hi_hum: 98, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 98, hi_tvoc: 95, gunshot: 0, aggression: 0 } } as any,
     },
     {
         id: 'S-B3-F2-R2',
@@ -340,17 +340,17 @@ export const mockSensors: Sensor[] = [
         ip_address: '10.0.2.22',
         location: 'Building 3 - Floor 2 - Room B',
         mac_address: 'B3:F2:R2:00:02',
-        sensor_data: { val: 1200, threshold: 1000, sensors: { co2: 1200 } } as any,
+        sensor_data: { val: 1200, threshold: 1000, sensors: { temp_c: 26.5, temp_f: 79.7, humidity: 55.0, pressure_hpa: 1008, co2: 1200, tvoc: 400, aqi: 85, pm25: 35, pm1: 15, pm10: 45, noise: 65, light: 600, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 85, hi_co2: 80, hi_hum: 95, hi_no2: 95, hi_pm1: 95, hi_pm10: 90, hi_pm25: 85, hi_tvoc: 80, gunshot: 0, aggression: 0 } } as any,
     },
     // LARGE UNASSIGNED POOL FOR TESTING
-    { id: 'POOL-001', name: 'Ambient Sensor Alpha', sensor_type: 'Temperature', status: 'Inactive', ip_address: '172.16.0.11', location: 'Lab 1', mac_address: 'AA:00:11:22:33:44', sensor_data: { val: 0, threshold: 25 } as any },
-    { id: 'POOL-002', name: 'Security Sensor Beta', sensor_type: 'Motion', status: 'Inactive', ip_address: '172.16.0.12', location: 'Server Room', mac_address: 'BB:00:11:22:33:44', sensor_data: { val: 0, threshold: 1 } as any },
-    { id: 'POOL-003', name: 'Air Quality Delta', sensor_type: 'CO2', status: 'Inactive', ip_address: '172.16.0.13', location: 'Conference Room', mac_address: 'CC:00:11:22:33:44', sensor_data: { val: 0, threshold: 1000 } as any },
-    { id: 'POOL-004', name: 'Humidity Sigma', sensor_type: 'Humidity', status: 'Inactive', ip_address: '172.16.0.14', location: 'Data Center', mac_address: 'DD:00:11:22:33:44', sensor_data: { val: 0, threshold: 60 } as any },
-    { id: 'POOL-005', name: 'Pressure Omega', sensor_type: 'Pressure', status: 'Inactive', ip_address: '172.16.0.15', location: 'Roof Top', mac_address: 'EE:00:11:22:33:44', sensor_data: { val: 0, threshold: 1013 } as any },
-    { id: 'POOL-006', name: 'Light Sensor Gamma', sensor_type: 'Light', status: 'Inactive', ip_address: '172.16.0.16', location: 'Cafeteria', mac_address: 'FF:00:11:22:33:44', sensor_data: { val: 0, threshold: 500 } as any },
-    { id: 'POOL-007', name: 'VOC Sensor Epsilon', sensor_type: 'VOC', status: 'Inactive', ip_address: '172.16.0.17', location: 'Office Area', mac_address: 'A1:00:11:22:33:44', sensor_data: { val: 0, threshold: 200 } as any },
-    { id: 'POOL-008', name: 'Acoustic Sensor Zeta', sensor_type: 'Sound', status: 'Inactive', ip_address: '172.16.0.18', location: 'Break Room', mac_address: 'B2:00:11:22:33:44', sensor_data: { val: 0, threshold: 80 } as any },
+    { id: 'POOL-001', name: 'Ambient Sensor Alpha', sensor_type: 'Temperature', status: 'Inactive', ip_address: '172.16.0.11', location: 'Lab 1', mac_address: 'AA:00:11:22:33:44', sensor_data: { val: 0, threshold: 25, sensors: { temp_c: 23, temp_f: 73.4, humidity: 45, pressure_hpa: 1013, co2: 600, tvoc: 100, aqi: 45, pm25: 12, pm1: 5, pm10: 15, noise: 40, light: 500, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 98, hi_co2: 98, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any },
+    { id: 'POOL-002', name: 'Security Sensor Beta', sensor_type: 'Motion', status: 'Inactive', ip_address: '172.16.0.12', location: 'Server Room', mac_address: 'BB:00:11:22:33:44', sensor_data: { val: 0, threshold: 1, sensors: { temp_c: 22, temp_f: 71.6, humidity: 42, pressure_hpa: 1013, co2: 550, tvoc: 80, aqi: 40, pm25: 10, pm1: 4, pm10: 12, noise: 35, light: 450, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 99, hi_co2: 99, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any },
+    { id: 'POOL-003', name: 'Air Quality Delta', sensor_type: 'CO2', status: 'Inactive', ip_address: '172.16.0.13', location: 'Conference Room', mac_address: 'CC:00:11:22:33:44', sensor_data: { val: 0, threshold: 1000, sensors: { temp_c: 24, temp_f: 75.2, humidity: 48, pressure_hpa: 1012, co2: 800, tvoc: 120, aqi: 55, pm25: 15, pm1: 6, pm10: 20, noise: 50, light: 550, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 95, hi_co2: 95, hi_hum: 98, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 98, hi_tvoc: 95, gunshot: 0, aggression: 0 } } as any },
+    { id: 'POOL-004', name: 'Humidity Sigma', sensor_type: 'Humidity', status: 'Inactive', ip_address: '172.16.0.14', location: 'Data Center', mac_address: 'DD:00:11:22:33:44', sensor_data: { val: 0, threshold: 60, sensors: { temp_c: 21, temp_f: 69.8, humidity: 35, pressure_hpa: 1014, co2: 500, tvoc: 50, aqi: 30, pm25: 8, pm1: 3, pm10: 10, noise: 60, light: 400, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 99, hi_co2: 100, hi_hum: 95, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any },
+    { id: 'POOL-005', name: 'Pressure Omega', sensor_type: 'Pressure', status: 'Inactive', ip_address: '172.16.0.15', location: 'Roof Top', mac_address: 'EE:00:11:22:33:44', sensor_data: { val: 0, threshold: 1013, sensors: { temp_c: 20, temp_f: 68.0, humidity: 40, pressure_hpa: 1013, co2: 500, tvoc: 60, aqi: 40, pm25: 12, pm1: 5, pm10: 15, noise: 40, light: 800, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 98, hi_co2: 100, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 98, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any },
+    { id: 'POOL-006', name: 'Light Sensor Gamma', sensor_type: 'Light', status: 'Inactive', ip_address: '172.16.0.16', location: 'Cafeteria', mac_address: 'FF:00:11:22:33:44', sensor_data: { val: 0, threshold: 500, sensors: { temp_c: 24, temp_f: 75.2, humidity: 55, pressure_hpa: 1012, co2: 700, tvoc: 120, aqi: 65, pm25: 18, pm1: 8, pm10: 25, noise: 65, light: 750, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 88, hi_co2: 90, hi_hum: 95, hi_no2: 95, hi_pm1: 95, hi_pm10: 90, hi_pm25: 88, hi_tvoc: 90, gunshot: 0, aggression: 0 } } as any },
+    { id: 'POOL-007', name: 'VOC Sensor Epsilon', sensor_type: 'VOC', status: 'Inactive', ip_address: '172.16.0.17', location: 'Office Area', mac_address: 'A1:00:11:22:33:44', sensor_data: { val: 0, threshold: 200, sensors: { temp_c: 23, temp_f: 73.4, humidity: 48, pressure_hpa: 1012, co2: 600, tvoc: 150, aqi: 55, pm25: 15, pm1: 6, pm10: 20, noise: 50, light: 600, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 92, hi_co2: 95, hi_hum: 98, hi_no2: 98, hi_pm1: 98, hi_pm10: 95, hi_pm25: 95, hi_tvoc: 90, gunshot: 0, aggression: 0 } } as any },
+    { id: 'POOL-008', name: 'Acoustic Sensor Zeta', sensor_type: 'Sound', status: 'Inactive', ip_address: '172.16.0.18', location: 'Break Room', mac_address: 'B2:00:11:22:33:44', sensor_data: { val: 0, threshold: 80, sensors: { temp_c: 22, temp_f: 71.6, humidity: 50, pressure_hpa: 1013, co2: 650, tvoc: 90, aqi: 48, pm25: 14, pm1: 5, pm10: 18, noise: 70, light: 550, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 94, hi_co2: 95, hi_hum: 95, hi_no2: 98, hi_pm1: 98, hi_pm10: 95, hi_pm25: 95, hi_tvoc: 95, gunshot: 0, aggression: 0 } } as any },
 
     // STATUS-SPECIFIC UNASSIGNED SENSORS (For Visual Testing)
     {
@@ -359,7 +359,7 @@ export const mockSensors: Sensor[] = [
         sensor_type: 'Temperature',
         status: 'critical',
         is_online: true,
-        sensor_data: { val: 45, threshold: 30, sensors: { temp_c: 45 } } as any
+        sensor_data: { val: 45, threshold: 30, sensors: { temp_c: 45, humidity: 25.0, co2: 600, tvoc: 300, aqi: 120, pm25: 45, noise: 75, light: 800, motion: 1, smoke: 1, gas: 0 } } as any
     },
     {
         id: 'TEST-WARNING',
@@ -416,7 +416,7 @@ export const mockSensors: Sensor[] = [
         sensor_type: 'CO2',
         status: 'safe',
         is_online: true,
-        sensor_data: { val: 450, threshold: 1000, sensors: { co2: 450 } } as any
+        sensor_data: { val: 450, threshold: 1000, sensors: { temp_c: 22.0, temp_f: 71.6, humidity: 45.0, pressure_hpa: 1013, co2: 450, tvoc: 80, aqi: 35, pm25: 8, pm1: 3, pm10: 10, noise: 40, light: 500, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 99, hi_co2: 99, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'TEST-GUNSHOT',
@@ -484,7 +484,7 @@ export const mockSensors: Sensor[] = [
                 pm1: 4.2, pm25: 7.8, pm10: 12.4,
                 co: 0.1, nh3: 2.5, no2: 5.4, co2: 445, tvoc: 45,
                 aqi: 28, coaqi: 15, no2aqi: 22, pm10aqi: 30, pm25aqi: 35,
-                health_index: 96, hi_co2: 98, hi_tvoc: 95, hi_pm25: 97, hi_no2: 94,
+                health_index: 96, hi_co2: 98, hi_tvoc: 95, hi_pm25: 97, hi_no2: 94, hi_hum: 98, hi_pm1: 99, hi_pm10: 97,
                 motion: 1, noise: 42, aggression: 0, gunshot: 0
             }
         } as any
@@ -507,7 +507,7 @@ export const mockSensors: Sensor[] = [
                 pm1: 24.2, pm25: 48.8, pm10: 62.4,
                 co: 1.5, nh3: 42.5, no2: 35.4, co2: 1250, tvoc: 445,
                 aqi: 88, coaqi: 65, no2aqi: 72, pm10aqi: 80, pm25aqi: 85,
-                health_index: 62, hi_co2: 68, hi_tvoc: 65, hi_pm25: 67, hi_no2: 64,
+                health_index: 62, hi_co2: 68, hi_tvoc: 65, hi_pm25: 67, hi_no2: 64, hi_hum: 70, hi_pm1: 75, hi_pm10: 65,
                 motion: 12, noise: 78, aggression: 0, gunshot: 0
             }
         } as any
@@ -530,7 +530,7 @@ export const mockSensors: Sensor[] = [
                 pm1: 94.2, pm25: 148.8, pm10: 212.4,
                 co: 12.5, nh3: 152.5, no2: 95.4, co2: 3250, tvoc: 1845,
                 aqi: 215, coaqi: 165, no2aqi: 172, pm10aqi: 190, pm25aqi: 205,
-                health_index: 12, hi_co2: 8, hi_tvoc: 12, hi_pm25: 10, hi_no2: 15,
+                health_index: 12, hi_co2: 8, hi_tvoc: 12, hi_pm25: 10, hi_no2: 15, hi_hum: 30, hi_pm1: 20, hi_pm10: 10,
                 motion: 5, noise: 122, aggression: 1, gunshot: 1
             }
         } as any
@@ -558,7 +558,7 @@ export const mockSensors: Sensor[] = [
                 // AQI: Warning (Yellow)
                 aqi: 82, coaqi: 45, no2aqi: 32, pm10aqi: 70, pm25aqi: 85,
                 // Health: Critical (Red Pulse) [Sentinel Scale: Lower is worse]
-                health_index: 35, hi_co2: 45, hi_tvoc: 40, hi_pm25: 38, hi_no2: 42,
+                health_index: 35, hi_co2: 45, hi_tvoc: 40, hi_pm25: 38, hi_no2: 42, hi_hum: 50, hi_pm1: 55, hi_pm10: 45,
                 // Sound: Safe (Green)
                 motion: 15, noise: 48, aggression: 0, gunshot: 0
             }
@@ -581,7 +581,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.111',
         location: 'Building A - Ground Floor - Zone A',
         mac_address: 'AA:BB:CC:DD:EE:11',
-        sensor_data: { val: 22.5, threshold: 25, sensors: { temp_c: 22.5 } } as any
+        sensor_data: { val: 22.5, threshold: 25, sensors: { temp_c: 22.5, temp_f: 72.5, humidity: 46.0, pressure_hpa: 1012, co2: 620, tvoc: 110, aqi: 48, pm25: 14, pm1: 6, pm10: 18, noise: 44, light: 520, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 95, hi_co2: 95, hi_hum: 98, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-A-G-HUM-02',
@@ -597,7 +597,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.112',
         location: 'Building A - Ground Floor - Zone B',
         mac_address: 'AA:BB:CC:DD:EE:12',
-        sensor_data: { val: 45, threshold: 60, sensors: { humidity: 45 } } as any
+        sensor_data: { val: 45, threshold: 60, sensors: { temp_c: 22.8, temp_f: 73.0, humidity: 45, pressure_hpa: 1013, co2: 610, tvoc: 105, aqi: 46, pm25: 13, pm1: 5, pm10: 16, noise: 43, light: 510, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 96, hi_co2: 96, hi_hum: 98, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-A-G-CO2-03',
@@ -613,7 +613,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.113',
         location: 'Building A - Ground Floor - Zone C',
         mac_address: 'AA:BB:CC:DD:EE:13',
-        sensor_data: { val: 950, threshold: 1000, sensors: { co2: 950 } } as any
+        sensor_data: { val: 950, threshold: 1000, sensors: { temp_c: 23.5, temp_f: 74.3, humidity: 50.0, pressure_hpa: 1011, co2: 950, tvoc: 250, aqi: 75, pm25: 25, pm1: 10, pm10: 35, noise: 55, light: 580, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 80, hi_co2: 85, hi_hum: 95, hi_no2: 100, hi_pm1: 98, hi_pm10: 95, hi_pm25: 90, hi_tvoc: 90, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-A-G-MOTION-04',
@@ -629,7 +629,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.114',
         location: 'Building A - Ground Floor - Zone D',
         mac_address: 'AA:BB:CC:DD:EE:14',
-        sensor_data: { val: 1, threshold: 1, sensors: { motion: 1 } } as any
+        sensor_data: { val: 1, threshold: 1, sensors: { temp_c: 22.6, temp_f: 72.7, humidity: 45.5, pressure_hpa: 1013, co2: 605, tvoc: 102, aqi: 44, pm25: 12, pm1: 5, pm10: 15, noise: 42, light: 515, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 97, hi_co2: 97, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-A-G-MULTI-05',
@@ -653,7 +653,7 @@ export const mockSensors: Sensor[] = [
                 pm1: 65.2, pm25: 95.8, pm10: 125.4,
                 co: 8.5, nh3: 85.5, no2: 65.4, co2: 1850, tvoc: 950,
                 aqi: 145, coaqi: 125, no2aqi: 135, pm10aqi: 150, pm25aqi: 155,
-                health_index: 35, hi_co2: 30, hi_tvoc: 35, hi_pm25: 32, hi_no2: 38,
+                health_index: 35, hi_co2: 30, hi_tvoc: 35, hi_pm25: 32, hi_no2: 38, hi_hum: 40, hi_pm1: 45, hi_pm10: 35,
                 motion: 3, noise: 95, aggression: 0, gunshot: 0
             }
         } as any
@@ -675,7 +675,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.121',
         location: 'Building A - First Floor - Office Area',
         mac_address: 'AA:BB:CC:DD:FF:21',
-        sensor_data: { val: 21.8, threshold: 25, sensors: { temp_c: 21.8 } } as any
+        sensor_data: { val: 21.8, threshold: 25, sensors: { temp_c: 21.8, temp_f: 71.2, humidity: 44.0, pressure_hpa: 1014, co2: 590, tvoc: 95, aqi: 38, pm25: 9, pm1: 4, pm10: 12, noise: 39, light: 490, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 98, hi_co2: 98, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-A-F1-HUM-02',
@@ -691,7 +691,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.122',
         location: 'Building A - First Floor - Conference Room',
         mac_address: 'AA:BB:CC:DD:FF:22',
-        sensor_data: { val: 58, threshold: 60, sensors: { humidity: 58 } } as any
+        sensor_data: { val: 58, threshold: 60, sensors: { temp_c: 24.0, temp_f: 75.2, humidity: 58, pressure_hpa: 1010, co2: 650, tvoc: 130, aqi: 55, pm25: 16, pm1: 7, pm10: 22, noise: 48, light: 540, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 90, hi_co2: 95, hi_hum: 90, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 95, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-A-F1-CO2-03',
@@ -707,7 +707,7 @@ export const mockSensors: Sensor[] = [
         ip_address: '192.168.1.123',
         location: 'Building A - First Floor - Server Room',
         mac_address: 'AA:BB:CC:DD:FF:23',
-        sensor_data: { val: 1650, threshold: 1000, sensors: { co2: 1650 } } as any
+        sensor_data: { val: 1650, threshold: 1000, sensors: { temp_c: 28.5, temp_f: 83.3, humidity: 55.0, pressure_hpa: 1005, co2: 1650, tvoc: 600, aqi: 150, pm25: 55, pm1: 25, pm10: 75, noise: 85, light: 700, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 45, hi_co2: 40, hi_hum: 90, hi_no2: 95, hi_pm1: 90, hi_pm10: 85, hi_pm25: 80, hi_tvoc: 70, gunshot: 0, aggression: 0 } } as any
     },
     // ============================================
     // BUILDING B - GROUND FLOOR (201)
@@ -722,7 +722,7 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.2,
         y_coordinate: 0.2,
         boundary: { x_min: 0.1, x_max: 0.3, y_min: 0.1, y_max: 0.3 },
-        sensor_data: { val: 22, threshold: 25, sensors: { temp_c: 22 } } as any
+        sensor_data: { val: 22, threshold: 25, sensors: { temp_c: 22, temp_f: 71.6, humidity: 45, pressure_hpa: 1013, co2: 500, tvoc: 75, aqi: 35, pm25: 10, pm1: 4, pm10: 14, noise: 40, light: 500, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 98, hi_co2: 99, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-B2-G-WARN',
@@ -734,7 +734,7 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.5,
         y_coordinate: 0.5,
         boundary: { x_min: 0.4, x_max: 0.6, y_min: 0.4, y_max: 0.6 },
-        sensor_data: { val: 55, threshold: 60, sensors: { humidity: 55 } } as any
+        sensor_data: { val: 55, threshold: 60, sensors: { temp_c: 24, temp_f: 75.2, humidity: 55, pressure_hpa: 1010, co2: 700, tvoc: 150, aqi: 65, pm25: 25, pm1: 10, pm10: 35, noise: 55, light: 550, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 85, hi_co2: 90, hi_hum: 90, hi_no2: 95, hi_pm1: 95, hi_pm10: 90, hi_pm25: 90, hi_tvoc: 90, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-B2-G-CRIT',
@@ -746,7 +746,7 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.8,
         y_coordinate: 0.8,
         boundary: { x_min: 0.7, x_max: 0.9, y_min: 0.7, y_max: 0.9 },
-        sensor_data: { val: 1500, threshold: 1000, sensors: { co2: 1500 } } as any
+        sensor_data: { val: 1500, threshold: 1000, sensors: { temp_c: 26, temp_f: 78.8, humidity: 60, pressure_hpa: 1005, co2: 1500, tvoc: 500, aqi: 120, pm25: 60, pm1: 25, pm10: 80, noise: 70, light: 600, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 55, hi_co2: 50, hi_hum: 85, hi_no2: 90, hi_pm1: 85, hi_pm10: 80, hi_pm25: 65, hi_tvoc: 75, gunshot: 0, aggression: 0 } } as any
     },
     // BUILDING B - FIRST FLOOR (202)
     {
@@ -759,7 +759,7 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.3,
         y_coordinate: 0.3,
         boundary: { x_min: 0.2, x_max: 0.4, y_min: 0.2, y_max: 0.4 },
-        sensor_data: { val: 21, threshold: 25, sensors: { temp_c: 21 } } as any
+        sensor_data: { val: 21, threshold: 25, sensors: { temp_c: 21, temp_f: 69.8, humidity: 42, pressure_hpa: 1015, co2: 480, tvoc: 60, aqi: 30, pm25: 8, pm1: 3, pm10: 12, noise: 38, light: 480, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 99, hi_co2: 100, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-B2-F1-WARN',
@@ -771,7 +771,7 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.6,
         y_coordinate: 0.6,
         boundary: { x_min: 0.5, x_max: 0.7, y_min: 0.5, y_max: 0.7 },
-        sensor_data: { val: 52, threshold: 60, sensors: { humidity: 52 } } as any
+        sensor_data: { val: 52, threshold: 60, sensors: { temp_c: 23, temp_f: 73.4, humidity: 52, pressure_hpa: 1012, co2: 650, tvoc: 110, aqi: 50, pm25: 18, pm1: 8, pm10: 25, noise: 52, light: 530, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 88, hi_co2: 90, hi_hum: 92, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 95, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-B2-F1-CRIT',
@@ -783,7 +783,7 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.9,
         y_coordinate: 0.1,
         boundary: { x_min: 0.8, x_max: 1.0, y_min: 0.0, y_max: 0.2 },
-        sensor_data: { val: 1800, threshold: 1000, sensors: { co2: 1800 } } as any
+        sensor_data: { val: 1800, threshold: 1000, sensors: { temp_c: 27, temp_f: 80.6, humidity: 65, pressure_hpa: 1002, co2: 1800, tvoc: 800, aqi: 160, pm25: 75, pm1: 30, pm10: 95, noise: 85, light: 650, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 35, hi_co2: 30, hi_hum: 80, hi_no2: 85, hi_pm1: 80, hi_pm10: 75, hi_pm25: 60, hi_tvoc: 50, gunshot: 0, aggression: 0 } } as any
     },
     // BUILDING B - SECOND FLOOR (203)
     {
@@ -796,7 +796,7 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.1,
         y_coordinate: 0.9,
         boundary: { x_min: 0.0, x_max: 0.2, y_min: 0.8, y_max: 1.0 },
-        sensor_data: { val: 20, threshold: 25, sensors: { temp_c: 20 } } as any
+        sensor_data: { val: 20, threshold: 25, sensors: { temp_c: 20, temp_f: 68.0, humidity: 40, pressure_hpa: 1016, co2: 450, tvoc: 50, aqi: 25, pm25: 5, pm1: 2, pm10: 8, noise: 35, light: 450, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 100, hi_co2: 100, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-B2-F2-WARN',
@@ -808,7 +808,7 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.4,
         y_coordinate: 0.1,
         boundary: { x_min: 0.3, x_max: 0.5, y_min: 0.0, y_max: 0.2 },
-        sensor_data: { val: 50, threshold: 60, sensors: { humidity: 50 } } as any
+        sensor_data: { val: 50, threshold: 60, sensors: { temp_c: 22, temp_f: 71.6, humidity: 50, pressure_hpa: 1012, co2: 600, tvoc: 100, aqi: 45, pm25: 15, pm1: 6, pm10: 20, noise: 50, light: 500, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 92, hi_co2: 95, hi_hum: 95, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 95, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-B2-F2-CRIT',
@@ -820,11 +820,8 @@ export const mockSensors: Sensor[] = [
         x_coordinate: 0.7,
         y_coordinate: 0.4,
         boundary: { x_min: 0.6, x_max: 0.8, y_min: 0.3, y_max: 0.5 },
-        sensor_data: { val: 2100, threshold: 1000, sensors: { co2: 2100 } } as any
+        sensor_data: { val: 2100, threshold: 1000, sensors: { temp_c: 29, temp_f: 84.2, humidity: 70, pressure_hpa: 1000, co2: 2100, tvoc: 950, aqi: 190, pm25: 90, pm1: 35, pm10: 110, noise: 90, light: 700, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 25, hi_co2: 20, hi_hum: 70, hi_no2: 80, hi_pm1: 75, hi_pm10: 70, hi_pm25: 50, hi_tvoc: 40, gunshot: 0, aggression: 0 } } as any
     },
-    // ============================================
-    // UNASSIGNED SENSORS (For Drag & Drop Practice)
-    // ============================================
     {
         id: 'S-UN-01',
         name: 'Unassigned Temp-01',
@@ -834,7 +831,7 @@ export const mockSensors: Sensor[] = [
         floor_level: undefined,
         x_coordinate: undefined,
         y_coordinate: undefined,
-        sensor_data: { val: 22, threshold: 25, sensors: { temp_c: 22 } } as any
+        sensor_data: { val: 22, threshold: 25, sensors: { temp_c: 22, temp_f: 71.6, humidity: 44, pressure_hpa: 1013, co2: 550, tvoc: 80, aqi: 40, pm25: 10, pm1: 4, pm10: 14, noise: 40, light: 500, motion: 0, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 98, hi_co2: 99, hi_hum: 100, hi_no2: 100, hi_pm1: 100, hi_pm10: 100, hi_pm25: 100, hi_tvoc: 100, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-UN-02',
@@ -845,7 +842,7 @@ export const mockSensors: Sensor[] = [
         floor_level: undefined,
         x_coordinate: undefined,
         y_coordinate: undefined,
-        sensor_data: { val: 65, threshold: 60, sensors: { humidity: 65 } } as any
+        sensor_data: { val: 65, threshold: 60, sensors: { temp_c: 25, temp_f: 77.0, humidity: 65, pressure_hpa: 1008, co2: 800, tvoc: 200, aqi: 90, pm25: 40, pm1: 15, pm10: 55, noise: 60, light: 600, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 70, hi_co2: 80, hi_hum: 75, hi_no2: 90, hi_pm1: 85, hi_pm10: 80, hi_pm25: 75, hi_tvoc: 80, gunshot: 0, aggression: 0 } } as any
     },
     {
         id: 'S-UN-03',
@@ -856,7 +853,7 @@ export const mockSensors: Sensor[] = [
         floor_level: undefined,
         x_coordinate: undefined,
         y_coordinate: undefined,
-        sensor_data: { val: 1500, threshold: 1000, sensors: { co2: 1500 } } as any
+        sensor_data: { val: 1500, threshold: 1000, sensors: { temp_c: 26, temp_f: 78.8, humidity: 60, pressure_hpa: 1006, co2: 1500, tvoc: 600, aqi: 120, pm25: 65, pm1: 28, pm10: 85, noise: 75, light: 650, motion: 1, smoke: 0, gas: 0, co: 0, nh3: 0, no2: 0, coaqi: 0, no2aqi: 0, pm10aqi: 0, pm25aqi: 0, health_index: 50, hi_co2: 45, hi_hum: 80, hi_no2: 85, hi_pm1: 80, hi_pm10: 75, hi_pm25: 60, hi_tvoc: 70, gunshot: 0, aggression: 0 } } as any
     }
 ];
 

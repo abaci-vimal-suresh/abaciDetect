@@ -1,7 +1,6 @@
 import React from 'react';
 import Sensor3DMarker from './Sensor3DMarker';
 import { Area, Sensor } from '../../../../../types/sensor';
-import { VisionMode } from '../FloorPlanCanvas';
 import { RoomVisibilitySettings } from '../RoomSettingsPanel';
 import Room3DBox from '../Room3DBox';
 
@@ -21,7 +20,7 @@ interface MultiFloorBuildingProps {
     darkModeStatus: boolean;
     focusedFloorLevel?: number | null;
     rotation: { x: number; y: number };
-    visionMode?: VisionMode;
+    selectedParameters: string[];
 }
 
 
@@ -41,7 +40,7 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
     darkModeStatus,
     focusedFloorLevel,
     rotation,
-    visionMode = 'none'
+    selectedParameters,
 }) => {
     // Get visible floors (deduplicated)
     const buildingFloors = Array.from(new Set(areas
@@ -61,12 +60,8 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
             {floorsToRender.map((floorLevel, idx) => {
                 const floorL = floorLevel || 0;
 
-                // Visibility logic
-                const isVisible = roomSettings.visibleFloors.length > 0
-                    ? roomSettings.visibleFloors.includes(floorL)
-                    : (focusedFloorLevel !== undefined && focusedFloorLevel !== null
-                        ? floorL === focusedFloorLevel
-                        : true);
+                // Visibility logic: Strictly visible only if in visibleFloors array
+                const isVisible = roomSettings.visibleFloors.includes(floorL);
 
                 if (!isVisible) {
                     return null;
@@ -86,24 +81,8 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
                 );
                 const currentFloorPlan = floorArea?.floor_plan_url || (idx === 0 ? floorPlanUrl : null);
 
-                // Image filter logic based on visionMode
-                let appliedFilter = 'none';
-
-                if (visionMode === 'invert') {
-                    appliedFilter = 'invert(1)';
-                } else if (visionMode === 'sepia') {
-                    appliedFilter = 'sepia(1)';
-                } else if (visionMode === 'negative') {
-                    appliedFilter = 'invert(1) hue-rotate(180deg)';
-                } else if (visionMode === 'dog') {
-                    // Dog view: Dichromatic (mostly yellow/blue), higher contrast
-                    appliedFilter = 'contrast(1.4) saturate(0.6) hue-rotate(-20deg) brightness(1.1)';
-                } else if (visionMode === 'batman') {
-                    // Batman: High contrast, bluish-black "detective mode" style
-                    appliedFilter = 'brightness(0.4) contrast(3) grayscale(1) sepia(1) hue-rotate(200deg) saturate(6) brightness(0.8)';
-                } else if (darkModeStatus) {
-                    appliedFilter = 'grayscale(1) invert(1) brightness(0.85) contrast(1.6) sepia(0.35) hue-rotate(190deg) saturate(1.4)';
-                }
+                // Optimized Night Vision: High contrast, bluish-black "detective mode" style
+                let appliedFilter = 'brightness(0.4) contrast(3) grayscale(1) sepia(1) hue-rotate(200deg) saturate(6) brightness(0.8)';
 
                 return (
                     <div
@@ -174,13 +153,16 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
                                     floorOpacity={roomSettings.floorOpacity}
                                     ceilingOpacity={roomSettings.ceilingOpacity}
                                     onUpdateRoom={onUpdateRoom}
-                                    pulseSpeed={roomSettings.pulseSpeed}
                                     showWalls={roomSettings.showWalls}
                                     sectionCutEnabled={roomSettings.sectionCutEnabled}
                                     sectionCutPlane={roomSettings.sectionCutPlane}
                                     sectionCutPosition={roomSettings.sectionCutPosition}
                                     rotation={rotation}
                                     floorSpacing={roomSettings.floorSpacing}
+                                    visionMode={roomSettings.visionMode}
+                                    selectedParameters={selectedParameters}
+                                    displayVal={marker.displayVal}
+                                    displayType={marker.displayType}
                                 />
                             ))}
 
@@ -202,6 +184,9 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
                                     onMouseDown={(e) => onSensorMouseDown(e, marker.sensor.id)}
                                     rotation={rotation}
                                     floorSpacing={roomSettings.floorSpacing}
+                                    selectedParameters={selectedParameters}
+                                    displayVal={marker.displayVal}
+                                    displayType={marker.displayType}
                                     onClick={(e) => {
                                         if (!editMode) {
                                             e.stopPropagation();

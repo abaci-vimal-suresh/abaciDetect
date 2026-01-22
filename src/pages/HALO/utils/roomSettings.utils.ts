@@ -4,15 +4,14 @@ import { RoomVisibilitySettings } from '../Sensors/components/RoomSettingsPanel'
  * Default configurations for the 3D room visualization.
  */
 export const DEFAULT_ROOM_SETTINGS: RoomVisibilitySettings = {
-    wallOpacity: 0.5,
+    wallOpacity: 0.1,
     floorOpacity: 1,
     ceilingOpacity: 0.5,
     showWalls: true,
     showFloor: true,
     showCeiling: true,
     showLabels: true,
-    pulseSpeed: 1,
-    wallHeight: 240,
+    wallHeight: 120,
     visibleFloors: [],
     floorSpacing: 400,
     floorOffset: 50,
@@ -22,12 +21,13 @@ export const DEFAULT_ROOM_SETTINGS: RoomVisibilitySettings = {
     sectionCutEnabled: false,
     sectionCutPlane: 'y',
     sectionCutPosition: 0.5,
-    floorScales: {}
+    floorScales: {},
+    visionMode: 'none'
 };
 
 /**
  * Synchronizes the wall height based on the floor spacing (60% ratio).
  */
 export const syncWallHeight = (floorSpacing: number): number => {
-    return Math.floor(floorSpacing * 0.6);
+    return Math.floor(floorSpacing * 0.3);
 };

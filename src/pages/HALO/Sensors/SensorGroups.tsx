@@ -61,7 +61,7 @@ const SensorGroups = () => {
 
     const subAreas = currentArea?.subareas || [];
 
-    // Get sensors that belong to this area (already filtered by API)
+    // Get sensors that belong to this area (recursive)
     const areaSensors = useMemo(() => {
         return getSensorsByArea(allSensors || [], areaId, currentArea?.name, areas);
     }, [allSensors, areaId, currentArea, areas]);

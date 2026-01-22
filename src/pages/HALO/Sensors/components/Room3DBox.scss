@@ -1,30 +1,57 @@
 .room-box-3d {
     .room-wall {
         border: 2px solid;
-        backdrop-filter: blur(4px);
-        transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+        backdrop-filter: blur(2px);
+        transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         backface-visibility: visible;
         box-sizing: border-box;
 
         &:hover {
             opacity: 1 !important;
         }
+
+        &.vision-batman {
+            border: 2px solid rgba(0, 200, 255, 0.8) !important;
+            box-shadow: 0 0 15px rgba(0, 200, 255, 0.4) !important;
+        }
+
+        &.status-warning {
+            animation: pulseWallWarning 3s infinite ease-in-out;
+        }
+
+        &.status-critical {
+            animation: pulseWallCritical 2s infinite ease-in-out;
+        }
     }
 
     .room-floor {
-        transition: opacity 0.3s ease;
+        transition: opacity 0.3s ease, filter 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+
+        // Night Vision Mode Floor
+        &.vision-night {
+            border: 2px solid rgba(0, 255, 0, 0.5) !important;
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.4),
+                inset 0 0 25px rgba(0, 255, 0, 0.2) !important;
+            filter: brightness(1.3) contrast(1.5) hue-rotate(90deg) saturate(2) !important;
+        }
+
+        &.vision-batman {
+            border: 2px solid rgba(0, 200, 255, 0.6) !important;
+            box-shadow: 0 0 30px rgba(0, 200, 255, 0.5),
+                inset 0 0 30px rgba(0, 200, 255, 0.3) !important;
+            filter: brightness(1.1) contrast(1.8) hue-rotate(185deg) saturate(2.5) drop-shadow(0 0 5px #00c8ff) !important;
+        }
     }
 
     .room-ceiling {
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        transition: opacity 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: opacity 0.3s ease, filter 0.3s ease, border-color 0.3s ease;
 
         .room-info-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            animation: floatLabel 3s ease-in-out infinite;
 
             .room-label {
                 background: rgba(0, 0, 0, 0.6);
@@ -35,6 +62,25 @@
                 font-weight: 600;
                 backdrop-filter: blur(4px);
                 white-space: nowrap;
+                transition: background 0.3s ease, border 0.3s ease, text-shadow 0.3s ease;
+
+
+                // Night Vision Mode Label
+                &.vision-night {
+                    background: rgba(0, 40, 0, 0.8);
+                    border: 1px solid rgba(0, 255, 0, 0.8);
+                    color: #00ff00;
+                    text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+                }
+
+                &.vision-batman {
+                    background: rgba(0, 20, 40, 0.8);
+                    border: 1px solid rgba(0, 200, 255, 0.8);
+                    color: #00c8ff;
+                    text-shadow: 0 0 15px rgba(0, 200, 255, 1);
+                    font-family: 'Outfit', sans-serif;
+                    letter-spacing: 1px;
+                }
             }
 
             .room-settings-btn {
@@ -90,47 +136,31 @@
     }
 }
 
-@keyframes floatLabel {
-
-    0%,
-    100% {
-        transform: translateZ(10px) translateY(0);
-    }
-
-    50% {
-        transform: translateZ(20px) translateY(-10px);
-    }
-}
-
-@keyframes roomGlowPulse {
-
-    0%,
-    100% {
-        transform: scale(0.6);
-        opacity: 0.2;
-        filter: blur(5px);
-    }
-
-    50% {
-        transform: scale(1.1);
-        opacity: 0.5;
-        filter: blur(2px);
-    }
-}
-
-@keyframes smokeDrift {
+@keyframes pulseWallWarning {
     0% {
-        background-position: 0% 0%;
-        opacity: 0.7;
+        opacity: 0.1 !important;
     }
 
     50% {
-        opacity: 0.9;
+        opacity: 0.22 !important;
     }
 
     100% {
-        background-position: 0% 10%;
-        opacity: 0.8;
+        opacity: 0.1 !important;
+    }
+}
+
+@keyframes pulseWallCritical {
+    0% {
+        opacity: 0.22 !important;
+    }
+
+    50% {
+        opacity: 0.45 !important;
+    }
+
+    100% {
+        opacity: 0.22 !important;
     }
 }
 

@@ -15,6 +15,10 @@ interface Sensor3DMarkerProps {
     onMouseDown: (e: React.MouseEvent) => void;
     onClick: (e: React.MouseEvent) => void;
     rotation: { x: number; y: number };
+    visionMode?: 'none' | 'invert' | 'sepia' | 'negative' | 'dog' | 'batman' | 'blueprint';
+    selectedParameters?: string[];
+    displayVal?: number;
+    displayType?: string;
 }
 
 const Sensor3DMarker: React.FC<Sensor3DMarkerProps> = ({
@@ -30,7 +34,11 @@ const Sensor3DMarker: React.FC<Sensor3DMarkerProps> = ({
     floorSpacing = 400,
     onMouseDown,
     onClick,
-    rotation
+    rotation,
+    visionMode = 'none',
+    selectedParameters = [],
+    displayVal,
+    displayType,
 }) => {
     const [isInternalHover, setIsInternalHover] = useState(false);
 
@@ -38,10 +46,9 @@ const Sensor3DMarker: React.FC<Sensor3DMarkerProps> = ({
     const wallHeight = Math.min(rawWallHeight, Math.floor(floorSpacing * 0.9));
 
     // POSITION: If z_coordinate is undefined (99% default), 
-    // we want it floating slightly ABOVE the ceiling for clear visibility.
-    // 1.05 * wallHeight puts it 5% higher than the ceiling.
-    const zRatio = sensor.z_coordinate !== undefined ? sensor.z_coordinate : 1.05;
-    const zPos = zRatio * wallHeight;
+    // we want it partially submerged into the ceiling (more than half inside).
+    const zRatio = sensor.z_coordinate !== undefined ? sensor.z_coordinate : 1.0;
+    const zPos = (zRatio * wallHeight) - 8; // Submerge 8px below ceiling line
 
     return (
         <div
@@ -62,28 +69,13 @@ const Sensor3DMarker: React.FC<Sensor3DMarkerProps> = ({
         >
             <div
                 className={`sensor-ball ${status}`}
-                style={{ color: statusColor }}
+                style={{
+                    color: statusColor,
+                    transform: `rotateY(${-rotation.y}deg) rotateX(${-rotation.x}deg)`,
+                    transition: 'transform 0.1s ease-out'
+                }}
             >
                 <div className="ball-core" />
-                <div className="ball-ring x" />
-                <div className="ball-ring y" />
-                <div className="ball-ring z" />
-
-                {status === 'critical' && (
-                    <>
-                        {[...Array(8)].map((_, i) => (
-                            <div key={i} className="spark-particle" />
-                        ))}
-                    </>
-                )}
-
-                {status === 'warning' && (
-                    <>
-                        {[...Array(3)].map((_, i) => (
-                            <div key={i} className="warning-wave" />
-                        ))}
-                    </>
-                )}
 
                 {[...Array(5)].map((_, i) => (
                     <div key={i} className="status-ribbon" style={{ background: `linear-gradient(to top, ${statusColor}, transparent)` }} />
@@ -104,18 +96,31 @@ const Sensor3DMarker: React.FC<Sensor3DMarkerProps> = ({
 
                 {/* FLOATING DATA LABEL */}
                 <div className="sensor-label-3d" style={{
-                    color: statusColor,
-                    transform: `rotateY(${-rotation.y}deg) rotateX(${-rotation.x}deg) translateZ(50px)`,
+                    color: visionMode === 'blueprint' ? '#00c8ff' : statusColor,
+                    textShadow: visionMode === 'blueprint' ? '0 0 10px rgba(0, 200, 255, 0.8)' : 'none',
+                    transform: `translateZ(50px)`,
                     transition: 'transform 0.1s ease-out'
                 }}>
-                    {sensor.sensor_data?.val ?? '--'} {sensor.sensor_type === 'Temperature' ? '°C' : ''}
+                    {displayVal !== undefined ? displayVal : (sensor.sensor_data?.val ?? '--')}
+                    {(() => {
+                        const type = displayType || sensor.sensor_type;
+                        if (type.includes('Temperature')) return '°C';
+                        if (type.includes('Humidity')) return '%';
+                        if (type.includes('CO2')) return ' ppm';
+                        if (type.includes('TVOC')) return ' ppb';
+                        if (type.includes('AQI')) return '';
+                        if (type.includes('PM2.5')) return ' µg/m³';
+                        if (type.includes('Noise')) return ' dB';
+                        if (type.includes('Light')) return ' lux';
+                        return '';
+                    })()}
                 </div>
 
                 {/* EXPANDED HOVER CARD */}
                 <div className="sensor-detail-card" style={{
                     color: statusColor,
                     borderColor: statusColor,
-                    transform: `rotateY(${-rotation.y}deg) rotateX(${-rotation.x}deg) translateZ(50px)`,
+                    transform: `translateZ(60px)`, // Offset slightly from data label
                     transition: 'transform 0.1s ease-out, opacity 0.3s ease, visibility 0.3s ease'
                 }}>
                     <div className="corner tl"></div>

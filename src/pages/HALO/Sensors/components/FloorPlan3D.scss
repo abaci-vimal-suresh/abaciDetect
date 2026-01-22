@@ -191,9 +191,7 @@
     box-shadow: 0 0 10px currentColor;
 }
 
-// ==========================================
-// ENHANCED SENSOR BALL WITH PARTICLE SYSTEM
-// ==========================================
+
 .sensor-ball {
     position: absolute;
     width: 50px;
@@ -201,9 +199,20 @@
     left: -25px;
     top: -25px;
     transform-style: preserve-3d;
-    animation: floatBall 3s ease-in-out infinite;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, filter 0.3s ease;
+    // mix-blend-mode: screen; // Removed as it can hide elements on some backdrops
+    filter: none; // No glow for 'safe' status
+    opacity: 1 !important;
+    z-index: 1000;
+
+    &.warning {
+        filter: drop-shadow(0 0 15px currentColor);
+    }
+
+    &.critical {
+        filter: drop-shadow(0 0 35px currentColor);
+    }
 
     // Hit area extension (re-adding from previous step as it is good UX and consistent)
     &::after {
@@ -219,7 +228,7 @@
     }
 
     .pulsating-plane {
-        animation: pulse3DPlane 5s ease-out infinite;
+        display: none;
         pointer-events: none;
     }
 
@@ -227,134 +236,28 @@
     // PARTICLE SYSTEM FOR ALERTS 💥
     // ==========================================
 
-    // Critical sensor spark particles
+    // Critical sensor
     &.critical {
-        animation: criticalShake 0.5s ease-in-out infinite;
-
         .spark-particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            left: 50%;
-            top: 50%;
-            border-radius: 50%;
-            background: #EF4444;
-            box-shadow: 0 0 8px #EF4444, 0 0 16px rgba(239, 68, 68, 0.5);
-            pointer-events: none;
-            opacity: 0;
-        }
-
-        // Generate 8 sparks emanating outward
-        .spark-particle:nth-child(1) {
-            animation: sparkEmanate 1.5s ease-out infinite;
-            --angle: 0deg;
-        }
-
-        .spark-particle:nth-child(2) {
-            animation: sparkEmanate 1.5s ease-out infinite 0.15s;
-            --angle: 45deg;
-        }
-
-        .spark-particle:nth-child(3) {
-            animation: sparkEmanate 1.5s ease-out infinite 0.3s;
-            --angle: 90deg;
-        }
-
-        .spark-particle:nth-child(4) {
-            animation: sparkEmanate 1.5s ease-out infinite 0.45s;
-            --angle: 135deg;
-        }
-
-        .spark-particle:nth-child(5) {
-            animation: sparkEmanate 1.5s ease-out infinite 0.6s;
-            --angle: 180deg;
-        }
-
-        .spark-particle:nth-child(6) {
-            animation: sparkEmanate 1.5s ease-out infinite 0.75s;
-            --angle: 225deg;
-        }
-
-        .spark-particle:nth-child(7) {
-            animation: sparkEmanate 1.5s ease-out infinite 0.9s;
-            --angle: 270deg;
-        }
-
-        .spark-particle:nth-child(8) {
-            animation: sparkEmanate 1.5s ease-out infinite 1.05s;
-            --angle: 315deg;
+            display: none;
         }
     }
 
-    // Warning sensor pulse waves
+    // Warning sensor
     &.warning {
         .warning-wave {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            border: 2px solid #F59E0B;
-            border-radius: 50%;
-            pointer-events: none;
-            opacity: 0;
-        }
-
-        .warning-wave:nth-child(1) {
-            animation: wavePropagate 2s ease-out infinite;
-        }
-
-        .warning-wave:nth-child(2) {
-            animation: wavePropagate 2s ease-out infinite 0.6s;
-        }
-
-        .warning-wave:nth-child(3) {
-            animation: wavePropagate 2s ease-out infinite 1.2s;
+            display: none;
         }
     }
 
-    // Status ribbons flowing upward for ALL sensors
+    // Status ribbons FLOWING upward for ALL sensors
     .status-ribbon {
-        position: absolute;
-        width: 2px;
-        height: 40px;
-        left: 50%;
-        bottom: 100%;
-        transform: translateX(-50%);
-        background: linear-gradient(to top, currentColor, transparent);
-        pointer-events: none;
-        opacity: 0;
-    }
-
-    .status-ribbon:nth-child(11) {
-        animation: ribbonFlow 2.5s ease-in infinite;
-        left: calc(50% - 16px);
-    }
-
-    .status-ribbon:nth-child(12) {
-        animation: ribbonFlow 2.5s ease-in infinite 0.5s;
-        left: calc(50% - 8px);
-    }
-
-    .status-ribbon:nth-child(13) {
-        animation: ribbonFlow 2.5s ease-in infinite 1s;
-        left: 50%;
-    }
-
-    .status-ribbon:nth-child(14) {
-        animation: ribbonFlow 2.5s ease-in infinite 1.5s;
-        left: calc(50% + 8px);
-    }
-
-    .status-ribbon:nth-child(15) {
-        animation: ribbonFlow 2.5s ease-in infinite 2s;
-        left: calc(50% + 16px);
+        display: none;
     }
 
     &.pulsating {
         .pulsating-plane {
-            animation: pulse3DPlane 3s ease-out infinite;
+            display: none;
         }
 
         .ball-ring {
@@ -362,9 +265,7 @@
         }
 
         .ball-core {
-            height: 40px;
-            top: 5px;
-            border-radius: 50%;
+            border-radius: 20px 20px 0 0;
             box-shadow: 0 0 15px currentColor;
             background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9), currentColor 60%, rgba(0, 0, 0, 0.5));
         }
@@ -573,34 +474,34 @@
 
 .ball-core {
     position: absolute;
-    width: 40px;
-    height: 20px;
-    left: 5px;
-    top: 25px;
-    border-radius: 0 0 20px 20px;
-    background: radial-gradient(circle at 35% 85%,
-            rgba(255, 255, 255, 0.9),
+    width: 30px; // Standard sphere size
+    height: 30px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) translateZ(2px);
+    border-radius: 50%; // Full sphere
+    background: radial-gradient(circle at 35% 35%,
+            rgba(255, 255, 255, 1) 0%,
             currentColor 60%,
-            rgba(0, 0, 0, 0.5));
-    box-shadow:
-        0 0 30px currentColor,
-        inset 0 0 15px rgba(0, 0, 0, 0.5);
+            rgba(0, 0, 0, 0.4) 100%);
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5); // No outer glow by default
+    transition: box-shadow 0.3s ease;
+
+    .sensor-ball.warning & {
+        box-shadow:
+            0 0 20px currentColor,
+            inset 0 0 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .sensor-ball.critical & {
+        box-shadow:
+            0 0 40px currentColor,
+            inset 0 0 15px rgba(0, 0, 0, 0.5);
+    }
 }
 
 .ball-ring {
-    position: absolute;
-    width: 60px;
-    height: 30px;
-    left: -5px;
-    top: 25px;
-    border-radius: 0 0 30px 30px;
-    border: 2px solid currentColor;
-    border-top: none;
-    opacity: 0.6;
-    box-shadow: 0 0 15px currentColor;
-    animation: rotateDome 4s linear infinite;
-    transform-origin: 50% 0%;
-    backface-visibility: visible;
+    display: none;
 }
 
 .ball-ring.x {
