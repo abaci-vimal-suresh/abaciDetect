@@ -10,7 +10,7 @@
 
 	.header + & {
 		@include media-breakpoint-up(map-get($aside, mobile-breakpoint)) {
-			padding-top: calc(#{map.get($header, height)} + #{$spacer} );
+			// padding-top: calc(#{map.get($header, height)} + #{$spacer} );
 		}
 		@include media-breakpoint-down(map-get($aside, mobile-breakpoint)) {
 			padding-top: map-deep-get($header, mobile, height);
