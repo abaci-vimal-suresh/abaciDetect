@@ -43,7 +43,7 @@ const SensorGroupManager = () => {
             {
                 name: newGroupName,
                 description: newGroupDesc,
-                sensor_list: selectedSensorIds
+                sensor_ids: selectedSensorIds
             },
             {
                 onSuccess: () => {

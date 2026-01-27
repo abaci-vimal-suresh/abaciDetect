@@ -218,13 +218,14 @@ export interface SensorGroup {
 export interface SensorGroupCreateData {
     name: string;
     description?: string;
-    sensor_ids?: number[];
+    sensor_ids?: string[];
+    sensor_list?: Sensor[];
 }
 
 export interface SensorGroupUpdateData {
     name?: string;
     description?: string;
-    sensor_ids?: number[];
+    sensor_ids?: string[];
 }
 
 export type SensorType = 'HALO_SMART' | 'HALO_3C' | 'HALO_IOT' | 'HALO_CUSTOM';
@@ -428,4 +429,115 @@ export interface HeartbeatStatus {
 export interface DeviceHealth {
     status: 'healthy' | 'unhealthy';
     timestamp: string;
+}
+
+// ============================================
+// ALERTS
+// ============================================
+
+export type AlertStatus = 'active' | 'acknowledged' | 'resolved' | 'dismissed' | 'suspended';
+export type AlertType = 'high_co2' | 'high_temperature' | 'high_humidity' | 'smoke_detected' |
+    'motion_alert' | 'gunshot_detected' | 'aggression_detected' | 'aqi_warning' | 'sensor_offline' | 'custom';
+
+export interface Alert {
+    id: number;
+    type: AlertType | string;
+    status: AlertStatus;
+    description: string;
+    remarks?: string;
+    sensor: number | {
+        id: number;
+        name: string;
+    };
+    sensor_name?: string;
+    area: number | {
+        id: number;
+        name: string;
+    };
+    area_name?: string;
+    user_acknowledged?: number | null;
+    user_acknowledged_username?: string | null;
+    time_of_acknowledgment?: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AlertCreateData {
+    type: AlertType | string;
+    status: AlertStatus;
+    description: string;
+    remarks?: string;
+    sensor: number;
+    area: number;
+}
+
+export interface AlertUpdateData {
+    status?: AlertStatus;
+    remarks?: string;
+    user_acknowledged?: number;
+}
+
+export interface AlertFilters {
+    type?: AlertType | string;
+    status?: AlertStatus;
+    sensor?: number;
+    area?: number;
+    search?: string;
+}
+
+export interface AlertTrendResponse {
+    success: boolean;
+    data: {
+        period: '24h' | '7d';
+        interval: 'hour' | 'day';
+        chart_data: {
+            labels: string[];
+            values: number[];
+        };
+    };
+}
+
+export interface AlertTrendFilters {
+    period: '24h' | '7d';
+    type?: AlertType | string;
+    status?: AlertStatus;
+}
+
+// ============================================
+// ALERT CONFIGURATION
+// ============================================
+
+export interface AlertRecipient {
+    id: number;
+    type: 'user' | 'group';
+    name?: string; // Optional for display
+}
+
+export interface AlertActionConfig {
+    email: boolean;
+    sms: boolean;
+    push_notification: boolean;
+    in_app: boolean;
+}
+
+export interface AlertConfiguration {
+    id: number;
+    parameter: string; // e.g., 'temp_c', 'co2' (matches SensorReadings keys)
+    parameter_label: string; // e.g., 'Temperature (Celsius)'
+    threshold_min?: number | null;
+    threshold_max?: number | null;
+    recipients: AlertRecipient[];
+    actions: AlertActionConfig;
+    enabled: boolean;
+    created_at: string;
+    updated_at: string;
+    updated_by?: number; // User ID
+}
+
+export interface AlertConfigurationUpdateData {
+    threshold_min?: number | null;
+    threshold_max?: number | null;
+    recipients?: AlertRecipient[];
+    actions?: Partial<AlertActionConfig>;
+    enabled?: boolean;
 }

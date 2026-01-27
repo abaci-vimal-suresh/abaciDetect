@@ -194,19 +194,22 @@
 
 		// Active Link
 		&.active {
-			background-color: tint-color(map-deep-get($navigation, item, active, background-color),
-					85%);
-			color: shade-color(map-deep-get($navigation, item, active, background-color), 15%);
+			// Neumorphic Active State (Pressed)
+			background-color: #EEF2F5;
+			color: #333;
+			// Inset shadow for pressed effect on Silver/Gray
+			box-shadow: inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #ffffff;
+			border-radius: 10px;
 
 			@include aside-elements {
-				background-color: auto-shade-tint(map-deep-get($aside, background-color), 8%);
-				color: color-contrast(auto-shade-tint(map-deep-get($aside, background-color), 8%),
-						map-deep-get($navigation, item, color-dark),
-						map-deep-get($navigation, item, color-light));
+				background-color: #EEF2F5;
+				color: #333;
+				box-shadow: inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #ffffff;
 
 				@include dark-mode {
 					background-color: rgba($white, 0.08);
 					color: $white;
+					box-shadow: none;
 				}
 			}
 
@@ -270,19 +273,22 @@
 
 		//  Hover
 		&:hover {
-			background-color: tint-color(map-deep-get($navigation, item, active, background-color),
-					90%);
-			color: shade-color(map-deep-get($navigation, item, active, background-color), 0%);
+			// Neumorphic Hover State (Raised)
+			background-color: #EEF2F5;
+			color: #111;
+			// Outward shadow for raised effect on Silver/Gray
+			box-shadow: 5px 5px 10px #d1d9e6, -5px -5px 10px #ffffff;
+			border-radius: 10px;
 
 			@include aside-elements {
-				background-color: auto-shade-tint(map-deep-get($aside, background-color), 12%);
-				color: color-contrast(auto-shade-tint(map-deep-get($aside, background-color), 12%),
-						map-deep-get($navigation, item, color-dark),
-						map-deep-get($navigation, item, color-light));
+				background-color: #EEF2F5;
+				color: #111;
+				box-shadow: 5px 5px 10px #d1d9e6, -5px -5px 10px #ffffff;
 
 				@include dark-mode {
 					background-color: rgba($white, 0.1);
 					color: $white;
+					box-shadow: none;
 				}
 			}
 

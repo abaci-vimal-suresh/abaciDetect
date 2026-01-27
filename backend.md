@@ -711,6 +711,185 @@ GET /api/devices/heartbeats/{id}/
 
 ---
 
+### Sensor Alerts
+
+#### List All Alerts
+```
+GET /api/devices/alerts/
+```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** 
+- Admin: Full access
+- Viewer: Read-only
+
+**Query Parameters:**
+- `type` - Filter by alert type
+- `status` - Filter by alert status (active, acknowledged, resolved, dismissed, suspended)
+- `sensor` - Filter by sensor ID
+- `area` - Filter by area ID
+- `search` - Search in type, sensor name, area name, description
+
+**Response:** `200 OK`
+
+---
+
+#### Get Alert by ID
+```
+GET /api/devices/alerts/{id}/
+```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** 
+- Admin: Full access
+- Viewer: Read-only
+
+**Response:** `200 OK`
+```json
+{
+  "id": 1,
+  "type": "high_co2",
+  "status": "active",
+  "description": "CO2 levels exceeded threshold of 1000 ppm",
+  "remarks": "Needs ventilation",
+  "sensor": {
+    "id": 1,
+    "name": "Sensor-001"
+  },
+  "area": {
+    "id": 1,
+    "name": "Office Building A"
+  },
+  "user_acknowledged": null,
+  "time_of_acknowledgment": null,
+  "created_at": "2026-01-23T10:05:00Z",
+  "updated_at": "2026-01-23T10:05:00Z"
+}
+```
+
+---
+
+#### Create Alert
+```
+POST /api/devices/alerts/
+Content-Type: application/json
+
+{
+  "type": "high_temperature",
+  "status": "active",
+  "description": "Temperature exceeded safe threshold",
+  "remarks": "Check HVAC system",
+  "sensor": 1,
+  "area": 1
+}
+```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
+
+**Response:** `201 Created`
+
+---
+
+#### Update Alert
+```
+PUT /api/devices/alerts/{id}/
+PATCH /api/devices/alerts/{id}/
+Content-Type: application/json
+
+{
+  "status": "acknowledged",
+  "remarks": "Issue resolved, HVAC serviced",
+  "user_acknowledged": 1
+}
+```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
+
+**Response:** `200 OK`
+
+---
+
+#### Delete Alert
+```
+DELETE /api/devices/alerts/{id}/
+```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
+
+**Response:** `204 No Content`
+
+---
+
+#### Get Alert Trends
+```
+GET /api/devices/alerts/trends/?period=24h
+```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** 
+- Admin: Full access
+- Viewer: Read-only
+
+**Query Parameters:**
+- `period` - Time period for trends (required)
+  - `24h` - Last 24 hours (hourly intervals)
+  - `7d` - Last 7 days (daily intervals)
+  
+- `type` - Filter by alert type (optional)
+- `status` - Filter by alert status (optional)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "period": "24h",
+    "interval": "hour",
+    "chart_data": {
+      "labels": [
+        "00:00", "01:00", "02:00", "03:00", "04:00", "05:00",
+        "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
+        "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+        "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"
+      ],
+      "values": [2, 3, 1, 0, 2, 4, 5, 3, 2, 1, 3, 4, 5, 6, 4, 3, 2, 1, 2, 3, 4, 2, 1, 0]
+    }
+  }
+}
+```
+
+**Examples:**
+
+Get 7-day alert trends:
+```
+GET /api/devices/alerts/trends/?period=7d
+```
+
+Response (7 days):
+```json
+{
+  "success": true,
+  "data": {
+    "period": "7d",
+    "interval": "day",
+    "chart_data": {
+      "labels": ["01-17", "01-18", "01-19", "01-20", "01-21", "01-22", "01-23"],
+      "values": [12, 15, 8, 10, 14, 9, 11]
+    }
+  }
+}
+```
+
+Get trends filtered by alert type and status:
+```
+GET /api/devices/alerts/trends/?period=24h&type=high_co2&status=active
+```
+
+---
+
 ### Halo Data Ingestion (Public)
 
 These endpoints are public for device sensors to send data.
@@ -1103,6 +1282,11 @@ Base URL: `/api/users/`
 GET /api/users/profiles/
 ```
 
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** 
+- Admin: Full access
+- Viewer: Read-only
+
 **Query Parameters:**
 - `role` - Filter by role: `admin`, `viewer`
 - `is_active` - Filter by status: `true`, `false`
@@ -1113,13 +1297,10 @@ GET /api/users/profiles/
 [
   {
     "id": 1,
-    "user": {
-      "id": 1,
-      "username": "john_admin",
-      "email": "john@example.com",
-      "first_name": "John",
-      "last_name": "Doe"
-    },
+    "username": "john_admin",
+    "email": "john@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
     "role": "admin",
     "is_active": true,
     "groups": [
@@ -1140,21 +1321,43 @@ GET /api/users/profiles/
 GET /api/users/profiles/{id}/
 ```
 
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** 
+- Admin: Full access
+- Viewer: Read-only
+
 **Response:** `200 OK` - Returns single profile object
 
 #### Create User Profile
 ```
-POST /api/users/profiles/
+POST /api/users/create/
 Content-Type: application/json
 
 {
-  "user_id": 5,
-  "role": "viewer",
-  "is_active": true
+  "username": "jane_viewer",
+  "email": "jane@example.com",
+  "password": "securepassword123",
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "role": "viewer"
 }
 ```
 
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
+
 **Response:** `201 Created`
+```json
+{
+  "id": 2,
+  "username": "jane_viewer",
+  "email": "jane@example.com",
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "role": "viewer",
+  "message": "User 'jane_viewer' created successfully"
+}
+```
 
 #### Update User Profile
 ```
@@ -1168,6 +1371,9 @@ Content-Type: application/json
 }
 ```
 
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
+
 **Response:** `200 OK`
 
 #### Delete User Profile
@@ -1175,7 +1381,15 @@ Content-Type: application/json
 DELETE /api/users/profiles/{id}/
 ```
 
-**Response:** `204 No Content`
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
+
+**Response:** `200 OK`
+```json
+{
+  "detail": "User 'jane_viewer' has been deactivated"
+}
+```
 
 ---
 
@@ -1185,6 +1399,11 @@ DELETE /api/users/profiles/{id}/
 ```
 GET /api/users/groups/
 ```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** 
+- Admin: Full access
+- Viewer: Read-only
 
 **Query Parameters:**
 - `search` - Search by group name or description
@@ -1209,6 +1428,11 @@ GET /api/users/groups/
 GET /api/users/groups/{id}/
 ```
 
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** 
+- Admin: Full access
+- Viewer: Read-only
+
 **Response:** `200 OK`
 
 #### Create User Group
@@ -1218,10 +1442,12 @@ Content-Type: application/json
 
 {
   "name": "Maintenance Team",
-  "description": "Building maintenance staff",
-  "member_ids": [1, 2, 3]
+  "description": "Building maintenance staff"
 }
 ```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
 
 **Response:** `201 Created`
 
@@ -1233,10 +1459,12 @@ Content-Type: application/json
 
 {
   "name": "Updated Group Name",
-  "description": "Updated description",
-  "member_ids": [1, 2]
+  "description": "Updated description"
 }
 ```
+
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
 
 **Response:** `200 OK`
 
@@ -1250,6 +1478,9 @@ Content-Type: application/json
 }
 ```
 
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
+
 **Response:** `200 OK`
 
 #### Remove Members from Group
@@ -1262,6 +1493,9 @@ Content-Type: application/json
 }
 ```
 
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
+
 **Response:** `200 OK`
 
 #### Delete User Group
@@ -1269,147 +1503,10 @@ Content-Type: application/json
 DELETE /api/users/groups/{id}/
 ```
 
-**Response:** `204 No Content`
-
----
-
-### User Management
-
-#### Create New User
-```
-POST /api/users/create/
-Content-Type: application/json
-
-{
-  "username": "jane_viewer",
-  "email": "jane@example.com",
-  "password": "securepassword123",
-  "first_name": "Jane",
-  "last_name": "Smith",
-  "role": "viewer"
-}
-```
-
-**Response:** `201 Created`
-```json
-{
-  "id": 2,
-  "username": "jane_viewer",
-  "email": "jane@example.com",
-  "first_name": "Jane",
-  "last_name": "Smith",
-  "role": "viewer",
-  "message": "User 'jane_viewer' created successfully"
-}
-```
-
-#### List All Users
-```
-GET /api/users/list/
-```
-
-**Query Parameters:**
-- `search` - Search by username, email, first_name, last_name
-- `ordering` - Sort by field: `username`, `date_joined`, `created_at`
+**Authentication:** ✅ Required (JWT Cookie)  
+**Permissions:** ✅ **Admin only**
 
 **Response:** `200 OK`
-
-#### Get User Details
-```
-GET /api/users/detail/{id}/
-```
-
-**Response:** `200 OK`
-
-#### Update User Details
-```
-PUT /api/users/detail/{id}/
-PATCH /api/users/detail/{id}/
-Content-Type: application/json
-
-{
-  "email": "newemail@example.com",
-  "first_name": "Jane",
-  "last_name": "Smith",
-  "role": "admin"
-}
-```
-
-**Response:** `200 OK`
-
-#### Delete User (Soft Delete)
-```
-DELETE /api/users/detail/{id}/
-```
-
-**Response:** `200 OK`
-```json
-{
-  "detail": "User 'jane_viewer' has been deactivated"
-}
-```
-
----
-
-### Current User Profile
-
-#### Get Current User's Profile
-```
-GET /api/users/profile/me/
-```
-
-**Response:** `200 OK`
-
-#### Update Current User's Profile
-```
-PUT /api/users/profile/me/
-PATCH /api/users/profile/me/
-Content-Type: application/json
-
-{
-  "email": "newemail@example.com",
-  "first_name": "John",
-  "last_name": "Doe"
-}
-```
-
-**Note:** Users can only update their own email and name, not their role.
-
-**Response:** `200 OK`
-
----
-
-### Change Password
-
-#### Change Current User's Password
-```
-PUT /api/users/change-password/
-Content-Type: application/json
-
-{
-  "old_password": "currentpassword123",
-  "new_password": "newpassword456"
-}
-```
-
-**Validation Rules:**
-- Old password must be correct
-- New password must be at least 8 characters
-- Both fields are required
-
-**Response:** `200 OK`
-```json
-{
-  "detail": "Password changed successfully"
-}
-```
-
-**Error Response:** `400 Bad Request`
-```json
-{
-  "detail": "Old password is incorrect"
-}
-```
 
 ---
 

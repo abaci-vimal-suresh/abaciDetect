@@ -31,6 +31,7 @@ export const UserRoutes = {
 export const AdminRoutes = {
 	haloDashboard: haloMenu.dashboard,
 	haloSensors: haloMenu.sensors,
+	haloArea: haloMenu.area,
 	monitoring: haloMenu.monitoring,
 	alerts: haloMenu.alerts,
 	privacy: haloMenu.privacy,
@@ -42,6 +43,7 @@ export const AdminRoutes = {
 export const ViewerRoutes = {
 	haloDashboard: haloMenu.dashboard,
 	haloSensors: haloMenu.sensors,
+	haloArea: haloMenu.area,
 	monitoring: haloMenu.monitoring,
 	alerts: {
 		...haloMenu.alerts,

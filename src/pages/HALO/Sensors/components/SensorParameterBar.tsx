@@ -13,6 +13,10 @@ export const PARAMETER_STYLE_MAP: Record<string, { icon: string; color: string; 
     motion: { label: 'Motion', icon: 'Visibility', color: '#F97316' },
     smoke: { label: 'Smoke', icon: 'SmokingRooms', color: '#94A3B8' },
     gas: { label: 'Gas', icon: 'GasMeter', color: '#FACC15' },
+    health_index: { label: 'Health Index', icon: 'Favorite', color: '#10B981' },
+    gunshot: { label: 'Gunshot', icon: 'CrisisAlert', color: '#EF4444' },
+    aggression: { label: 'Aggression', icon: 'Warning', color: '#F59E0B' },
+    gunshot_aggression: { label: 'Gunshot/Aggression', icon: 'Security', color: '#EF4444' }
 };
 
 interface SensorParameterBarProps {

@@ -14,17 +14,41 @@
 			map.get($header, color)
 		);
 	}
-	@include padding(map.get($header, padding-y) map.get($header, padding-x));
-	@include header-shadow(map.get($header, box-shadow));
+	// @include padding(map.get($header, padding-y) map.get($header, padding-x));
+	@include padding(0 $spacer); // Adjusted padding for better spacing
+	// @include header-shadow(map.get($header, box-shadow));
 
 	position: sticky;
-	z-index: $zindex-sticky;
-	top: 0;
+	z-index: 1040; // Higher z-index for proper layering
+	top: $spacer; // Floating effect
 	display: flex;
 	height: map.get($header, height);
 	align-items: center;
-	border-bottom: map.get($header, border-size) solid map.get($header, border-color);
-	background-color: rgba(map.get($header, background-color), map.get($header, opacity));
+	border-bottom: 0; // No border for neumorphism
+	
+	// Backdrop blur effect - THIS IS WHAT YOU WANTED
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	
+	// Neumorphic Background & Shadow
+	background-color: rgba($body-bg, 0.7); // Semi-transparent instead of transparent
+	box-shadow: none;
+	border-radius: $border-radius * 2;
+	margin: 0 $grid-gutter-width; // Uniform width alignment
+	width: calc(100% - #{$grid-gutter-width * 2}); // specific width calculation
+
+	@include dark-mode {
+		background-color: rgba($dark-body-bg, 0.7); // Semi-transparent dark mode
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		box-shadow: none;
+		color: if(
+			map.get($header, color),
+			color-contrast(map.get($header, dark-background-color), map.get($header, color-dark)),
+			map.get($header, color)
+		);
+	}
+
 	color: if(
 		map.get($header, color),
 		map.get($header, color),
@@ -33,7 +57,7 @@
 
 	// For child element use position fixed
 	@include media-breakpoint-up(map.get($aside, mobile-breakpoint)) {
-		@include backdrop-filter-blur(map.get($header, blur));
+		// @include backdrop-filter-blur(map.get($header, blur)); // Disable blur for solid neumorphism
 	}
 
 	// Mobile hide
