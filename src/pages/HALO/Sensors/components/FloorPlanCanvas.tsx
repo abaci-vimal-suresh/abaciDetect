@@ -86,7 +86,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const [selectedSensor, setSelectedSensor] = useState<string | null>(null);
     const [showBoundaryHint, setShowBoundaryHint] = useState(false);
     const [selectedParameters, setSelectedParameters] = useState<string[]>(['temp_c', 'humidity', 'co2', 'aqi']);
-    const [showParameterCards, setShowParameterCards] = useState(true);
+    const [showParameterCards, setShowParameterCards] = useState(false);
 
     const scrollCards = (direction: 'left' | 'right') => {
         if (cardsScrollRef.current) {
