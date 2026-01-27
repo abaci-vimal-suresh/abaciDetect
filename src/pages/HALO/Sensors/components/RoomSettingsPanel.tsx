@@ -90,7 +90,7 @@ const RoomSettingsPanel: React.FC<RoomSettingsPanelProps> = ({
 }) => {
     const { darkModeStatus } = useDarkMode();
     const [globalVisualsOpen, setGlobalVisualsOpen] = useState(true);
-    const [floorControlsOpen, setFloorControlsOpen] = useState(true);
+    const [floorControlsOpen, setFloorControlsOpen] = useState(false);
     const [roomControlsOpen, setRoomControlsOpen] = useState(false);
 
     // Detect hierarchy level
