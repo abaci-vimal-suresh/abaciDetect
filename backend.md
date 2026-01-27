@@ -449,7 +449,8 @@ GET /api/devices/sensors/
 - `sensor_type` - Filter by type
 - `is_active` - Filter by status
 - `is_online` - Filter by online status
-- `search` - Search by name, location, mac_address
+- `area` - Filter by area ID
+- `search` - Search by name, description, mac_address, ip_address
 
 **Response:** `200 OK`
 ```json
@@ -458,11 +459,14 @@ GET /api/devices/sensors/
     "id": 1,
     "name": "Sensor-001",
     "sensor_type": "HALO_3C",
-    "location": "Building A - Room 101",
+    "description": "Temperature and air quality sensor",
     "is_active": true,
     "is_online": true,
     "ip_address": "192.168.1.100",
     "mac_address": "AA:BB:CC:DD:EE:01",
+    "username": "sensor_user",
+    "password": "sensor_pass",
+    "area": 1,
     "sensor_groups": [
       {
         "id": 1,
@@ -515,9 +519,13 @@ Content-Type: application/json
 {
   "name": "Sensor-002",
   "sensor_type": "HALO_IOT",
-  "location": "Building A - Room 102",
+  "description": "Environmental monitoring sensor",
   "is_active": true,
+  "ip_address": "192.168.1.102",
   "mac_address": "AA:BB:CC:DD:EE:02",
+  "username": "sensor_user",
+  "password": "sensor_pass",
+  "area": 1,
   "sensor_group_ids": [1, 2],
   "x_val": 15.0,
   "y_val": 25.0,
@@ -532,9 +540,13 @@ Content-Type: application/json
 **Request Parameters:**
 - `name` (required) - Sensor name/identifier
 - `sensor_type` (required) - Sensor type (HALO_3C, HALO_IOT, HALO_SMART, HALO_CUSTOM)
-- `location` (optional) - Physical location
+- `description` (optional) - Detailed description of the sensor
 - `is_active` (optional, default: true) - Whether sensor is active
-- `mac_address` (optional) - MAC address
+- `ip_address` (optional) - IP address of the sensor
+- `mac_address` (optional) - MAC address (unique identifier)
+- `username` (optional) - Authentication username for sensor
+- `password` (optional) - Authentication password for sensor
+- `area` (optional) - Area ID where sensor is deployed
 - `sensor_group_ids` (optional) - Array of sensor group IDs to add sensor to
 - `x_val`, `y_val`, `z_val` (optional) - Position coordinates
 - `radius` (optional) - Spherical coverage radius
@@ -548,7 +560,8 @@ PATCH /api/devices/sensors/{id}/
 Content-Type: application/json
 
 {
-  "location": "Updated Location",
+  "description": "Updated description",
+  "area": 2,
   "is_online": true,
   "sensor_group_ids": [2, 3]
 }
@@ -557,9 +570,21 @@ Content-Type: application/json
 **Authentication:** ✅ Required (JWT Cookie)  
 **Permissions:** ✅ **Admin only**
 
-**Request Parameters:**
-- `sensor_group_ids` (optional) - Array of sensor group IDs. If provided, sensor will be removed from old groups and added to new ones
-- Other optional fields: name, sensor_type, location, is_active, is_online, mac_address, etc.
+**Request Parameters (all optional):**
+- `name` - Sensor name/identifier
+- `sensor_type` - Sensor type (HALO_3C, HALO_IOT, HALO_SMART, HALO_CUSTOM)
+- `description` - Detailed description
+- `is_active` - Whether sensor is active
+- `is_online` - Whether sensor is currently online
+- `ip_address` - IP address
+- `mac_address` - MAC address
+- `username` - Authentication username
+- `password` - Authentication password
+- `area` - Area ID where sensor is deployed
+- `sensor_group_ids` - Array of sensor group IDs. If provided, sensor will be removed from old groups and added to new ones
+- `x_val`, `y_val`, `z_val` - Position coordinates
+- Boundary fields: `x_min`, `y_min`, `x_max`, `y_max`, `z_min`, `z_max`, `boundary_opacity_val`
+- Spherical fields: `radius`, `hemisphere_opacity_val`
 
 **Response:** `200 OK`
 
@@ -651,6 +676,121 @@ DELETE /api/devices/sensor-groups/{id}/
 **Permissions:** ✅ **Admin only**
 
 **Response:** `200 OK`
+
+---
+
+### Sensor Configuration
+
+#### Get Sensor Configuration
+```
+GET /api/devices/sensor-config/?sensor_type=HALO_3C
+```
+
+**Authentication:** ❌ Not required (Public)
+
+**Query Parameters:**
+- `sensor_type` (required) - Sensor type code: `HALO_3C`, `HALO_IOT`, `HALO_SMART`, `HALO_CUSTOM`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "sensor_type": "HALO_3C",
+  "data": {
+    "model_name": "HALO 3C",
+    "description": "HALO 3C air quality sensor",
+    "metadata": {
+      "version": "1.0",
+      "last_updated": "2026-01-16"
+    },
+    "available_sensors": [
+      {
+        "sensor_name": "temperature",
+        "sensor_type": "TEMPERATURE",
+        "unit": "°C",
+        "description": "Room temperature sensor",
+        "threshold": 25.0,
+        "min_value": -10.0,
+        "max_value": 50.0
+      },
+      {
+        "sensor_name": "humidity",
+        "sensor_type": "HUMIDITY",
+        "unit": "%",
+        "description": "Room humidity sensor",
+        "threshold": 60.0,
+        "min_value": 0.0,
+        "max_value": 100.0
+      },
+      {
+        "sensor_name": "co2",
+        "sensor_type": "CO2",
+        "unit": "ppm",
+        "description": "Carbon dioxide concentration",
+        "threshold": 1000.0,
+        "min_value": 0.0,
+        "max_value": 5000.0
+      }
+    ]
+  },
+  "sensor_count": 3,
+  "timestamp": "2026-01-27T10:05:00Z"
+}
+```
+
+#### List Available Sensor Configuration Types
+```
+GET /api/devices/sensor-config/types/
+```
+
+**Authentication:** ❌ Not required (Public)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "total_types": 4,
+  "available_types": [
+    {
+      "sensor_type": "HALO_3C",
+      "file_name": "Halo_3c",
+      "sensor_count": 3,
+      "model_name": "HALO 3C",
+      "description": "HALO 3C air quality sensor",
+      "version": "1.0",
+      "api_url": "/api/devices/sensor-config/?sensor_type=HALO_3C"
+    },
+    {
+      "sensor_type": "HALO_IOT",
+      "file_name": "Halo_iot",
+      "sensor_count": 5,
+      "model_name": "HALO IOT",
+      "description": "HALO IOT smart sensor",
+      "version": "2.0",
+      "api_url": "/api/devices/sensor-config/?sensor_type=HALO_IOT"
+    },
+    {
+      "sensor_type": "HALO_SMART",
+      "file_name": "Halo_smart",
+      "sensor_count": 4,
+      "model_name": "HALO SMART",
+      "description": "HALO SMART advanced sensor",
+      "version": "1.5",
+      "api_url": "/api/devices/sensor-config/?sensor_type=HALO_SMART"
+    },
+    {
+      "sensor_type": "HALO_CUSTOM",
+      "file_name": "Halo_custom",
+      "sensor_count": 6,
+      "model_name": "HALO CUSTOM",
+      "description": "HALO CUSTOM configurable sensor",
+      "version": "1.0",
+      "api_url": "/api/devices/sensor-config/?sensor_type=HALO_CUSTOM"
+    }
+  ],
+  "timestamp": "2026-01-27T10:05:00Z"
+}
+```
 
 ---
 
@@ -1525,7 +1665,8 @@ GET /api/devices/sensors/
 - `sensor_type` - Filter by type
 - `is_active` - Filter by status
 - `is_online` - Filter by online status
-- `search` - Search by name, location, mac_address
+- `area` - Filter by area ID
+- `search` - Search by name, description, mac_address, ip_address
 
 **Response:** `200 OK`
 ```json
@@ -1534,11 +1675,14 @@ GET /api/devices/sensors/
     "id": 1,
     "name": "Sensor-001",
     "sensor_type": "HALO_3C",
-    "location": "Building A - Room 101",
+    "description": "Temperature and air quality sensor",
     "is_active": true,
     "is_online": true,
     "ip_address": "192.168.1.100",
     "mac_address": "AA:BB:CC:DD:EE:01",
+    "username": "sensor_user",
+    "password": "sensor_pass",
+    "area": 1,
     "sensor_groups": [
       {
         "id": 1,
@@ -1586,9 +1730,13 @@ Content-Type: application/json
 {
   "name": "Sensor-002",
   "sensor_type": "HALO_IOT",
-  "location": "Building A - Room 102",
+  "description": "Environmental monitoring sensor",
   "is_active": true,
+  "ip_address": "192.168.1.102",
   "mac_address": "AA:BB:CC:DD:EE:02",
+  "username": "sensor_user",
+  "password": "sensor_pass",
+  "area": 1,
   "sensor_group_ids": [1, 2],
   "x_val": 15.0,
   "y_val": 25.0,
@@ -1600,9 +1748,13 @@ Content-Type: application/json
 **Request Parameters:**
 - `name` (required) - Sensor name/identifier
 - `sensor_type` (required) - Sensor type (HALO_3C, HALO_IOT, HALO_SMART, HALO_CUSTOM)
-- `location` (optional) - Physical location
+- `description` (optional) - Detailed description of the sensor
 - `is_active` (optional, default: true) - Whether sensor is active
-- `mac_address` (optional) - MAC address
+- `ip_address` (optional) - IP address of the sensor
+- `mac_address` (optional) - MAC address (unique identifier)
+- `username` (optional) - Authentication username for sensor
+- `password` (optional) - Authentication password for sensor
+- `area` (optional) - Area ID where sensor is deployed
 - `sensor_group_ids` (optional) - Array of sensor group IDs to add sensor to
 - `x_val`, `y_val`, `z_val` (optional) - Position coordinates
 - `radius` (optional) - Spherical coverage radius
@@ -1616,15 +1768,20 @@ PATCH /api/devices/sensors/{id}/
 Content-Type: application/json
 
 {
-  "location": "Updated Location",
+  "description": "Updated description",
   "is_online": true,
+  "area": 2,
   "sensor_group_ids": [2, 3]
 }
 ```
 
 **Request Parameters:**
 - `sensor_group_ids` (optional) - Array of sensor group IDs. If provided, sensor will be removed from old groups and added to new ones
-- Other optional fields: name, sensor_type, location, is_active, is_online, mac_address, etc.
+- `description` (optional) - Updated sensor description
+- `area` (optional) - Updated area ID
+- `username` (optional) - Updated authentication username
+- `password` (optional) - Updated authentication password
+- Other optional fields: name, sensor_type, is_active, is_online, mac_address, ip_address, etc.
 
 **Response:** `200 OK`
 

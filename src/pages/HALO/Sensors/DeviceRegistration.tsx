@@ -4,8 +4,8 @@ import Button from '../../../components/bootstrap/Button';
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Icon from '../../../components/icon/Icon';
 import Spinner from '../../../components/bootstrap/Spinner';
-import { useRegisterSensor } from '../../../api/sensors.api';
-import { SensorRegistrationData } from '../../../types/sensor';
+import { useRegisterSensor, useAreas } from '../../../api/sensors.api';
+import { SensorRegistrationData, Area } from '../../../types/sensor';
 import '../../../styles/pages/deviceregistration.scss';
 
 interface IDeviceRegistrationProps {
@@ -14,9 +14,21 @@ interface IDeviceRegistrationProps {
     onCancel: () => void;
 }
 
+const flattenAreas = (areas: Area[], depth = 0): { id: number, name: string, depth: number }[] => {
+    let result: { id: number, name: string, depth: number }[] = [];
+    areas.forEach(area => {
+        result.push({ id: area.id, name: area.name, depth });
+        if (area.subareas) {
+            result.push(...flattenAreas(area.subareas, depth + 1));
+        }
+    });
+    return result;
+};
+
 const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) => {
     const [step, setStep] = useState(1);
     const registerSensorMutation = useRegisterSensor();
+    const { data: areas } = useAreas();
 
     const {
         register,
@@ -24,6 +36,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
         reset,
         trigger,
         watch,
+        setValue,
         formState: { errors },
     } = useForm<SensorRegistrationData>({
         mode: 'onChange',
@@ -39,7 +52,8 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
         console.log('Form data received:', data);
 
         // Filter out fields not expected by the API
-        const { terms, ...apiData } = data;
+        // const { terms, ...apiData } = data; // terms removed
+        const apiData = { ...data };
 
         console.log('Cleaned API payload:', apiData);
 
@@ -127,6 +141,25 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                 </div>
                             </FormGroup>
                         </div>
+                        <div className='col-12'>
+                            <FormGroup label='Description' className='mb-0'>
+                                <div className='input-icon-wrapper'>
+                                    <Icon icon='Description' className='input-icon' />
+                                    <textarea
+                                        className={`form-control input-with-icon ${errors.description ? 'is-invalid' : ''}`}
+                                        placeholder='Enter sensor description...'
+                                        rows={3}
+                                        {...register('description', {
+                                            maxLength: {
+                                                value: 500,
+                                                message: 'Description must be less than 500 characters'
+                                            }
+                                        })}
+                                    />
+                                    {errors.description && <div className='invalid-feedback'>{errors.description.message}</div>}
+                                </div>
+                            </FormGroup>
+                        </div>
                     </div>
                 )}
 
@@ -140,14 +173,33 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                         className={`form-control input-with-icon font-monospace ${errors.mac_address ? 'is-invalid' : ''}`}
                                         placeholder='00:1A:2B:3C:4D:5E'
                                         {...register('mac_address', {
+                                            onChange: (e) => {
+                                                // Auto-format MAC address
+                                                let value = e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+                                                if (value.length > 12) value = value.substring(0, 12);
+                                                
+                                                const parts = [];
+                                                for (let i = 0; i < value.length; i += 2) {
+                                                    parts.push(value.substring(i, i + 2));
+                                                }
+                                                const formatted = parts.join(':');
+                                                
+                                                // Use setValue to update without full re-render overhead if possible, 
+                                                // but we need to update the input value immediately.
+                                                // Setting the value in the event target helps, but setValue updates the internal state.
+                                                if (e.target.value !== formatted) {
+                                                    e.target.value = formatted;
+                                                    setValue('mac_address', formatted, { shouldValidate: true });
+                                                }
+                                            },
                                             validate: value => {
                                                 if (!value) return true; // Optional
                                                 const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
                                                 return macRegex.test(value) || 'Invalid MAC Address format';
                                             },
                                             maxLength: {
-                                                value: 100,
-                                                message: 'MAC address must be less than 100 characters'
+                                                value: 17, // 12 chars + 5 colons
+                                                message: 'MAC address must be 17 characters'
                                             }
                                         })}
                                     />
@@ -179,20 +231,64 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                             </FormGroup>
                         </div>
                         <div className='col-12'>
-                            <FormGroup label='Location' className='mb-0'>
+                            <FormGroup label='Area / Location' className='mb-0'>
                                 <div className='input-icon-wrapper'>
                                     <Icon icon='LocationOn' className='input-icon' />
+                                    <select
+                                        className={`form-select input-with-icon ${errors.area_id ? 'is-invalid' : ''}`}
+                                        {...register('area_id', {
+                                            required: 'Area is required',
+                                            valueAsNumber: true
+                                        })}
+                                    >
+                                        <option value=''>Select Area...</option>
+                                        {areas && flattenAreas(areas).map(area => (
+                                            <option key={area.id} value={area.id}>
+                                                {'\u00A0'.repeat(area.depth * 4)}{area.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.area_id && <div className='invalid-feedback'>{errors.area_id.message}</div>}
+                                </div>
+                            </FormGroup>
+                        </div>
+                        
+                        <div className='col-12 col-md-6'>
+                            <FormGroup label='Device Username' className='mb-0'>
+                                <div className='input-icon-wrapper'>
+                                    <Icon icon='Person' className='input-icon' />
                                     <input
-                                        className={`form-control input-with-icon ${errors.location ? 'is-invalid' : ''}`}
-                                        placeholder='e.g. Building A, Floor 2, Room 205'
-                                        {...register('location', {
+                                        className={`form-control input-with-icon ${errors.username ? 'is-invalid' : ''}`}
+                                        placeholder='admin'
+                                        autoComplete='off'
+                                        {...register('username', {
                                             maxLength: {
-                                                value: 200,
-                                                message: 'Location must be less than 200 characters'
+                                                value: 100,
+                                                message: 'Username must be less than 100 characters'
                                             }
                                         })}
                                     />
-                                    {errors.location && <div className='invalid-feedback'>{errors.location.message}</div>}
+                                    {errors.username && <div className='invalid-feedback'>{errors.username.message}</div>}
+                                </div>
+                            </FormGroup>
+                        </div>
+                        <div className='col-12 col-md-6'>
+                            <FormGroup label='Device Password' className='mb-0'>
+                                <div className='input-icon-wrapper'>
+                                    <Icon icon='VpnKey' className='input-icon' />
+                                    <input
+                                        type='password'
+                                        className={`form-control input-with-icon ${errors.password ? 'is-invalid' : ''}`}
+                                        placeholder='••••••••'
+                                        autoComplete='new-password'
+                                        {...register('password', {
+                                            maxLength: {
+                                                value: 100,
+                                                message: 'Password must be less than 100 characters'
+                                            }
+                                        })}
+                                    />
+                                    {errors.password && <div className='invalid-feedback'>{errors.password.message}</div>}
                                 </div>
                             </FormGroup>
                         </div>
@@ -214,6 +310,10 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                 <div className='review-label'>Sensor Type</div>
                                 <div className='review-value'>{formValues.sensor_type || 'Not provided'}</div>
                             </div>
+                            <div className='review-item'>
+                                <div className='review-label'>Description</div>
+                                <div className='review-value'>{formValues.description || 'Not provided'}</div>
+                            </div>
                         </div>
 
                         <div className='review-card'>
@@ -230,28 +330,23 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                 <div className='review-value font-monospace'>{formValues.ip_address || 'Not provided'}</div>
                             </div>
                             <div className='review-item'>
-                                <div className='review-label'>Location</div>
-                                <div className='review-value'>{formValues.location || 'Not specified'}</div>
+                                <div className='review-label'>Area</div>
+                                <div className='review-value'>
+                                    {formValues.area_id 
+                                        ? (flattenAreas(areas || []).find(a => a.id === Number(formValues.area_id))?.name || 'Unknown Area') 
+                                        : 'Not specified'}
+                                </div>
                             </div>
-                        </div>
-
-                        <div className='review-card'>
-                            <div className='form-check'>
-                                <input
-                                    className={`form-check-input ${(errors as any).terms ? 'is-invalid' : ''}`}
-                                    type='checkbox'
-                                    id='terms'
-                                    {...register('terms' as any, { required: 'You must confirm before registering' })}
-                                />
-                                <label className='form-check-label' htmlFor='terms'>
-                                    I confirm that this device is physically installed securely and ready for commissioning.
-                                </label>
-                                {(errors as any).terms && (
-                                    <div className='invalid-feedback d-block'>
-                                        {(errors as any).terms.message}
+                            {(formValues.username || formValues.password) && (
+                                <div className='review-item'>
+                                    <div className='review-label'>Credentials</div>
+                                    <div className='review-value'>
+                                        {formValues.username ? `User: ${formValues.username}` : ''}
+                                        {formValues.username && formValues.password ? ' / ' : ''}
+                                        {formValues.password ? 'Password: ••••••••' : ''}
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -282,7 +377,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                         onClick={async () => {
                             const fields = step === 1
                                 ? ['name', 'sensor_type']
-                                : ['mac_address', 'ip_address', 'location'];
+                                : ['mac_address', 'ip_address', 'area_id'];
                             // @ts-ignore
                             const isValid = await trigger(fields);
                             if (isValid) setStep(step + 1);

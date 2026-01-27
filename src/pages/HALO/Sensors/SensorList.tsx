@@ -133,6 +133,11 @@ const SensorList = () => {
         {
             title: 'Location',
             field: 'location',
+            render: (rowData: any) => (
+                <div>
+                    <div className='fw-bold'>{rowData?.area_name}</div>
+                </div>
+            )
         },
         {
             title: 'Status',

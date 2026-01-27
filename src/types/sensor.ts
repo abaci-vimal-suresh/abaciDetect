@@ -236,6 +236,10 @@ export interface SensorRegistrationData {
     location?: string;
     ip_address?: string;
     mac_address?: string;
+    description?: string;
+    area_id?: number;
+    username?: string;
+    password?: string;
 }
 
 export interface SensorConfig {

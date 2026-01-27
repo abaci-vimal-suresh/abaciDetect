@@ -16,7 +16,7 @@ import {
 import { queryClient, queryKeys } from '../lib/queryClient';
 
 const isDev = process.env.NODE_ENV === 'development';
-const MOCK_SOCKET = true;
+const MOCK_SOCKET = false;
 
 const WebsocketProvider = ({ children }) => {
 	const { user, userData } = useContext(AuthContext);

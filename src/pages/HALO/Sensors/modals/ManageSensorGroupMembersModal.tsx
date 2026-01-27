@@ -13,12 +13,15 @@ import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Icon from '../../../../components/icon/Icon';
 import Badge from '../../../../components/bootstrap/Badge';
 import Checks from '../../../../components/bootstrap/forms/Checks';
+import Input from '../../../../components/bootstrap/forms/Input';
+import Label from '../../../../components/bootstrap/forms/Label';
 
 import {
     useSensorGroup,
     useSensors,
     useAddSensorGroupMembers,
     useRemoveSensorGroupMembers,
+    useUpdateSensorGroup,
 } from '../../../../api/sensors.api';
 
 interface ManageSensorGroupMembersModalProps {
@@ -36,48 +39,54 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
     const { data: allSensors } = useSensors({});
     const addMembersMutation = useAddSensorGroupMembers();
     const removeMembersMutation = useRemoveSensorGroupMembers();
+    const updateGroupMutation = useUpdateSensorGroup();
 
     const [selectedSensorIds, setSelectedSensorIds] = useState<string[]>([]);
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [memberIds, setMemberIds] = useState<string[]>([]);
 
-    // Get sensors that are not already in the group
+    // Sync state from group data
+    React.useEffect(() => {
+        if (group) {
+            setName(group.name);
+            setDescription(group.description || '');
+            setMemberIds(group.sensor_list?.map(s => String(s.id)) || []);
+        }
+    }, [group]);
+
+    const handleSaveChanges = () => {
+        if (!groupId || !name.trim()) return;
+        updateGroupMutation.mutate({
+            groupId,
+            data: {
+                name,
+                description,
+                sensor_ids: memberIds
+            }
+        });
+    };
+
+    // Get sensors that are not already in the group (staged or persisted)
     const availableSensors = allSensors?.filter(
-        (s) => !group?.sensor_list?.some((sensor) => String(sensor.id) === String(s.id))
+        (s) => !memberIds.some((id) => String(id) === String(s.id))
     );
 
     const handleAddMembers = () => {
-        if (!groupId || selectedSensorIds.length === 0 || !group) return;
-
-        // Calculate the full list of sensors (existing + new)
-        const currentIds = group.sensor_list?.map(s => String(s.id)) || [];
-        const updatedSensorIds = Array.from(new Set([...currentIds, ...selectedSensorIds]));
-
-        addMembersMutation.mutate(
-            { groupId, sensor_ids: updatedSensorIds },
-            {
-                onSuccess: () => {
-                    setSelectedSensorIds([]);
-                },
-            }
-        );
+        if (selectedSensorIds.length === 0) return;
+        setMemberIds(prev => Array.from(new Set([...prev, ...selectedSensorIds])));
+        setSelectedSensorIds([]);
     };
 
     const handleRemoveMember = (sensorId: string) => {
-        if (!groupId || !group) return;
-
-        if (window.confirm('Are you sure you want to remove this sensor from the group?')) {
-            // Calculate the full list of sensors minus the one being removed
-            const currentIds = group.sensor_list?.map(s => String(s.id)) || [];
-            const updatedSensorIds = currentIds.filter(id => id !== sensorId);
-
-            removeMembersMutation.mutate({ groupId, sensor_ids: updatedSensorIds });
-        }
+        setMemberIds(prev => prev.filter(id => String(id) !== String(sensorId)));
     };
 
     return (
         <Modal isOpen={isOpen} setIsOpen={setIsOpen} size="lg" titleId="manage-sensor-members-modal">
             <ModalHeader setIsOpen={setIsOpen}>
                 <ModalTitle id="manage-sensor-members-modal">
-                    Manage Group Sensors {group && `- ${group.name}`}
+                    Edit Sensor Group {group && `- ${group.name}`}
                 </ModalTitle>
             </ModalHeader>
             <ModalBody>
@@ -87,23 +96,48 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
                     </div>
                 ) : (
                     <div className="row g-4">
+                        {/* Group Information Section */}
+                        <div className="col-12 border-bottom pb-4 mb-2">
+                            <h6 className="mb-3">Group Information</h6>
+                            <div className="row g-3">
+                                <div className="col-md-6">
+                                    <FormGroup label="Group Name">
+                                        <Input
+                                            value={name}
+                                            onChange={(e: any) => setName(e.target.value)}
+                                            placeholder="e.g. Ammonia Detectors"
+                                        />
+                                    </FormGroup>
+                                </div>
+                                <div className="col-md-6">
+                                    <FormGroup label="Description">
+                                        <Input
+                                            value={description}
+                                            onChange={(e: any) => setDescription(e.target.value)}
+                                            placeholder="Purpose of this group..."
+                                        />
+                                    </FormGroup>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Current Sensors Section */}
                         <div className="col-12">
                             <div className="d-flex align-items-center justify-content-between mb-3">
                                 <h6 className="mb-0">
                                     Current Sensors{' '}
                                     <Badge color="info" isLight>
-                                        {group?.sensor_count || 0}
+                                        {memberIds.length}
                                     </Badge>
                                 </h6>
                             </div>
 
-                            {group?.sensor_list && group.sensor_list.length > 0 ? (
+                            {memberIds.length > 0 ? (
                                 <div
                                     className="border rounded"
                                     style={{ maxHeight: '300px', overflowY: 'auto' }}
                                 >
-                                    {group.sensor_list.map((sensor) => (
+                                    {allSensors?.filter(s => memberIds.includes(String(s.id))).map((sensor) => (
                                         <div
                                             key={sensor.id}
                                             className="d-flex justify-content-between align-items-center p-3 border-bottom"
@@ -134,8 +168,7 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
                                                 color="danger"
                                                 isLight
                                                 size="sm"
-                                                onClick={() => handleRemoveMember(sensor.id)}
-                                                isDisable={removeMembersMutation.isPending}
+                                                onClick={() => handleRemoveMember(String(sensor.id))}
                                             >
                                                 Remove
                                             </Button>
@@ -181,7 +214,7 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
                                                     id={`new-sensor-${sensor.id}`}
                                                     label={`${sensor.name} (${sensor.mac_address || sensor.macAddress}) - ${sensor.sensor_type}`}
                                                     value={sensor.id}
-                                                    checked={selectedSensorIds.includes(sensor.id)}
+                                                    checked={selectedSensorIds.includes(String(sensor.id))}
                                                     onChange={(e: any) => {
                                                         const { checked, value } = e.target;
                                                         const valStr = String(value);
@@ -201,24 +234,14 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
                                     </div>
 
                                     <Button
-                                        color="primary"
+                                        color="info"
+                                        isLight
                                         icon="Add"
                                         onClick={handleAddMembers}
-                                        isDisable={
-                                            selectedSensorIds.length === 0 ||
-                                            addMembersMutation.isPending
-                                        }
+                                        isDisable={selectedSensorIds.length === 0}
                                         className="mt-2"
                                     >
-                                        {addMembersMutation.isPending ? (
-                                            <>
-                                                <Spinner isSmall inButton isGrow />
-                                                Adding...
-                                            </>
-                                        ) : (
-                                            `Add ${selectedSensorIds.length} ${selectedSensorIds.length === 1 ? 'Sensor' : 'Sensors'
-                                            }`
-                                        )}
+                                        Add to List
                                     </Button>
                                 </>
                             ) : (
@@ -234,9 +257,24 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
                 )}
             </ModalBody>
             <ModalFooter>
-                <Button color="info" onClick={() => setIsOpen(false)}>
-                    Close
-                </Button>
+                <div className="w-100 d-flex justify-content-between align-items-center">
+                    <div className="small text-muted">
+                        {updateGroupMutation.isPending ? 'Saving changes...' : ''}
+                    </div>
+                    <div className="d-flex gap-2">
+                        <Button color="light" onClick={() => setIsOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            color="primary"
+                            onClick={handleSaveChanges}
+                            isDisable={updateGroupMutation.isPending || !name.trim()}
+                        >
+                            {updateGroupMutation.isPending && <Spinner isSmall inButton isGrow />}
+                            Save All Changes
+                        </Button>
+                    </div>
+                </div>
             </ModalFooter>
         </Modal>
     );

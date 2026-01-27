@@ -31,16 +31,14 @@ const useTablestyle = (containerRef: any = null) => {
 			MuiPaper: {
 				styleOverrides: {
 					root: {
-						backgroundColor: themeStatus === 'dark' ? '#1f2128' : '#EEF2F5',
+						backgroundColor: themeStatus === 'dark' ? '#1f2128' : '#EEF2F5', // Neumorphic background
 						fontFamily: 'inherit',
 						boxShadow: themeStatus === 'dark'
-							? '0 2px 4px rgba(0, 0, 0, 0.2), 6px 6px 14px rgba(0, 0, 0, 0.35)'
+							? '0 2px 4px rgba(0, 0, 0, 0.2), 8px 8px 16px rgba(0, 0, 0, 0.35)'
 							: '6px 6px 12px #d1d9e6, -6px -6px 12px #ffffff',
 						backgroundImage: 'none',
 						borderRadius: '12px',
-						border: themeStatus === 'dark'
-							? '1px solid rgba(168, 124, 161, 0.2)'
-							: '1px solid rgba(122, 58, 111, 0.12)',
+						border: 'none !important',
 						overflow: 'hidden',
 					},
 				},
@@ -137,9 +135,7 @@ const useTablestyle = (containerRef: any = null) => {
 			MuiToolbar: {
 				styleOverrides: {
 					root: {
-						backgroundColor: themeStatus === 'dark'
-							? '#1f2128 !important'
-							: 'rgba(255, 255, 255, 0.92) !important',
+						backgroundColor: 'transparent !important',
 						paddingLeft: '1.5rem !important',
 						paddingRight: '1.5rem !important',
 						minHeight: '72px !important',
@@ -231,9 +227,7 @@ const useTablestyle = (containerRef: any = null) => {
 						borderTop: themeStatus === 'dark'
 							? '1px solid rgba(255, 255, 255, 0.15)'
 							: '1px solid rgba(122, 58, 111, 0.08)',
-						backgroundColor: themeStatus === 'dark'
-							? '#1f2128'
-							: 'rgba(255, 255, 255, 0.92)',
+						backgroundColor: 'transparent !important',
 						color: themeStatus === 'dark'
 							? 'rgba(255, 255, 255, 0.9)'
 							: '#323232',

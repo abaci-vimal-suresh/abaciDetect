@@ -15,6 +15,7 @@ import Modal, { ModalHeader, ModalBody, ModalFooter } from '../../../components/
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
 import Select from '../../../components/bootstrap/forms/Select';
+import Textarea from '../../../components/bootstrap/forms/Textarea';
 import { Alert, AlertCreateData, AlertStatus, AlertType } from '../../../types/sensor';
 import Chart, { IChartOptions } from '../../../components/extras/Chart';
 import Breadcrumb from '../../../components/bootstrap/Breadcrumb';
@@ -24,13 +25,15 @@ import useDarkMode from '../../../hooks/useDarkMode';
 // Types for our Alert History
 interface AlertHistoryItem {
     id: string;
+    originalId: number;
     timestamp: string;
     sensor_name: string;
     area_name: string;
     alert_type: string;
     severity: 'critical' | 'warning' | 'info';
     value: string | number;
-    status: 'Active' | 'Resolved';
+    status: AlertStatus | 'Resolved'; // Supporting AlertStatus type
+    remarks?: string;
     resolved_at?: string;
 }
 
@@ -63,6 +66,56 @@ const AlertHistory = () => {
         area: undefined
     });
 
+    // States for status update modal
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+    const [selectedAlert, setSelectedAlert] = useState<AlertHistoryItem | null>(null);
+    const [targetStatus, setTargetStatus] = useState<AlertStatus | null>(null);
+    const [remarks, setRemarks] = useState('');
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [alertToDelete, setAlertToDelete] = useState<AlertHistoryItem | null>(null);
+
+    const handleStatusUpdate = async () => {
+        if (!selectedAlert || !targetStatus) return;
+
+        const payload: any = {
+            status: targetStatus,
+            remarks: remarks,
+        };
+
+        if (targetStatus === 'acknowledged') {
+            payload.user_acknowledged = 1;
+        }
+
+        await updateAlertMutation.mutateAsync({
+            alertId: selectedAlert.originalId,
+            data: payload
+        });
+
+        setIsStatusModalOpen(false);
+        setRemarks('');
+        setSelectedAlert(null);
+        setTargetStatus(null);
+    };
+
+    const openStatusModal = (alert: AlertHistoryItem, status: AlertStatus) => {
+        setSelectedAlert(alert);
+        setTargetStatus(status);
+        setIsStatusModalOpen(true);
+    };
+
+    const handleDeleteClick = (alert: AlertHistoryItem) => {
+        setAlertToDelete(alert);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (alertToDelete) {
+            await deleteAlertMutation.mutateAsync(alertToDelete.originalId);
+            setIsDeleteModalOpen(false);
+            setAlertToDelete(null);
+        }
+    };
+
     const handleCreateAlert = async () => {
         if (newAlert.sensor && newAlert.area && newAlert.type && newAlert.description) {
             await createAlertMutation.mutateAsync(newAlert as AlertCreateData);
@@ -83,6 +136,7 @@ const AlertHistory = () => {
         if (!alertsData) return [];
         return (alertsData as any[]).map((alert: any) => ({
             id: `ALH-${1000 + alert.id}`,
+            originalId: alert.id,
             timestamp: alert.created_at,
             sensor_name: alert.sensor_name || (typeof alert.sensor === 'object' ? alert.sensor?.name : `Sensor-${alert.sensor}`),
             area_name: alert.area_name || (typeof alert.area === 'object' ? alert.area?.name : `Area-${alert.area}`),
@@ -90,7 +144,8 @@ const AlertHistory = () => {
             severity: (alert.type.includes('smoke') || alert.type.includes('fire') || alert.type === 'sensor_offline' || alert.status === 'critical') ? 'critical' :
                 (alert.status === 'warning' || alert.type.includes('high')) ? 'warning' : 'info',
             value: alert.description,
-            status: alert.status === 'resolved' ? 'Resolved' : 'Active',
+            status: alert.status,
+            remarks: alert.remarks,
             resolved_at: alert.status === 'resolved' ? alert.updated_at : undefined,
         }));
     }, [alertsData]);
@@ -136,7 +191,7 @@ const AlertHistory = () => {
             total: mockAlertHistory.length,
             critical: mockAlertHistory.filter(h => h.severity === 'critical').length,
             warning: mockAlertHistory.filter(h => h.severity === 'warning').length,
-            resolved: mockAlertHistory.filter(h => h.status === 'Resolved').length,
+            resolved: mockAlertHistory.filter(h => h.status === 'resolved' || h.status === 'Resolved').length,
         };
     }, [mockAlertHistory]);
 
@@ -167,31 +222,17 @@ const AlertHistory = () => {
                 fill: {
                     type: 'gradient',
                     gradient: {
+                        shade: themeStatus === 'dark' ? 'dark' : 'light',
                         type: 'vertical',
-                        shadeIntensity: 1,
-                        opacityFrom: 0.6,
+                        shadeIntensity: 0.5,
+                        gradientToColors: [themeStatus === 'dark' ? '#7a3a6f' : '#a87ca1'],
+                        inverseColors: true,
+                        opacityFrom: themeStatus === 'dark' ? 0.5 : 0.4,
                         opacityTo: 0.1,
-                        stops: [0, 100],
-                        colorStops: [
-                            {
-                                offset: 0,
-                                color: '#ff4444', // Red at top (high values)
-                                opacity: 0.8
-                            },
-                            {
-                                offset: 50,
-                                color: '#ffaa00', // Orange/Yellow in middle
-                                opacity: 0.6
-                            },
-                            {
-                                offset: 100,
-                                color: '#00ff88', // Green at bottom (low values)
-                                opacity: 0.3
-                            }
-                        ]
+                        stops: [0, 100]
                     }
                 },
-                colors: ['#00ff88'], // Base color (will be overridden by gradient)
+                colors: [themeStatus === 'dark' ? '#a87ca1' : '#7a3a6f'], // Subtle purple line
                 labels,
                 tooltip: {
                     theme: themeStatus,
@@ -254,12 +295,86 @@ const AlertHistory = () => {
         {
             title: 'Status',
             field: 'status',
-            render: (rowData: AlertHistoryItem) => (
-                <Badge color={rowData.status === 'Resolved' ? 'success' : 'danger'}>
-                    {rowData.status}
-                </Badge>
-            ),
+            render: (rowData: AlertHistoryItem) => {
+                const colors: Record<string, string> = {
+                    'active': 'danger',
+                    'acknowledged': 'warning',
+                    'resolved': 'success',
+                    'dismissed': 'secondary',
+                    'suspended': 'dark'
+                };
+                return (
+                    <Badge color={colors[rowData.status.toLowerCase()] as any || 'primary'} isLight>
+                        {rowData.status.toUpperCase()}
+                    </Badge>
+                );
+            },
         },
+        {
+            title: 'Remarks',
+            field: 'remarks',
+            render: (rowData: AlertHistoryItem) => (
+                <small className="text-muted">{rowData.remarks || '-'}</small>
+            )
+        },
+        {
+            title: 'Actions',
+            field: 'actions',
+            sorting: false,
+            filtering: false,
+            render: (rowData: AlertHistoryItem) => (
+                <div className="d-flex gap-2">
+                    {rowData.status === 'active' && (
+                        <Button
+                            color="success"
+                            isLight
+                            icon="CheckCircle"
+                            size="sm"
+                            title="Acknowledge Alert"
+                            onClick={() => openStatusModal(rowData, 'acknowledged')}
+                        />
+                    )}
+                    {rowData.status === 'acknowledged' && (
+                        <Button
+                            color="success"
+                            isLight
+                            icon="TaskAlt"
+                            size="sm"
+                            title="Resolve Alert"
+                            onClick={() => openStatusModal(rowData, 'resolved')}
+                        />
+                    )}
+                    {rowData.status === 'active' && (
+                        <>
+                            <Button
+                                color="secondary"
+                                isLight
+                                icon="Block"
+                                size="sm"
+                                title="Dismiss Alert"
+                                onClick={() => openStatusModal(rowData, 'dismissed')}
+                            />
+                            <Button
+                                color="dark"
+                                isLight
+                                icon="PauseCircle"
+                                size="sm"
+                                title="Suspend Alert"
+                                onClick={() => openStatusModal(rowData, 'suspended')}
+                            />
+                        </>
+                    )}
+                    <Button
+                        color="danger"
+                        isLight
+                        icon="Delete"
+                        size="sm"
+                        title="Delete Log"
+                        onClick={() => handleDeleteClick(rowData)}
+                    />
+                </div>
+            )
+        }
     ];
 
     return (
@@ -302,7 +417,7 @@ const AlertHistory = () => {
                     </div>
 
                     <div className="col-lg-3 col-md-6 mb-4">
-                        <Card stretch className=" shadow-sm">
+                        <Card stretch>
                             <CardBody className="py-4">
                                 <div className="d-flex align-items-center">
                                     <div className="flex-shrink-0 bg-white rounded-circle p-3 shadow-sm">
@@ -397,30 +512,6 @@ const AlertHistory = () => {
                                                 filtering: true,
                                                 actionsColumnIndex: -1,
                                             }}
-                                            actions={[
-                                                (rowData: any) => ({
-                                                    icon: 'CheckCircle',
-                                                    tooltip: 'Resolve Alert',
-                                                    hidden: rowData.status === 'Resolved',
-                                                    onClick: (event, row: any) => {
-                                                        const id = parseInt(row.id.split('-')[1]) - 1000;
-                                                        updateAlertMutation.mutate({
-                                                            alertId: id,
-                                                            data: { status: 'resolved' as AlertStatus, remarks: 'Resolved via dashboard' }
-                                                        });
-                                                    }
-                                                }),
-                                                (rowData: any) => ({
-                                                    icon: 'Delete',
-                                                    tooltip: 'Delete Log',
-                                                    onClick: (event, row: any) => {
-                                                        if (window.confirm('Are you sure you want to delete this alert log?')) {
-                                                            const id = parseInt(row.id.split('-')[1]) - 1000;
-                                                            deleteAlertMutation.mutate(id);
-                                                        }
-                                                    }
-                                                })
-                                            ]}
                                         />
                                     </ThemeProvider>
                                 </div>
@@ -498,6 +589,60 @@ const AlertHistory = () => {
                     </div>
                 </div>
             </Page>
+
+            <Modal isOpen={isStatusModalOpen} setIsOpen={setIsStatusModalOpen}>
+                <ModalHeader setIsOpen={setIsStatusModalOpen}>
+                    Update Alert Status: {targetStatus?.toUpperCase()}
+                </ModalHeader>
+                <ModalBody>
+                    <div className="row g-3">
+                        <div className="col-12 text-center mb-2">
+                            <Icon
+                                icon={
+                                    targetStatus === 'resolved' ? 'TaskAlt' :
+                                        targetStatus === 'dismissed' ? 'Block' :
+                                            targetStatus === 'suspended' ? 'PauseCircle' : 'Info'
+                                }
+                                size="3x"
+                                className={`text-${targetStatus === 'resolved' ? 'success' :
+                                    targetStatus === 'dismissed' ? 'secondary' :
+                                        targetStatus === 'suspended' ? 'dark' : 'primary'
+                                    }`}
+                            />
+                            <div className="mt-2 fw-bold">
+                                Updating Alert {selectedAlert?.id} to {targetStatus?.toUpperCase()}
+                            </div>
+                        </div>
+                        <div className="col-12">
+                            <FormGroup label="Remarks / Resolution Notes">
+                                <Textarea
+                                    placeholder="Enter details about why this alert is being updated..."
+                                    value={remarks}
+                                    onChange={(e: any) => setRemarks(e.target.value)}
+                                    rows={4}
+                                />
+                            </FormGroup>
+                        </div>
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="secondary" isLight onClick={() => setIsStatusModalOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        color={
+                            targetStatus === 'resolved' ? 'success' :
+                                targetStatus === 'dismissed' ? 'secondary' :
+                                    targetStatus === 'suspended' ? 'dark' : 'primary'
+                        }
+                        icon="Save"
+                        onClick={handleStatusUpdate}
+                        isDisable={updateAlertMutation.isPending || !remarks.trim()}
+                    >
+                        Confirm Update
+                    </Button>
+                </ModalFooter>
+            </Modal>
 
             <Modal isOpen={isCreateModalOpen} setIsOpen={setIsCreateModalOpen} size="lg">
                 <ModalHeader setIsOpen={setIsCreateModalOpen}>
@@ -585,6 +730,26 @@ const AlertHistory = () => {
                         isDisable={createAlertMutation.isPending}
                     >
                         Trigger Now
+                    </Button>
+                </ModalFooter>
+            </Modal>
+            {/* Delete Confirmation Modal */}
+            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} title="Confirm Deletion">
+                <ModalBody>
+                    <div className="text-center p-3">
+                        <Icon icon="ReportProblem" size="3x" className="text-danger mb-3" />
+                        <h5>Are you sure?</h5>
+                        <p className="text-muted">
+                            Do you really want to delete this alert log? This action cannot be undone.
+                        </p>
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="light" onClick={() => setIsDeleteModalOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button color="danger" onClick={confirmDelete}>
+                        Delete Log
                     </Button>
                 </ModalFooter>
             </Modal>

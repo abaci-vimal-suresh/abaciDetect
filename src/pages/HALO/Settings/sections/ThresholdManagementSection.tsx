@@ -5,7 +5,7 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Spinner from '../../../../components/bootstrap/Spinner';
 import Icon from '../../../../components/icon/Icon';
 import Select from '../../../../components/bootstrap/forms/Select';
-import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration } from '../../../../api/sensors.api';
+import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig } from '../../../../api/sensors.api';
 import { SensorConfig, SENSOR_CONFIG_CHOICES } from '../../../../types/sensor';
 import Badge from '../../../../components/bootstrap/Badge';
 import styles from '../../../../styles/pages/HALO/Settings/ThresholdManagement.module.scss';
@@ -131,6 +131,8 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     // API calls with mock fallback
     const { data: apiConfigs, isLoading } = useSensorConfigurations(deviceId);
     const { data: apiSensor } = useSensor(deviceId);
+    const { data: remoteConfig } = useRemoteSensorConfig(apiSensor?.sensor_type as string);
+
     const addMutation = useAddSensorConfiguration();
     const updateMutation = useUpdateSensorConfiguration();
     const deleteMutation = useDeleteSensorConfiguration();
@@ -138,6 +140,11 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     // 🔥 Use mock data if API returns nothing
     const configs = apiConfigs && apiConfigs.length > 0 ? apiConfigs : MOCK_CONFIGS;
     const latestSensor = apiSensor || MOCK_SENSOR_DATA;
+
+    const sensorConfigChoices = remoteConfig?.data?.sensors.map(s => ({
+        value: s.sensor_key,
+        label: s.sensor_name
+    })) || SENSOR_CONFIG_CHOICES;
 
     const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -210,7 +217,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         setIsCreatingNew(false);
     };
 
-    const filteredChoices = SENSOR_CONFIG_CHOICES.filter(
+    const filteredChoices = sensorConfigChoices.filter(
         choice => !configs?.some(c => c.sensor_name === choice.value)
     );
 

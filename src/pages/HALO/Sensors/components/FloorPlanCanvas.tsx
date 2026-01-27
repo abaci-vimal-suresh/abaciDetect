@@ -54,6 +54,8 @@ interface FloorPlanCanvasProps {
     roomSettings?: RoomVisibilitySettings;
     onSettingsChange?: (settings: RoomVisibilitySettings) => void;
     style?: React.CSSProperties;
+    initialZoom?: number;
+    initialView?: string;
 }
 
 interface SensorMarker {
@@ -74,7 +76,9 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     editMode = false,
     roomSettings: externalRoomSettings,
     onSettingsChange,
-    style
+    style,
+    initialZoom = 1,
+    initialView = 'perspective'
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const cardsScrollRef = useRef<HTMLDivElement>(null);
@@ -130,7 +134,11 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const {
         rotation, setRotation, zoom, setZoom, pan, setPan, setDragStart3D, setIsDragging3D,
         handleZoom, handleWheel, handlePanStart, showView, resetView, resetPan, isDragging3D
-    } = use3DScene(containerRef, editMode);
+    } = use3DScene(containerRef, {
+        locked: editMode,
+        initialZoom,
+        initialView
+    });
 
     const { projectTo3DFloor } = useCoordinateProjection(containerRef, pan, zoom, rotation.y, canvasDimensions);
 

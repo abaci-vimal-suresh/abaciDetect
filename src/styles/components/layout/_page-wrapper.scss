@@ -1,8 +1,7 @@
-//
-//  Page Wrapper
-//
 .page-wrapper {
 	display: flex;
 	flex: 1 0 auto;
 	flex-direction: column;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
 }
