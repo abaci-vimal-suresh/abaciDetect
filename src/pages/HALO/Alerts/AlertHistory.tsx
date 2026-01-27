@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { format, subDays, subHours, isToday, isWithinInterval, startOfDay } from 'date-fns';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
@@ -36,7 +35,6 @@ interface AlertHistoryItem {
 }
 
 const AlertHistory = () => {
-    const { t } = useTranslation();
     const { themeStatus } = useDarkMode();
     const { theme, headerStyle, rowStyle } = useTablestyle();
 
