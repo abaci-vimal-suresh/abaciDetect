@@ -10,9 +10,38 @@ interface Rotation {
     y: number;
 }
 
-export const use3DScene = (containerRef: RefObject<HTMLDivElement>, locked: boolean = false) => {
-    const [rotation, setRotation] = useState<Rotation>({ x: 45, y: -30 });
-    const [zoom, setZoom] = useState(1);
+export interface Use3DSceneOptions {
+    locked?: boolean;
+    initialZoom?: number;
+    initialView?: string;
+}
+
+const getViewRotation = (view: string): Rotation => {
+    switch (view) {
+        case 'back': return { x: 75, y: 180 };
+        case 'right': return { x: 25, y: -45 };
+        case 'left': return { x: 25, y: 45 };
+        case 'top': return { x: 20, y: 0 };
+        case 'bottom': return { x: -20, y: 0 };
+        case 'front': return { x: 75, y: 0 };
+        case 'perspective':
+        default: return { x: 45, y: -30 };
+    }
+};
+
+export const use3DScene = (containerRef: RefObject<HTMLDivElement>, optionsOrLocked: boolean | Use3DSceneOptions = false) => {
+    const options: Use3DSceneOptions = typeof optionsOrLocked === 'boolean'
+        ? { locked: optionsOrLocked }
+        : optionsOrLocked;
+
+    const {
+        locked = false,
+        initialZoom = 1,
+        initialView = 'perspective'
+    } = options;
+
+    const [rotation, setRotation] = useState<Rotation>(getViewRotation(initialView));
+    const [zoom, setZoom] = useState(initialZoom);
     const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
 
     const [isDragging3D, setIsDragging3D] = useState(false);
@@ -58,15 +87,7 @@ export const use3DScene = (containerRef: RefObject<HTMLDivElement>, locked: bool
     }, [pan.x, pan.y, locked]);
 
     const showView = useCallback((view: string) => {
-        switch (view) {
-            case 'back': setRotation({ x: 75, y: 180 }); break;
-            case 'right': setRotation({ x: 25, y: -45 }); break;
-            case 'left': setRotation({ x: 25, y: 45 }); break;
-            case 'top': setRotation({ x: 20, y: 0 }); break;
-            case 'bottom': setRotation({ x: -20, y: 0 }); break;
-            case 'front': setRotation({ x: 75, y: 0 }); break;
-            case 'perspective': setRotation({ x: 45, y: -30 }); break;
-        }
+        setRotation(getViewRotation(view));
     }, []);
 
     const resetPan = useCallback(() => {

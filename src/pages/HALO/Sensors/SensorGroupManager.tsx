@@ -24,7 +24,6 @@ const SensorGroupManager = () => {
     const deleteGroupMutation = useDeleteSensorGroup();
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isManageModalOpen, setIsManageModalOpen] = useState(false);
     const [selectedGroup, setSelectedGroup] = useState<SensorGroup | null>(null);
@@ -57,35 +56,6 @@ const SensorGroupManager = () => {
         );
     };
 
-    const handleEditClick = (group: SensorGroup) => {
-        setSelectedGroup(group);
-        setNewGroupName(group.name);
-        setNewGroupDesc(group.description || '');
-        setIsEditModalOpen(true);
-    };
-
-    const handleUpdateGroup = () => {
-        if (!newGroupName.trim() || !selectedGroup) {
-            setError('Group name is required');
-            return;
-        }
-
-        updateGroupMutation.mutate(
-            {
-                groupId: selectedGroup.id,
-                data: { name: newGroupName, description: newGroupDesc }
-            },
-            {
-                onSuccess: () => {
-                    setIsEditModalOpen(false);
-                    setSelectedGroup(null);
-                    setNewGroupName('');
-                    setNewGroupDesc('');
-                    setError('');
-                }
-            }
-        );
-    };
 
     const handleDeleteClick = (group: SensorGroup) => {
         setSelectedGroup(group);
@@ -166,59 +136,40 @@ const SensorGroupManager = () => {
                                 </CardHeader>
                                 <CardBody>
                                     <div className='row g-2'>
-                                        <div className='col-6'>
+                                        <div className='col-12'>
                                             <div className='border rounded p-2 text-center'>
                                                 <div className='h4 mb-0 text-primary'>{group.sensor_count || 0}</div>
                                                 <div className='small text-muted'>Sensors</div>
                                             </div>
                                         </div>
-                                        <div className='col-6'>
-                                            <div className='border rounded p-2 text-center'>
-                                                <div className='h4 mb-0 text-danger'>{group.activeAlerts || 0}</div>
-                                                <div className='small text-muted'>Active Alerts</div>
-                                            </div>
-                                        </div>
+
                                     </div>
-                                    <div className='mt-3 d-flex flex-column gap-2'>
+                                    <div className='d-flex gap-3'>
                                         <Button
                                             color='info'
                                             isLight
-                                            icon='Group'
-                                            className='w-100'
+                                            icon='Edit'
+                                            className='btn-neumorphic flex-fill text-info'
                                             onClick={(e: React.MouseEvent) => {
                                                 e.stopPropagation();
                                                 setSelectedGroup(group);
                                                 setIsManageModalOpen(true);
                                             }}
                                         >
-                                            Manage Sensors
+                                            Edit Group
                                         </Button>
-                                        <div className='d-flex gap-2'>
-                                            <Button
-                                                color='primary'
-                                                isLight
-                                                icon='Edit'
-                                                className='flex-fill'
-                                                onClick={(e: React.MouseEvent) => {
-                                                    e.stopPropagation();
-                                                    handleEditClick(group);
-                                                }}
-                                            >
-                                                Edit
-                                            </Button>
-                                            <Button
-                                                color='danger'
-                                                isLight
-                                                icon='Delete'
-                                                className='flex-fill'
-                                                onClick={(e: React.MouseEvent) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteClick(group);
-                                                }}
-                                            >
-                                                Delete
-                                            </Button>
-                                        </div>
+                                        <Button
+                                            color='danger'
+                                            isLight
+                                            icon='Delete'
+                                            className='btn-neumorphic flex-fill text-danger'
+                                            onClick={(e: React.MouseEvent) => {
+                                                e.stopPropagation();
+                                                handleDeleteClick(group);
+                                            }}
+                                        >
+                                            Delete Group
+                                        </Button>
                                     </div>
                                 </CardBody>
                             </Card>
@@ -278,7 +229,7 @@ const SensorGroupManager = () => {
                     </FormGroup>
 
                     <FormGroup label='Select Sensors' className='mb-0'>
-                        <div className='border rounded p-3 bg-light' style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                        <div className='border rounded p-3 ' style={{ maxHeight: '250px', overflowY: 'auto' }}>
                             <div className='d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom'>
                                 <div className='small fw-bold text-muted'>
                                     {selectedSensorIds.length} sensors selected
@@ -344,54 +295,6 @@ const SensorGroupManager = () => {
                 </ModalFooter>
             </Modal>
 
-            {/* Edit Group Modal */}
-            <Modal isOpen={isEditModalOpen} setIsOpen={setIsEditModalOpen}>
-                <ModalHeader setIsOpen={setIsEditModalOpen}>
-                    <ModalTitle id='edit-group-modal'>Edit Sensor Group</ModalTitle>
-                </ModalHeader>
-                <ModalBody>
-                    <FormGroup label='Group Name' className='mb-3'>
-                        <Input
-                            value={newGroupName}
-                            onChange={(e: any) => {
-                                setNewGroupName(e.target.value);
-                                setError('');
-                            }}
-                            placeholder='e.g. Ammonia Detectors'
-                            invalidFeedback={error}
-                            isValid={false}
-                            isTouched={!!error}
-                        />
-                    </FormGroup>
-                    <FormGroup label='Description' className='mb-3'>
-                        <Input
-                            component='textarea'
-                            value={newGroupDesc}
-                            onChange={(e: any) => setNewGroupDesc(e.target.value)}
-                            placeholder='Describe the purpose of this group...'
-                        />
-                    </FormGroup>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color='light' onClick={() => {
-                        setIsEditModalOpen(false);
-                        setSelectedGroup(null);
-                        setNewGroupName('');
-                        setNewGroupDesc('');
-                        setError('');
-                    }}>
-                        Cancel
-                    </Button>
-                    <Button
-                        color='primary'
-                        onClick={handleUpdateGroup}
-                        isDisable={updateGroupMutation.isPending}
-                    >
-                        {updateGroupMutation.isPending && <Spinner isSmall inButton />}
-                        Update Group
-                    </Button>
-                </ModalFooter>
-            </Modal>
 
             {/* Delete Confirmation Modal */}
             <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen}>

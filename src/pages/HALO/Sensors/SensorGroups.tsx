@@ -255,6 +255,8 @@ const SensorGroups = () => {
                                     }
                                 }}
                                 editMode={isEditMode}
+                                initialZoom={0.5}
+                                initialView="front"
                             />
                         </div>
                         <div className='col-md-3'>

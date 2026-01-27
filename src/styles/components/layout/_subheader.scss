@@ -7,70 +7,76 @@
 
 .subheader {
 	--#{$prefix}subheader-bg: #{rgba(
-		map.get($subheader, background-color),
-		map.get($subheader, opacity)
-	)};
-	
+ map.get($subheader, background-color),
+	map.get($subheader, opacity))
+}
+
+;
+
+--#{$prefix}subheader-color: #{if(
+ map.get($subheader, color),
+map.get($subheader, color),
+color-contrast(map.get($subheader, background-color), map.get($subheader, color-dark)))
+}
+
+;
+
+--#{$prefix}subheader-border-bottom-color: #{map.get($subheader, border-color)};
+
+@include dark-mode {
+	--#{$prefix}subheader-bg: rgba(65, 49, 64, 0.5);
 	--#{$prefix}subheader-color: #{if(
-		map.get($subheader, color),
-		map.get($subheader, color),
-		color-contrast(map.get($subheader, background-color), map.get($subheader, color-dark))
-	)};
-	
-	--#{$prefix}subheader-border-bottom-color: #{map.get($subheader, border-color)};
+ map.get($subheader, color),
+	color-contrast(map.get($subheader, dark-background-color),
+		map.get($subheader, color-dark)),
+	map.get($subheader, color))
+}
 
-	@include dark-mode {
-		--#{$prefix}subheader-bg: rgba(65, 49, 64, 0.5);
-		--#{$prefix}subheader-color: #{if(
-			map.get($subheader, color),
-			color-contrast(map.get($subheader, dark-background-color),
-				map.get($subheader, color-dark)),
-			map.get($subheader, color)
-		)};
-		--#{$prefix}subheader-border-bottom-color: #{map.get($subheader, dark-border-color)};
-	}
+;
+--#{$prefix}subheader-border-bottom-color: #{map.get($subheader, dark-border-color)};
+}
 
-	@include padding(0 $spacer);
-	
-	position: sticky;
-	z-index: 1030; // Higher z-index so content scrolls underneath
-	top: calc(#{map.get($header, height)} + #{$spacer} * 3);
-	display: flex;
-	min-height: map.get($subheader, height);
-	align-items: center;
-	border-bottom: 0;
-	
-	// Neumorphic Styling with backdrop blur
-	background-color: rgba($body-bg, 0.7); // Semi-transparent instead of transparent
-	backdrop-filter: blur(10px); // Blur effect for content underneath
-	-webkit-backdrop-filter: blur(10px); // Safari support
+@include padding(0 $spacer);
+
+position: sticky;
+z-index: 1030; // Higher z-index so content scrolls underneath
+top: map.get($header, height); // Align exactly below header
+display: flex;
+min-height: map.get($subheader, height);
+align-items: center;
+border-bottom: 0;
+
+// Neumorphic Styling with backdrop blur
+background-color: rgba($body-bg, 0.95); // More opaque
+backdrop-filter: blur(10px); // Blur effect for content underneath
+-webkit-backdrop-filter: blur(10px); // Safari support
+box-shadow: $box-shadow-sm;
+border-radius: 0; // Flush alignment
+margin: 0;
+width: 100%;
+
+@include dark-mode {
+	background-color: rgba($dark-body-bg, 0.95); // More opaque dark mode
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
 	box-shadow: none;
-	border-radius: $border-radius * 2;
-	margin: $spacer $grid-gutter-width;
-	width: calc(100% - #{$grid-gutter-width * 2});
-
-	@include dark-mode {
-		background-color: rgba($dark-body-bg, 0.7); // Semi-transparent dark mode
-		backdrop-filter: blur(10px);
-		-webkit-backdrop-filter: blur(10px);
-		box-shadow: none;
-		color: var(--#{$prefix}subheader-color);
-	}
-
 	color: var(--#{$prefix}subheader-color);
+}
 
-	@at-root .header+.content & {
-		top: calc(#{map.get($header, height)} + #{$spacer} * 3);
+color: var(--#{$prefix}subheader-color);
+
+@at-root .header+.content & {
+	top: map.get($header, height);
+}
+
+@include media-breakpoint-down(map.get($aside, mobile-breakpoint)) {
+	min-height: fit-content;
+
+	>* {
+		@include padding-top($spacer);
+		@include padding-bottom($spacer);
 	}
-
-	@include media-breakpoint-down(map.get($aside, mobile-breakpoint)) {
-		min-height: fit-content;
-
-		>* {
-			@include padding-top($spacer);
-			@include padding-bottom($spacer);
-		}
-	}
+}
 }
 
 // If header is fly

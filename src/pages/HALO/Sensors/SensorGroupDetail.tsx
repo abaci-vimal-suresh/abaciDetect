@@ -398,6 +398,8 @@ const SensorGroupDetail = () => {
                                         onBoundaryUpdate={handleBoundaryUpdate}
                                         editMode={isEditMode}
                                         style={{ height: '100%' }}
+                                        initialZoom={0.5}
+                                        initialView="front"
                                     />
                                 </div>
                             </div>

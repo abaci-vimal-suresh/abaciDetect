@@ -45,7 +45,6 @@ const Wrapper = () => {
 				<FooterRoutes />
 			</WrapperContainer>
 			<WrapperOverlay />
-			<AlertSimulator />
 		</>
 	);
 };

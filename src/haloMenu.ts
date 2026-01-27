@@ -20,7 +20,7 @@ export const haloMenu = {
             },
             groups: {
                 id: 'sensor-groups',
-                text: 'Filter Groups',
+                text: 'Sensor Groups',
                 path: '/halo/sensors/groups',
                 icon: 'FilterList',
             }

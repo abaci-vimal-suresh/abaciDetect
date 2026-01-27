@@ -680,6 +680,7 @@ input[type=number] {
 
 .material-table-wrapper {
   overflow: auto;
+  background-color: transparent !important;
 }
 
 
@@ -1127,5 +1128,50 @@ input[type=number] {
     background-color: var(--bs-primary);
     color: var(--bs-light);
     font-weight: 400;
+  }
+}
+
+// Neumorphic Button Style
+.btn-neumorphic {
+  border: none !important;
+  background: #e0e5ec;
+  color: #4d4d4d;
+  box-shadow: 6px 6px 12px #b8b9be, -6px -6px 12px #ffffff !important;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  border-radius: 12px !important;
+
+  &:hover,
+  &:focus,
+  &:active {
+    background: #e0e5ec !important;
+    color: #4d4d4d !important;
+    box-shadow: inset 6px 6px 12px #b8b9be, inset -6px -6px 12px #ffffff !important;
+    transform: translateY(1px);
+  }
+
+  &.text-danger {
+    color: #dc3545 !important;
+  }
+
+  &.text-info {
+    color: #0dcaf0 !important;
+  }
+
+  // Dark mode overrides: Remove shadow and adjust background
+  [data-bs-theme='dark'] &,
+  [theme='dark'] & {
+    box-shadow: none !important;
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: inherit !important;
+
+    &:hover,
+    &:focus,
+    &:active {
+      box-shadow: none !important;
+      background: rgba(255, 255, 255, 0.1) !important;
+      transform: none !important;
+    }
   }
 }
