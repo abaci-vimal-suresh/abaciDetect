@@ -157,7 +157,16 @@ const RoomSettingsPanel: React.FC<RoomSettingsPanelProps> = ({
     };
 
     return (
-        <Card className="room-settings-panel shadow-sm h-100" stretch style={{ height: '100%', minHeight: '600px', overflowY: 'auto' }}>
+        <Card
+            className="room-settings-panel shadow-sm h-100"
+            stretch
+            style={{
+                height: '100%',
+                maxHeight: 'calc(100vh - 250px)',
+                display: 'flex',
+                flexDirection: 'column'
+            }}
+        >
             <CardHeader>
                 <CardTitle>
                     <Icon icon="Settings" className="me-2" />
@@ -169,7 +178,7 @@ const RoomSettingsPanel: React.FC<RoomSettingsPanelProps> = ({
                     {hierarchyLevel === 'room' && `Room: ${currentArea?.name}`}
                 </div>
             </CardHeader>
-            <CardBody>
+            <CardBody style={{ overflowY: 'auto' }}>
                 {/* Camera Presets */}
                 <div className="mb-4">
                     <Label className="fw-bold mb-2">Quick Presets</Label>
