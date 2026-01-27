@@ -326,8 +326,8 @@ const SensorGroupDetail = () => {
 
                 {viewMode === 'floorplan' ? (
 
-                    <div style={{ height: 'calc(100vh - 250px)', minHeight: '600px' }}>
-                        <div className='row g-3 h-100 align-items-stretch'>
+                    <div style={{ height: 'calc(100vh - 250px)', minHeight: '600px', overflowY: 'auto' }}>
+                        <div className='row g-3 align-items-stretch'>
                             {/* LEFT SIDEBAR: SENSOR PALETTE (Only in Edit Mode) */}
                             {isEditMode && (
                                 <div className='col-md-3 h-100'>
@@ -347,8 +347,8 @@ const SensorGroupDetail = () => {
                                 </div>
                             )}
 
-                            {/* CENTER: 3D VIEW (Adjusts width) */}
-                            <div className={`${isEditMode ? 'col-md-9' : 'col-md-9'} h-100 d-flex flex-column`}>
+                            {/* CENTER: 3D VIEW (Fixed height, scrolls page around it) */}
+                            <div className={`${isEditMode ? 'col-md-9' : 'col-md-9'} d-flex flex-column`} style={{ minHeight: '600px' }}>
                                 <div className='d-flex justify-content-between align-items-center mb-3'>
                                     <h5 className='mb-0 text-white'>
                                         {isEditMode ? 'Edit 3D Sensor Layout' : '3D Sensor Visualization'}

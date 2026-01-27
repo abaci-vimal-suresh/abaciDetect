@@ -573,7 +573,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                 </div>
             </CardHeader>
 
-            <CardBody className="p-0 position-relative" style={{ height: '100%', minHeight: '600px', perspective: '1200px' }}>
+            <CardBody className="p-0 position-relative" style={{ height: '600px', perspective: '1200px' }}>
                 <div style={{
                     position: 'absolute',
                     top: '12px',
