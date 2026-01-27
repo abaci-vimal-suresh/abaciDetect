@@ -1,4 +1,4 @@
-import { Area, Sensor, SubArea, User, SensorGroup } from '../types/sensor';
+import { Area, Sensor, SubArea, User, SensorGroup, UserActivity, Alert, AlertTrendResponse, SensorConfig, AlertConfiguration } from '../types/sensor';
 
 export const mockUsers: User[] = [
     {
@@ -942,6 +942,11 @@ export const loadMockData = () => {
                 }
             });
 
+            if (parsed.alertConfigurations) {
+                mockAlertConfigurations.length = 0;
+                mockAlertConfigurations.push(...parsed.alertConfigurations);
+            }
+
             // Always rebuild hierarchy after loading/merging
             syncHierarchy();
 
@@ -962,6 +967,7 @@ export const saveMockData = () => {
         const dataToSave = {
             sensors: mockSensors,
             areas: mockAreas,
+            alertConfigurations: mockAlertConfigurations,
             timestamp: new Date().toISOString()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
@@ -972,6 +978,167 @@ export const saveMockData = () => {
         return false;
     }
 };
+
+
+export const mockPersonnelData: { [sensorId: string]: { name: string; contact: string; email: string } } = {};
+
+export const mockUserActivities: UserActivity[] = [
+    { id: 1, user_id: 1, action: 'System Setup', timestamp: new Date().toISOString(), details: 'Admin created the system' },
+    { id: 2, user_id: 2, action: 'Login', timestamp: new Date().toISOString(), details: 'John Doe logged in' }
+];
+
+export const mockAlerts: Alert[] = [
+    {
+        id: 1,
+        type: 'high_co2',
+        status: 'active',
+        description: 'CO2 levels exceeded threshold of 1000 ppm',
+        remarks: 'Needs ventilation',
+        sensor: 101,
+        sensor_name: 'Sensor-A-G-CO2-03',
+        area: 101,
+        area_name: 'Ground Floor A',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: 2,
+        type: 'smoke_detected',
+        status: 'active',
+        description: 'Smoke detected in Server Room',
+        remarks: 'Emergency protocol initiated',
+        sensor: 701,
+        sensor_name: 'S-A-F1-CO2-03',
+        area: 102,
+        area_name: 'First Floor A',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        id: 3,
+        type: 'high_temperature',
+        status: 'resolved',
+        description: 'Temperature spike in Building B',
+        remarks: 'HVAC adjusted',
+        sensor: 201,
+        sensor_name: 'S-B2-G-WARN',
+        area: 201,
+        area_name: 'Ground Floor B',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        updated_at: new Date(Date.now() - 1800000).toISOString()
+    },
+    {
+        id: 4,
+        type: 'motion_alert',
+        status: 'active',
+        description: 'Unauthorized motion in Warehouse',
+        sensor: 5,
+        sensor_name: 'Perimeter-Cam',
+        area: 200,
+        area_name: 'Building B (Empty)',
+        created_at: new Date(Date.now() - 7200000).toISOString(),
+        updated_at: new Date(Date.now() - 7200000).toISOString()
+    },
+    {
+        id: 5,
+        type: 'aqi_warning',
+        status: 'acknowledged',
+        description: 'Air Quality Index warning',
+        remarks: 'Team notified',
+        sensor: 470,
+        sensor_name: 'SENTINEL-MIXED-STATUS',
+        area: 102,
+        area_name: 'First Floor A',
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        updated_at: new Date(Date.now() - 43200000).toISOString()
+    }
+];
+
+export const mockAlertTrends: AlertTrendResponse = {
+    success: true,
+    data: {
+        period: '24h',
+        interval: 'hour',
+        chart_data: {
+            labels: ["00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"],
+            values: [2, 3, 1, 0, 2, 4, 5, 3, 2, 1, 3, 4, 5, 6, 4, 3, 2, 1, 2, 3, 4, 2, 1, 0]
+        }
+    }
+};
+
+
+export const mockSensorConfigs: { [sensorId: string]: SensorConfig[] } = {
+    'S-A-G-TEMP-01': [
+        { id: 1, sensor_name: 'temp_c', enabled: true, min_value: 15, max_value: 30, threshold: 25 },
+        { id: 2, sensor_name: 'humidity', enabled: false, min_value: 20, max_value: 80, threshold: 60 }
+    ],
+    'S-A-G-CO2-03': [
+        { id: 3, sensor_name: 'co2', enabled: true, min_value: 0, max_value: 2000, threshold: 1000 }
+    ]
+};
+
+export const mockAlertConfigurations: AlertConfiguration[] = [
+    {
+        id: 1,
+        parameter: 'temp_c',
+        parameter_label: 'Temperature (Celsius)',
+        threshold_min: 18,
+        threshold_max: 28,
+        recipients: [
+            { id: 1, type: 'user', name: 'admin' },
+            { id: 1, type: 'group', name: 'Security Team' }
+        ],
+        actions: {
+            email: true,
+            sms: false,
+            push_notification: true,
+            in_app: true
+        },
+        enabled: true,
+        created_at: '2026-01-20T10:00:00Z',
+        updated_at: '2026-01-20T10:00:00Z',
+        updated_by: 1
+    },
+    {
+        id: 2,
+        parameter: 'co2',
+        parameter_label: 'Carbon Dioxide (ppm)',
+        threshold_max: 1000,
+        recipients: [
+            { id: 1, type: 'group', name: 'Security Team' }
+        ],
+        actions: {
+            email: true,
+            sms: true,
+            push_notification: true,
+            in_app: true
+        },
+        enabled: true,
+        created_at: '2026-01-20T10:00:00Z',
+        updated_at: '2026-01-20T10:00:00Z',
+        updated_by: 1
+    },
+    {
+        id: 3,
+        parameter: 'humidity',
+        parameter_label: 'Humidity (%)',
+        threshold_min: 30,
+        threshold_max: 60,
+        recipients: [
+            { id: 2, type: 'user', name: 'viewer' }
+        ],
+        actions: {
+            email: false,
+            sms: false,
+            push_notification: false,
+            in_app: true
+        },
+        enabled: true,
+        created_at: '2026-01-20T10:00:00Z',
+        updated_at: '2026-01-20T10:00:00Z',
+        updated_by: 1
+    }
+];
 
 // Try to load persisted data on module initialization
 loadMockData();

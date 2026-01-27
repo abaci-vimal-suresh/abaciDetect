@@ -1,14 +1,17 @@
-//
-//  Content
-//
+@use "sass:map";
 
 .content {
 	@include padding(map-get($content, padding-y) map-get($content, padding-x));
 
 	display: flex;
 	flex: 1 0 auto;
+	position: relative;
+	z-index: 1; // Lower than header and subheader
 
 	.header + & {
+		@include media-breakpoint-up(map-get($aside, mobile-breakpoint)) {
+			padding-top: calc(#{map.get($header, height)} + #{$spacer} );
+		}
 		@include media-breakpoint-down(map-get($aside, mobile-breakpoint)) {
 			padding-top: map-deep-get($header, mobile, height);
 		}

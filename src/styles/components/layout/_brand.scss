@@ -79,10 +79,12 @@
 		}
 
 		&:hover {
-			background-color: auto-shade-tint(map-deep-get($aside, background-color), 8%);
+			background-color: #EEF2F5;
+			box-shadow: 4px 4px 8px #d1d9e6, -4px -4px 8px #ffffff;
 
 			@include dark-mode {
 				background-color: rgba($white, 0.08);
+				box-shadow: none;
 			}
 		}
 

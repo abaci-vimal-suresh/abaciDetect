@@ -48,8 +48,8 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
         if (!groupId || selectedSensorIds.length === 0 || !group) return;
 
         // Calculate the full list of sensors (existing + new)
-        const currentIds = group.sensor_list?.map(s => Number(s.id)) || [];
-        const updatedSensorIds = Array.from(new Set([...currentIds, ...selectedSensorIds.map(id => Number(id))]));
+        const currentIds = group.sensor_list?.map(s => String(s.id)) || [];
+        const updatedSensorIds = Array.from(new Set([...currentIds, ...selectedSensorIds]));
 
         addMembersMutation.mutate(
             { groupId, sensor_ids: updatedSensorIds },
@@ -66,8 +66,8 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
 
         if (window.confirm('Are you sure you want to remove this sensor from the group?')) {
             // Calculate the full list of sensors minus the one being removed
-            const currentIds = group.sensor_list?.map(s => Number(s.id)) || [];
-            const updatedSensorIds = currentIds.filter(id => String(id) !== String(sensorId));
+            const currentIds = group.sensor_list?.map(s => String(s.id)) || [];
+            const updatedSensorIds = currentIds.filter(id => id !== sensorId);
 
             removeMembersMutation.mutate({ groupId, sensor_ids: updatedSensorIds });
         }

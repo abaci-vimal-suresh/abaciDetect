@@ -18,25 +18,20 @@ export const haloMenu = {
                 path: '/halo/sensors/list',
                 icon: 'ViewList',
             },
-            areas: {
-                id: 'sensor-areas',
-                text: 'Sensor Areas',
-                path: '/halo/sensors/areas',
-                icon: 'GroupWork',
-            },
             groups: {
                 id: 'sensor-groups',
                 text: 'Filter Groups',
                 path: '/halo/sensors/groups',
                 icon: 'FilterList',
-            },
-            // firmware: {
-            //     id: 'sensor-firmware',
-            //     text: 'Firmware Update',
-            //     path: '/halo/sensors/firmware',
-            //     icon: 'SystemUpdate',
-            // },
+            }
         },
+    },
+    area: {
+        id: 'halo-area',
+        text: 'Area',
+        path: '/halo/sensors/areas',
+        icon: 'LocationOn',
+        subMenu: null,
     },
     monitoring: {
         id: 'halo-monitoring',

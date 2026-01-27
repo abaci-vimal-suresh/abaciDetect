@@ -100,6 +100,11 @@ const RouteConfig: CustomRouteConfig[] = [
 		allowedTo: ['Admin'],
 	},
 	{
+		path: '/halo/alerts',
+		element: <Navigate to='/halo/alerts/history' replace />,
+		allowedTo: ['Admin', 'Viewer'],
+	},
+	{
 		path: '/halo/alerts/history',
 		element: <HaloAlertHistory />,
 		allowedTo: ['Admin', 'Viewer'],

@@ -18,7 +18,26 @@ import SceneGizmo3D from './3d/SceneGizmo3D';
 import Boundary3DVolume from './3d/Boundary3DVolume';
 import InteractionHints from './3d/InteractionHints';
 import SensorParameterBar, { PARAMETER_STYLE_MAP } from './SensorParameterBar';
+import SensorParameterCard from './SensorParameterCard';
 import { getMetricStatus, getAggregatedStatus } from '../../utils/threshold.utils';
+
+const PARAM_META: Record<string, { unit: string; min: number; max: number; threshold: number }> = {
+    temp_c: { unit: '°C', min: 10, max: 40, threshold: 26 },
+    humidity: { unit: '%', min: 0, max: 100, threshold: 65 },
+    co2: { unit: 'ppm', min: 400, max: 2000, threshold: 1000 },
+    aqi: { unit: '', min: 0, max: 500, threshold: 100 },
+    tvoc: { unit: 'ppb', min: 0, max: 5000, threshold: 1500 },
+    noise: { unit: 'dB', min: 30, max: 120, threshold: 75 },
+    pm25: { unit: 'µg/m³', min: 0, max: 250, threshold: 35 },
+    light: { unit: 'lux', min: 0, max: 10000, threshold: 5000 },
+    pm10: { unit: 'µg/m³', min: 0, max: 500, threshold: 150 },
+    pm1: { unit: 'µg/m³', min: 0, max: 100, threshold: 35 },
+};
+
+const PARAMETER_GROUPS = {
+    left: [] as string[],
+    right: ['aqi', 'health_index', 'gunshot_aggression']
+};
 
 interface FloorPlanCanvasProps {
     areaId: number;
@@ -58,6 +77,8 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     style
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const cardsScrollRef = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLDivElement>(null);
     const { darkModeStatus } = useDarkMode();
     const [imageLoaded, setImageLoaded] = useState(false);
     const [canvasDimensions, setCanvasDimensions] = useState({ width: 800, height: 600, dpr: 1 });
@@ -65,6 +86,17 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const [selectedSensor, setSelectedSensor] = useState<string | null>(null);
     const [showBoundaryHint, setShowBoundaryHint] = useState(false);
     const [selectedParameters, setSelectedParameters] = useState<string[]>(['temp_c', 'humidity', 'co2', 'aqi']);
+    const [showParameterCards, setShowParameterCards] = useState(true);
+
+    const scrollCards = (direction: 'left' | 'right') => {
+        if (cardsScrollRef.current) {
+            const scrollAmount = 300;
+            cardsScrollRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     const [roomConfigs, setRoomConfigs] = useState<{
         [sensorId: string]: { name: string; color: string; showWalls?: boolean; wallOpacity?: number }
@@ -316,6 +348,61 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
         return Array.from(params);
     }, [visibleSensors]);
 
+    const availableParameterData = useMemo(() => {
+        return availableParameters.map(param => {
+            const style = PARAMETER_STYLE_MAP[param];
+            const meta = PARAM_META[param] || { unit: '', min: 0, max: 100, threshold: 50 };
+
+            // Calculate average for this floor
+            const readings = filteredVisibleSensors
+                .map(m => m.sensor.sensor_data?.sensors?.[param])
+                .filter(val => val !== undefined) as number[];
+
+            const avgValue = readings.length > 0
+                ? readings.reduce((a, b) => a + b, 0) / readings.length
+                : 0;
+
+            // Identify locations with issues
+            const individualStatuses = filteredVisibleSensors
+                .map(m => {
+                    const val = m.sensor.sensor_data?.sensors?.[param];
+                    return val !== undefined ? getMetricStatus(param, val) : 'safe';
+                });
+
+            const criticalLocs = filteredVisibleSensors
+                .filter(m => {
+                    const val = m.sensor.sensor_data?.sensors?.[param];
+                    return val !== undefined && getMetricStatus(param, val) !== 'safe';
+                })
+                .map(m => m.sensor.room_name || m.sensor.location || 'Unknown Area');
+
+            return {
+                param,
+                label: style?.label || param.toUpperCase(),
+                value: avgValue,
+                unit: meta.unit,
+                min: meta.min,
+                max: meta.max,
+                threshold: meta.threshold,
+                status: getAggregatedStatus(individualStatuses),
+                icon: style?.icon,
+                isSelected: selectedParameters.includes(param),
+                criticalLocations: Array.from(new Set(criticalLocs)),
+                onClick: () => {
+                    setSelectedParameters(prev =>
+                        prev.includes(param)
+                            ? prev.filter(p => p !== param)
+                            : [...prev, param]
+                    );
+                }
+            };
+        });
+    }, [filteredVisibleSensors, selectedParameters, availableParameters]);
+
+    const getParameterProps = (param: string) => {
+        return availableParameterData.find(d => d.param === param) || null;
+    };
+
     const [image, setImage] = useState<HTMLImageElement | null>(null);
     useEffect(() => {
         if (!floorPlanUrl) return;
@@ -394,22 +481,30 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     };
 
     return (
-        <Card className="floor-plan-card h-100 shadow-3d border-0 overflow-hidden" stretch style={{ background: darkModeStatus ? '#0F172A' : '#F8FAFC', ...style }}>
-            <CardHeader className="bg-transparent border-bottom border-light py-3">
+        <Card
+            ref={containerRef}
+            className="floor-plan-card h-100 shadow-3d border-0 overflow-hidden"
+            stretch
+            style={{
+                background: darkModeStatus ? '#0F172A' : '#F8FAFC',
+                ...style,
+                position: 'relative'
+            }}
+        >
+            <CardHeader className="bg-transparent border-bottom border-light py-3 px-4">
                 <div className="d-flex justify-content-between align-items-center w-100">
-                    <CardTitle className="mb-0 fs-5 fw-bold d-flex align-items-center">
-                        <Icon icon="3d_rotation" className="me-2 text-primary" />
-                        Interactive 3D Sensor Environment
+                    <div className="d-flex align-items-center gap-3">
+                        <CardTitle className="mb-0 fs-5 fw-bold d-flex align-items-center text-white" style={{ letterSpacing: '0.5px' }}>
+                            Interactive 3D Sensor Environment
+                        </CardTitle>
+
                         {editMode && <Badge color="warning" isLight className="ms-2 px-2 py-1">EDIT MODE</Badge>}
 
-
-
-                        <div className="d-flex align-items-center gap-2 ms-4 border-start ps-4 border-light border-opacity-10">
+                        <div className="d-flex align-items-center gap-2 border-start ps-3 border-light border-opacity-10">
                             {/* View Presets */}
-                            <div className="btn-group btn-group-sm bg-dark bg-opacity-10 rounded-pill p-1 border border-light border-opacity-10">
+                            <div className="btn-group btn-group-sm bg-dark bg-opacity-20 rounded-pill p-1 border border-light border-opacity-10 shadow-sm" style={{ backdropFilter: 'blur(8px)' }}>
                                 {[
-                                    { id: 'perspective', label: '3D', icon: '3d_rotation' },
-                                    { id: 'top', label: 'Top', icon: 'expand_less' },
+                                    { id: 'perspective', label: '3D', icon: 'keyboard_arrow_up' },
                                     { id: 'front', label: 'F', icon: 'none' },
                                     { id: 'back', label: 'B', icon: 'none' },
                                     { id: 'left', label: 'L', icon: 'none' },
@@ -421,7 +516,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                                         onClick={() => showView(view.id)}
                                         className="btn btn-sm px-2 py-1 text-muted hover-text-primary d-flex align-items-center border-0"
                                         title={view.label}
-                                        style={{ fontSize: '0.7rem', fontWeight: 600 }}
+                                        style={{ fontSize: '0.75rem', fontWeight: 700, minWidth: '28px', color: 'rgba(255,255,255,0.6)' }}
                                     >
                                         {view.icon !== 'none' ? <Icon icon={view.icon} size="sm" /> : <span>{view.label}</span>}
                                     </button>
@@ -429,11 +524,11 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                             </div>
 
                             {/* Reset & Tools */}
-                            <div className="d-flex gap-1 bg-dark bg-opacity-10 rounded-pill p-1 border border-light border-opacity-10">
-                                <button onClick={resetPan} className="btn btn-sm btn-link text-muted p-1" title="Center Pan">
+                            <div className="d-flex gap-1 bg-dark bg-opacity-20 rounded-pill p-1 border border-light border-opacity-10 shadow-sm" style={{ backdropFilter: 'blur(8px)' }}>
+                                <button onClick={resetPan} className="btn btn-sm btn-link text-muted p-1 hover-text-primary" title="Center Pan">
                                     <Icon icon="center_focus_strong" size="sm" />
                                 </button>
-                                <button onClick={resetView} className="btn btn-sm btn-link text-muted p-1" title="Reset View">
+                                <button onClick={resetView} className="btn btn-sm btn-link text-muted p-1 hover-text-primary" title="Reset View">
                                     <Icon icon="refresh" size="sm" />
                                 </button>
 
@@ -443,38 +538,152 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                                     } else {
                                         document.exitFullscreen();
                                     }
-                                }} className="btn btn-sm btn-link text-muted p-1" title="Fullscreen">
+                                }} className="btn btn-sm btn-link text-muted p-1 hover-text-primary" title="Fullscreen">
                                     <Icon icon="fullscreen" size="sm" />
+                                </button>
+
+                                <button
+                                    onClick={() => setShowParameterCards(!showParameterCards)}
+                                    className={`btn btn-sm btn-link p-1 hover-text-primary ${showParameterCards ? 'text-primary' : 'text-muted'}`}
+                                    title={showParameterCards ? "Hide Metrics" : "Show Metrics"}
+                                >
+                                    <Icon icon={showParameterCards ? "keyboard_arrow_up" : "keyboard_arrow_down"} size="sm" />
                                 </button>
                             </div>
                         </div>
+                    </div>
 
-                    </CardTitle>
-                    <div className="d-flex gap-2">
-                        <Button size="sm" color="info" isLight={!editMode} onClick={() => setShowBoundaryHint(!showBoundaryHint)}>
-                            <Icon icon="Help" />
-                        </Button>
-                        {!editMode && (
-                            <Button size="sm" color="info" isLight onClick={resetView} title="Home">
-                                <Icon icon="Home" />
-                            </Button>
-                        )}
+                    {/* Far Right Nav Buttons */}
+                    <div className="d-flex align-items-center gap-2">
+                        <button
+                            className="btn btn-sm bg-dark bg-opacity-40 text-primary rounded shadow-sm border border-light border-opacity-10 p-0 d-flex align-items-center justify-content-center"
+                            style={{ width: '32px', height: '32px' }}
+                            onClick={() => setShowBoundaryHint(!showBoundaryHint)}
+                        >
+                            <Icon icon="help_outline" size="sm" />
+                        </button>
+                        <button
+                            className="btn btn-sm bg-dark bg-opacity-40 text-primary rounded shadow-sm border border-light border-opacity-10 p-0 d-flex align-items-center justify-content-center"
+                            style={{ width: '32px', height: '32px' }}
+                            onClick={resetView}
+                        >
+                            <Icon icon="home" size="sm" />
+                        </button>
                     </div>
                 </div>
             </CardHeader>
 
             <CardBody className="p-0 position-relative" style={{ height: '100%', minHeight: '600px', perspective: '1200px' }}>
-                <SensorParameterBar
-                    availableParameters={availableParameters}
-                    selectedParameters={selectedParameters}
-                    onToggleParameter={(param) => {
-                        setSelectedParameters(prev =>
-                            prev.includes(param)
-                                ? prev.filter(p => p !== param)
-                                : [...prev, param]
-                        );
-                    }}
-                />
+                <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    right: '12px',
+                    zIndex: 1002,
+                    pointerEvents: 'none',
+                    transform: showParameterCards ? 'translateY(0)' : 'translateY(-150%)',
+                    opacity: showParameterCards ? 1 : 0,
+                    transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+                    visibility: showParameterCards ? 'visible' : 'hidden'
+                }}>
+                    <div className="d-flex align-items-center w-100 position-relative py-2">
+                        {/* Left Scroll Button */}
+                        <button
+                            onClick={() => scrollCards('left')}
+                            className="btn btn-sm btn-dark bg-opacity-75 text-white rounded-circle shadow-sm border border-light border-opacity-10 d-none d-md-flex align-items-center justify-content-center"
+                            style={{ pointerEvents: 'auto', width: '32px', height: '32px', zIndex: 1003, backdropFilter: 'blur(4px)' }}
+                        >
+                            <Icon icon="keyboard_arrow_left" />
+                        </button>
+
+                        <div
+                            ref={cardsScrollRef}
+                            style={{
+                                display: 'flex',
+                                gap: '16px',
+                                overflowX: 'auto',
+                                padding: '8px 20px',
+                                scrollbarWidth: 'none',
+                                pointerEvents: 'auto',
+                                flexGrow: 1,
+                                height: '240px' // Accommodate scaled card height
+                            }}
+                            className="hide-scrollbar"
+                        >
+                            {availableParameterData
+                                .filter(data => !(PARAMETER_GROUPS.left.includes(data.param) || PARAMETER_GROUPS.right.includes(data.param)))
+                                .map(data => (
+                                    <div key={data.param} style={{ flexShrink: 0, width: '120px', height: '150px' }}>
+                                        <SensorParameterCard
+                                            {...data}
+                                            isCompact
+                                        />
+                                    </div>
+                                ))}
+                        </div>
+
+                        {/* Right Scroll Button */}
+                        <button
+                            onClick={() => scrollCards('right')}
+                            className="btn btn-sm btn-dark bg-opacity-75 text-white rounded-circle shadow-sm border border-light border-opacity-10 d-none d-md-flex align-items-center justify-content-center"
+                            style={{ pointerEvents: 'auto', width: '32px', height: '32px', zIndex: 1003, backdropFilter: 'blur(4px)' }}
+                        >
+                            <Icon icon="keyboard_arrow_right" />
+                        </button>
+                    </div>
+                </div>
+
+                <div style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '280px',
+                    bottom: '80px',
+                    width: '130px',
+                    zIndex: 1002,
+                    pointerEvents: 'none',
+                    display: showParameterCards ? 'flex' : 'none',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    overflowY: 'auto',
+                    padding: '10px 5px',
+                }} className="hide-scrollbar">
+                    {availableParameterData
+                        .filter(data => PARAMETER_GROUPS.left.includes(data.param))
+                        .map(data => (
+                            <div key={data.param} style={{ pointerEvents: 'auto' }}>
+                                <SensorParameterCard
+                                    {...data}
+                                    isCompact
+                                />
+                            </div>
+                        ))}
+                </div>
+
+                <div style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '150px',
+                    bottom: '80px',
+                    width: '130px',
+                    zIndex: 1002,
+                    pointerEvents: 'none',
+                    display: showParameterCards ? 'flex' : 'none',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    overflowY: 'auto',
+                    padding: '10px 5px',
+                }} className="hide-scrollbar">
+                    {availableParameterData
+                        .filter(data => PARAMETER_GROUPS.right.includes(data.param))
+                        .map(data => (
+                            <div key={data.param} style={{ pointerEvents: 'auto' }}>
+                                <SensorParameterCard
+                                    {...data}
+                                    isCompact
+                                />
+                            </div>
+                        ))}
+                </div>
                 <div
                     ref={containerRef}
                     className="canvas-container-3d h-100"
@@ -574,7 +783,16 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                     />
                 </div>
             </CardBody>
-        </Card>
+            <style>{`
+                .hide-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .hide-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+            `}</style>
+        </Card >
     );
 };
 

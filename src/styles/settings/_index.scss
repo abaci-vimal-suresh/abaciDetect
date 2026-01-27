@@ -107,42 +107,19 @@ $position-values: (
 // Settings for the `<body>` element.
 $body-color: #323232;
 
-$body-bg: #f5f5f7 !default; // Off-white to make neumorphic white highlights visible
+$body-bg: #EEF2F5 !default; // Modern Neumorphic Silver/Gray
+
 
 $dark-body-color: $light !default;
 $dark-body-bg: #1f2128 !default;
 
-//
-// Links
-//
-// Style anchor elements.
-
-//
-// Paragraphs
-//
-// Style p element.
-
-// Grid breakpoints
-
-// Grid containers
-
-// Grid columns
-//
-// Set the number of columns and specify the width of the gutters.
 
 $grid-gutter-width: 1.5rem !default;
 
-// Container padding
-
-//
-// Components
-//
-// Define common padding and border radius sizes and more.
 
 $border-color: $gray-300;
 $dark-border-color: $gray-700;
 
-// $border-radius: 1rem;\
 $border-radius: 0.75rem;
 $border-radius-sm: $border-radius * 0.875;
 $border-radius-lg: $border-radius * 1.25;
@@ -155,14 +132,13 @@ $box-shadow-lg: 0 1.6rem 3rem rgba($black, 0.175);
 // GRADIENT BACKGROUNDS FOR THEMING
 // ============================================
 
-// Light Theme - Subtle gradient from primary tint to off-white
+// Light Theme - Modern Silver/Gray
 $body-bg-gradient-light: linear-gradient(135deg,
-		#f8f4f7 0%, // Very light purple tint
-		#fafafa 50%, // Off-white center
-		#f5f2f4 100% // Light purple-gray
+		#EEF2F5 0%,
+		#EEF2F5 100%
 	) !default;
 
-// // Dark Theme - Deep gradient from dark to primary
+// Dark Theme - Deep gradient from dark to primary
 $body-bg-gradient-dark: linear-gradient(135deg,
 		#1f2128 0%, // Your dark color
 		#2a1f28 50%, // Dark purple blend
@@ -180,19 +156,19 @@ $card-bg-gradient-dark: linear-gradient(135deg,
 
 
 // Neumorphism Shadows
-// Light Mode - Bottom-Right Only
-$neu-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.05), // Soft ambient shadow
-	6px 6px 12px rgba(0, 0, 0, 0.08) !default; // Bottom-right shadow ONLY
+// Light Mode - Neumorphic Style for #EEF2F5
+$neu-shadow-light: 6px 6px 12px #d1d9e6,
+	-6px -6px 12px #ffffff !default;
 
-$neu-shadow-light-soft: 0 1px 2px rgba(0, 0, 0, 0.04),
-	4px 4px 8px rgba(0, 0, 0, 0.06) !default;
+$neu-shadow-light-soft: 4px 4px 8px #d1d9e6,
+	-4px -4px 8px #ffffff !default;
 
-$neu-shadow-light-strong: 0 3px 6px rgba(0, 0, 0, 0.06),
-	10px 10px 20px rgba(0, 0, 0, 0.1) !default;
+$neu-shadow-light-strong: 10px 10px 20px #d1d9e6,
+	-10px -10px 20px #ffffff !default;
 
 // For inset effect (pressed state)
-$neu-shadow-inset-light: inset 0 -1px 2px rgba(0, 0, 0, 0.05),
-	inset 3px 3px 6px rgba(0, 0, 0, 0.06) !default;
+$neu-shadow-inset-light: inset 4px 4px 8px #d1d9e6,
+	inset -4px -4px 8px #ffffff !default;
 
 // Dark Mode - Bottom-Right Only
 $neu-shadow-dark: 0 2px 4px rgba(0, 0, 0, 0.2),
@@ -397,7 +373,8 @@ $dark-pagination-disabled-border-color: $dark-pagination-hover-bg !default;
 //
 // Cards
 //
-$card-bg: $light !default; // Match body for neumorphism
+$card-bg: $body-bg !default; // Match body for neumorphism
+
 $dark-card-bg: $dark !default;
 
 $card-spacer-y: $spacer * 1.5;

@@ -1,18 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authAxios as axiosInstance } from '../axiosInstance';
 import { queryKeys } from '../lib/queryClient';
-import { Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, UserActivity, UserRole, UserGroup, UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData, UserCreateData, UserUpdateData } from '../types/sensor';
+import {
+    Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, UserActivity, UserRole, UserGroup,
+    UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData,
+    UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
+    AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData
+} from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
-import { mockAreas, mockSubAreas, mockSensors, saveMockData, mockUsers, mockUserGroups, mockSensorGroups } from '../mockData/sensors';
+import {
+    mockAreas, mockSubAreas, mockSensors, saveMockData, mockUsers, mockUserGroups,
+    mockSensorGroups, mockPersonnelData, mockUserActivities, mockAlerts, mockAlertTrends, mockSensorConfigs, mockAlertConfigurations
+} from '../mockData/sensors';
 
 export const USE_MOCK_DATA = true;
 
-const mockPersonnelData: { [sensorId: string]: { name: string; contact: string; email: string } } = {};
-
-const mockUserActivities: UserActivity[] = [
-    { id: 1, user_id: 1, action: 'System Setup', timestamp: new Date().toISOString(), details: 'Admin created the system' },
-    { id: 2, user_id: 2, action: 'Login', timestamp: new Date().toISOString(), details: 'John Doe logged in' }
-];
 
 export const useUsers = () => {
     return useQuery({
@@ -560,6 +562,10 @@ export const useSensorConfigurations = (sensorId: string) => {
         queryKey: ['sensorConfigurations', sensorId],
         queryFn: async () => {
             if (!sensorId) return [];
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                return mockSensorConfigs[sensorId] || [];
+            }
             // GET /api/sensors/{id}/configurations/
             const { data } = await axiosInstance.get(`/devices/sensors/${sensorId}/configurations/`);
             return data as SensorConfig[];
@@ -598,6 +604,19 @@ export const useUpdateSensorConfiguration = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, configId, config }: { sensorId: string; configId: number; config: Partial<SensorConfig> }) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                const sensorConfigs = mockSensorConfigs[sensorId];
+                if (sensorConfigs) {
+                    const configIndex = sensorConfigs.findIndex(c => c.id === configId);
+                    if (configIndex > -1) {
+                        sensorConfigs[configIndex] = { ...sensorConfigs[configIndex], ...config };
+                        return sensorConfigs[configIndex];
+                    }
+                }
+                // If not found, it might be a new one being added or just missing mock
+                return { id: configId, ...config } as SensorConfig;
+            }
             // PUT/PATCH /api/sensors/{id}/configurations/{config_id}/
             const { data } = await axiosInstance.patch(`/devices/sensors/${sensorId}/configurations/${configId}/`, config);
             return data as SensorConfig;
@@ -867,7 +886,7 @@ export const useCreateSensorGroup = () => {
 
                 // Fetch sensors for mock data if IDs provided
                 const groupSensors = data.sensor_ids
-                    ? mockSensors.filter(s => data.sensor_ids!.includes(Number(s.id)))
+                    ? mockSensors.filter(s => data.sensor_ids!.includes(s.id))
                     : [];
 
                 const newGroup: SensorGroup = {
@@ -932,7 +951,7 @@ export const useUpdateSensorGroup = () => {
                     if (data.name !== undefined) group.name = data.name;
                     if (data.description !== undefined) group.description = data.description;
                     if (data.sensor_ids !== undefined) {
-                        const newSensors = mockSensors.filter(s => data.sensor_ids!.includes(Number(s.id)));
+                        const newSensors = mockSensors.filter(s => data.sensor_ids!.includes(s.id));
                         // group.sensor_list = newSensors;
                         group.sensor_count = newSensors.length;
                     }
@@ -974,8 +993,8 @@ export const useAddSensorGroupMembers = () => {
                     if (!group.sensor_list) group.sensor_list = [];
 
                     const newSensors = mockSensors.filter(s => sensor_ids.includes(s.id));
-                    const currentIds = group.sensor_list.map(s => Number(s.id));
-                    const toAddObj = newSensors.filter(s => !currentIds.includes(Number(s.id)));
+                    const currentIds = group.sensor_list.map(s => s.id);
+                    const toAddObj = newSensors.filter(s => !currentIds.includes(s.id));
 
                     group.sensor_list.push(...toAddObj);
                     group.sensor_count = group.sensor_list.length;
@@ -1015,7 +1034,7 @@ export const useRemoveSensorGroupMembers = () => {
                 const group = mockSensorGroups.find(g => g.id.toString() === groupId.toString());
                 if (group) {
                     if (group.sensor_list) {
-                        group.sensor_list = group.sensor_list.filter(s => !sensor_ids.includes(Number(s.id)));
+                        group.sensor_list = group.sensor_list.filter(s => !sensor_ids.includes(s.id));
                         group.sensor_count = group.sensor_list.length;
                     }
                     group.updated_at = new Date().toISOString();
@@ -1175,15 +1194,12 @@ export const useLatestReadings = () => {
             const { data } = await axiosInstance.get('/devices/readings/latest/');
             return data;
         },
-        refetchInterval: 5000, // Refresh every 5 seconds
+        refetchInterval: 5000,
         staleTime: 3000
     });
 };
 
-/**
- * Get all sensors' latest data
- * GET /api/devices/sensors/latest-data/
- */
+
 export const useAllSensorsLatestData = () => {
     return useQuery({
         queryKey: ['allSensorsLatestData'],
@@ -1579,5 +1595,293 @@ export const useDeleteUserGroup = () => {
         onError: (error: any) => {
             showErrorNotification(error?.response?.data?.message || 'Failed to delete group');
         },
+    });
+};
+
+// ============================================
+// ALERTS API
+// ============================================
+
+
+// Get all alerts with optional filters
+export const useAlerts = (filters?: AlertFilters) => {
+    return useQuery({
+        queryKey: ['alerts', filters],
+        queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                let filtered = [...mockAlerts];
+
+                if (filters?.type) {
+                    filtered = filtered.filter(alert => alert.type === filters.type);
+                }
+                if (filters?.status) {
+                    filtered = filtered.filter(alert => alert.status === filters.status);
+                }
+                if (filters?.sensor) {
+                    filtered = filtered.filter(alert => {
+                        const sId = typeof alert.sensor === 'object' ? alert.sensor.id : alert.sensor;
+                        return sId === filters.sensor;
+                    });
+                }
+                if (filters?.area) {
+                    filtered = filtered.filter(alert => {
+                        const aId = typeof alert.area === 'object' ? alert.area.id : alert.area;
+                        return aId === filters.area;
+                    });
+                }
+                if (filters?.search) {
+                    const searchLower = filters.search.toLowerCase();
+                    filtered = filtered.filter(alert => {
+                        const sName = alert.sensor_name || (typeof alert.sensor === 'object' ? alert.sensor.name : '');
+                        const aName = alert.area_name || (typeof alert.area === 'object' ? alert.area.name : '');
+                        return (
+                            alert.type.toLowerCase().includes(searchLower) ||
+                            alert.description.toLowerCase().includes(searchLower) ||
+                            sName.toLowerCase().includes(searchLower) ||
+                            aName.toLowerCase().includes(searchLower)
+                        );
+                    });
+                }
+
+                return filtered;
+            }
+
+            const params = new URLSearchParams();
+            if (filters?.type) params.append('type', filters.type);
+            if (filters?.status) params.append('status', filters.status);
+            if (filters?.sensor) params.append('sensor', filters.sensor.toString());
+            if (filters?.area) params.append('area', filters.area.toString());
+            if (filters?.search) params.append('search', filters.search);
+
+            const { data } = await axiosInstance.get(`/devices/alerts/?${params.toString()}`);
+            return data as Alert[];
+        },
+        staleTime: 1 * 60 * 1000, // 1 minute
+    });
+};
+
+// Get single alert by ID
+export const useAlert = (alertId: number) => {
+    return useQuery({
+        queryKey: ['alerts', alertId],
+        queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                const alert = mockAlerts.find(a => a.id === alertId);
+                if (!alert) throw new Error('Alert not found');
+                return alert;
+            }
+
+            const { data } = await axiosInstance.get(`/devices/alerts/${alertId}/`);
+            return data as Alert;
+        },
+        enabled: !!alertId,
+    });
+};
+
+// Create new alert
+export const useCreateAlert = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (alertData: AlertCreateData) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                const newId = Math.max(...mockAlerts.map(a => a.id), 0) + 1;
+                const newAlert: Alert = {
+                    id: newId,
+                    type: alertData.type,
+                    status: alertData.status,
+                    description: alertData.description,
+                    remarks: alertData.remarks,
+                    sensor: { id: alertData.sensor, name: `Sensor-${alertData.sensor}` },
+                    area: { id: alertData.area, name: `Area-${alertData.area}` },
+                    user_acknowledged: null,
+                    time_of_acknowledgment: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+                mockAlerts.push(newAlert);
+                return newAlert;
+            }
+
+            const { data } = await axiosInstance.post('/devices/alerts/', alertData);
+            return data as Alert;
+        },
+        onSuccess: (newAlert) => {
+            queryClient.invalidateQueries({ queryKey: ['alerts'] });
+            showSuccessNotification(`Alert "${newAlert.type}" created successfully!`);
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || 'Failed to create alert');
+        },
+    });
+};
+
+// Update alert
+export const useUpdateAlert = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async ({ alertId, data }: { alertId: number; data: AlertUpdateData }) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                const alertIndex = mockAlerts.findIndex(a => a.id === alertId);
+                if (alertIndex > -1) {
+                    mockAlerts[alertIndex] = {
+                        ...mockAlerts[alertIndex],
+                        ...data,
+                        updated_at: new Date().toISOString(),
+                        time_of_acknowledgment: data.user_acknowledged ? new Date().toISOString() : mockAlerts[alertIndex].time_of_acknowledgment,
+                    };
+                    return mockAlerts[alertIndex];
+                }
+                throw new Error('Alert not found');
+            }
+
+            const { data: response } = await axiosInstance.patch(`/devices/alerts/${alertId}/`, data);
+            return response as Alert;
+        },
+        onSuccess: (updatedAlert) => {
+            queryClient.invalidateQueries({ queryKey: ['alerts'] });
+            queryClient.invalidateQueries({ queryKey: ['alerts', updatedAlert.id] });
+            showSuccessNotification('Alert updated successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || 'Failed to update alert');
+        },
+    });
+};
+
+// Delete alert
+export const useDeleteAlert = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (alertId: number) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                const alertIndex = mockAlerts.findIndex(a => a.id === alertId);
+                if (alertIndex > -1) {
+                    mockAlerts.splice(alertIndex, 1);
+                    return { success: true };
+                }
+                throw new Error('Alert not found');
+            }
+
+            await axiosInstance.delete(`/devices/alerts/${alertId}/`);
+            return { success: true };
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alerts'] });
+            showSuccessNotification('Alert deleted successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || 'Failed to delete alert');
+        },
+    });
+};
+
+
+// Get alert trends
+export const useAlertTrends = (filters: AlertTrendFilters) => {
+    return useQuery({
+        queryKey: ['alerts', 'trends', filters],
+        queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return mockAlertTrends;
+            }
+            const params = new URLSearchParams();
+            params.append('period', filters.period);
+            if (filters.type) params.append('type', filters.type);
+            if (filters.status) params.append('status', filters.status);
+
+            const { data } = await axiosInstance.get(`/devices/alerts/trends/?${params.toString()}`);
+            return data as AlertTrendResponse;
+        },
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        enabled: !!filters.period,
+    });
+};
+
+
+// ============================================
+// ALERT CONFIGURATION API
+// ============================================
+
+export const useAlertConfigurations = () => {
+    return useQuery({
+        queryKey: ['alertConfigurations'],
+        queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return JSON.parse(JSON.stringify(mockAlertConfigurations));
+            }
+            const { data } = await axiosInstance.get('/alerts/configurations/');
+            return data as AlertConfiguration[];
+        }
+    });
+};
+
+export const useSaveAlertConfiguration = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (config: Partial<AlertConfiguration> & { id?: number }) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                
+                if (config.id) {
+                    const index = mockAlertConfigurations.findIndex(c => c.id === config.id);
+                    if (index > -1) {
+                        const updated = {
+                            ...mockAlertConfigurations[index],
+                            ...config,
+                            updated_at: new Date().toISOString()
+                        } as AlertConfiguration;
+                        mockAlertConfigurations[index] = updated;
+                        saveMockData();
+                        return updated;
+                    }
+                    throw new Error('Configuration not found');
+                } else {
+                    // Create new
+                    const newId = Math.max(...mockAlertConfigurations.map(c => c.id), 0) + 1;
+                    const newConfig = {
+                        ...config,
+                        id: newId,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                        enabled: config.enabled ?? true,
+                        recipients: config.recipients || [],
+                        actions: config.actions || { email: false, sms: false, push_notification: false, in_app: false }
+                    } as AlertConfiguration;
+                    mockAlertConfigurations.push(newConfig);
+                    saveMockData();
+                    return newConfig;
+                }
+            }
+            
+            if (config.id) {
+                const { data } = await axiosInstance.patch(`/alerts/configurations/${config.id}/`, config);
+                return data;
+            } else {
+                const { data } = await axiosInstance.post('/alerts/configurations/', config);
+                return data;
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alertConfigurations'] });
+            showSuccessNotification('Alert configuration saved successfully');
+        },
+        onError: (err) => {
+            showErrorNotification('Failed to save alert configuration');
+        }
     });
 };
