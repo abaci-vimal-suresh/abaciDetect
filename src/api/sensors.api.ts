@@ -14,7 +14,7 @@ import {
     mockSensorGroups, mockPersonnelData, mockUserActivities, mockAlerts, mockAlertTrends, mockSensorConfigs, mockAlertConfigurations
 } from '../mockData/sensors';
 
-export const USE_MOCK_DATA = false;
+export const USE_MOCK_DATA = true;
 
 
 export const useUsers = () => {
@@ -355,18 +355,24 @@ export const useUpdateArea = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ areaId, data }: { areaId: number; data: Partial<Area> }) => {
+        mutationFn: async ({ areaId, data }: { areaId: number; data: any }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 const areaIndex = mockAreas.findIndex(a => a.id === areaId);
                 if (areaIndex > -1) {
-                    mockAreas[areaIndex] = { ...mockAreas[areaIndex], ...data };
+                    const updates = data instanceof FormData ? Object.fromEntries((data as any).entries()) : data;
+                    if (updates.area_plan instanceof File) {
+                        (updates as any).floor_plan_url = URL.createObjectURL(updates.area_plan);
+                    }
+                    mockAreas[areaIndex] = { ...mockAreas[areaIndex], ...updates };
                     saveMockData();
                     return mockAreas[areaIndex];
                 }
                 throw new Error('Area not found');
             }
-            const response = await axiosInstance.patch(`/administration/areas/${areaId}/`, data);
+
+            const headers = data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {};
+            const response = await axiosInstance.patch(`/administration/areas/${areaId}/`, data, { headers });
             return response.data as Area;
         },
         onSuccess: (updatedArea) => {
@@ -374,7 +380,36 @@ export const useUpdateArea = () => {
             showSuccessNotification(`Area "${updatedArea.name}" updated successfully!`);
         },
         onError: (error: any) => {
-            showErrorNotification(error?.response?.data?.message || 'Failed to update area');
+            showErrorNotification(error?.response?.data?.message || error?.response?.data?.detail || 'Failed to update area');
+        }
+    });
+};
+
+export const useDeleteArea = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (areaId: number) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                const index = mockAreas.findIndex(a => a.id === areaId);
+                if (index > -1) {
+                    mockAreas.splice(index, 1);
+                    saveMockData();
+                    return { success: true };
+                }
+                throw new Error('Area not found');
+            }
+            await axiosInstance.delete(`/administration/areas/${areaId}/`);
+            return { success: true };
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['areas'] });
+            showSuccessNotification('Area deleted successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || error?.response?.data?.detail || 'Failed to delete area');
         }
     });
 };
@@ -656,8 +691,8 @@ export const useUpdateSensorConfiguration = () => {
                 // If not found, it might be a new one being added or just missing mock
                 return { id: configId, ...config } as SensorConfig;
             }
-            // PUT/PATCH /api/sensors/{id}/configurations/{config_id}/
-            const { data } = await axiosInstance.patch(`/devices/sensors/${sensorId}/configurations/${configId}/`, config);
+            // PATCH /api/devices/sensors/{id}/update_configuration/?config_id={id}
+            const { data } = await axiosInstance.patch(`/devices/sensors/${sensorId}/update_configuration/?config_id=${configId}`, config);
             return data as SensorConfig;
         },
         onSuccess: (_, { sensorId }) => {
@@ -680,8 +715,8 @@ export const useDeleteSensorConfiguration = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, configId }: { sensorId: string; configId: number }) => {
-            // DELETE /api/sensors/{id}/configurations/{config_id}/
-            await axiosInstance.delete(`/devices/sensors/${sensorId}/configurations/${configId}/`);
+            // DELETE /api/devices/sensors/{id}/delete_configuration/?config_id={id}
+            await axiosInstance.delete(`/devices/sensors/${sensorId}/delete_configuration/?config_id=${configId}`);
         },
         onSuccess: (_, { sensorId }) => {
             queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId] });

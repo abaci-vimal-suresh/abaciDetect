@@ -5,8 +5,8 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Spinner from '../../../../components/bootstrap/Spinner';
 import Icon from '../../../../components/icon/Icon';
 import Select from '../../../../components/bootstrap/forms/Select';
-import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig } from '../../../../api/sensors.api';
-import { SensorConfig, SENSOR_CONFIG_CHOICES } from '../../../../types/sensor';
+import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig, useUsers, useUserGroups } from '../../../../api/sensors.api';
+import { SensorConfig, SENSOR_CONFIG_CHOICES, AlertActionConfig } from '../../../../types/sensor';
 import Badge from '../../../../components/bootstrap/Badge';
 import styles from '../../../../styles/pages/HALO/Settings/ThresholdManagement.module.scss';
 import classNames from 'classnames';
@@ -14,9 +14,12 @@ import { getMetricStatusFromConfig, getStatusColor, getStatusLabel } from '../..
 import ThemeContext from '../../../../contexts/themeContext';
 import Modal, { ModalHeader, ModalTitle, ModalBody, ModalFooter } from '../../../../components/bootstrap/Modal';
 import StatusToggleButton from '../../../../components/CustomComponent/Buttons/StatusToggleButton';
+import MaterialTable from '@material-table/core';
+import { ThemeProvider } from '@mui/material/styles';
+import useTablestyle from '../../../../hooks/useTablestyles';
 
 const DEFAULT_SENSOR_VALUES: Record<string, { min: number; max: number; threshold: number }> = {
-    temp_c: { min: 0, max: 50, threshold: 28 },
+    temperature: { min: 0, max: 50, threshold: 28 },
     temp_f: { min: 32, max: 122, threshold: 82 },
     humidity: { min: 0, max: 100, threshold: 65 },
     pm1: { min: 0, max: 1000, threshold: 35 },
@@ -52,7 +55,7 @@ const DEFAULT_SENSOR_VALUES: Record<string, { min: number; max: number; threshol
 const MOCK_CONFIGS: SensorConfig[] = [
     {
         id: 1,
-        sensor_name: 'temp_c',
+        sensor_name: 'temperature',
         enabled: true,
         min_value: 0,
         max_value: 50,
@@ -106,7 +109,7 @@ const MOCK_SENSOR_DATA = {
     id: 'mock-sensor-1',
     sensor_data: {
         sensors: {
-            temp_c: 32.5,      // Above threshold (28) - WARNING
+            temperature: 32.5,  // Above threshold (28) - WARNING
             humidity: 58.2,    // Below threshold (65) - SAFE
             co2: 1450,         // Above threshold (1200) - WARNING
             pm25: 42,          // Above threshold (35) - WARNING
@@ -127,6 +130,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({ deviceId }) => {
     const { darkModeStatus } = useContext(ThemeContext);
+    const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
 
     // API calls with mock fallback
     const { data: apiConfigs, isLoading } = useSensorConfigurations(deviceId);
@@ -136,6 +140,8 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     const addMutation = useAddSensorConfiguration();
     const updateMutation = useUpdateSensorConfiguration();
     const deleteMutation = useDeleteSensorConfiguration();
+    const { data: users } = useUsers();
+    const { data: userGroups } = useUserGroups();
 
     // 🔥 Use mock data if API returns nothing
     const configs = apiConfigs && apiConfigs.length > 0 ? apiConfigs : MOCK_CONFIGS;
@@ -146,7 +152,110 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         label: s.sensor_name
     })) || SENSOR_CONFIG_CHOICES;
 
+    const displaySensorName = (name: string) => {
+        return SENSOR_CONFIG_CHOICES.find(c => c.value === name)?.label ||
+            sensorConfigChoices.find(c => c.value === name)?.label ||
+            name;
+    };
+
+    const [viewMode, setViewMode] = useState<'visual' | 'list'>('visual');
     const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
+
+    const tableColumns = [
+        {
+            title: 'Sensor Name',
+            field: 'sensor_name',
+            headerStyle: { textAlign: 'left' as any, paddingLeft: '2rem' },
+            cellStyle: { textAlign: 'left' as any, paddingLeft: '2rem' },
+            render: (rowData: any) => (
+                <div className='fw-bold' style={{ fontSize: '0.95rem' }}>
+                    {displaySensorName(rowData.sensor_name)}
+                </div>
+            )
+        },
+        {
+            title: 'Status',
+            field: 'enabled',
+            sorting: false,
+            headerStyle: { textAlign: 'center' as any },
+            cellStyle: { textAlign: 'center' as any },
+            render: (rowData: any) => (
+                <div className="d-flex justify-content-center">
+                    <StatusToggleButton
+                        id={`list-toggle-${rowData.id}`}
+                        checked={rowData.enabled ?? true}
+                        onChange={(val: boolean) => {
+                            updateMutation.mutate({
+                                sensorId: deviceId,
+                                configId: rowData.id!,
+                                config: { ...rowData, enabled: val }
+                            });
+                        }}
+                    />
+                </div>
+            )
+        },
+        {
+            title: 'Threshold',
+            field: 'threshold',
+            headerStyle: { textAlign: 'center' as any },
+            cellStyle: { textAlign: 'center' as any },
+            render: (rowData: any) => (
+                <div className="d-flex justify-content-center">
+                    <Badge color='info' isLight className='px-2 py-1' style={{ borderRadius: '50px', minWidth: '35px', textAlign: 'center' as any }}>
+                        {rowData.threshold}
+                    </Badge>
+                </div>
+            )
+        },
+        {
+            title: 'Range',
+            field: 'min_value',
+            headerStyle: { textAlign: 'center' as any },
+            cellStyle: { textAlign: 'center' as any },
+            render: (rowData: any) => (
+                <span className='text-muted' style={{ fontSize: '0.9rem' }}>
+                    {rowData.min_value} - {rowData.max_value}
+                </span>
+            )
+        },
+        {
+            title: 'Actions',
+            field: 'actions',
+            sorting: false,
+            filtering: false,
+            headerStyle: { textAlign: 'right' as any, paddingRight: '2rem' },
+            cellStyle: { textAlign: 'right' as any, paddingRight: '2rem' },
+            render: (rowData: any) => (
+                <div className='d-flex gap-2 justify-content-end align-items-center'>
+                    <Button
+                        color='primary'
+                        isLight
+                        size='sm'
+                        icon='Tune'
+                        className='px-3'
+                        onClick={() => {
+                            setSelectedConfigId(rowData.id!);
+                            setViewMode('visual');
+                        }}
+                    >
+                        Edit
+                    </Button>
+                    <Button
+                        color='danger'
+                        isLight
+                        size='sm'
+                        icon='Delete'
+                        onClick={() => {
+                            setSelectedConfigId(rowData.id!);
+                            handleDelete();
+                        }}
+                    />
+                </div>
+            )
+        }
+    ];
+
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -166,11 +275,11 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
 
     // Form state
     const [formData, setFormData] = useState<Partial<SensorConfig>>({
-        sensor_name: 'temp_c',
-        enabled: true,
+        sensor_name: 'temperature',
         min_value: 0,
         max_value: 50,
-        threshold: 28
+        threshold: 28,
+        enabled: true
     });
 
     // Get selected config
@@ -188,7 +297,6 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         if (selectedConfig) {
             setFormData({
                 sensor_name: selectedConfig.sensor_name,
-                enabled: selectedConfig.enabled,
                 min_value: selectedConfig.min_value,
                 max_value: selectedConfig.max_value,
                 threshold: selectedConfig.threshold
@@ -227,10 +335,8 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             const defaults = DEFAULT_SENSOR_VALUES[firstAvailable] || { min: 0, max: 100, threshold: 30 };
 
             setIsCreatingNew(true);
-            setSelectedConfigId(null);
             setFormData({
                 sensor_name: firstAvailable,
-                enabled: true,
                 min_value: defaults.min,
                 max_value: defaults.max,
                 threshold: defaults.threshold
@@ -275,13 +381,21 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     const handleSave = () => {
         setSaveStatus('saving');
 
+        const payload = {
+            sensor_name: formData.sensor_name,
+            threshold: formData.threshold,
+            min_value: formData.min_value,
+            max_value: formData.max_value,
+            enabled: formData.enabled ?? true,
+        };
+
         if (isCreatingNew) {
             // Mock save for demo
-            console.log('🔥 MOCK SAVE (New Config):', formData);
+            console.log(' MOCK SAVE (New Config):', payload);
 
             addMutation.mutate({
                 sensorId: deviceId,
-                config: formData as SensorConfig
+                config: payload as SensorConfig
             }, {
                 onSuccess: (newConfig) => {
                     setSaveStatus('saved');
@@ -304,7 +418,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             updateMutation.mutate({
                 sensorId: deviceId,
                 configId: selectedConfigId,
-                config: formData
+                config: payload
             }, {
                 onSuccess: () => {
                     setSaveStatus('saved');
@@ -325,7 +439,6 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         if (selectedConfig) {
             setFormData({
                 sensor_name: selectedConfig.sensor_name,
-                enabled: selectedConfig.enabled,
                 min_value: selectedConfig.min_value,
                 max_value: selectedConfig.max_value,
                 threshold: selectedConfig.threshold
@@ -335,7 +448,6 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             const defaults = DEFAULT_SENSOR_VALUES[firstAvailable] || { min: 0, max: 100, threshold: 30 };
             setFormData({
                 sensor_name: firstAvailable,
-                enabled: true,
                 min_value: defaults.min,
                 max_value: defaults.max,
                 threshold: defaults.threshold
@@ -471,258 +583,371 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         </Modal>
     );
 
+    const renderVisualView = () => (
+        <>
+            <div className={styles.detailHeader}>
+                <div className={styles.headerTop}>
+                    <div className={styles.titleSection}>
+                        <Icon icon='TuneOutline' size='2x' className={styles.headerIcon} />
+                        <div className={styles.titleContent}>
+                            <div className={styles.selectorRow}>
+                                {!isCreatingNew ? (
+                                    <Select
+                                        list={sensorDropdownOptions}
+                                        value={selectedConfigId?.toString() || ''}
+                                        onChange={(e: any) => handleSelectConfig(parseInt(e.target.value))}
+                                        ariaLabel='Select Sensor Configuration'
+                                        className={styles.sensorSelector}
+                                    />
+                                ) : (
+                                    <h4>New Configuration</h4>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className={styles.headerActions}>
+                        <div className='d-flex align-items-center gap-2 me-3'>
+                            <StatusToggleButton
+                                id='visual-status-toggle'
+                                checked={formData.enabled ?? true}
+                                onChange={(val: boolean) => handleFormChange({ enabled: val })}
+                            />
+                            {/* <span className={classNames(styles.subtitle, 'mb-0')}>
+                                {!formData.enabled ? 'Active' : 'Disabled'}
+                            </span> */}
+                        </div>
+                        <div className={styles.viewSwitcher}>
+                            <button
+                                className={classNames(styles.viewBtn, { [styles.active]: viewMode === 'visual' })}
+                                onClick={() => setViewMode('visual')}
+                                title='Visual Editor'
+                            >
+                                <Icon icon='Tune' />
+                                <span className='d-none d-md-inline'>Visual</span>
+                            </button>
+                            <button
+                                className={classNames(styles.viewBtn, { [styles.active]: viewMode === 'list' })}
+                                onClick={() => setViewMode('list')}
+                                title='Manage All'
+                            >
+                                <Icon icon='FormatListBulleted' />
+                                <span className='d-none d-md-inline'>List</span>
+                            </button>
+                        </div>
+                        <Button
+                            color='primary'
+                            size='sm'
+                            icon='Add'
+                            onClick={handleCreateNew}
+                            isLight
+                        >
+                            New
+                        </Button>
+                        {saveStatus !== 'idle' && (
+                            <div className={classNames(styles.saveStatus, styles[saveStatus])}>
+                                {saveStatus === 'saving' && <><Spinner isSmall /> Saving...</>}
+                                {saveStatus === 'saved' && <><Icon icon='CheckCircle' /> Saved</>}
+                                {saveStatus === 'error' && <><Icon icon='Error' /> Error</>}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Live Status Banner */}
+                {liveValue !== null && (
+                    <div className={classNames(styles.liveStatusBanner, styles[liveColor])}>
+                        <div className={styles.bannerContent}>
+                            <div className={styles.liveIndicator}>
+                                <span className={styles.pulse} />
+                                <span>LIVE</span>
+                            </div>
+                            <div className={styles.liveValue}>
+                                <span className={styles.value}>{liveValue.toFixed(2)}</span>
+                                <span className={styles.label}>{liveLabel}</span>
+                            </div>
+                            <div className={styles.thresholdInfo}>
+                                <span>Threshold: {formData.threshold}</span>
+                                <Icon icon={liveValue > (formData.threshold || 0) ? 'TrendingUp' : 'TrendingDown'} />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className={styles.detailContent}>
+                <div className={styles.formSection}>
+                    <label className={styles.sectionLabel}>
+                        <Icon icon='Category' />
+                        Sensor Type
+                    </label>
+                    <Select
+                        list={isCreatingNew ? filteredChoices : SENSOR_CONFIG_CHOICES}
+                        value={formData.sensor_name}
+                        onChange={(e: any) => handleFormChange({ sensor_name: e.target.value })}
+                        disabled={!isCreatingNew}
+                        ariaLabel='Sensor Type'
+                        className={styles.formSelect}
+                    />
+                    {!isCreatingNew && (
+                        <small className={styles.formHint}>
+                            <Icon icon='Lock' size='sm' />
+                            Sensor type is locked after creation
+                        </small>
+                    )}
+                </div>
+
+                {/* Visual Threshold Control */}
+                <div className={styles.formSection}>
+                    <label className={styles.sectionLabel}>
+                        <Icon icon='Speed' />
+                        Threshold Configuration
+                    </label>
+
+                    <div className={styles.visualControl}>
+                        {/* Gauge Display */}
+                        <div className={styles.gaugeDisplay}>
+                            <div className={styles.gaugeTrack}>
+                                {/* Safe Zone */}
+                                <div
+                                    className={styles.safeZone}
+                                    style={{ width: `${getThresholdPosition()}%` }}
+                                />
+                                {/* Warning Zone */}
+                                <div
+                                    className={styles.warningZone}
+                                    style={{
+                                        left: `${getThresholdPosition()}%`,
+                                        width: `${100 - getThresholdPosition()}%`
+                                    }}
+                                />
+
+                                {/* Threshold Marker */}
+                                <div
+                                    className={styles.thresholdMarkerNew}
+                                    style={{ left: `${getThresholdPosition()}%` }}
+                                >
+                                    <div className={styles.markerLine} />
+                                    <div className={styles.markerDot} />
+                                    <div className={styles.markerLabel}>
+                                        {formData.threshold?.toFixed(1)}
+                                    </div>
+                                </div>
+
+                                {/* Live Value Pointer */}
+                                {liveValue !== null && (
+                                    <div
+                                        className={classNames(styles.livePointer, styles[liveColor])}
+                                        style={{ left: `${getLivePointerPosition()}%` }}
+                                    >
+                                        <div className={styles.pointerLine} />
+                                        <div className={styles.pointerDot} />
+                                        <div className={styles.pointerLabel}>
+                                            {liveValue.toFixed(1)}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Range Labels */}
+                            <div className={styles.rangeLabels}>
+                                <span>{formData.min_value}</span>
+                                <span>{formData.max_value}</span>
+                            </div>
+                        </div>
+
+                        {/* Slider Control */}
+                        <div className={styles.sliderControl}>
+                            <input
+                                type='range'
+                                min={formData.min_value || 0}
+                                max={formData.max_value || 100}
+                                step={0.1}
+                                value={formData.threshold || 0}
+                                onChange={(e) => handleFormChange({ threshold: parseFloat(e.target.value) })}
+                                className={styles.thresholdSlider}
+                            />
+                        </div>
+
+                        {/* Numeric Input */}
+                        <div className={styles.numericInput}>
+                            <Input
+                                type='number'
+                                value={formData.threshold}
+                                onChange={(e: any) => handleFormChange({ threshold: parseFloat(e.target.value) || 0 })}
+                                step={0.1}
+                                className={styles.thresholdInput}
+                            />
+                            <span className={styles.inputLabel}>Alert Threshold</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Range Configuration */}
+                <div className={styles.formSection}>
+                    <label className={styles.sectionLabel}>
+                        <Icon icon='SyncAlt' />
+                        Expected Range
+                    </label>
+                    <div className={styles.rangeInputs}>
+                        <div className={styles.rangeInput}>
+                            <label>Minimum</label>
+                            <Input
+                                type='number'
+                                value={formData.min_value}
+                                onChange={(e: any) => handleFormChange({ min_value: parseFloat(e.target.value) || 0 })}
+                            />
+                        </div>
+                        <Icon icon='Remove' className={styles.rangeSeparator} />
+                        <div className={styles.rangeInput}>
+                            <label>Maximum</label>
+                            <Input
+                                type='number'
+                                value={formData.max_value}
+                                onChange={(e: any) => handleFormChange({ max_value: parseFloat(e.target.value) || 100 })}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className={styles.actionBar}>
+                    {!isCreatingNew && (
+                        <Button
+                            color='danger'
+                            isLight
+                            icon='Delete'
+                            onClick={handleDelete}
+                            isDisable={deleteMutation.isPending}
+                        >
+                            Delete
+                        </Button>
+                    )}
+                    <div className={styles.actionGroup}>
+                        <Button
+                            color='secondary'
+                            isLight
+                            icon='RestartAlt'
+                            onClick={handleReset}
+                            isDisable={!hasUnsavedChanges}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            color='primary'
+                            icon='Save'
+                            onClick={handleSave}
+                            isDisable={!hasUnsavedChanges || addMutation.isPending || updateMutation.isPending}
+                        >
+                            {(addMutation.isPending || updateMutation.isPending) && <Spinner isSmall inButton />}
+                            {isCreatingNew ? 'Create' : 'Save'}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+
+    const renderListView = () => (
+        <>
+            <div className={styles.detailHeader}>
+                <div className={styles.headerTop}>
+                    <div className={styles.titleSection}>
+                        <Icon icon='NotificationsActive' size='2x' className={styles.headerIcon} />
+                        <div className={styles.titleContent}>
+                            <h4>Manage All Thresholds</h4>
+                            <span className={styles.subtitle}>Current configurations for {apiSensor?.name || deviceId}</span>
+                        </div>
+                    </div>
+                    <div className={styles.headerActions}>
+                        <div className={styles.viewSwitcher}>
+                            <button
+                                className={classNames(styles.viewBtn, { [styles.active]: viewMode === 'visual' })}
+                                onClick={() => setViewMode('visual')}
+                                title='Visual Editor'
+                            >
+                                <Icon icon='Tune' />
+                                <span className='d-none d-md-inline'>Visual</span>
+                            </button>
+                            <button
+                                className={classNames(styles.viewBtn, { [styles.active]: viewMode === 'list' })}
+                                onClick={() => setViewMode('list')}
+                                title='Manage All'
+                            >
+                                <Icon icon='FormatListBulleted' />
+                                <span className='d-none d-md-inline'>List</span>
+                            </button>
+                        </div>
+                        <Button
+                            color='primary'
+                            size='sm'
+                            icon='Add'
+                            onClick={handleCreateNew}
+                            isLight
+                        >
+                            New
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            <div className={styles.listView}>
+                <div className={styles.tableCard}>
+                    <ThemeProvider theme={theme}>
+                        <MaterialTable
+                            title=""
+                            columns={tableColumns}
+                            data={configs || []}
+                            isLoading={isLoading}
+                            options={{
+                                headerStyle: {
+                                    ...headerStyles(),
+                                    fontWeight: 'bold',
+                                    textTransform: 'uppercase',
+                                    fontSize: '0.75rem',
+                                    letterSpacing: '0.1em'
+                                },
+                                rowStyle: {
+                                    ...rowStyles(),
+                                    cursor: 'default'
+                                },
+                                actionsColumnIndex: -1,
+                                search: true,
+                                pageSize: 10,
+                                searchFieldStyle: searchFieldStyle(),
+                                columnsButton: false,
+                                showTitle: false,
+                                padding: 'default',
+                                toolbar: true,
+                            }}
+                            localization={{
+                                pagination: {
+                                    labelRowsPerPage: '',
+                                },
+                                toolbar: {
+                                    searchPlaceholder: 'Search Thresholds...'
+                                }
+                            }}
+                        />
+                    </ThemeProvider>
+                </div>
+            </div>
+        </>
+    );
+
     return (
         <div className={classNames(styles.singlePanelContainer, { [styles.darkMode]: darkModeStatus })}>
             {renderConfirmModal()}
             <div className={styles.mainPanel}>
-                {(selectedConfig || isCreatingNew) ? (
-                    <>
-                        <div className={styles.detailHeader}>
-                            <div className={styles.headerTop}>
-                                <div className={styles.titleSection}>
-                                    <Icon icon='TuneOutline' size='2x' className={styles.headerIcon} />
-                                    <div className={styles.titleContent}>
-                                        <div className={styles.selectorRow}>
-                                            {!isCreatingNew ? (
-                                                <Select
-                                                    list={sensorDropdownOptions}
-                                                    value={selectedConfigId?.toString() || ''}
-                                                    onChange={(e: any) => handleSelectConfig(parseInt(e.target.value))}
-                                                    ariaLabel='Select Sensor Configuration'
-                                                    className={styles.sensorSelector}
-                                                />
-                                            ) : (
-                                                <h4>New Configuration</h4>
-                                            )}
-                                        </div>
-                                        <span className={styles.subtitle}>{formData.sensor_name}</span>
-                                    </div>
-                                </div>
-                                <div className={styles.headerActions}>
-                                    <Button
-                                        color='primary'
-                                        size='sm'
-                                        icon='Add'
-                                        onClick={handleCreateNew}
-                                        isLight
-                                    >
-                                        New
-                                    </Button>
-                                    {saveStatus !== 'idle' && (
-                                        <div className={classNames(styles.saveStatus, styles[saveStatus])}>
-                                            {saveStatus === 'saving' && <><Spinner isSmall /> Saving...</>}
-                                            {saveStatus === 'saved' && <><Icon icon='CheckCircle' /> Saved</>}
-                                            {saveStatus === 'error' && <><Icon icon='Error' /> Error</>}
-                                        </div>
-                                    )}
-                                    <StatusToggleButton
-                                        id='enabled-switch'
-                                        checked={!!formData.enabled}
-                                        onChange={(val) => handleFormChange({ enabled: val })}
-                                    />
-                                </div>
+                {viewMode === 'list' ? renderListView() : (
+                    (selectedConfig || isCreatingNew) ? renderVisualView() : (
+                        <div className={styles.emptyState}>
+                            <div className={styles.emptyIcon}>
+                                <Icon icon='TouchApp' />
                             </div>
-
-                            {/* Live Status Banner */}
-                            {liveValue !== null && (
-                                <div className={classNames(styles.liveStatusBanner, styles[liveColor])}>
-                                    <div className={styles.bannerContent}>
-                                        <div className={styles.liveIndicator}>
-                                            <span className={styles.pulse} />
-                                            <span>LIVE</span>
-                                        </div>
-                                        <div className={styles.liveValue}>
-                                            <span className={styles.value}>{liveValue.toFixed(2)}</span>
-                                            <span className={styles.label}>{liveLabel}</span>
-                                        </div>
-                                        <div className={styles.thresholdInfo}>
-                                            <span>Threshold: {formData.threshold}</span>
-                                            <Icon icon={liveValue > (formData.threshold || 0) ? 'TrendingUp' : 'TrendingDown'} />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <h5>Select a Configuration</h5>
+                            <p>Choose a sensor from the dropdown above to view and edit its configuration.</p>
                         </div>
-
-                        <div className={styles.detailContent}>
-                            <div className={styles.formSection}>
-                                <label className={styles.sectionLabel}>
-                                    <Icon icon='Category' />
-                                    Sensor Type
-                                </label>
-                                <Select
-                                    list={isCreatingNew ? filteredChoices : SENSOR_CONFIG_CHOICES}
-                                    value={formData.sensor_name}
-                                    onChange={(e: any) => handleFormChange({ sensor_name: e.target.value })}
-                                    disabled={!isCreatingNew}
-                                    ariaLabel='Sensor Type'
-                                    className={styles.formSelect}
-                                />
-                                {!isCreatingNew && (
-                                    <small className={styles.formHint}>
-                                        <Icon icon='Lock' size='sm' />
-                                        Sensor type is locked after creation
-                                    </small>
-                                )}
-                            </div>
-
-                            {/* Visual Threshold Control */}
-                            <div className={styles.formSection}>
-                                <label className={styles.sectionLabel}>
-                                    <Icon icon='Speed' />
-                                    Threshold Configuration
-                                </label>
-
-                                <div className={styles.visualControl}>
-                                    {/* Gauge Display */}
-                                    <div className={styles.gaugeDisplay}>
-                                        <div className={styles.gaugeTrack}>
-                                            {/* Safe Zone */}
-                                            <div
-                                                className={styles.safeZone}
-                                                style={{ width: `${getThresholdPosition()}%` }}
-                                            />
-                                            {/* Warning Zone */}
-                                            <div
-                                                className={styles.warningZone}
-                                                style={{
-                                                    left: `${getThresholdPosition()}%`,
-                                                    width: `${100 - getThresholdPosition()}%`
-                                                }}
-                                            />
-
-                                            {/* Threshold Marker */}
-                                            <div
-                                                className={styles.thresholdMarkerNew}
-                                                style={{ left: `${getThresholdPosition()}%` }}
-                                            >
-                                                <div className={styles.markerLine} />
-                                                <div className={styles.markerDot} />
-                                                <div className={styles.markerLabel}>
-                                                    {formData.threshold?.toFixed(1)}
-                                                </div>
-                                            </div>
-
-                                            {/* Live Value Pointer */}
-                                            {liveValue !== null && (
-                                                <div
-                                                    className={classNames(styles.livePointer, styles[liveColor])}
-                                                    style={{ left: `${getLivePointerPosition()}%` }}
-                                                >
-                                                    <div className={styles.pointerLine} />
-                                                    <div className={styles.pointerDot} />
-                                                    <div className={styles.pointerLabel}>
-                                                        {liveValue.toFixed(1)}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Range Labels */}
-                                        <div className={styles.rangeLabels}>
-                                            <span>{formData.min_value}</span>
-                                            <span>{formData.max_value}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Slider Control */}
-                                    <div className={styles.sliderControl}>
-                                        <input
-                                            type='range'
-                                            min={formData.min_value || 0}
-                                            max={formData.max_value || 100}
-                                            step={0.1}
-                                            value={formData.threshold || 0}
-                                            onChange={(e) => handleFormChange({ threshold: parseFloat(e.target.value) })}
-                                            className={styles.thresholdSlider}
-                                        />
-                                    </div>
-
-                                    {/* Numeric Input */}
-                                    <div className={styles.numericInput}>
-                                        <Input
-                                            type='number'
-                                            value={formData.threshold}
-                                            onChange={(e: any) => handleFormChange({ threshold: parseFloat(e.target.value) || 0 })}
-                                            step={0.1}
-                                            className={styles.thresholdInput}
-                                        />
-                                        <span className={styles.inputLabel}>Alert Threshold</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Range Configuration */}
-                            <div className={styles.formSection}>
-                                <label className={styles.sectionLabel}>
-                                    <Icon icon='SyncAlt' />
-                                    Expected Range
-                                </label>
-                                <div className={styles.rangeInputs}>
-                                    <div className={styles.rangeInput}>
-                                        <label>Minimum</label>
-                                        <Input
-                                            type='number'
-                                            value={formData.min_value}
-                                            onChange={(e: any) => handleFormChange({ min_value: parseFloat(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                    <Icon icon='Remove' className={styles.rangeSeparator} />
-                                    <div className={styles.rangeInput}>
-                                        <label>Maximum</label>
-                                        <Input
-                                            type='number'
-                                            value={formData.max_value}
-                                            onChange={(e: any) => handleFormChange({ max_value: parseFloat(e.target.value) || 100 })}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className={styles.actionBar}>
-                                {!isCreatingNew && (
-                                    <Button
-                                        color='danger'
-                                        isLight
-                                        icon='Delete'
-                                        onClick={handleDelete}
-                                        isDisable={deleteMutation.isPending}
-                                    >
-                                        Delete
-                                    </Button>
-                                )}
-                                <div className={styles.actionGroup}>
-                                    <Button
-                                        color='secondary'
-                                        isLight
-                                        icon='RestartAlt'
-                                        onClick={handleReset}
-                                        isDisable={!hasUnsavedChanges}
-                                    >
-                                        Reset
-                                    </Button>
-                                    <Button
-                                        color='primary'
-                                        icon='Save'
-                                        onClick={handleSave}
-                                        isDisable={!hasUnsavedChanges || addMutation.isPending || updateMutation.isPending}
-                                    >
-                                        {(addMutation.isPending || updateMutation.isPending) && <Spinner isSmall inButton />}
-                                        {isCreatingNew ? 'Create' : 'Save'}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className={styles.emptyState}>
-                        <div className={styles.emptyIcon}>
-                            <Icon icon='TouchApp' />
-                        </div>
-                        <h5>Select a Configuration</h5>
-                        <p>Choose a sensor from the dropdown above to view and edit its configuration.</p>
-                    </div>
+                    )
                 )}
             </div>
         </div>

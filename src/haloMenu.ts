@@ -50,20 +50,20 @@ export const haloMenu = {
     alerts: {
         id: 'halo-alerts',
         text: 'Alerts',
-        path: '/halo/alerts',
+        path: '/halo/alerts/history',
         icon: 'NotificationsActive',
         subMenu: {
             history: {
-                id: 'halo-alerts-history',
-                text: 'History',
+                id: 'alerts-history',
+                text: 'Alert History',
                 path: '/halo/alerts/history',
                 icon: 'History',
             },
             configuration: {
-                id: 'halo-alerts-config',
-                text: 'Configuration',
-                path: '/halo/alerts/config',
-                icon: 'Tune',
+                id: 'alerts-configuration',
+                text: 'Alert Configuration',
+                path: '/halo/alerts/configuration',
+                icon: 'Settings',
             },
         },
     },

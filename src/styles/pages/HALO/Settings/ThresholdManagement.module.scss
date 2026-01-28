@@ -33,10 +33,49 @@
                     rgba(243, 84, 33, 0.3));
         }
 
-        .sensorSelector {
-            background: rgba(249, 249, 249, 0.796);
+        .sensorSelector,
+        .formSelect {
+            background: rgba(255, 255, 255, 0.05);
             border-color: rgba(255, 255, 255, 0.12);
-            color: rgba(34, 30, 30, 0.9);
+            color: #ffffff;
+
+            option {
+                background-color: #1e1e26;
+                color: #ffffff;
+            }
+        }
+
+        .thresholdSlider {
+            background: rgba(255, 255, 255, 0.2) !important;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.3) !important;
+            }
+        }
+
+        // Global overrides for inputs within this container in dark mode
+        :global {
+
+            .form-control,
+            .form-select,
+            input[type="number"],
+            input[type="text"],
+            select {
+                background-color: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                color: #ffffff !important;
+
+                &:focus {
+                    background-color: rgba(255, 255, 255, 0.08) !important;
+                    border-color: var(--bs-primary) !important;
+                    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25) !important;
+                    color: #ffffff !important;
+                }
+
+                &::placeholder {
+                    color: rgba(255, 255, 255, 0.5);
+                }
+            }
         }
     }
 }
@@ -184,6 +223,74 @@
     &.error {
         color: var(--bs-danger);
         background: rgba(var(--bs-danger-rgb), 0.1);
+    }
+}
+
+.viewSwitcher {
+    display: flex;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px;
+    border-radius: $border-radius-pill;
+    margin-right: $spacer;
+
+    .viewBtn {
+        border: none;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.7);
+        padding: 4px 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        border-radius: $border-radius-pill;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        i {
+            font-size: 0.9rem;
+        }
+
+        &.active {
+            background: #ffffff;
+            color: var(--bs-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        &:hover:not(.active) {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+    }
+}
+
+.listView {
+    // padding: $spacer;
+    height: 100%;
+    overflow-y: auto;
+
+    .tableCard {
+        background: rgba(var(--bs-card-bg-rgb), 0.5);
+        border-radius: $border-radius-lg;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        overflow: hidden;
+    }
+
+    table {
+        margin-bottom: 0;
+
+        th {
+            background: rgba(0, 0, 0, 0.05);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: $spacer;
+            border-bottom-width: 1px;
+        }
+
+        td {
+            padding: $spacer;
+            vertical-align: middle;
+        }
     }
 }
 
@@ -526,10 +633,16 @@
         width: 100%;
         height: 8px;
         border-radius: 4px;
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.1) !important; // Darker track for light mode
         outline: none;
         -webkit-appearance: none;
         appearance: none;
+        cursor: pointer;
+        transition: background 0.2s ease;
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.15) !important;
+        }
 
         &::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -540,12 +653,16 @@
             background: var(--bs-primary);
             cursor: pointer;
             border: 4px solid rgba(var(--bs-card-bg-rgb), 1);
-            box-shadow: 0 2px 12px rgba(var(--bs-primary-rgb), 0.5);
-            transition: all 0.2s ease;
+            box-shadow: 0 0 15px rgba(var(--bs-primary-rgb), 0.8); // Enhanced glow
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); // Bouncy transition
 
             &:hover {
-                transform: scale(1.15);
-                box-shadow: 0 4px 16px rgba(var(--bs-primary-rgb), 0.6);
+                transform: scale(1.2);
+                box-shadow: 0 0 20px rgba(var(--bs-primary-rgb), 1);
+            }
+
+            &:active {
+                transform: scale(0.95);
             }
         }
 

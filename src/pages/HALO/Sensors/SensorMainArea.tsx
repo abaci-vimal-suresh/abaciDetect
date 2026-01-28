@@ -11,11 +11,12 @@ import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../components/bootstrap/Modal';
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
-import { useAreas, useCreateArea, useAddSensorToSubArea, useSensors, useUsers } from '../../../api/sensors.api';
+import { useAreas, useCreateArea, useAddSensorToSubArea, useSensors, useUsers, useDeleteArea } from '../../../api/sensors.api';
 import { Area, User } from '../../../types/sensor';
 import TreeCard from './components/TreeCard';
 import Checks from '../../../components/bootstrap/forms/Checks';
 import Label from '../../../components/bootstrap/forms/Label';
+import EditAreaModal from './modals/EditAreaModal';
 
 const SensorMainArea = () => {
 
@@ -28,6 +29,8 @@ const SensorMainArea = () => {
     const addSensorMutation = useAddSensorToSubArea();
 
     const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingArea, setEditingArea] = useState<Area | null>(null);
     const [isSensorModalOpen, setIsSensorModalOpen] = useState(false);
     const [selectedAreaId, setSelectedAreaId] = useState<string>('');
     const [selectedSensorId, setSelectedSensorId] = useState('');
@@ -94,6 +97,12 @@ const SensorMainArea = () => {
         navigate(`/halo/sensors/areas/${areaId}/subzones`);
     };
 
+    const handleEditClick = (e: React.MouseEvent, area: Area) => {
+        e.stopPropagation();
+        setEditingArea(area);
+        setIsEditModalOpen(true);
+    };
+
     if (isLoading || sensorsLoading) {
         return (
             <PageWrapper title='Sensor Areas'>
@@ -152,7 +161,15 @@ const SensorMainArea = () => {
             <Page container='fluid'>
                 {viewMode === 'tree' ? (
                     /* Tree View */
-                    <TreeCard data={areas || []} sensors={allSensors || []} users={users || []} />
+                    <TreeCard
+                        data={areas || []}
+                        sensors={allSensors || []}
+                        users={users || []}
+                        onEditNode={(area) => {
+                            setEditingArea(area);
+                            setIsEditModalOpen(true);
+                        }}
+                    />
                 ) : (
                     /* Grid View */
                     <>
@@ -215,6 +232,15 @@ const SensorMainArea = () => {
                                         <CardHeader>
                                             <CardTitle>{area.name}</CardTitle>
                                             <CardActions>
+                                                <Button
+                                                    color='info'
+                                                    isLight
+                                                    icon='Edit'
+                                                    size='sm'
+                                                    onClick={(e: any) => handleEditClick(e, area)}
+                                                    className='me-1'
+                                                    title='Edit Area'
+                                                />
                                                 <Badge color='success' isLight>
                                                     Active
                                                 </Badge>
@@ -421,6 +447,11 @@ const SensorMainArea = () => {
                     </Button>
                 </ModalFooter>
             </Modal>
+            <EditAreaModal
+                isOpen={isEditModalOpen}
+                setIsOpen={setIsEditModalOpen}
+                area={editingArea}
+            />
         </PageWrapper >
     );
 };

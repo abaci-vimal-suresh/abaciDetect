@@ -17,8 +17,6 @@ import ThemeContext from '../../../contexts/themeContext';
 // Import sub-components
 import DeviceConfigSection from './sections/DeviceConfigSection';
 import ThresholdManagementSection from './sections/ThresholdManagementSection';
-// import EventMonitoringSection from './sections/EventMonitoringSection';
-// import AlertNotificationSection from './sections/AlertNotificationSection';
 // import CalibrationMaintenanceSection from './sections/CalibrationMaintenanceSection';
 import SafetySecuritySection from './sections/SafetySecuritySection';
 // import DataLoggingSection from './sections/DataLoggingSection';
@@ -43,7 +41,7 @@ const settingsSections: SettingsSection[] = [
     },
     {
         id: 'thresholds',
-        label: 'Threshold Management',
+        label: 'Thresholds & Configuration',
         icon: 'Speed',
         component: ThresholdManagementSection,
     },
@@ -52,12 +50,6 @@ const settingsSections: SettingsSection[] = [
     //     label: 'Event Monitoring',
     //     icon: 'Visibility',
     //     component: EventMonitoringSection,
-    // },
-    // {
-    //     id: 'alerts',
-    //     label: 'Alerts & Notifications',
-    //     icon: 'Notifications',
-    //     component: AlertNotificationSection,
     // },
     // {
     //     id: 'data',
@@ -83,12 +75,12 @@ const settingsSections: SettingsSection[] = [
     //     icon: 'TuneRounded',
     //     component: AdvancedFeaturesSection,
     // },
-    {
-        id: 'safety',
-        label: 'Safety & Security',
-        icon: 'Security',
-        component: SafetySecuritySection,
-    },
+    // {
+    //     id: 'safety',
+    //     label: 'Safety & Security',
+    //     icon: 'Security',
+    //     component: SafetySecuritySection,
+    // },
     // {
     //     id: 'reporting',
     //     label: 'Reporting',

@@ -109,11 +109,7 @@ const RouteConfig: CustomRouteConfig[] = [
 		element: <HaloAlertHistory />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
-	{
-		path: '/halo/alerts/config',
-		element: <HaloAlertConfiguration />,
-		allowedTo: ['Admin'],
-	},
+
 	{
 		path: '/halo/monitoring',
 		element: <HaloSensorMonitoringDashboard />,

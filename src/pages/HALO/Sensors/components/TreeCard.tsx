@@ -23,6 +23,7 @@ interface TreeCardProps {
     sensors?: any[];
     users?: any[];
     onNodeClick?: (node: TreeNode) => void;
+    onEditNode?: (nodeContent: any) => void; // New callback for editing area
 }
 
 interface NodePosition {
@@ -30,7 +31,7 @@ interface NodePosition {
     y: number;
 }
 
-const TreeCard: React.FC<TreeCardProps> = ({ data, sensors = [], users = [], onNodeClick }) => {
+const TreeCard: React.FC<TreeCardProps> = ({ data, sensors = [], users = [], onNodeClick, onEditNode }) => {
     const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -238,6 +239,20 @@ const TreeCard: React.FC<TreeCardProps> = ({ data, sensors = [], users = [], onN
                                     title={isExpanded ? 'Collapse' : 'Expand'}
                                 >
                                     <Icon icon={isExpanded ? 'ExpandLess' : 'ExpandMore'} size="sm" />
+                                </button>
+                            )}
+                            {node.type === 'area' && onEditNode && (
+                                <button
+                                    className={`${styles.expandButton} ms-1`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        // Find original area object to pass to edit modal
+                                        const originalArea = data.find(a => a.id === node.id);
+                                        if (originalArea) onEditNode(originalArea);
+                                    }}
+                                    title="Edit Area"
+                                >
+                                    <Icon icon="Edit" size="sm" />
                                 </button>
                             )}
                         </div>
