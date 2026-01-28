@@ -4,6 +4,13 @@ import Card, { CardBody, CardHeader, CardTitle } from '../../../components/boots
 import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
 import Badge from '../../../components/bootstrap/Badge';
+import Modal, {
+    ModalBody,
+    ModalFooter,
+    ModalHeader,
+    ModalTitle
+} from '../../../components/bootstrap/Modal';
+import Spinner from '../../../components/bootstrap/Spinner';
 import { useUser, useUserActivity, useAreas, useDeleteUser } from '../../../api/sensors.api';
 import { Area, UserActivity } from '../../../types/sensor';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
@@ -23,6 +30,7 @@ const UserDetailPage = () => {
     const { data: activities, isLoading: isActivityLoading } = useUserActivity(id || '');
     const { data: areas } = useAreas();
     const deleteUserMutation = useDeleteUser();
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
 
     const assignedAreas = useMemo(() => {
         if (!user || !areas) return [];
@@ -41,14 +49,16 @@ const UserDetailPage = () => {
         return findAssigned(areas);
     }, [user, areas]);
 
-    const handleDelete = async () => {
-        if (window.confirm(`Are you sure you want to delete user ${user?.username}? This action cannot be undone.`)) {
-            try {
-                await deleteUserMutation.mutateAsync(Number(id));
-                navigate('/users');
-            } catch (err) {
-                console.error("Failed to delete user", err);
-            }
+    const handleDelete = () => {
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        try {
+            await deleteUserMutation.mutateAsync(Number(id));
+            navigate('/users');
+        } catch (err) {
+            console.error("Failed to delete user", err);
         }
     };
 
@@ -228,6 +238,39 @@ const UserDetailPage = () => {
                     </div>
                 </div>
             </Page>
+
+            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} isCentered>
+                <ModalHeader setIsOpen={setIsDeleteModalOpen}>
+                    <ModalTitle id='deleteUserModal'>Delete User</ModalTitle>
+                </ModalHeader>
+                <ModalBody>
+                    <div className='alert alert-danger d-flex align-items-center mb-3'>
+                        <Icon icon='Warning' className='me-2' size='2x' />
+                        <div>
+                            <strong>Warning:</strong> This action cannot be undone.
+                        </div>
+                    </div>
+                    <p>
+                        Are you sure you want to delete user <strong>"{user?.username}"</strong>?
+                    </p>
+                    <p className='text-muted small'>
+                        This will permanently remove the user and all their associated data from the system.
+                    </p>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color='light' onClick={() => setIsDeleteModalOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        color='danger'
+                        onClick={handleDeleteConfirm}
+                        isDisable={deleteUserMutation.isPending}
+                    >
+                        {deleteUserMutation.isPending && <Spinner isSmall inButton isGrow />}
+                        Delete User
+                    </Button>
+                </ModalFooter>
+            </Modal>
         </PageWrapper>
     );
 };

@@ -1069,11 +1069,41 @@ export const mockAlertTrends: AlertTrendResponse = {
 
 export const mockSensorConfigs: { [sensorId: string]: SensorConfig[] } = {
     'S-A-G-TEMP-01': [
-        { id: 1, sensor_name: 'temp_c', enabled: true, min_value: 15, max_value: 30, threshold: 25 },
-        { id: 2, sensor_name: 'humidity', enabled: false, min_value: 20, max_value: 80, threshold: 60 }
+        {
+            id: 1,
+            sensor_name: 'temperature',
+            sensor_type: 'TEMPERATURE',
+            unit: '°C',
+            description: 'Room temperature sensor',
+            enabled: true,
+            min_value: 15,
+            max_value: 30,
+            threshold: 25
+        },
+        {
+            id: 2,
+            sensor_name: 'humidity',
+            sensor_type: 'HUMIDITY',
+            unit: '%',
+            description: 'Room humidity sensor',
+            enabled: false,
+            min_value: 20,
+            max_value: 80,
+            threshold: 60
+        }
     ],
     'S-A-G-CO2-03': [
-        { id: 3, sensor_name: 'co2', enabled: true, min_value: 0, max_value: 2000, threshold: 1000 }
+        {
+            id: 3,
+            sensor_name: 'co2',
+            sensor_type: 'CO2',
+            unit: 'ppm',
+            description: 'Carbon Dioxide sensor',
+            enabled: true,
+            min_value: 0,
+            max_value: 2000,
+            threshold: 1000
+        }
     ]
 };
 

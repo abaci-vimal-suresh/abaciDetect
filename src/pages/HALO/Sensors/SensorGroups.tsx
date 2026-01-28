@@ -23,6 +23,7 @@ import RoomSettingsPanel, { RoomVisibilitySettings } from './components/RoomSett
 import { mockRoomBoundaries, mockSensors, saveMockData, mockAreas } from '../../../mockData/sensors';
 import { DEFAULT_ROOM_SETTINGS } from '../utils/roomSettings.utils';
 import { filterSensors, getSensorsByArea, getAvailableSensors } from '../utils/sensorData.utils';
+import EditAreaModal from './modals/EditAreaModal';
 
 const SensorGroups = () => {
     const { areaId } = useParams<{ areaId: string }>();
@@ -34,6 +35,8 @@ const SensorGroups = () => {
     const queryClient = useQueryClient();
 
     const [isSubAreaModalOpen, setIsSubAreaModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingArea, setEditingArea] = useState<Area | null>(null);
     const [isSensorModalOpen, setIsSensorModalOpen] = useState(false);
     const [selectedSensorId, setSelectedSensorId] = useState('');
     const [subAreaName, setSubAreaName] = useState('');
@@ -121,6 +124,12 @@ const SensorGroups = () => {
 
     const handleCardClick = (subAreaId: number) => {
         navigate(`/halo/sensors/areas/${areaId}/subzones/${subAreaId}`);
+    };
+
+    const handleEditClick = (e: React.MouseEvent, area: Area) => {
+        e.stopPropagation();
+        setEditingArea(area);
+        setIsEditModalOpen(true);
     };
 
     if (isLoading || sensorsLoading) {
@@ -346,6 +355,15 @@ const SensorGroups = () => {
                                                 <CardHeader>
                                                     <CardTitle>{subArea.name}</CardTitle>
                                                     <CardActions>
+                                                        <Button
+                                                            color='info'
+                                                            isLight
+                                                            icon='Edit'
+                                                            size='sm'
+                                                            onClick={(e: any) => handleEditClick(e, subArea)}
+                                                            className='me-1'
+                                                            title='Edit Sub Area'
+                                                        />
                                                         <Badge color='success' isLight>
                                                             Active
                                                         </Badge>
@@ -616,6 +634,11 @@ const SensorGroups = () => {
                     </Button>
                 </ModalFooter>
             </Modal>
+            <EditAreaModal
+                isOpen={isEditModalOpen}
+                setIsOpen={setIsEditModalOpen}
+                area={editingArea}
+            />
         </PageWrapper >
     );
 };

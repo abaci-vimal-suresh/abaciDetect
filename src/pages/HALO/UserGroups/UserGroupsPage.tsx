@@ -8,6 +8,13 @@ import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHea
 import Card, { CardBody } from '../../../components/bootstrap/Card';
 import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
+import Modal, {
+    ModalBody,
+    ModalFooter,
+    ModalHeader,
+    ModalTitle
+} from '../../../components/bootstrap/Modal';
+import Spinner from '../../../components/bootstrap/Spinner';
 
 import ThemeContext from '../../../contexts/themeContext';
 import useTablestyle from '../../../hooks/useTablestyles';
@@ -28,6 +35,8 @@ const UserGroupsPage = () => {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editGroupId, setEditGroupId] = useState<number | null>(null);
     const [manageGroupId, setManageGroupId] = useState<number | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [groupToDelete, setGroupToDelete] = useState<any>(null);
 
     const staticColumns = [
         {
@@ -122,9 +131,8 @@ const UserGroupsPage = () => {
                         icon="Delete"
                         title="Delete"
                         onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete "${rowData.name}"?`)) {
-                                deleteGroupMutation.mutate(rowData.id);
-                            }
+                            setGroupToDelete(rowData);
+                            setIsDeleteModalOpen(true);
                         }}
                         style={{ width: 36, height: 36, borderRadius: 8 }}
                     />
@@ -196,6 +204,46 @@ const UserGroupsPage = () => {
                 setIsOpen={() => setManageGroupId(null)}
                 groupId={manageGroupId}
             />
+
+            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} isCentered>
+                <ModalHeader setIsOpen={setIsDeleteModalOpen}>
+                    <ModalTitle id='deleteGroupModal'>Delete User Group</ModalTitle>
+                </ModalHeader>
+                <ModalBody>
+                    <div className='alert alert-danger d-flex align-items-center mb-3'>
+                        <Icon icon='Warning' className='me-2' size='2x' />
+                        <div>
+                            <strong>Warning:</strong> This action cannot be undone.
+                        </div>
+                    </div>
+                    <p>
+                        Are you sure you want to delete the user group <strong>"{groupToDelete?.name}"</strong>?
+                    </p>
+                    <p className='text-muted small'>
+                        This will permanently remove the group and all its settings from the system.
+                    </p>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color='light' onClick={() => setIsDeleteModalOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        color='danger'
+                        onClick={() => {
+                            if (groupToDelete) {
+                                deleteGroupMutation.mutateAsync(groupToDelete.id).then(() => {
+                                    setIsDeleteModalOpen(false);
+                                    setGroupToDelete(null);
+                                });
+                            }
+                        }}
+                        isDisable={deleteGroupMutation.isPending}
+                    >
+                        {deleteGroupMutation.isPending && <Spinner isSmall inButton isGrow />}
+                        Delete Group
+                    </Button>
+                </ModalFooter>
+            </Modal>
         </PageWrapper>
     );
 };

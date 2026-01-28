@@ -147,6 +147,7 @@ export interface SensorPlacementPayload {
 export interface Area {
     id: number;
     name: string;
+    area_type?: string; // building, floor, room, etc.
     sensor_count: number;
     subareas: Area[]; // Changed to Area to support recursion
     description?: string;
@@ -245,10 +246,15 @@ export interface SensorRegistrationData {
 export interface SensorConfig {
     id?: number; // Optional on creation
     sensor_name: string;
-    enabled: boolean;
+    sensor_type?: string;
+    unit?: string;
+    description?: string;
+    enabled?: boolean;
     min_value?: number;
     threshold?: number;
     max_value?: number;
+    recipients?: AlertRecipient[];
+    actions?: AlertActionConfig;
     device?: number; // ID of the device
     created_at?: string;
     updated_at?: string;
@@ -256,7 +262,7 @@ export interface SensorConfig {
 
 export const SENSOR_CONFIG_CHOICES = [
     // Temperature & Humidity
-    { value: 'temp_c', label: 'Temperature (Celsius)' },
+    { value: 'temperature', label: 'Temperature' },
     { value: 'temp_f', label: 'Temperature (Fahrenheit)' },
     { value: 'humidity', label: 'Humidity (%)' },
 
