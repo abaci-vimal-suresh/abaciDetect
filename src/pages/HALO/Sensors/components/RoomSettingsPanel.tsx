@@ -158,7 +158,7 @@ const RoomSettingsPanel: React.FC<RoomSettingsPanelProps> = ({
 
     return (
         <Card
-            className="room-settings-panel shadow-sm h-100"
+            className="room-settings-panel shadow-sm h-90"
             stretch
             style={{
                 height: '100%',

@@ -19,6 +19,7 @@ import Boundary3DVolume from './3d/Boundary3DVolume';
 import InteractionHints from './3d/InteractionHints';
 import SensorParameterBar, { PARAMETER_STYLE_MAP } from './SensorParameterBar';
 import SensorParameterCard from './SensorParameterCard';
+import SensorPalette from './SensorPalette';
 import RoomSettingsPanel from './RoomSettingsPanel';
 import { getMetricStatus, getAggregatedStatus } from '../../utils/threshold.utils';
 
@@ -43,6 +44,7 @@ const PARAMETER_GROUPS = {
 interface FloorPlanCanvasProps {
     areaId: number;
     sensors: Sensor[];
+    paletteSensors?: Sensor[]; // For the palette
     areas?: Area[];
     floorPlanUrl?: string;
     roomBoundaries?: number[][];
@@ -61,6 +63,7 @@ interface FloorPlanCanvasProps {
     initialZoom?: number;
     initialView?: string;
     currentArea?: Area;
+    onEditModeChange?: (isEdit: boolean) => void;
 }
 
 interface SensorMarker {
@@ -73,6 +76,7 @@ interface SensorMarker {
 const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     areaId,
     sensors,
+    paletteSensors = [], // Default to empty
     areas = [],
     floorPlanUrl,
     onSensorClick,
@@ -84,7 +88,8 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     style,
     initialZoom = 1,
     initialView = 'perspective',
-    currentArea
+    currentArea,
+    onEditModeChange
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const cardsScrollRef = useRef<HTMLDivElement>(null);
@@ -574,6 +579,41 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
 
                             {/* Reset & Tools */}
                             <div className={`d-flex gap-1 ${darkModeStatus ? 'bg-dark bg-opacity-20' : 'bg-secondary bg-opacity-10'} rounded-pill p-1 border ${darkModeStatus ? 'border-light border-opacity-10' : 'border-dark border-opacity-10'} shadow-sm`} style={{ backdropFilter: 'blur(8px)' }}>
+                                {onEditModeChange && (
+                                    <>
+                                        {!editMode ? (
+                                            <button
+                                                onClick={() => onEditModeChange(true)}
+                                                className="btn btn-sm btn-link text-muted p-1 hover-text-primary"
+                                                title="Edit Layout"
+                                            >
+                                                <Icon icon="Edit" size="sm" />
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => onEditModeChange(false)}
+                                                    className="btn btn-sm btn-link text-success p-1 hover-text-success"
+                                                    title="Save Layout"
+                                                >
+                                                    <Icon icon="Save" size="sm" />
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        onEditModeChange(false);
+                                                        // If we want a separate cancel handler, we can add it, but for now toggling off is fine
+                                                    }}
+                                                    className="btn btn-sm btn-link text-danger p-1 hover-text-danger"
+                                                    title="Cancel Editing"
+                                                >
+                                                    <Icon icon="Close" size="sm" />
+                                                </button>
+                                                <div className="vr my-1 align-self-center opacity-25"></div>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+
                                 <button onClick={resetPan} className="btn btn-sm btn-link text-muted p-1 hover-text-primary" title="Center Pan">
                                     <Icon icon="center_focus_strong" size="sm" />
                                 </button>
@@ -755,6 +795,30 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                         />
                     </div>
                 )}
+                {/* SENSOR PALETTE (Overlay in Edit Mode) */}
+                {editMode && (
+                    <div style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '60px', // Below the toolbar area
+                        bottom: '24px',
+                        zIndex: 1005,
+                        width: '200px',
+                        pointerEvents: 'none' // Let clicks pass through container, children re-enable
+                    }}>
+                        <div style={{ pointerEvents: 'auto', maxHeight: '100%', overflowY: 'auto' }} className="hide-scrollbar rounded shadow-sm">
+                            <SensorPalette
+                                sensors={paletteSensors}
+                                currentAreaId={areaId}
+                                onDragStart={(e, sensor) => {
+                                    e.dataTransfer.setData('application/json', JSON.stringify({ sensorId: sensor.id }));
+                                    e.dataTransfer.effectAllowed = 'move';
+                                }}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 <div
                     ref={containerRef}
                     className="canvas-container-3d h-100"

@@ -313,12 +313,18 @@ const SensorGroupDetail = () => {
             <Page container='fluid'>
 
                 {viewMode === 'floorplan' ? (
-                    <div className='row g-0 align-items-stretch' style={{ minHeight: 'calc(100vh - 200px)' }}>
-                        {/* LEFT SIDEBAR: SENSOR PALETTE (Only in Edit Mode) */}
-                        {isEditMode && (
-                            <div className='col-md-3 h-100'>
-                                <SensorPalette
-                                    sensors={allSensors?.filter(s => {
+                    <div className='row g-0 align-items-stretch' style={{ height: 'calc(100vh - 180px)', overflow: 'hidden' }}>
+                        <div className='col-md-12 d-flex flex-column h-100'>
+                            <div className='d-flex justify-content-between align-items-center mb-3'>
+                                <div>
+                                    {/* Buttons removed - moved to FloorPlanCanvas */}
+                                </div>
+                            </div>
+                            <div className="flex-fill" style={{ position: 'relative', overflow: 'hidden' }}>
+                                <FloorPlanCanvas
+                                    areaId={subzoneId ? Number(subzoneId) : Number(areaId)}
+                                    sensors={sensors}
+                                    paletteSensors={allSensors?.filter(s => {
                                         const targetAreaId = subzoneId ? Number(subzoneId) : Number(areaId);
                                         const sAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : (s.area || s.area_id);
                                         const isUnassigned = !sAreaId && !s.area_name;
@@ -327,56 +333,6 @@ const SensorGroupDetail = () => {
 
                                         return isUnassigned || (isInArea && isUnplaced) || s.status === 'Inactive';
                                     }) || []}
-                                    currentAreaId={subzoneId ? Number(subzoneId) : Number(areaId)}
-                                    onDragStart={(e, sensor) => {
-                                        e.dataTransfer.setData('application/json', JSON.stringify({ sensorId: sensor.id }));
-                                        e.dataTransfer.effectAllowed = 'move';
-                                    }}
-                                />
-                            </div>
-                        )}
-
-                        {/* CENTER: 3D VIEW (Full Width) */}
-                        <div className='col-md-12 d-flex flex-column' style={{ minHeight: '600px' }}>
-                            <div className='d-flex justify-content-between align-items-center mb-3'>
-                                <h5 className='mb-0 text-white'>
-                                    {isEditMode ? 'Edit 3D Sensor Layout' : '3D Sensor Visualization'}
-                                </h5>
-                                <div>
-                                    <Button
-                                        color={isEditMode ? 'success' : 'primary'}
-                                        icon={isEditMode ? 'Save' : 'Edit'}
-                                        onClick={() => {
-                                            if (isEditMode) {
-                                                handleSaveLayout();
-                                            } else {
-                                                setIsEditMode(true);
-                                            }
-                                        }}
-                                        className='me-2'
-                                        isDisable={updateSensorMutation.isPending}
-                                    >
-                                        {updateSensorMutation.isPending ? <Spinner isSmall inButton className="me-2" /> : null}
-                                        {isEditMode ? 'Save Layout' : 'Edit Layout'}
-                                    </Button>
-                                    {isEditMode && (
-                                        <Button
-                                            color='light'
-                                            icon='Close'
-                                            onClick={() => {
-                                                setIsEditMode(false);
-                                                setStagedChanges({});
-                                            }}
-                                        >
-                                            Cancel
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex-fill">
-                                <FloorPlanCanvas
-                                    areaId={subzoneId ? Number(subzoneId) : Number(areaId)}
-                                    sensors={sensors}
                                     areas={areas || []}
                                     roomSettings={roomSettings}
                                     onSettingsChange={setRoomSettings}
@@ -427,7 +383,11 @@ const SensorGroupDetail = () => {
                                         });
                                     }}
                                     editMode={isEditMode}
-                                    style={{ height: '100%', minHeight: '600px' }}
+                                    onEditModeChange={(mode) => {
+                                        setIsEditMode(mode);
+                                        if (!mode) handleSaveLayout();
+                                    }}
+                                    style={{ height: '100%' }}
                                     initialZoom={0.5}
                                     initialView="front"
                                 />

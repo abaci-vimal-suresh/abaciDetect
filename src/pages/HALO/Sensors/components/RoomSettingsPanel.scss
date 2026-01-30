@@ -1,36 +1,29 @@
 .room-settings-panel {
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(10px);
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); // Default to body bg
     height: 100%;
     overflow: hidden;
+    border-radius: 0.5rem; // Match standard radius
 
-    html[theme='dark'] & {
-        background: rgba(30, 41, 59, 0.7) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    /* Custom scrollbar for premium look */
+    // Custom scrollbar for premium look
     .card-body::-webkit-scrollbar {
         width: 6px;
     }
 
     .card-body::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.05);
+        background: transparent;
     }
 
     .card-body::-webkit-scrollbar-thumb {
-        background: rgba(59, 130, 246, 0.3);
+        background: var(--bs-secondary-bg);
         border-radius: 3px;
     }
 
     .card-body::-webkit-scrollbar-thumb:hover {
-        background: rgba(59, 130, 246, 0.5);
+        background: var(--bs-secondary);
     }
 
     .card-header {
-        background: rgba(0, 0, 0, 0.02);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 
         html[theme='dark'] & {
             background: rgba(15, 23, 42, 0.5);

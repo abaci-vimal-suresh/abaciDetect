@@ -59,11 +59,17 @@ export const haloMenu = {
                 path: '/halo/alerts/history',
                 icon: 'History',
             },
-            configuration: {
-                id: 'alerts-configuration',
-                text: 'Alert Configuration',
-                path: '/halo/alerts/configuration',
-                icon: 'Settings',
+            alertfilter: {
+                id: 'alerts-filter',
+                text: 'Alert Filter',
+                path: '/halo/alerts/filter',
+                icon: 'History',
+            },
+            actions: {
+                id: 'alerts-actions',
+                text: 'Alert Actions',
+                path: '/halo/alerts/actions',
+                icon: 'History',
             },
         },
     },

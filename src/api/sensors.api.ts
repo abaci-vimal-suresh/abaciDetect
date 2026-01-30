@@ -1914,7 +1914,7 @@ export const useAlerts = (filters?: AlertFilters) => {
             if (filters?.area) params.append('area', filters.area.toString());
             if (filters?.search) params.append('search', filters.search);
 
-            const { data } = await axiosInstance.get(`/devices/alerts/?${params.toString()}`);
+            const { data } = await axiosInstance.get(`/alert-management/alerts/?${params.toString()}`);
             return data as Alert[];
         },
         staleTime: 1 * 60 * 1000, // 1 minute
@@ -1933,7 +1933,7 @@ export const useAlert = (alertId: number) => {
                 return alert;
             }
 
-            const { data } = await axiosInstance.get(`/devices/alerts/${alertId}/`);
+            const { data } = await axiosInstance.get(`/alert-management/alerts/${alertId}/`);
             return data as Alert;
         },
         enabled: !!alertId,
@@ -1967,7 +1967,7 @@ export const useCreateAlert = () => {
                 return newAlert;
             }
 
-            const { data } = await axiosInstance.post('/devices/alerts/', alertData);
+            const { data } = await axiosInstance.post('/alert-management/alerts/', alertData);
             return data as Alert;
         },
         onSuccess: (newAlert) => {
@@ -2003,7 +2003,7 @@ export const useUpdateAlert = () => {
                 throw new Error('Alert not found');
             }
 
-            const { data: response } = await axiosInstance.patch(`/devices/alerts/${alertId}/`, data);
+            const { data: response } = await axiosInstance.patch(`/alert-management/alerts/${alertId}/`, data);
             return response as Alert;
         },
         onSuccess: (updatedAlert) => {
@@ -2034,7 +2034,7 @@ export const useDeleteAlert = () => {
                 throw new Error('Alert not found');
             }
 
-            await axiosInstance.delete(`/devices/alerts/${alertId}/`);
+            await axiosInstance.delete(`/alert-management/alerts/${alertId}/`);
             return { success: true };
         },
         onSuccess: () => {
@@ -2062,7 +2062,7 @@ export const useAlertTrends = (filters: AlertTrendFilters) => {
             if (filters.type) params.append('type', filters.type);
             if (filters.status) params.append('status', filters.status);
 
-            const { data } = await axiosInstance.get(`/devices/alerts/trends/?${params.toString()}`);
+            const { data } = await axiosInstance.get(`/alert-management/alerts/trends/?${params.toString()}`);
             return data as AlertTrendResponse;
         },
         staleTime: 2 * 60 * 1000, // 2 minutes
@@ -2153,7 +2153,7 @@ export const useSaveAlertConfiguration = () => {
 
 /**
  * Fetch all alert filters
- * GET /api/devices/alert-filters/
+ * GET /api/alert-management/alert-filters/
  */
 export const useAlertFilters = (filters?: { search?: string; area_id?: number }) => {
     return useQuery({
@@ -2166,13 +2166,16 @@ export const useAlertFilters = (filters?: { search?: string; area_id?: number })
                         id: 1,
                         name: "HighAirQuality_Critical",
                         description: "Trigger actions for critical air quality alerts",
-                        area_list: [1, 2, 3],
-                        sensor_config_types: [5, 6, 7],
+                        area_ids: [1, 2, 3],
+                        sensor_config_ids: [5, 6, 7],
                         action_for_min: true,
                         action_for_max: true,
                         action_for_threshold: true,
-                        sensor_groups: [1],
-                        actions: [1, 2, 3],
+                        sensor_group_ids: [1],
+                        action_ids: [1, 2, 3],
+                        weekdays: [0, 1, 2, 3, 4], // Mon-Fri
+                        start_time: "09:00",
+                        end_time: "17:00",
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     }
@@ -2183,7 +2186,7 @@ export const useAlertFilters = (filters?: { search?: string; area_id?: number })
             if (filters?.search) params.append('search', filters.search);
             if (filters?.area_id) params.append('area_id', filters.area_id.toString());
 
-            const { data } = await axiosInstance.get(`/devices/alert-filters/?${params.toString()}`);
+            const { data } = await axiosInstance.get(`/alert-management/alert-filters/?${params.toString()}`);
             return data as AlertFilter[];
         }
     });
@@ -2191,7 +2194,7 @@ export const useAlertFilters = (filters?: { search?: string; area_id?: number })
 
 /**
  * Fetch all actions
- * GET /api/administration/actions/
+ * GET /api/alert-management/actions/
  */
 export const useActions = (filters?: { search?: string; type?: string; is_active?: boolean }) => {
     return useQuery({
@@ -2205,10 +2208,14 @@ export const useActions = (filters?: { search?: string; type?: string; is_active
                         name: "SendAQIAlert_ToBuildings",
                         type: "email",
                         recipients: [1, 2, 5],
+                        user_groups: [1, 2],
+                        device_type: 'HALO',
                         device_list: "device_001,device_002,device_003",
                         message_type: "critical",
                         message_template: "Alert: {alert_type} detected in {area_name}. Sensor: {sensor_name}. Description: {description}",
                         is_active: true,
+                        http_method: 'POST',
+                        webhook_url: 'https://api.example.com/webhook',
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     }
@@ -2220,7 +2227,7 @@ export const useActions = (filters?: { search?: string; type?: string; is_active
             if (filters?.type) params.append('type', filters.type);
             if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
 
-            const { data } = await axiosInstance.get(`/administration/actions/?${params.toString()}`);
+            const { data } = await axiosInstance.get(`/alert-management/actions/?${params.toString()}`);
             return data as Action[];
         }
     });
@@ -2228,7 +2235,7 @@ export const useActions = (filters?: { search?: string; type?: string; is_active
 
 /**
  * Create new alert filter
- * POST /api/devices/alert-filters/
+ * POST /api/alert-management/alert-filters/
  */
 export const useCreateAlertFilter = () => {
     const queryClient = useQueryClient();
@@ -2240,7 +2247,7 @@ export const useCreateAlertFilter = () => {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 return { ...filterData, id: Math.floor(Math.random() * 1000) } as AlertFilter;
             }
-            const { data } = await axiosInstance.post('/devices/alert-filters/', filterData);
+            const { data } = await axiosInstance.post('/alert-management/alert-filters/', filterData);
             return data as AlertFilter;
         },
         onSuccess: () => {
@@ -2255,7 +2262,7 @@ export const useCreateAlertFilter = () => {
 
 /**
  * Update alert filter
- * PATCH /api/devices/alert-filters/{id}/
+ * PATCH /api/alert-management/alert-filters/{id}/
  */
 export const useUpdateAlertFilter = () => {
     const queryClient = useQueryClient();
@@ -2267,7 +2274,7 @@ export const useUpdateAlertFilter = () => {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 return { id, ...data } as AlertFilter;
             }
-            const { data: response } = await axiosInstance.patch(`/devices/alert-filters/${id}/`, data);
+            const { data: response } = await axiosInstance.patch(`/alert-management/alert-filters/${id}/`, data);
             return response as AlertFilter;
         },
         onSuccess: () => {
@@ -2282,7 +2289,7 @@ export const useUpdateAlertFilter = () => {
 
 /**
  * Delete alert filter
- * DELETE /api/devices/alert-filters/{id}/
+ * DELETE /api/alert-management/alert-filters/{id}/
  */
 export const useDeleteAlertFilter = () => {
     const queryClient = useQueryClient();
@@ -2294,7 +2301,7 @@ export const useDeleteAlertFilter = () => {
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 return { success: true };
             }
-            await axiosInstance.delete(`/devices/alert-filters/${id}/`);
+            await axiosInstance.delete(`/alert-management/alert-filters/${id}/`);
             return { success: true };
         },
         onSuccess: () => {
@@ -2303,6 +2310,86 @@ export const useDeleteAlertFilter = () => {
         },
         onError: () => {
             showErrorNotification('Failed to delete alert filter');
+        }
+    });
+};
+/**
+ * Create new action
+ * POST /api/alert-management/actions/
+ */
+export const useCreateAction = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (actionData: Partial<Action>) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return { ...actionData, id: Math.floor(Math.random() * 1000), created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as Action;
+            }
+            const { data } = await axiosInstance.post('/alert-management/actions/', actionData);
+            return data as Action;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['actions'] });
+            showSuccessNotification('Action created successfully');
+        },
+        onError: () => {
+            showErrorNotification('Failed to create action');
+        }
+    });
+};
+
+/**
+ * Update action
+ * PATCH /api/alert-management/actions/{id}/
+ */
+export const useUpdateAction = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: number; data: Partial<Action> }) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return { id, ...data, updated_at: new Date().toISOString() } as Action;
+            }
+            const { data: response } = await axiosInstance.patch(`/alert-management/actions/${id}/`, data);
+            return response as Action;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['actions'] });
+            showSuccessNotification('Action updated successfully');
+        },
+        onError: () => {
+            showErrorNotification('Failed to update action');
+        }
+    });
+};
+
+/**
+ * Delete action
+ * DELETE /api/alert-management/actions/{id}/
+ */
+export const useDeleteAction = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return { success: true };
+            }
+            await axiosInstance.delete(`/alert-management/actions/${id}/`);
+            return { success: true };
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['actions'] });
+            showSuccessNotification('Action deleted successfully');
+        },
+        onError: () => {
+            showErrorNotification('Failed to delete action');
         }
     });
 };
