@@ -638,9 +638,13 @@ export interface AlertConfigurationUpdateData {
 export interface Action {
     id: number;
     name: string;
-    type: 'email' | 'sms' | 'push_notification' | 'webhook' | 'slack' | 'teams' | 'custom';
+    type: 'email' | 'sms' | 'push_notification' | 'webhook' | 'device_notification' | 'slack' | 'teams' | 'custom';
     recipients: number[];
+    user_groups?: number[];
+    device_type?: 'HALO' | 'HALO_SMART' | 'HALO_IOT';
     device_list?: string;
+    http_method?: 'GET' | 'POST' | 'PUT';
+    webhook_url?: string;
     message_type?: string;
     message_template: string;
     is_active: boolean;
@@ -653,13 +657,16 @@ export interface AlertFilter {
     id: number;
     name: string;
     description: string;
-    area_list: number[];
-    sensor_config_types: number[];
+    area_ids: number[];
+    sensor_config_ids: number[];
     action_for_min: boolean;
     action_for_max: boolean;
     action_for_threshold: boolean;
-    sensor_groups: number[];
-    actions: number[] | Action[];
+    sensor_group_ids?: number[]; // Optional
+    action_ids?: number[] | Action[]; // Optional
+    weekdays?: number[]; // 0-6 (Mon-Sun)
+    start_time?: string; // HH:MM
+    end_time?: string; // HH:MM
     created_at: string;
     updated_at: string;
 }

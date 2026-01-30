@@ -24,9 +24,9 @@ const AlertFilterSection: React.FC<AlertFilterSectionProps> = ({ deviceId }) => 
 
     // Filter to show only filters relevant to this device's area or sensor
     const relevantFilters = allFilters?.filter(filter => {
-        const areaMatch = sensor?.area && (typeof sensor.area === 'object' ? filter.area_list.includes(sensor.area.id) : filter.area_list.includes(sensor.area));
+        const areaMatch = sensor?.area && (typeof sensor.area === 'object' ? filter.area_ids.includes(sensor.area.id) : filter.area_ids.includes(sensor.area));
         // Simple logic for demo: if area matches or if it's a global filter (empty area list)
-        return areaMatch || filter.area_list.length === 0;
+        return areaMatch || filter.area_ids.length === 0;
     }) || [];
 
     return (

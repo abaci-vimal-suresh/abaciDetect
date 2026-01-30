@@ -276,36 +276,24 @@ const SensorGroups = () => {
                     <div className='row'>
                         <div className='col-md-12'>
                             <div className='d-flex justify-content-between align-items-center'>
-                                {/* <h5 className='mb-0'>
-                                    {isEditMode ? 'Edit Sensor Layout' : 'Floor Plan Visualization'}
-                                </h5> */}
+                                {/* Section Header removed as it was empty/commented out */}
                                 <div>
-                                    {(currentArea?.floor_level !== undefined && currentArea?.floor_level !== null) && (
-                                        <>
-                                            <Button
-                                                color={isEditMode ? 'success' : 'primary'}
-                                                icon={isEditMode ? 'Save' : 'Edit'}
-                                                onClick={() => setIsEditMode(!isEditMode)}
-                                                className='me-2'
-                                            >
-                                                {isEditMode ? 'Save Layout' : 'Edit Layout'}
-                                            </Button>
-                                            {isEditMode && (
-                                                <Button
-                                                    color='light'
-                                                    icon='Close'
-                                                    onClick={() => setIsEditMode(false)}
-                                                >
-                                                    Cancel
-                                                </Button>
-                                            )}
-                                        </>
-                                    )}
+                                    {/* Buttons removed - moved to FloorPlanCanvas */}
                                 </div>
                             </div>
                             <FloorPlanCanvas
                                 areaId={Number(areaId)}
                                 sensors={allSensors || []}
+                                paletteSensors={allSensors?.filter(s => {
+                                    // Logic to show unassigned or improperly placed sensors for the current area
+                                    const targetAreaId = Number(areaId);
+                                    const sAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : (s.area || s.area_id);
+                                    const isUnassigned = !sAreaId && !s.area_name;
+                                    const isInArea = Number(sAreaId) === targetAreaId;
+                                    const isUnplaced = (s.x_val === undefined || s.x_val === null) && (s.x_coordinate === undefined || s.x_coordinate === null);
+
+                                    return isUnassigned || (isInArea && isUnplaced) || s.status === 'Inactive';
+                                }) || []}
                                 areas={areas || []}
                                 roomSettings={roomSettings}
                                 onSettingsChange={setRoomSettings}
@@ -362,6 +350,7 @@ const SensorGroups = () => {
                                     });
                                 }}
                                 editMode={isEditMode}
+                                onEditModeChange={(mode) => setIsEditMode(mode)}
                                 initialZoom={0.5}
                                 initialView="front"
                             />

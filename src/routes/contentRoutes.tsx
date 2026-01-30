@@ -9,6 +9,8 @@ const HaloSensorList = lazy(() => import('../pages/HALO/Sensors/SensorList'));
 const HaloPrivacySettings = lazy(() => import('../pages/HALO/Privacy/PrivacySettings'));
 const HaloAlertHistory = lazy(() => import('../pages/HALO/Alerts/AlertHistory'));
 const HaloAlertConfiguration = lazy(() => import('../pages/HALO/Alerts/AlertConfiguration'));
+const HaloAlertFilter = lazy(() => import('../pages/HALO/Alerts/AlertFilterPage'));
+const HaloAlertActions = lazy(() => import('../pages/HALO/Alerts/AlertActionPage'));
 const HaloLiveMonitoring = lazy(() => import('../pages/HALO/Monitoring/LiveMonitoring'));
 const HaloReports = lazy(() => import('../pages/HALO/Reports/Reports'));
 const HaloFirmwareUpdate = lazy(() => import('../pages/HALO/Sensors/FirmwareUpdate'));
@@ -109,6 +111,16 @@ const RouteConfig: CustomRouteConfig[] = [
 	{
 		path: '/halo/alerts/history',
 		element: <HaloAlertHistory />,
+		allowedTo: ['Admin', 'Viewer'],
+	},
+	{
+		path: '/halo/alerts/filter',
+		element: <HaloAlertFilter />,
+		allowedTo: ['Admin', 'Viewer'],
+	},
+	{
+		path: '/halo/alerts/actions',
+		element: <HaloAlertActions />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
 
