@@ -54,7 +54,7 @@
             gap: 10px;
 
             .room-label {
-                background: rgba(0, 0, 0, 0.6);
+                background: rgba(0, 0, 0, 0.7);
                 color: white;
                 padding: 4px 12px;
                 border-radius: 12px;
@@ -64,22 +64,11 @@
                 white-space: nowrap;
                 transition: background 0.3s ease, border 0.3s ease, text-shadow 0.3s ease;
 
-
-                // Night Vision Mode Label
-                &.vision-night {
-                    background: rgba(0, 40, 0, 0.8);
-                    border: 1px solid rgba(0, 255, 0, 0.8);
-                    color: #00ff00;
-                    text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
-                }
-
-                &.vision-batman {
-                    background: rgba(0, 20, 40, 0.8);
-                    border: 1px solid rgba(0, 200, 255, 0.8);
-                    color: #00c8ff;
-                    text-shadow: 0 0 15px rgba(0, 200, 255, 1);
-                    font-family: 'Outfit', sans-serif;
-                    letter-spacing: 1px;
+                html[theme='light'] & {
+                    background: rgba(255, 255, 255, 0.85);
+                    color: #1e293b;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    border: 1px solid rgba(0, 0, 0, 0.05);
                 }
             }
 
@@ -107,30 +96,51 @@
 
 .room-config-modal {
     .modal-content {
-        background: #1a1a2e;
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: white;
+        color: #1e293b;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+
+        html[theme='dark'] & {
+            background: #1a1a2e;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
     }
 
     .modal-header {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+        html[theme='dark'] & {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
         .btn-close {
-            filter: invert(1);
+            html[theme='dark'] & {
+                filter: invert(1);
+            }
         }
     }
 
     .modal-footer {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+
+        html[theme='dark'] & {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
     }
 
     .form-control {
-        background: #2a2a4e;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
+        background: #f8fafc;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        color: #1e293b;
+
+        html[theme='dark'] & {
+            background: #2a2a4e;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
 
         &:focus {
-            background: #2a2a4e;
             box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
         }
     }

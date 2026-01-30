@@ -78,7 +78,14 @@ export const getSensorsByArea = (
 
     return sensors.filter(sensor => {
         // Match by ID (including child areas)
-        if (areaId && areaIds.includes(Number(sensor.area?.id) || Number(sensor.area_id))) {
+        // Handle case where sensor.area is an object (with id) or a number (the id itself)
+        const sensorAreaId = typeof sensor.area === 'object' && sensor.area !== null 
+            ? sensor.area.id 
+            : sensor.area;
+            
+        const finalAreaId = Number(sensorAreaId) || Number(sensor.area_id);
+
+        if (areaId && areaIds.includes(finalAreaId)) {
             return true;
         }
 

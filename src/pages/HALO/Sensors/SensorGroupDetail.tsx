@@ -12,9 +12,10 @@ import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../components/bootstrap/Modal';
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
-import { useAreas, useAddSensorToSubArea, useSensors, useCreateSubArea } from '../../../api/sensors.api';
+import { useAreas, useAddSensorToSubArea, useSensors, useCreateSubArea, useUpdateSensor } from '../../../api/sensors.api';
 import { useQueryClient } from '@tanstack/react-query';
 import { Area, SensorPlacementPayload } from '../../../types/sensor';
+import Swal from 'sweetalert2';
 import FloorPlanCanvas from './components/FloorPlanCanvas';
 import SensorPalette from './components/SensorPalette';
 import RoomSettingsPanel, { RoomVisibilitySettings } from './components/RoomSettingsPanel';
@@ -31,6 +32,7 @@ const SensorGroupDetail = () => {
     const { data: allSensors, isLoading: sensorsLoading } = useSensors();
     const addSensorMutation = useAddSensorToSubArea();
     const createSubAreaMutation = useCreateSubArea();
+    const updateSensorMutation = useUpdateSensor();
     const queryClient = useQueryClient();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,6 +44,7 @@ const SensorGroupDetail = () => {
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
     const [viewMode, setViewMode] = useState<'grid' | 'floorplan'>('floorplan');
     const [isEditMode, setIsEditMode] = useState(false);
+    const [stagedChanges, setStagedChanges] = useState<Record<string, any>>({});
 
     const [uploadedFloorPlan, setUploadedFloorPlan] = useState<string | null>(null);
     const [roomSettings, setRoomSettings] = useState<RoomVisibilitySettings>(DEFAULT_ROOM_SETTINGS);
@@ -85,91 +88,34 @@ const SensorGroupDetail = () => {
         }
     }, [subzoneId, areaId, currentSubArea, currentArea]);
 
-    // Load uploaded floor plan from persisted data when switching sub-areas
-    React.useEffect(() => {
-        if (subzoneId) {
-            const area = mockAreas.find(a => a.id === Number(subzoneId));
-            if (area?.floor_plan_url) {
-                setUploadedFloorPlan(area.floor_plan_url);
-            } else {
-                setUploadedFloorPlan(null);
-            }
-        }
-    }, [subzoneId]);
 
-    // Mock update handler (In real app, use mutation)
-    const handleSensorUpdate = (sensorId: string, x: number, y: number, areaId?: number | null) => {
-        const sensorIndex = mockSensors.findIndex(s => s.id === sensorId);
-        if (sensorIndex > -1) {
-            // Update the mock data in memory immediately so UI reflects change
-            mockSensors[sensorIndex].x_coordinate = x;
-            mockSensors[sensorIndex].y_coordinate = y;
-
-            // NEW: Update area_id assignment AND floor_level
-            if (areaId !== undefined) {
-                mockSensors[sensorIndex].area_id = areaId || undefined;
-                const targetArea = areas?.find(a => Number(a.id) === Number(areaId));
-                // IMPORTANT: Update area object and floor_level to match the area
-                if (targetArea) {
-                    mockSensors[sensorIndex].area = { ...targetArea };
-                    mockSensors[sensorIndex].area_name = targetArea.name;
-                    if (targetArea.floor_level !== undefined) {
-                        mockSensors[sensorIndex].floor_level = targetArea.floor_level;
-                    }
-                }
-
-                if (areaId) {
-                    console.log(`✅ [MOCK] Sensor ${sensorId} auto-assigned to area ${areaId} (Floor: ${mockSensors[sensorIndex].floor_level})`);
-                } else {
-                    console.log(`⚠️ [MOCK] Sensor ${sensorId} unassigned from area`);
-                }
-            }
-
-            // TELEMETRY: Console log the payload as requested by user
-            const payload: SensorPlacementPayload & { boundary?: any } = {
-                sensorId,
-                areaId: areaId || Number(subzoneId),
-                x_coordinate: x,
-                y_coordinate: y,
-                image_url: uploadedFloorPlan || currentSubArea?.floor_plan_url,
-                boundary: mockSensors[sensorIndex].boundary // Include boundary in payload
-            };
-            console.log('📡 [TELEMETRY] Sensor placement payload:', payload);
-
-            // ✅ PERSIST to localStorage and refresh queries
-            saveMockData();
-            queryClient.invalidateQueries({ queryKey: ['sensors'] });
-        }
-    };
-
-    const handleBoundaryUpdate = (sensorId: string, boundary: { x_min: number; x_max: number; y_min: number; y_max: number; z_min: number; z_max: number }) => {
-        const sensorIndex = mockSensors.findIndex(s => s.id === sensorId);
-        if (sensorIndex > -1) {
-            mockSensors[sensorIndex].boundary = boundary;
-            console.log(`📐 [MOCK] Updated boundary for ${sensorId}`, boundary);
-
-            // ✅ PERSIST to localStorage and refresh queries
-            saveMockData();
-            queryClient.invalidateQueries({ queryKey: ['sensors'] });
-        }
+    const handleSaveLayout = () => {
+        setIsEditMode(false);
     };
 
     const handleSensorRemove = (sensorId: string) => {
-        const sensorIndex = mockSensors.findIndex(s => s.id === sensorId);
-        if (sensorIndex > -1) {
-            // TELEMETRY: Console log the removal payload
+        // TELEMETRY: Console log the removal payload
+        const sensor = allSensors?.find(s => s.id === sensorId);
+        if (sensor) {
             console.log('🗑️ [TELEMETRY] Sensor removed from floor plan:', {
                 sensorId,
                 previousCoordinates: {
-                    x: mockSensors[sensorIndex].x_coordinate,
-                    y: mockSensors[sensorIndex].y_coordinate
+                    x: sensor.x_val,
+                    y: sensor.y_val
                 }
             });
 
-            // Reset coordinates and area
-            (mockSensors[sensorIndex] as any).x_coordinate = undefined;
-            (mockSensors[sensorIndex] as any).y_coordinate = undefined;
-            (mockSensors[sensorIndex] as any).area = null;
+            // Use mutation to unassign sensor from area
+            updateSensorMutation.mutate({
+                sensorId,
+                data: {
+                    id: sensorId,
+                    area: null, // Unassign from area
+                    // We can also clear coordinates if desired, but area: null is sufficient to hide it
+                    x_val: null as any,
+                    y_val: null as any
+                }
+            });
         }
     };
 
@@ -208,10 +154,17 @@ const SensorGroupDetail = () => {
         return getSensorsByArea(allSensors || [], areaId, currentArea?.name, areas);
     }, [allSensors, areaId, currentArea, areas]);
 
-    // Filter sensors that belong to this subarea (recursive)
+    // Get sensors for this area
     const sensors = useMemo(() => {
         const targetId = subzoneId || areaId;
-        return getSensorsByArea(allSensors || [], targetId, currentSubArea?.name, areas);
+        const rawSensors = getSensorsByArea(allSensors || [], targetId, currentSubArea?.name, areas);
+
+        return rawSensors.map(s => ({
+            ...s,
+            // Support both old and new fields for compatibility with FloorPlanCanvas
+            x_coordinate: s.x_coordinate ?? s.x_val,
+            y_coordinate: s.y_coordinate ?? s.y_val,
+        }));
     }, [allSensors, subzoneId, areaId, currentSubArea, areas]);
 
     // Get available sensors (sensors with no area assigned)
@@ -266,6 +219,34 @@ const SensorGroupDetail = () => {
         navigate(`/halo/sensors/areas/${areaId}/subzones/${nestedSubAreaId}`);
     };
 
+    const handleUnassignSensor = (e: React.MouseEvent, sensor: any) => {
+        e.stopPropagation();
+
+        Swal.fire({
+            title: 'Unassign Sensor?',
+            text: `Are you sure you want to remove "${sensor.name}" from this sub-area?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, unassign',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-neumorphic-popup',
+                confirmButton: 'btn btn-neumorphic text-danger mx-2',
+                cancelButton: 'btn btn-neumorphic mx-2'
+            },
+            buttonsStyling: false,
+            background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1a1a1a' : '#e0e5ec',
+            color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#4d4d4d',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                updateSensorMutation.mutate({
+                    sensorId: sensor.id,
+                    data: { area: null }
+                });
+            }
+        });
+    };
+
     if (areasLoading || sensorsLoading) {
         return (
             <PageWrapper title='Sub Area Details'>
@@ -289,133 +270,168 @@ const SensorGroupDetail = () => {
                     />
                 </SubHeaderLeft>
                 <SubHeaderRight>
-                    <div className='btn-group me-3'>
+                    <div className='d-flex gap-3'>
+                        <div className='d-flex gap-2'>
+                            <Button
+                                isNeumorphic
+                                className={viewMode === 'grid' ? 'active' : ''}
+                                icon='GridView'
+                                onClick={() => setViewMode('grid')}
+                                title='Grid View'
+                            >
+                                Grid
+                            </Button>
+                            <Button
+                                isNeumorphic
+                                className={viewMode === 'floorplan' ? 'active' : ''}
+                                icon='3d_rotation'
+                                onClick={() => setViewMode('floorplan')}
+                                title='3D View'
+                            >
+                                3D View
+                            </Button>
+                        </div>
                         <Button
-                            color={viewMode === 'grid' ? 'primary' : 'secondary'}
-                            icon='GridView'
-                            onClick={() => setViewMode('grid')}
-                            className={viewMode === 'grid' ? 'active' : ''}
-                            title='Grid View'
+                            isNeumorphic
+                            className='text-info'
+                            icon='Add'
+                            onClick={() => setIsSubAreaModalOpen(true)}
                         >
-                            Grid
+                            Create Sub Area
                         </Button>
                         <Button
-                            color={viewMode === 'floorplan' ? 'primary' : 'secondary'}
-                            icon='3d_rotation'
-                            onClick={() => setViewMode('floorplan')}
-                            className={viewMode === 'floorplan' ? 'active' : ''}
-                            title='3D View'
+                            isNeumorphic
+                            className='text-primary'
+                            icon='Add'
+                            onClick={() => setIsModalOpen(true)}
                         >
-                            3D View
+                            Add Sensor
                         </Button>
                     </div>
-                    <Button
-                        color='info'
-                        icon='Add'
-                        className='me-2'
-                        onClick={() => setIsSubAreaModalOpen(true)}
-                    >
-                        Create Sub Area
-                    </Button>
-                    <Button color='primary' icon='Add' onClick={() => setIsModalOpen(true)}>
-                        Add Sensor
-                    </Button>
                 </SubHeaderRight>
             </SubHeader>
             <Page container='fluid'>
 
                 {viewMode === 'floorplan' ? (
+                    <div className='row g-0 align-items-stretch' style={{ minHeight: 'calc(100vh - 200px)' }}>
+                        {/* LEFT SIDEBAR: SENSOR PALETTE (Only in Edit Mode) */}
+                        {isEditMode && (
+                            <div className='col-md-3 h-100'>
+                                <SensorPalette
+                                    sensors={allSensors?.filter(s => {
+                                        const targetAreaId = subzoneId ? Number(subzoneId) : Number(areaId);
+                                        const sAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : (s.area || s.area_id);
+                                        const isUnassigned = !sAreaId && !s.area_name;
+                                        const isInArea = Number(sAreaId) === targetAreaId;
+                                        const isUnplaced = (s.x_val === undefined || s.x_val === null) && (s.x_coordinate === undefined || s.x_coordinate === null);
 
-                    <div style={{ height: 'calc(100vh - 250px)', minHeight: '600px', overflowY: 'auto' }}>
-                        <div className='row g-3 align-items-stretch'>
-                            {/* LEFT SIDEBAR: SENSOR PALETTE (Only in Edit Mode) */}
-                            {isEditMode && (
-                                <div className='col-md-3 h-100'>
-                                    <SensorPalette
-                                        sensors={allSensors?.filter(s => {
-                                            const targetAreaId = subzoneId ? Number(subzoneId) : Number(areaId);
-                                            return (!s.area_id && !s.area_name) ||
-                                                (s.area_id === targetAreaId && (s.x_coordinate === undefined || s.x_coordinate === null)) ||
-                                                s.status === 'Inactive';
-                                        }) || []}
-                                        currentAreaId={subzoneId ? Number(subzoneId) : Number(areaId)}
-                                        onDragStart={(e, sensor) => {
-                                            e.dataTransfer.setData('application/json', JSON.stringify({ sensorId: sensor.id }));
-                                            e.dataTransfer.effectAllowed = 'move';
+                                        return isUnassigned || (isInArea && isUnplaced) || s.status === 'Inactive';
+                                    }) || []}
+                                    currentAreaId={subzoneId ? Number(subzoneId) : Number(areaId)}
+                                    onDragStart={(e, sensor) => {
+                                        e.dataTransfer.setData('application/json', JSON.stringify({ sensorId: sensor.id }));
+                                        e.dataTransfer.effectAllowed = 'move';
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {/* CENTER: 3D VIEW (Full Width) */}
+                        <div className='col-md-12 d-flex flex-column' style={{ minHeight: '600px' }}>
+                            <div className='d-flex justify-content-between align-items-center mb-3'>
+                                <h5 className='mb-0 text-white'>
+                                    {isEditMode ? 'Edit 3D Sensor Layout' : '3D Sensor Visualization'}
+                                </h5>
+                                <div>
+                                    <Button
+                                        color={isEditMode ? 'success' : 'primary'}
+                                        icon={isEditMode ? 'Save' : 'Edit'}
+                                        onClick={() => {
+                                            if (isEditMode) {
+                                                handleSaveLayout();
+                                            } else {
+                                                setIsEditMode(true);
+                                            }
                                         }}
-                                    />
-                                </div>
-                            )}
-
-                            {/* CENTER: 3D VIEW (Fixed height, scrolls page around it) */}
-                            <div className={`${isEditMode ? 'col-md-9' : 'col-md-9'} d-flex flex-column`} style={{ minHeight: '600px' }}>
-                                <div className='d-flex justify-content-between align-items-center mb-3'>
-                                    <h5 className='mb-0 text-white'>
-                                        {isEditMode ? 'Edit 3D Sensor Layout' : '3D Sensor Visualization'}
-                                    </h5>
-                                    <div>
+                                        className='me-2'
+                                        isDisable={updateSensorMutation.isPending}
+                                    >
+                                        {updateSensorMutation.isPending ? <Spinner isSmall inButton className="me-2" /> : null}
+                                        {isEditMode ? 'Save Layout' : 'Edit Layout'}
+                                    </Button>
+                                    {isEditMode && (
                                         <Button
-                                            color={isEditMode ? 'success' : 'primary'}
-                                            icon={isEditMode ? 'Save' : 'Edit'}
-                                            onClick={() => setIsEditMode(!isEditMode)}
-                                            className='me-2'
+                                            color='light'
+                                            icon='Close'
+                                            onClick={() => {
+                                                setIsEditMode(false);
+                                                setStagedChanges({});
+                                            }}
                                         >
-                                            {isEditMode ? 'Save Layout' : 'Edit Layout'}
+                                            Cancel
                                         </Button>
-                                        {isEditMode && (
-                                            <Button
-                                                color='light'
-                                                icon='Close'
-                                                onClick={() => {
-                                                    setIsEditMode(false);
-                                                }}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex-fill">
-                                    <FloorPlanCanvas
-                                        areaId={subzoneId ? Number(subzoneId) : Number(areaId)}
-                                        sensors={(allSensors || []).filter(s => {
-                                            const targetAreaId = subzoneId ? Number(subzoneId) : Number(areaId);
-                                            return !s.area_id ||
-                                                Number(s.area_id) === targetAreaId ||
-                                                (Number(s.area?.parent_id) === targetAreaId);
-                                        })}
-                                        areas={areas || []}
-                                        roomSettings={roomSettings}
-                                        onSettingsChange={setRoomSettings}
-                                        floorPlanUrl={uploadedFloorPlan || currentSubArea?.floor_plan_url || currentArea?.floor_plan_url}
-                                        roomBoundaries={mockRoomBoundaries[subzoneId ? Number(subzoneId) : Number(areaId)]}
-                                        onSensorClick={(sensor) => !isEditMode && navigate(`/halo/sensors/detail/${sensor.id}`)}
-                                        onSensorDrop={(sensorId, x, y, areaId) => {
-                                            handleSensorUpdate(sensorId, x, y, areaId);
-                                        }}
-                                        onSensorRemove={handleSensorRemove}
-                                        onImageUpload={handleImageUpload}
-                                        onBoundaryUpdate={handleBoundaryUpdate}
-                                        editMode={isEditMode}
-                                        style={{ height: '100%' }}
-                                        initialZoom={0.5}
-                                        initialView="front"
-                                    />
+                                    )}
                                 </div>
                             </div>
+                            <div className="flex-fill">
+                                <FloorPlanCanvas
+                                    areaId={subzoneId ? Number(subzoneId) : Number(areaId)}
+                                    sensors={sensors}
+                                    areas={areas || []}
+                                    roomSettings={roomSettings}
+                                    onSettingsChange={setRoomSettings}
+                                    floorPlanUrl={
+                                        uploadedFloorPlan ||
+                                        currentSubArea?.area_plan ||
+                                        currentSubArea?.floor_plan_url ||
+                                        currentArea?.area_plan ||
+                                        currentArea?.floor_plan_url
+                                    }
+                                    roomBoundaries={
+                                        (subzoneId ? currentSubArea?.polygon_coords : currentArea?.polygon_coords) ||
+                                        mockRoomBoundaries[subzoneId ? Number(subzoneId) : Number(areaId)]
+                                    }
+                                    currentArea={currentSubArea}
+                                    onSensorClick={(sensor) => !isEditMode && navigate(`/halo/sensors/detail/${sensor.id}`)}
+                                    onSensorDrop={(sensorId, x, y, dropAreaId) => {
+                                        const currentSensor = allSensors?.find(s => s.id === sensorId);
+                                        const targetAreaId = currentSensor?.area_id
+                                            ? currentSensor.area_id
+                                            : (dropAreaId || (subzoneId ? Number(subzoneId) : Number(areaId)));
 
-                            {/* RIGHT SIDEBAR: SETTINGS */}
-                            {!isEditMode && (
-                                <div className='col-md-3 h-100'>
-                                    <RoomSettingsPanel
-                                        settings={roomSettings}
-                                        onSettingsChange={setRoomSettings}
-                                        currentArea={currentSubArea}
-                                        areas={areas || []}
-                                        sensors={allSensors || []}
-                                    />
-                                </div>
-                            )}
+                                        updateSensorMutation.mutate({
+                                            sensorId,
+                                            data: {
+                                                id: sensorId,
+                                                x_val: x,
+                                                y_val: y,
+                                                area: targetAreaId
+                                            }
+                                        });
+                                    }}
+                                    onSensorRemove={handleSensorRemove}
+                                    onImageUpload={handleImageUpload}
+                                    onBoundaryUpdate={(sensorId, boundary) => {
+                                        updateSensorMutation.mutate({
+                                            sensorId,
+                                            data: {
+                                                id: sensorId,
+                                                x_min: boundary.x_min,
+                                                x_max: boundary.x_max,
+                                                y_min: boundary.y_min,
+                                                y_max: boundary.y_max,
+                                                z_min: boundary.z_min ?? 0,
+                                                z_max: boundary.z_max ?? 1,
+                                                boundary_opacity_val: boundary.boundary_opacity_val ?? 0.5
+                                            }
+                                        });
+                                    }}
+                                    editMode={isEditMode}
+                                    style={{ height: '100%', minHeight: '600px' }}
+                                    initialZoom={0.5}
+                                    initialView="front"
+                                />
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -554,6 +570,15 @@ const SensorGroupDetail = () => {
                                             <CardHeader>
                                                 <CardTitle>{sensor.name}</CardTitle>
                                                 <CardActions>
+                                                    <Button
+                                                        color='danger'
+                                                        isLight
+                                                        icon='LinkOff'
+                                                        size='sm'
+                                                        onClick={(e: any) => handleUnassignSensor(e, sensor)}
+                                                        className='me-2'
+                                                        title='Remove from Area'
+                                                    />
                                                     <Badge color={sensor.is_active ? 'success' : 'danger'} isLight>
                                                         {sensor.is_active ? 'Active' : 'Inactive'}
                                                     </Badge>
@@ -731,7 +756,7 @@ const SensorGroupDetail = () => {
                     </Button>
                 </ModalFooter>
             </Modal>
-        </PageWrapper>
+        </PageWrapper >
     );
 };
 

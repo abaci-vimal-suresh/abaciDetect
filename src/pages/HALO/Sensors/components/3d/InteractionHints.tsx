@@ -5,7 +5,7 @@ import Button from '../../../../../components/bootstrap/Button';
 interface InteractionHintsProps {
     zoom: number;
     editMode: boolean;
-    selectedSensor: string | null;
+    selectedSensor: string | number | null;
     showBoundaryHint: boolean;
     onZoomIn: () => void;
     onZoomOut: () => void;

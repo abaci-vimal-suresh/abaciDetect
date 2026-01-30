@@ -18,7 +18,7 @@ interface Room3DBoxProps {
     wallOpacity: number;
     floorOpacity: number;
     ceilingOpacity: number;
-    onUpdateRoom: (sensorId: string, name: string, color: string, showWalls: boolean, wallOpacity?: number) => void;
+    onUpdateRoom: (sensorId: string | number, name: string, color: string, showWalls: boolean, wallOpacity?: number) => void;
     showWalls: boolean;
     hideSettings?: boolean;
     sectionCutEnabled?: boolean;
@@ -29,6 +29,7 @@ interface Room3DBoxProps {
     selectedParameters?: string[];
     displayVal?: number;
     displayType?: string;
+    polygon_coords?: number[][];
 }
 
 const Room3DBox = React.memo<Room3DBoxProps>(({
@@ -53,7 +54,8 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
     visionMode = 'none',
     selectedParameters = [],
     displayVal,
-    displayType
+    displayType,
+    polygon_coords
 }) => {
     const { darkModeStatus } = useDarkMode();
     const boundary = sensor.boundary!;
@@ -74,7 +76,7 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
         const roomCenter = {
             x: (boundary.x_min + boundary.x_max) / 2,
             y: (boundary.y_min + boundary.y_max) / 2,
-            z: sensor.z_coordinate || 0.5
+            z: (sensor.z_coordinate ?? sensor.z_val ?? 0.5)
         };
 
         switch (sectionCutPlane) {
@@ -96,7 +98,7 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
         const threshold = 0.15;
         const centerPos = sectionCutPlane === 'x' ? (boundary.x_min + boundary.x_max) / 2 :
             sectionCutPlane === 'y' ? (boundary.y_min + boundary.y_max) / 2 :
-                sensor.z_coordinate || 0.5;
+                (sensor.z_coordinate ?? sensor.z_val ?? 0.5);
 
         const distance = sectionCutPosition - centerPos;
         const opacity = Math.max(0, Math.min(1, distance / threshold + 0.5));
@@ -109,8 +111,8 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
     }, [sectionCutEnabled, sectionCutPlane, sectionCutPosition, boundary, sensor.z_coordinate]);
 
     const [showModal, setShowModal] = useState(false);
-    const [roomName, setRoomName] = useState(sensor.room_name || `Room ${sensor.id.split('-').pop()}`);
-    const [roomColor, setRoomColor] = useState(sensor.room_color || '#3B82F6');
+    const [roomName, setRoomName] = useState(sensor.room_name || `Room ${String(sensor.id).split('-').pop()}`);
+    const [roomColor, setRoomColor] = useState(sensor.room_color || (darkModeStatus ? '#3B82F6' : '#94A3B8'));
     const [roomShowWalls, setRoomShowWalls] = useState(showWalls);
     const [roomWallOpacity, setRoomWallOpacity] = useState(wallOpacity);
 
@@ -127,6 +129,12 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
     const bH = (boundary.y_max - boundary.y_min) * floorH;
 
     const displayColor = statusColor === '#10B981' ? roomColor : statusColor;
+
+    // Helper for Polygon Path
+    const polygonPath = React.useMemo(() => {
+        if (!polygon_coords || polygon_coords.length < 3) return null;
+        return `polygon(${polygon_coords.map(p => `${p[0] * 100}% ${p[1] * 100}%`).join(', ')})`;
+    }, [polygon_coords]);
 
     return (
         <div
@@ -167,7 +175,6 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
                     }
 
                     // Status boost (overlay on top of value)
-                    // Reduced base boost to match the pulse requirements (Warning: 10-20%, Critical: 20-40%)
                     if (status === 'critical') dynamicOpacity = Math.max(dynamicOpacity, 0.2);
                     else if (status === 'warning') dynamicOpacity = Math.max(dynamicOpacity, 0.1);
 
@@ -189,20 +196,22 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
                                 ${cWarn} ${opacity * 0.3}) 50%, 
                                 transparent 75%)`;
                     } else {
-                        const isCustom = statusColor !== '#10B981';
-                        const startColor = isCustom ? displayColor : '#10B981';
-                        const baseColor = isCustom ? displayColor : 'rgba(16, 185, 129,';
+                        const isCustom = sensor.room_color !== undefined;
+                        const startColor = isCustom ? roomColor : (darkModeStatus ? '#10B981' : '#94A3B8');
+                        const baseColor = isCustom ? roomColor : (darkModeStatus ? 'rgba(16, 185, 129,' : 'rgba(148, 163, 184,');
 
                         if (baseColor.includes('rgba')) {
-                            wallBackground = `linear-gradient(to bottom, ${baseColor} ${opacity}) 0%, ${baseColor} 0) 15%, transparent 35%)`;
+                            wallBackground = darkModeStatus
+                                ? `linear-gradient(to bottom, ${baseColor} ${opacity}) 0%, ${baseColor} 0) 15%, transparent 35%)`
+                                : `linear-gradient(to bottom, ${baseColor} ${opacity * 0.8}) 0%, ${baseColor} 0) 10%, transparent 25%)`;
                         } else {
-                            wallBackground = `linear-gradient(to bottom, ${startColor} 0%, ${startColor} 15%, transparent 35%)`;
+                            wallBackground = darkModeStatus
+                                ? `linear-gradient(to bottom, ${startColor} 0%, ${startColor} 15%, transparent 35%)`
+                                : `linear-gradient(to bottom, ${startColor} 0%, ${startColor} 10%, transparent 25%)`;
                         }
                     }
 
                     const wallStyle = {
-                        width: bW,
-                        height: wallHeight,
                         background: wallBackground,
                         backgroundSize: '100% 200%',
                         transformOrigin: 'top',
@@ -212,29 +221,70 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
                         opacity: dynamicOpacity
                     } as React.CSSProperties;
 
-                    const wallStyleSide = { ...wallStyle, width: bH };
+                    // POLYGON WALLS
+                    if (polygon_coords && polygon_coords.length >= 3) {
+                        return (
+                            <>
+                                {polygon_coords.map((p1, idx) => {
+                                    const p2 = polygon_coords[(idx + 1) % polygon_coords.length];
+                                    const x1 = p1[0] * floorW;
+                                    const y1 = p1[1] * floorH;
+                                    const x2 = p2[0] * floorW;
+                                    const y2 = p2[1] * floorH;
+                                    const dx = x2 - x1;
+                                    const dy = y2 - y1;
+                                    const length = Math.sqrt(dx * dx + dy * dy);
+                                    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+                                    return (
+                                        <div
+                                            key={`wall-${idx}`}
+                                            className={`room-wall status-${status}`}
+                                            style={{
+                                                ...wallStyle,
+                                                width: length,
+                                                height: wallHeight,
+                                                left: x1,
+                                                top: y1,
+                                                transformOrigin: '0 0',
+                                                transform: `translateZ(0px) rotateZ(${angle}deg) rotateX(90deg)`
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </>
+                        );
+                    }
+
+                    // RECTANGLE WALLS (Fallback)
+                    const rectWallStyle = {
+                        ...wallStyle,
+                        width: bW,
+                        height: wallHeight,
+                    };
+                    const rectWallStyleSide = { ...rectWallStyle, width: bH };
 
                     return (
                         <>
                             {/* North Wall */}
                             <div className={`room-wall status-${status}`} style={{
-                                ...wallStyle, left: bX, top: bY,
+                                ...rectWallStyle, left: bX, top: bY,
                                 transform: `translateZ(0px) rotateX(90deg)`,
                             }} />
                             {/* South Wall */}
                             <div className={`room-wall status-${status}`} style={{
-                                ...wallStyle, left: bX, top: bY + bH,
+                                ...rectWallStyle, left: bX, top: bY + bH,
                                 transform: `translateZ(0px) rotateX(90deg)`,
                             }} />
                             {/* East Wall */}
                             <div className={`room-wall status-${status}`} style={{
-                                ...wallStyleSide, left: bX + bW, top: bY,
+                                ...rectWallStyleSide, left: bX + bW, top: bY,
                                 transform: `translateZ(0px) rotateX(90deg) rotateY(90deg)`,
                                 transformOrigin: 'top left',
                             }} />
                             {/* West Wall */}
                             <div className={`room-wall status-${status}`} style={{
-                                ...wallStyleSide, left: bX, top: bY,
+                                ...rectWallStyleSide, left: bX, top: bY,
                                 transform: `translateZ(0px) rotateX(90deg) rotateY(90deg)`,
                                 transformOrigin: 'top left',
                             }} />
@@ -244,34 +294,56 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
             )}
 
             {/* Internal Floor */}
-            <div className={`room-floor vision-${visionMode}`} style={{
-                position: 'absolute',
-                left: bX,
-                top: bY,
-                width: bW,
-                height: bH,
-                backgroundImage: floorPlanUrl ? `url(${floorPlanUrl})` : 'none',
-                backgroundPosition: `-${bX}px -${bY}px`,
-                backgroundSize: `${floorW}px ${floorH}px`,
-                backgroundColor: displayColor,
-                opacity: floorOpacity,
-                border: `2px solid ${displayColor}`,
-                transform: `translateZ(0.1px)`,
-                backfaceVisibility: 'visible',
-                filter: applyFilter
-            } as React.CSSProperties} />
+            {polygonPath ? (
+                // Polygon Floor
+                <div className={`room-floor vision-${visionMode}`} style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundImage: floorPlanUrl ? `url(${floorPlanUrl})` : 'none',
+                    backgroundSize: `${floorW}px ${floorH}px`,
+                    backgroundColor: displayColor,
+                    opacity: floorOpacity,
+                    transform: `translateZ(0.1px)`,
+                    backfaceVisibility: 'visible',
+                    filter: applyFilter,
+                    clipPath: polygonPath
+                } as React.CSSProperties} />
+            ) : (
+                // Rectangle Floor
+                <div className={`room-floor vision-${visionMode}`} style={{
+                    position: 'absolute',
+                    left: bX,
+                    top: bY,
+                    width: bW,
+                    height: bH,
+                    backgroundImage: floorPlanUrl ? `url(${floorPlanUrl})` : 'none',
+                    backgroundPosition: `-${bX}px -${bY}px`,
+                    backgroundSize: `${floorW}px ${floorH}px`,
+                    backgroundColor: displayColor,
+                    opacity: floorOpacity,
+                    border: `2px solid ${displayColor}`,
+                    transform: `translateZ(0.1px)`,
+                    backfaceVisibility: 'visible',
+                    filter: applyFilter
+                } as React.CSSProperties} />
+            )}
+
 
             {statusColor !== '#10B981' && (
                 <div
                     style={{
                         position: 'absolute',
-                        left: bX,
-                        top: bY,
-                        width: bW,
-                        height: bH,
+                        left: polygonPath ? 0 : bX,
+                        top: polygonPath ? 0 : bY,
+                        width: polygonPath ? '100%' : bW,
+                        height: polygonPath ? '100%' : bH,
                         transform: 'translateZ(0px)',
                         transformStyle: 'preserve-3d',
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        clipPath: polygonPath || undefined
                     } as React.CSSProperties}
                 >
                     <div
@@ -280,8 +352,8 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
                             width: '100%',
                             height: '100%',
                             background: (() => {
-                                const cx = (sensor.x_coordinate! * floorW) - bX;
-                                const cy = (sensor.y_coordinate! * floorH) - bY;
+                                const cx = ((sensor.x_val ?? sensor.x_coordinate!) * floorW) - (polygonPath ? 0 : bX);
+                                const cy = ((sensor.y_val ?? sensor.y_coordinate!) * floorH) - (polygonPath ? 0 : bY);
                                 const center = `circle at ${cx}px ${cy}px`;
 
                                 const cSafe = '#10B981';
@@ -303,28 +375,44 @@ const Room3DBox = React.memo<Room3DBoxProps>(({
             )}
 
             {/* Ceiling Layer */}
-            <div className="room-ceiling" style={{
-                position: 'absolute',
-                left: bX,
-                top: bY,
-                width: bW,
-                height: bH,
-                backgroundColor: displayColor,
-                opacity: ceilingOpacity,
-                border: `1px solid ${displayColor}`,
-                transform: `translateZ(${wallHeight}px)`,
-                backfaceVisibility: 'visible'
-            } as React.CSSProperties} />
+            {polygonPath ? (
+                <div className="room-ceiling" style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: displayColor,
+                    opacity: ceilingOpacity,
+                    transform: `translateZ(${wallHeight}px)`,
+                    backfaceVisibility: 'visible',
+                    clipPath: polygonPath
+                } as React.CSSProperties} />
+            ) : (
+                <div className="room-ceiling" style={{
+                    position: 'absolute',
+                    left: bX,
+                    top: bY,
+                    width: bW,
+                    height: bH,
+                    backgroundColor: displayColor,
+                    opacity: ceilingOpacity,
+                    border: `1px solid ${displayColor}`,
+                    transform: `translateZ(${wallHeight}px)`,
+                    backfaceVisibility: 'visible'
+                } as React.CSSProperties} />
+            )}
+
 
             {/* Room Label Container */}
             <div
                 className="room-info-wrapper"
                 style={{
                     position: 'absolute',
-                    left: bX,
-                    top: bY,
-                    width: bW,
-                    height: bH,
+                    left: (boundary.x_min + boundary.x_max) / 2 * floorW - 50, // Approximate center
+                    top: (boundary.y_min + boundary.y_max) / 2 * floorH - 25,
+                    width: 100,
+                    height: 50,
                     transform: `translateZ(${wallHeight}px)`,
                     display: 'flex',
                     alignItems: 'center',

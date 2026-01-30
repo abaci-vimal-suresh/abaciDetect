@@ -45,10 +45,15 @@ const Sensor3DMarker: React.FC<Sensor3DMarkerProps> = ({
     // CLAMP: Must match Room3DBox clamping exactly
     const wallHeight = Math.min(rawWallHeight, Math.floor(floorSpacing * 0.9));
 
-    // POSITION: If z_coordinate is undefined (99% default), 
-    // we want it partially submerged into the ceiling (more than half inside).
-    const zRatio = sensor.z_coordinate !== undefined ? sensor.z_coordinate : 1.0;
-    const zPos = (zRatio * wallHeight) - 8; // Submerge 8px below ceiling line
+    // POSITION: 
+    // If zRatio is close to 0 (floor), we want it sitting ON TOP (+8px).
+    // If zRatio is close to 1 (ceiling), we want it SUBMERGED (-8px).
+    const zRatio = (sensor.z_coordinate !== undefined && sensor.z_coordinate !== null)
+        ? sensor.z_coordinate
+        : ((sensor.z_val !== undefined && sensor.z_val !== null) ? sensor.z_val : 0.0);
+    const isFloorMounted = zRatio < 0.5;
+    const zOffset = isFloorMounted ? 8 : -8;
+    const zPos = (zRatio * wallHeight) + zOffset;
 
     return (
         <div

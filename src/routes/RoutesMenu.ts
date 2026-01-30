@@ -15,7 +15,8 @@ export const allRoutesObject = {
 	}
 };
 
-import { time } from 'console';
+
+// import { time } from 'console';
 import { haloMenu } from '../haloMenu';
 
 export const UserRoutes = {
@@ -38,6 +39,8 @@ export const AdminRoutes = {
 	users: haloMenu.users,
 	timetravel: haloMenu.timetravel,
 	reports: haloMenu.reports,
+	autocad: haloMenu.autocad,
+	threed: haloMenu.threed,
 };
 
 export const ViewerRoutes = {
@@ -53,6 +56,8 @@ export const ViewerRoutes = {
 	},
 	timetravel: haloMenu.timetravel,
 	reports: haloMenu.reports,
+	autocad: haloMenu.autocad,
+	threed: haloMenu.threed,
 };
 
 export const pagesNotInSideBar = {

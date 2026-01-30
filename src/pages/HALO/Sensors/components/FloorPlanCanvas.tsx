@@ -19,6 +19,7 @@ import Boundary3DVolume from './3d/Boundary3DVolume';
 import InteractionHints from './3d/InteractionHints';
 import SensorParameterBar, { PARAMETER_STYLE_MAP } from './SensorParameterBar';
 import SensorParameterCard from './SensorParameterCard';
+import RoomSettingsPanel from './RoomSettingsPanel';
 import { getMetricStatus, getAggregatedStatus } from '../../utils/threshold.utils';
 
 const PARAM_META: Record<string, { unit: string; min: number; max: number; threshold: number }> = {
@@ -46,16 +47,20 @@ interface FloorPlanCanvasProps {
     floorPlanUrl?: string;
     roomBoundaries?: number[][];
     onSensorClick?: (sensor: Sensor) => void;
-    onSensorDrop?: (sensorId: string, x: number, y: number, areaId?: number | null) => void;
-    onSensorRemove?: (sensorId: string) => void;
+    onSensorDrop?: (sensorId: string | number, x: number, y: number, areaId?: number | null) => void;
+    onSensorRemove?: (sensorId: string | number) => void;
     onImageUpload?: (file: File) => void;
-    onBoundaryUpdate?: (sensorId: string, boundary: { x_min: number; x_max: number; y_min: number; y_max: number }) => void;
+    onBoundaryUpdate?: (sensorId: string | number, boundary: {
+        x_min: number; x_max: number; y_min: number; y_max: number;
+        z_min?: number; z_max?: number; boundary_opacity_val?: number
+    }) => void;
     editMode?: boolean;
     roomSettings?: RoomVisibilitySettings;
     onSettingsChange?: (settings: RoomVisibilitySettings) => void;
     style?: React.CSSProperties;
     initialZoom?: number;
     initialView?: string;
+    currentArea?: Area;
 }
 
 interface SensorMarker {
@@ -78,7 +83,8 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     onSettingsChange,
     style,
     initialZoom = 1,
-    initialView = 'perspective'
+    initialView = 'perspective',
+    currentArea
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const cardsScrollRef = useRef<HTMLDivElement>(null);
@@ -86,10 +92,10 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const { darkModeStatus } = useDarkMode();
     const [imageLoaded, setImageLoaded] = useState(false);
     const [canvasDimensions, setCanvasDimensions] = useState({ width: 800, height: 600, dpr: 1 });
-    const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
-    const [selectedSensor, setSelectedSensor] = useState<string | null>(null);
+    const [hoveredSensor, setHoveredSensor] = useState<string | number | null>(null);
+    const [selectedSensor, setSelectedSensor] = useState<string | number | null>(null);
     const [showBoundaryHint, setShowBoundaryHint] = useState(false);
-    const [selectedParameters, setSelectedParameters] = useState<string[]>(['temp_c', 'humidity', 'co2', 'aqi']);
+    const [selectedParameters, setSelectedParameters] = useState<string[]>([]);
     const [showParameterCards, setShowParameterCards] = useState(false);
 
     const scrollCards = (direction: 'left' | 'right') => {
@@ -107,8 +113,8 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     }>({});
 
     const [localRoomSettings, setLocalRoomSettings] = useState<RoomVisibilitySettings>({
-        wallOpacity: 0.1,
-        floorOpacity: 0.2,
+        wallOpacity: 0.5,
+        floorOpacity: 0.3,
         ceilingOpacity: 0.5,
         showWalls: true,
         showFloor: true,
@@ -152,11 +158,11 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
 
     const sensorMarkers: SensorMarker[] = useMemo(() => {
         return sensors
-            .filter(s => s.x_coordinate !== undefined && s.y_coordinate !== undefined)
+            .filter(s => (s.x_val !== undefined && s.y_val !== undefined) || (s.x_coordinate !== undefined && s.y_coordinate !== undefined))
             .map(sensor => ({
                 sensor,
-                x: sensor.x_coordinate!,
-                y: sensor.y_coordinate!,
+                x: sensor.x_val ?? sensor.x_coordinate!,
+                y: sensor.y_val ?? sensor.y_coordinate!,
                 status: getSensorStatus(sensor)
             }));
     }, [sensors, getSensorStatus]);
@@ -164,6 +170,18 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const selectedSensorBoundary = useMemo(() => {
         if (!selectedSensor) return null;
         const sensor = sensors.find(s => s.id === selectedSensor);
+        // Construct boundary object from flat fields if present
+        if (sensor?.x_min !== undefined) {
+            return {
+                x_min: sensor.x_min,
+                x_max: sensor.x_max,
+                y_min: sensor.y_min,
+                y_max: sensor.y_max,
+                z_min: sensor.z_min ?? 0,
+                z_max: sensor.z_max ?? 1,
+                boundary_opacity_val: sensor.boundary_opacity_val ?? 0.5
+            };
+        }
         return sensor?.boundary || null;
     }, [selectedSensor, sensors]);
 
@@ -180,6 +198,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
         zoom,
         rotationY: rotation.y,
         canvasDimensions,
+        areaBounds: canvasDimensions, // Use current canvas dimensions as reference for normalization
         sensorMarkers,
         selectedSensor,
         selectedSensorBoundary,
@@ -195,21 +214,35 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     // Find the building context (Root Parent)
     const activeBuildingAreas = useMemo(() => {
         if (!areaId || areas.length === 0) return areas;
-        let rootId = areaId;
-        let checkArea = areas.find(a => Number(a.id) === Number(areaId));
+
+        const currentArea = areas.find(a => Number(a.id) === Number(areaId));
+        if (!currentArea) return areas;
+
+        // Determine the "Context Area" - Stop at the first floor or building we find going up
+        let contextArea = currentArea;
         let depth = 0;
-        while (checkArea && checkArea.parent_id !== null && depth < 5) {
-            rootId = Number(checkArea.parent_id);
-            checkArea = areas.find(a => Number(a.id) === Number(rootId));
+        while (contextArea &&
+            contextArea.area_type !== 'floor' &&
+            contextArea.area_type !== 'building' &&
+            contextArea.parent_id !== null &&
+            depth < 5) {
+            const parent = areas.find(a => Number(a.id) === Number(contextArea.parent_id));
+            if (!parent) break;
+            contextArea = parent;
             depth++;
         }
+
+        const contextId = Number(contextArea.id);
+
+        // Return only the context area and its descendants
         return areas.filter(a => {
-            if (Number(a.id) === Number(rootId)) return true;
+            if (Number(a.id) === contextId) return true;
             let pId = a.parent_id;
             let d2 = 0;
-            while (pId !== null && d2 < 5) {
-                if (Number(pId) === Number(rootId)) return true;
-                pId = areas.find(curr => Number(curr.id) === Number(pId))?.parent_id || null;
+            while (pId !== null && d2 < 10) { // Increased depth for deep hierarchies
+                if (Number(pId) === contextId) return true;
+                const parent = areas.find(curr => Number(curr.id) === Number(pId));
+                pId = parent?.parent_id || null;
                 d2++;
             }
             return false;
@@ -248,7 +281,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     // --- AUTOMATIC CAMERA LOCK ---
     useEffect(() => {
         if (editMode) {
-            showView('front');
+            showView('top');
             setZoom(1);
             setPan({ x: 0, y: 0 });
         }
@@ -267,9 +300,13 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const visibleSensors = useMemo(() => {
         return markersWithDrag.filter(marker => {
             if (areaId) {
-                const isDirect = Number(marker.sensor.area_id) === Number(areaId);
+                const sensorAreaId = typeof marker.sensor.area === 'object' && marker.sensor.area !== null
+                    ? marker.sensor.area.id
+                    : (marker.sensor.area || marker.sensor.area_id);
+
+                const isDirect = Number(sensorAreaId) === Number(areaId);
                 let rollsUp = false;
-                let checkArea = marker.sensor.area || areas?.find(a => Number(a.id) === Number(marker.sensor.area_id));
+                let checkArea = typeof marker.sensor.area === 'object' ? marker.sensor.area : areas?.find(a => Number(a.id) === Number(sensorAreaId));
                 let depth = 0;
                 while (checkArea && depth < 5) {
                     if (Number(checkArea.id) === Number(areaId) || Number(checkArea.parent_id) === Number(areaId)) {
@@ -490,11 +527,10 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
 
     return (
         <Card
-            ref={containerRef}
             className="floor-plan-card h-100 shadow-3d border-0 overflow-hidden"
             stretch
             style={{
-                background: darkModeStatus ? '#0F172A' : '#F8FAFC',
+                background: darkModeStatus ? '#0F172A' : '#F1F5F9',
                 ...style,
                 position: 'relative'
             }}
@@ -502,15 +538,15 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
             <CardHeader className="bg-transparent border-bottom border-light py-3 px-4">
                 <div className="d-flex justify-content-between align-items-center w-100">
                     <div className="d-flex align-items-center gap-3">
-                        <CardTitle className="mb-0 fs-5 fw-bold d-flex align-items-center text-white" style={{ letterSpacing: '0.5px' }}>
+                        <CardTitle className={`mb-0 fs-5 fw-bold d-flex align-items-center ${darkModeStatus ? 'text-white' : 'text-dark'}`} style={{ letterSpacing: '0.5px' }}>
                             Interactive 3D Sensor Environment
                         </CardTitle>
 
                         {editMode && <Badge color="warning" isLight className="ms-2 px-2 py-1">EDIT MODE</Badge>}
 
-                        <div className="d-flex align-items-center gap-2 border-start ps-3 border-light border-opacity-10">
+                        <div className={`d-flex align-items-center gap-2 border-start ps-3 ${darkModeStatus ? 'border-light border-opacity-10' : 'border-dark border-opacity-10'}`}>
                             {/* View Presets */}
-                            <div className="btn-group btn-group-sm bg-dark bg-opacity-20 rounded-pill p-1 border border-light border-opacity-10 shadow-sm" style={{ backdropFilter: 'blur(8px)' }}>
+                            <div className={`btn-group btn-group-sm ${darkModeStatus ? 'bg-dark bg-opacity-20' : 'bg-secondary bg-opacity-10'} rounded-pill p-1 border ${darkModeStatus ? 'border-light border-opacity-10' : 'border-dark border-opacity-10'} shadow-sm`} style={{ backdropFilter: 'blur(8px)' }}>
                                 {[
                                     { id: 'perspective', label: '3D', icon: 'keyboard_arrow_up' },
                                     { id: 'front', label: 'F', icon: 'none' },
@@ -522,9 +558,14 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                                     <button
                                         key={view.id}
                                         onClick={() => showView(view.id)}
-                                        className="btn btn-sm px-2 py-1 text-muted hover-text-primary d-flex align-items-center border-0"
+                                        className="btn btn-sm px-2 py-1 d-flex align-items-center border-0"
                                         title={view.label}
-                                        style={{ fontSize: '0.75rem', fontWeight: 700, minWidth: '28px', color: 'rgba(255,255,255,0.6)' }}
+                                        style={{
+                                            fontSize: '0.75rem',
+                                            fontWeight: 700,
+                                            minWidth: '28px',
+                                            color: darkModeStatus ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'
+                                        }}
                                     >
                                         {view.icon !== 'none' ? <Icon icon={view.icon} size="sm" /> : <span>{view.label}</span>}
                                     </button>
@@ -532,7 +573,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                             </div>
 
                             {/* Reset & Tools */}
-                            <div className="d-flex gap-1 bg-dark bg-opacity-20 rounded-pill p-1 border border-light border-opacity-10 shadow-sm" style={{ backdropFilter: 'blur(8px)' }}>
+                            <div className={`d-flex gap-1 ${darkModeStatus ? 'bg-dark bg-opacity-20' : 'bg-secondary bg-opacity-10'} rounded-pill p-1 border ${darkModeStatus ? 'border-light border-opacity-10' : 'border-dark border-opacity-10'} shadow-sm`} style={{ backdropFilter: 'blur(8px)' }}>
                                 <button onClick={resetPan} className="btn btn-sm btn-link text-muted p-1 hover-text-primary" title="Center Pan">
                                     <Icon icon="center_focus_strong" size="sm" />
                                 </button>
@@ -564,16 +605,16 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                     {/* Far Right Nav Buttons */}
                     <div className="d-flex align-items-center gap-2">
                         <button
-                            className="btn btn-sm bg-dark bg-opacity-40 text-primary rounded shadow-sm border border-light border-opacity-10 p-0 d-flex align-items-center justify-content-center"
+                            className={`btn btn-sm ${darkModeStatus ? 'bg-dark bg-opacity-40' : 'bg-secondary bg-opacity-10'} text-primary rounded shadow-sm border ${darkModeStatus ? 'border-light border-opacity-10' : 'border-dark border-opacity-10'} p-0 d-flex align-items-center justify-content-center`}
                             style={{ width: '32px', height: '32px' }}
                             onClick={() => setShowBoundaryHint(!showBoundaryHint)}
                         >
                             <Icon icon="help_outline" size="sm" />
                         </button>
                         <button
-                            className="btn btn-sm bg-dark bg-opacity-40 text-primary rounded shadow-sm border border-light border-opacity-10 p-0 d-flex align-items-center justify-content-center"
-                            style={{ width: '32px', height: '32px' }}
+                            className={`btn btn-sm ${darkModeStatus ? 'bg-dark bg-opacity-40' : 'bg-secondary bg-opacity-10'} text-primary rounded shadow-sm border ${darkModeStatus ? 'border-light border-opacity-10' : 'border-dark border-opacity-10'} p-0 d-flex align-items-center justify-content-center`}
                             onClick={resetView}
+                            style={{ width: '32px', height: '32px' }}
                         >
                             <Icon icon="home" size="sm" />
                         </button>
@@ -670,7 +711,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                 <div style={{
                     position: 'absolute',
                     right: '12px',
-                    top: '150px',
+                    top: '280px',
                     bottom: '80px',
                     width: '130px',
                     zIndex: 1002,
@@ -692,6 +733,28 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                             </div>
                         ))}
                 </div>
+
+                {/* INTEGRATED ROOM SETTINGS PANEL (Floating Overlay) */}
+                {!editMode && (
+                    <div style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '12px',
+                        zIndex: 1005,
+                        width: '320px',
+                        maxHeight: 'calc(100% - 24px)',
+                        overflowY: 'auto',
+                        pointerEvents: 'auto'
+                    }} className="hide-scrollbar">
+                        <RoomSettingsPanel
+                            settings={roomSettings!}
+                            onSettingsChange={onSettingsChange!}
+                            currentArea={currentArea}
+                            areas={areas}
+                            sensors={sensors}
+                        />
+                    </div>
+                )}
                 <div
                     ref={containerRef}
                     className="canvas-container-3d h-100"
@@ -706,7 +769,9 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDrop}
                     style={{
-                        background: 'radial-gradient(circle at center, #0F172A 0%, #050810 100%)',
+                        background: darkModeStatus
+                            ? 'radial-gradient(circle at center, #0F172A 0%, #050810 100%)'
+                            : 'radial-gradient(circle, rgb(205, 208, 215) 0%, rgb(5, 8, 16) 100%)',
                     }}
                 >
                     <div className="scene-pivot-3d" style={{
@@ -765,6 +830,9 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                                 sensorY={sensors.find(s => s.id === selectedSensor)?.y_coordinate}
                                 canvasWidth={canvasDimensions.width}
                                 canvasHeight={canvasDimensions.height}
+                                z_min={selectedSensorBoundary?.z_min}
+                                z_max={selectedSensorBoundary?.z_max}
+                                opacity={selectedSensorBoundary?.boundary_opacity_val}
                             />
                         )}
                     </div>

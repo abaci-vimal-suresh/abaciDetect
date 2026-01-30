@@ -21,7 +21,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "@mui/material", "@mui/icons-material", "@mui/lab",],
+    include: ["react", "react-dom", "@mui/material", "@mui/icons-material", "@mui/lab", "three", "@react-three/fiber"],
     esbuildOptions: {
       target: "esnext",
     },

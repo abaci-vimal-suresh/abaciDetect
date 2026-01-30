@@ -17,13 +17,14 @@ interface Use3DInteractionsProps {
     zoom: number;
     rotationY: number;
     canvasDimensions: { width: number; height: number };
+    areaBounds?: { width: number; height: number };
     sensorMarkers: any[];
-    selectedSensor: string | null;
+    selectedSensor: string | number | null;
     selectedSensorBoundary: any | null; // Added
-    setSelectedSensor: (id: string | null) => void;
+    setSelectedSensor: (id: string | number | null) => void;
     projectTo3DFloor: (clientX: number, clientY: number) => Point | null;
-    onSensorDrop?: (id: string, x: number, y: number) => void;
-    onBoundaryUpdate?: (id: string, boundary: any) => void;
+    onSensorDrop?: (id: string | number, x: number, y: number) => void;
+    onBoundaryUpdate?: (id: string | number, boundary: any) => void;
 }
 
 export const use3DInteractions = ({
@@ -31,6 +32,7 @@ export const use3DInteractions = ({
     zoom,
     rotationY,
     canvasDimensions,
+    areaBounds,
     sensorMarkers,
     selectedSensor,
     selectedSensorBoundary,
@@ -39,15 +41,15 @@ export const use3DInteractions = ({
     onSensorDrop,
     onBoundaryUpdate
 }: Use3DInteractionsProps) => {
-    const [isDragging3DSensor, setIsDragging3DSensor] = useState<string | null>(null);
-    const [localDraggedSensorPos, setLocalDraggedSensorPos] = useState<{ id: string; x: number; y: number } | null>(null);
+    const [isDragging3DSensor, setIsDragging3DSensor] = useState<string | number | null>(null);
+    const [localDraggedSensorPos, setLocalDraggedSensorPos] = useState<{ id: string | number; x: number; y: number } | null>(null);
     const [isDrawingBoundary3D, setIsDrawingBoundary3D] = useState(false);
     const [isResizingBoundary3D, setIsResizingBoundary3D] = useState<string | null>(null); // 'n' | 's' | 'e' | 'w' | 'ne' | ...
     const [boundaryStart3D, setBoundaryStart3D] = useState<Point | null>(null);
     const [sensorBoundary, setSensorBoundary] = useState<Boundary | null>(null); // This is pixels for drawing preview
     const [dragStart3D, setDragStart3D] = useState<Point>({ x: 0, y: 0 });
 
-    const handleSensorMouseDown3D = useCallback((e: React.MouseEvent, sensorId: string) => {
+    const handleSensorMouseDown3D = useCallback((e: React.MouseEvent, sensorId: string | number) => {
         if (!editMode) return;
 
         // Always select when clicking
@@ -163,15 +165,29 @@ export const use3DInteractions = ({
 
         const handleMouseUp = () => {
             if ((isDrawingBoundary3D || isResizingBoundary3D) && sensorBoundary && selectedSensor) {
+                // Use areaBounds if available, otherwise fallback to canvasDimensions
+                const refWidth = areaBounds?.width || canvasDimensions.width;
+                const refHeight = areaBounds?.height || canvasDimensions.height;
+
                 const normalizedBoundary = {
-                    x_min: sensorBoundary.x / canvasDimensions.width,
-                    x_max: (sensorBoundary.x + sensorBoundary.width) / canvasDimensions.width,
-                    y_min: sensorBoundary.y / canvasDimensions.height,
-                    y_max: (sensorBoundary.y + sensorBoundary.height) / canvasDimensions.height,
-                    z_min: 0,
-                    z_max: 1
+                    x_min: sensorBoundary.x / refWidth,
+                    x_max: (sensorBoundary.x + sensorBoundary.width) / refWidth,
+                    y_min: sensorBoundary.y / refHeight,
+                    y_max: (sensorBoundary.y + sensorBoundary.height) / refHeight,
+                    z_min: selectedSensorBoundary?.z_min ?? 0,
+                    z_max: selectedSensorBoundary?.z_max ?? 1,
+                    boundary_opacity_val: selectedSensorBoundary?.boundary_opacity_val ?? 0.5
                 };
-                onBoundaryUpdate?.(selectedSensor, normalizedBoundary);
+
+                // Explicitly calculate the 4 vertex points for the user
+                const vertices = [
+                    [normalizedBoundary.x_min, normalizedBoundary.y_min], // Top-Left
+                    [normalizedBoundary.x_max, normalizedBoundary.y_min], // Top-Right
+                    [normalizedBoundary.x_max, normalizedBoundary.y_max], // Bottom-Right
+                    [normalizedBoundary.x_min, normalizedBoundary.y_max]  // Bottom-Left
+                ];
+
+                onBoundaryUpdate?.(selectedSensor, { ...normalizedBoundary, vertices } as any);
                 setSensorBoundary(null);
             }
 

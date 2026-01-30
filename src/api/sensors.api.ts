@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React from 'react';
 import axios from 'axios';
 import { authAxios as axiosInstance } from '../axiosInstance';
 import { queryKeys } from '../lib/queryClient';
@@ -6,7 +7,8 @@ import {
     Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, UserActivity, UserRole, UserGroup,
     UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData,
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
-    AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData
+    AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
+    SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 import {
@@ -14,7 +16,7 @@ import {
     mockSensorGroups, mockPersonnelData, mockUserActivities, mockAlerts, mockAlertTrends, mockSensorConfigs, mockAlertConfigurations
 } from '../mockData/sensors';
 
-export const USE_MOCK_DATA = true;
+export const USE_MOCK_DATA = false;
 
 
 export const useUsers = () => {
@@ -174,34 +176,6 @@ export const useUserActivity = (userId: string) => {
 };
 
 
-// Helper to adapt Backend API Area format to Frontend Area Interface
-const mapBackendAreaToFrontend = (backendArea: any): Area => {
-    return {
-        id: backendArea.id,
-        name: backendArea.name,
-        sensor_count: backendArea.sensor_count,
-        parent_id: backendArea.parent_id,
-
-        // Map Backend 'area_plan' -> Frontend 'floor_plan_url'
-        floor_plan_url: backendArea.area_plan,
-
-        // Map Backend User Objects -> Frontend IDs
-        person_in_charge_ids: backendArea.person_in_charge
-            ? backendArea.person_in_charge.map((u: any) => u.id)
-            : [],
-
-        // Recursively map subareas
-        subareas: backendArea.subareas
-            ? backendArea.subareas.map(mapBackendAreaToFrontend)
-            : [],
-
-        // Map or Default other optional fields
-        is_room: backendArea.subareas && backendArea.subareas.length === 0, // Heuristic: if leaf node, arguably a room? Or default false.
-        floor_level: null, // Backend doesn't seem to send this yet, defaulting
-        floor_height: 250, // Default
-    };
-};
-
 export const useAreas = () => {
     return useQuery({
         queryKey: ['areas'],
@@ -215,8 +189,8 @@ export const useAreas = () => {
             // Spec: GET /api/areas/?include_subareas=true
             const { data } = await axiosInstance.get('/administration/areas/?include_subareas=true');
 
-            // Adapt the list
-            return data.map(mapBackendAreaToFrontend) as Area[];
+            // Return raw data
+            return data as Area[];
         },
     });
 };
@@ -227,23 +201,52 @@ export const useCreateArea = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async (data: { name: string; person_in_charge_ids?: number[] }) => {
+        mutationFn: async (data: FormData | { name: string; area_type?: string; parent_id?: number | null; person_in_charge_ids?: number[] }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // Handle both FormData and plain object
+                let formValues: any;
+                if (data instanceof FormData) {
+                    formValues = {};
+                    data.forEach((value, key) => {
+                        if (key === 'person_in_charge_ids') {
+                            formValues[key] = formValues[key] || [];
+                            formValues[key].push(Number(value));
+                        } else if (key === 'area_plan') {
+                            formValues[key] = value; // Keep File object
+                        } else {
+                            formValues[key] = value;
+                        }
+                    });
+                } else {
+                    formValues = data;
+                }
+
                 const newId = Math.max(...mockAreas.map(a => a.id)) + 1;
                 const newArea: Area = {
                     id: newId,
-                    name: data.name,
+                    name: formValues.name,
+                    area_type: formValues.area_type || 'building',
+                    parent_id: formValues.parent_id ? Number(formValues.parent_id) : null,
                     sensor_count: 0,
                     subareas: [],
-                    parent_id: null,
-                    person_in_charge_ids: data.person_in_charge_ids || []
+                    person_in_charge_ids: formValues.person_in_charge_ids || [],
+                    // Handle file upload in mock mode
+                    floor_plan_url: formValues.area_plan instanceof File
+                        ? URL.createObjectURL(formValues.area_plan)
+                        : null,
                 };
                 mockAreas.push(newArea);
                 saveMockData();
                 return newArea;
             }
-            const response = await axiosInstance.post('/administration/areas/', data);
+
+            // Real backend: Send FormData or JSON
+            const headers = data instanceof FormData
+                ? { 'Content-Type': 'multipart/form-data' }
+                : {};
+            const response = await axiosInstance.post('/administration/areas/', data, { headers });
             return response.data as Area;
         },
         onSuccess: (newArea) => {
@@ -310,31 +313,69 @@ export const useCreateSubArea = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async (data: { name: string; areaId: string; person_in_charge_ids?: number[] }) => {
+        mutationFn: async (data: FormData | { name: string; areaId: string; area_type?: string; person_in_charge_ids?: number[] }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                const parentArea = mockAreas.find(a => a.id == Number(data.areaId));
+
+                // Handle both FormData and plain object
+                let formValues: any;
+                let parentId: number;
+
+                if (data instanceof FormData) {
+                    formValues = {};
+                    data.forEach((value, key) => {
+                        if (key === 'person_in_charge_ids') {
+                            formValues[key] = formValues[key] || [];
+                            formValues[key].push(Number(value));
+                        } else if (key === 'area_plan') {
+                            formValues[key] = value; // Keep File object
+                        } else if (key === 'parent_id') {
+                            parentId = Number(value);
+                        } else {
+                            formValues[key] = value;
+                        }
+                    });
+                } else {
+                    formValues = data;
+                    parentId = Number(data.areaId);
+                }
+
+                const parentArea = mockAreas.find(a => a.id == parentId);
                 const newId = Math.max(...mockAreas.map(a => a.id)) + 1;
                 const newArea: Area = {
                     id: newId,
-                    name: data.name,
-                    parent_id: Number(data.areaId),
+                    name: formValues.name,
+                    area_type: formValues.area_type || 'others',
+                    parent_id: parentId,
                     floor_level: parentArea?.floor_level ?? 0,
                     is_room: true,
                     sensor_count: 0,
                     subareas: [],
-                    person_in_charge_ids: data.person_in_charge_ids || []
+                    person_in_charge_ids: formValues.person_in_charge_ids || [],
+                    // Handle file upload in mock mode
+                    floor_plan_url: formValues.area_plan instanceof File
+                        ? URL.createObjectURL(formValues.area_plan)
+                        : null,
                 };
                 mockAreas.push(newArea);
                 saveMockData();
                 return newArea;
             }
-            const response = await axiosInstance.post(`/administration/areas/`, {
-                name: data.name,
-                parent_id: Number(data.areaId),
-                person_in_charge_ids: data.person_in_charge_ids
-            });
-            return response.data as Area;
+
+            // Real backend: Send FormData or JSON
+            if (data instanceof FormData) {
+                const headers = { 'Content-Type': 'multipart/form-data' };
+                const response = await axiosInstance.post('/administration/areas/', data, { headers });
+                return response.data as Area;
+            } else {
+                const response = await axiosInstance.post(`/administration/areas/`, {
+                    name: data.name,
+                    area_type: data.area_type || 'others',
+                    parent_id: Number(data.areaId),
+                    person_in_charge_ids: data.person_in_charge_ids
+                });
+                return response.data as Area;
+            }
         },
         onSuccess: (newSubArea, variables) => {
             queryClient.invalidateQueries({ queryKey: ['areas'] });
@@ -419,8 +460,15 @@ export const useSubAreaSensors = (subAreaId: string) => {
     return useQuery({
         queryKey: ['subareas', subAreaId, 'sensors'],
         queryFn: async () => {
-            const { data } = await axiosInstance.get(`/devices/sensors/?area_id=${subAreaId}`);
-            return data as Sensor[];
+            const { data: backendResponse } = await axiosInstance.get<Sensor[] | { results: Sensor[] }>(
+                `/devices/sensors/?area=${subAreaId}`
+            );
+
+            const backendSensors = Array.isArray(backendResponse)
+                ? backendResponse
+                : (backendResponse as any).results || [];
+
+            return backendSensors as Sensor[];
         },
         enabled: !!subAreaId,
     });
@@ -478,9 +526,13 @@ export const useSensors = (filters?: {
                 return sensors;
             }
 
+            // ============================================
+            // REAL BACKEND INTEGRATION WITH ADAPTER
+            // ============================================
+
             // Build query params
             const params = new URLSearchParams();
-            if (filters?.areaId) params.append('area_id', filters.areaId);
+            if (filters?.areaId) params.append('area', filters.areaId);  // Backend uses 'area' not 'area_id'
             if (filters?.status && filters.status !== 'all') {
                 params.append('is_active', (filters.status === 'active').toString());
             }
@@ -488,8 +540,18 @@ export const useSensors = (filters?: {
             if (filters?.is_online !== undefined) params.append('is_online', filters.is_online.toString());
             if (filters?.search) params.append('search', filters.search);
 
-            const { data } = await axiosInstance.get(`/devices/sensors/?${params.toString()}`);
-            return data as Sensor[];
+            // Fetch sensors from backend
+            const { data: backendResponse } = await axiosInstance.get<Sensor[] | { results: Sensor[], count: number }>(
+                `/devices/sensors/?${params.toString()}`
+            );
+
+            // Handle pagination (DRF returns { results: [], count: ... } for paginated responses)
+            const backendSensors = Array.isArray(backendResponse)
+                ? backendResponse
+                : (backendResponse as any).results || [];
+
+            // Return raw data
+            return backendSensors as Sensor[];
         },
         staleTime: 2 * 60 * 1000,
         gcTime: 5 * 60 * 1000,
@@ -498,21 +560,23 @@ export const useSensors = (filters?: {
 
 
 
-export const useSensor = (sensorId: string) => {
-    const isSensor4 = sensorId === '4';
+export const useSensor = (sensorId: string | number) => {
+    const isSensor4 = sensorId.toString() === '4';
 
     return useQuery({
-        queryKey: queryKeys.sensors.detail(sensorId),
+        queryKey: queryKeys.sensors.detail(sensorId.toString()),
         queryFn: async () => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                const sensor = mockSensors.find(s => s.id == sensorId);
+                const sensor = mockSensors.find(s => s.id.toString() == sensorId.toString());
                 if (!sensor) throw new Error('Sensor not found');
                 return sensor;
             }
-            // Use /devices/{id}/latest to get real-time sensor data
-            const { data } = await axiosInstance.get(`/devices/sensors/${sensorId}/`);
-            return data as Sensor;
+
+            // Fetch sensor metadata from backend
+            const { data: backendSensor } = await axiosInstance.get<Sensor>(`/devices/sensors/${sensorId}/`);
+
+            return backendSensor;
         },
         enabled: !!sensorId,
         // For sensor_4, use longer stale time since WebSocket provides real-time updates
@@ -520,6 +584,119 @@ export const useSensor = (sensorId: string) => {
         // Keep previous data while updating to prevent loading flicker
         placeholderData: (previousData) => previousData,
     });
+};
+
+// ============================================
+// NEW: SENSOR READINGS HOOKS
+// ============================================
+
+/**
+ * Fetch latest sensor readings for a specific sensor
+ * 
+ * Backend stores readings separately from sensor metadata.
+ * This hook fetches the latest reading by MAC address.
+ * 
+ * @param sensorId - Sensor ID to fetch readings for
+ * @param options - Query options (refetch interval, etc.)
+ */
+export const useSensorReadings = (sensorId: string | number, options?: { refetchInterval?: number }) => {
+    return useQuery({
+        queryKey: ['sensorReadings', sensorId.toString()],
+        queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                // In mock mode, readings are embedded in sensor object
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                const sensor = mockSensors.find(s => s.id.toString() === sensorId.toString());
+                return sensor?.sensor_data;
+            }
+
+            // ============================================
+            // REAL BACKEND: Fetch readings separately
+            // ============================================
+
+            // Step 1: Get sensor to find MAC address
+            const { data: backendSensor } = await axiosInstance.get<Sensor>(
+                `/devices/sensors/${sensorId}/`
+            );
+
+            if (!backendSensor.mac_address) {
+                console.warn(`Sensor ${sensorId} has no MAC address, cannot fetch readings`);
+                return null;
+            }
+
+            // Step 2: Fetch latest reading by MAC address
+            const { data: readings } = await axiosInstance.get<any[]>(
+                '/devices/readings/',
+                {
+                    params: {
+                        mac_address: backendSensor.mac_address,
+                        limit: 1  // Only get the latest reading
+                    }
+                }
+            );
+
+            if (!readings || readings.length === 0) {
+                console.warn(`No readings found for sensor ${sensorId}`);
+                return null;
+            }
+
+            const latestReading = readings[0];
+
+            console.log('📡 Fetched sensor reading:', {
+                sensorId,
+                mac: backendSensor.mac_address,
+                timestamp: latestReading.timestamp,
+                temp: latestReading.sensors.temp_c
+            });
+
+            return latestReading;
+        },
+        enabled: !!sensorId,
+        // Poll for real-time updates (every 10 seconds by default)
+        refetchInterval: options?.refetchInterval || 10000,
+        staleTime: 5000, // Consider data stale after 5 seconds
+    });
+};
+
+/**
+ * Fetch sensor with combined metadata + latest readings
+ * 
+ * This hook combines:
+ * 1. Sensor metadata (from useSensor)
+ * 2. Latest readings (from useSensorReadings)
+ * 
+ * Perfect for 3D visualization where you need both!
+ * 
+ * @param sensorId - Sensor ID
+ * @param options - Query options
+ */
+export const useSensorWithReadings = (sensorId: string | number, options?: { refetchInterval?: number }) => {
+    const sensorQuery = useSensor(sensorId);
+    const readingsQuery = useSensorReadings(sensorId, options);
+
+    // Combine the results
+    const combinedData = React.useMemo(() => {
+        if (!sensorQuery.data) return undefined;
+
+        // If we have readings, combine them with sensor metadata
+        if (readingsQuery.data) {
+            return { ...sensorQuery.data, sensor_data: readingsQuery.data };
+        }
+
+        // Otherwise, return sensor without readings
+        return sensorQuery.data;
+    }, [sensorQuery.data, readingsQuery.data]);
+
+    return {
+        data: combinedData,
+        isLoading: sensorQuery.isLoading || readingsQuery.isLoading,
+        isError: sensorQuery.isError || readingsQuery.isError,
+        error: sensorQuery.error || readingsQuery.error,
+        refetch: () => {
+            sensorQuery.refetch();
+            readingsQuery.refetch();
+        },
+    };
 };
 
 
@@ -631,14 +808,14 @@ export const useRemoteSensorConfig = (sensorType?: string) => {
 };
 
 
-export const useSensorConfigurations = (sensorId: string) => {
+export const useSensorConfigurations = (sensorId: string | number) => {
     return useQuery({
-        queryKey: ['sensorConfigurations', sensorId],
+        queryKey: ['sensorConfigurations', sensorId.toString()],
         queryFn: async () => {
             if (!sensorId) return [];
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 300));
-                return mockSensorConfigs[sensorId] || [];
+                return mockSensorConfigs[sensorId.toString()] || [];
             }
             // GET /api/sensors/{id}/configurations/
             const { data } = await axiosInstance.get(`/devices/sensors/${sensorId}/configurations/`);
@@ -653,13 +830,13 @@ export const useAddSensorConfiguration = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ sensorId, config }: { sensorId: string; config: SensorConfig }) => {
+        mutationFn: async ({ sensorId, config }: { sensorId: string | number; config: SensorConfig }) => {
             // POST /api/sensors/{id}/add_configuration/
             const { data } = await axiosInstance.post(`/devices/sensors/${sensorId}/add_configuration/`, config);
             return data as SensorConfig;
         },
         onSuccess: (_, { sensorId }) => {
-            queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId] });
+            queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId.toString()] });
             showSuccessNotification('Configuration added successfully!');
         },
         onError: (error: any) => {
@@ -677,10 +854,10 @@ export const useUpdateSensorConfiguration = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ sensorId, configId, config }: { sensorId: string; configId: number; config: Partial<SensorConfig> }) => {
+        mutationFn: async ({ sensorId, configId, config }: { sensorId: string | number; configId: number; config: Partial<SensorConfig> }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                const sensorConfigs = mockSensorConfigs[sensorId];
+                const sensorConfigs = mockSensorConfigs[sensorId.toString()];
                 if (sensorConfigs) {
                     const configIndex = sensorConfigs.findIndex(c => c.id === configId);
                     if (configIndex > -1) {
@@ -696,7 +873,7 @@ export const useUpdateSensorConfiguration = () => {
             return data as SensorConfig;
         },
         onSuccess: (_, { sensorId }) => {
-            queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId] });
+            queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId.toString()] });
             showSuccessNotification('Configuration updated successfully!');
         },
         onError: (error: any) => {
@@ -714,12 +891,12 @@ export const useDeleteSensorConfiguration = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ sensorId, configId }: { sensorId: string; configId: number }) => {
+        mutationFn: async ({ sensorId, configId }: { sensorId: string | number; configId: number }) => {
             // DELETE /api/devices/sensors/{id}/delete_configuration/?config_id={id}
             await axiosInstance.delete(`/devices/sensors/${sensorId}/delete_configuration/?config_id=${configId}`);
         },
         onSuccess: (_, { sensorId }) => {
-            queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId] });
+            queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId.toString()] });
             showSuccessNotification('Configuration deleted successfully!');
         },
         onError: (error: any) => {
@@ -756,7 +933,7 @@ export const useUpdateSensorPersonnel = () => {
             sensorId,
             personnelData
         }: {
-            sensorId: string;
+            sensorId: string | number;
             personnelData: {
                 personnel_in_charge?: string;
                 personnel_contact?: string;
@@ -765,7 +942,7 @@ export const useUpdateSensorPersonnel = () => {
         }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                const sensor = mockSensors.find(s => s.id == sensorId);
+                const sensor = mockSensors.find(s => s.id.toString() == sensorId.toString());
                 if (sensor) {
                     // Update personnel fields
                     if (personnelData.personnel_in_charge !== undefined) {
@@ -789,7 +966,7 @@ export const useUpdateSensorPersonnel = () => {
         },
         onSuccess: (updatedSensor, { sensorId }) => {
             // Invalidate relevant queries
-            queryClient.invalidateQueries({ queryKey: queryKeys.sensors.detail(sensorId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.sensors.detail(sensorId.toString()) });
             queryClient.invalidateQueries({ queryKey: queryKeys.sensors.lists() });
             showSuccessNotification('Personnel information updated successfully!');
         },
@@ -813,12 +990,12 @@ export const useUpdatePersonnelInCharge = () => {
             sensorId,
             personnelName
         }: {
-            sensorId: string;
+            sensorId: string | number;
             personnelName: string;
         }) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                const sensor = mockSensors.find(s => s.id == sensorId);
+                const sensor = mockSensors.find(s => s.id.toString() == sensorId.toString());
                 if (sensor) {
                     sensor.personnel_in_charge = personnelName;
                     saveMockData();
@@ -833,7 +1010,7 @@ export const useUpdatePersonnelInCharge = () => {
             return data as Sensor;
         },
         onSuccess: (updatedSensor, { sensorId }) => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.sensors.detail(sensorId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.sensors.detail(String(sensorId)) });
             queryClient.invalidateQueries({ queryKey: queryKeys.sensors.lists() });
             showSuccessNotification('Personnel in charge updated successfully!');
         },
@@ -854,11 +1031,16 @@ export const useUpdateSensor = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async ({ sensorId, data }: { sensorId: string; data: Partial<Sensor> }) => {
+        mutationFn: async ({ sensorId, data }: { sensorId: string | number; data: Partial<SensorUpdatePayload> }) => {
+            // DIRECT BACKEND: No transformation
+            // We assume the UI now provides the correct backend structure (x_val, etc.)
+            const backendPayload = data;
+
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                const sensor = mockSensors.find(s => s.id == sensorId);
+                const sensor = mockSensors.find(s => s.id.toString() == sensorId.toString());
                 if (sensor) {
+                    // Update mock data using transformed structure for consistency
                     Object.assign(sensor, data);
                     saveMockData();
                     return sensor;
@@ -866,11 +1048,11 @@ export const useUpdateSensor = () => {
                 throw new Error('Sensor not found');
             }
 
-            const { data: response } = await axiosInstance.patch(`/devices/sensors/${sensorId}/`, data);
+            const { data: response } = await axiosInstance.patch(`/devices/sensors/${sensorId}/`, backendPayload);
             return response as Sensor;
         },
         onSuccess: (_, { sensorId }) => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.sensors.detail(sensorId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.sensors.detail(String(sensorId)) });
             queryClient.invalidateQueries({ queryKey: queryKeys.sensors.lists() });
             showSuccessNotification('Sensor updated successfully!');
         },
@@ -890,10 +1072,10 @@ export const useDeleteSensor = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
-        mutationFn: async (sensorId: string) => {
+        mutationFn: async (sensorId: string | number) => {
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                const index = mockSensors.findIndex(s => s.id == sensorId);
+                const index = mockSensors.findIndex(s => s.id.toString() == sensorId.toString());
                 if (index > -1) {
                     mockSensors.splice(index, 1);
                     saveMockData();
@@ -1293,7 +1475,7 @@ export const useAllSensorsLatestData = () => {
                     timestamp: s.last_heartbeat
                 }));
             }
-            const { data } = await axiosInstance.get('/devices/sensors/latest-data/');
+            const { data } = await axiosInstance.get('/devices/latest-data/');
             return data;
         },
         refetchInterval: 5000, // Refresh every 5 seconds
@@ -1961,6 +2143,166 @@ export const useSaveAlertConfiguration = () => {
         },
         onError: (err) => {
             showErrorNotification('Failed to save alert configuration');
+        }
+    });
+};
+
+// ============================================
+// ALERT FILTERS & ACTIONS API
+// ============================================
+
+/**
+ * Fetch all alert filters
+ * GET /api/devices/alert-filters/
+ */
+export const useAlertFilters = (filters?: { search?: string; area_id?: number }) => {
+    return useQuery({
+        queryKey: ['alertFilters', filters],
+        queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return [
+                    {
+                        id: 1,
+                        name: "HighAirQuality_Critical",
+                        description: "Trigger actions for critical air quality alerts",
+                        area_list: [1, 2, 3],
+                        sensor_config_types: [5, 6, 7],
+                        action_for_min: true,
+                        action_for_max: true,
+                        action_for_threshold: true,
+                        sensor_groups: [1],
+                        actions: [1, 2, 3],
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }
+                ] as AlertFilter[];
+            }
+
+            const params = new URLSearchParams();
+            if (filters?.search) params.append('search', filters.search);
+            if (filters?.area_id) params.append('area_id', filters.area_id.toString());
+
+            const { data } = await axiosInstance.get(`/devices/alert-filters/?${params.toString()}`);
+            return data as AlertFilter[];
+        }
+    });
+};
+
+/**
+ * Fetch all actions
+ * GET /api/administration/actions/
+ */
+export const useActions = (filters?: { search?: string; type?: string; is_active?: boolean }) => {
+    return useQuery({
+        queryKey: ['actions', filters],
+        queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return [
+                    {
+                        id: 1,
+                        name: "SendAQIAlert_ToBuildings",
+                        type: "email",
+                        recipients: [1, 2, 5],
+                        device_list: "device_001,device_002,device_003",
+                        message_type: "critical",
+                        message_template: "Alert: {alert_type} detected in {area_name}. Sensor: {sensor_name}. Description: {description}",
+                        is_active: true,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }
+                ] as Action[];
+            }
+
+            const params = new URLSearchParams();
+            if (filters?.search) params.append('search', filters.search);
+            if (filters?.type) params.append('type', filters.type);
+            if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+
+            const { data } = await axiosInstance.get(`/administration/actions/?${params.toString()}`);
+            return data as Action[];
+        }
+    });
+};
+
+/**
+ * Create new alert filter
+ * POST /api/devices/alert-filters/
+ */
+export const useCreateAlertFilter = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (filterData: Partial<AlertFilter>) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return { ...filterData, id: Math.floor(Math.random() * 1000) } as AlertFilter;
+            }
+            const { data } = await axiosInstance.post('/devices/alert-filters/', filterData);
+            return data as AlertFilter;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alertFilters'] });
+            showSuccessNotification('Alert filter created successfully');
+        },
+        onError: () => {
+            showErrorNotification('Failed to create alert filter');
+        }
+    });
+};
+
+/**
+ * Update alert filter
+ * PATCH /api/devices/alert-filters/{id}/
+ */
+export const useUpdateAlertFilter = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: number; data: Partial<AlertFilter> }) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return { id, ...data } as AlertFilter;
+            }
+            const { data: response } = await axiosInstance.patch(`/devices/alert-filters/${id}/`, data);
+            return response as AlertFilter;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alertFilters'] });
+            showSuccessNotification('Alert filter updated successfully');
+        },
+        onError: () => {
+            showErrorNotification('Failed to update alert filter');
+        }
+    });
+};
+
+/**
+ * Delete alert filter
+ * DELETE /api/devices/alert-filters/{id}/
+ */
+export const useDeleteAlertFilter = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                return { success: true };
+            }
+            await axiosInstance.delete(`/devices/alert-filters/${id}/`);
+            return { success: true };
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alertFilters'] });
+            showSuccessNotification('Alert filter deleted successfully');
+        },
+        onError: () => {
+            showErrorNotification('Failed to delete alert filter');
         }
     });
 };

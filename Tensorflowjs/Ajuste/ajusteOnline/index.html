@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    
+    <link rel="stylesheet" href="style.css">
+    <!-- importar TFjs - Import Tfjs -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.11.7"></script>
+    <!-- Importar Google Chart - Import Google Chart  -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    
+    <title>Ajuste de curva TFjs</title>
+</head>
+
+<body>
+    <div id='grafOriginal' class='graficas'></div>
+    <div id='grafInicial' class='graficas'></div>
+    <div id='grafFinal' class='graficas'></div>
+    <div id='resultado'>
+        <h3>Resumen - summary</h3>
+        <table id='tabla'>
+            <thead>
+                <tr>
+                    <th>Coeficientes</th>
+                    <th>a</th>
+                    <th>b</th>
+                    <th>c</th>
+                    <th>d</th>
+                </tr>
+            </thead>
+            <tbody id="tablaCuerpo">
+            </tbody>
+        </table>
+    </div>
+    <script src="index.js"></script>
+</body>
+
+</html>

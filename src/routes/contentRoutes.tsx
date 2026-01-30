@@ -19,6 +19,8 @@ const HaloSensorMainArea = lazy(() => import('../pages/HALO/Sensors/SensorMainAr
 const HaloSensorGroups = lazy(() => import('../pages/HALO/Sensors/SensorGroups'));
 const HaloSensorGroupManager = lazy(() => import('../pages/HALO/Sensors/SensorGroupManager'));
 const HaloTimeTravel = lazy(() => import('../pages/HALO/TimeTravel/TimeTravelPlayback'));
+const AutocadViewer = lazy(() => import('../pages/HALO/Autocad/AutocadViewer'));
+const ThreeDPage = lazy(() => import('../pages/HALO/ThreeD/ThreeDPage'));
 
 const HaloSensorMonitoringDashboard = lazy(() => import('../pages/HALO/Sensors/SensorMonitoringDashboard'));
 
@@ -128,6 +130,16 @@ const RouteConfig: CustomRouteConfig[] = [
 	{
 		path: '/halo/timetravel',
 		element: <HaloTimeTravel />,
+		allowedTo: ['Admin', 'Viewer'],
+	},
+	{
+		path: '/halo/autocad',
+		element: <AutocadViewer />,
+		allowedTo: ['Admin', 'Viewer'],
+	},
+	{
+		path: '/halo/threed',
+		element: <ThreeDPage />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
 

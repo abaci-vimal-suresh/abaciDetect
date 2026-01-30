@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+  <title>control1</title>
+
+  <!-- CSS -->
+  <style>
+    button {
+      background: none;
+      border: 1px solid lightgrey;
+      border-radius: 25%;
+    }
+
+    button:focus {
+      background-color: #eceff1
+    }
+  </style>
+</head>
+
+<body>
+  <!-- UI -->
+  <h3>Control leds</h3>
+  <button id='green' onclick="changeState(this.id)">
+    <img src="./img/greenLed.png" alt="green Led">
+  </button>
+  <button id='blue' onclick="changeState(this.id)">
+    <img src="./img/blueLed.png" alt="blue Led">
+  </button>
+
+  <!-- FUNCTIONS -->
+  <script>
+    const changeState = async (led) => {
+      const response = await fetch('http://192.168.1.55:3000/controled',
+        {
+          method: 'POST',
+          body: JSON.stringify({ led }),
+          headers: { 'Content-Type': 'application/json' }
+        }
+      )
+      await response
+    }
+  </script>
+
+</body>
+
+</html>

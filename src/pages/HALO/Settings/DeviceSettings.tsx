@@ -19,6 +19,7 @@ import DeviceConfigSection from './sections/DeviceConfigSection';
 import ThresholdManagementSection from './sections/ThresholdManagementSection';
 // import CalibrationMaintenanceSection from './sections/CalibrationMaintenanceSection';
 import SafetySecuritySection from './sections/SafetySecuritySection';
+import AlertFilterSection from './sections/AlertFilterSection';
 // import DataLoggingSection from './sections/DataLoggingSection';
 // import DisplayPreferencesSection from './sections/DisplayPreferencesSection';
 // import AdvancedFeaturesSection from './sections/AdvancedFeaturesSection';
@@ -44,6 +45,12 @@ const settingsSections: SettingsSection[] = [
         label: 'Thresholds & Configuration',
         icon: 'Speed',
         component: ThresholdManagementSection,
+    },
+    {
+        id: 'alert-filters',
+        label: 'Alert Filters',
+        icon: 'FilterList',
+        component: AlertFilterSection,
     },
     // {
     //     id: 'monitoring',

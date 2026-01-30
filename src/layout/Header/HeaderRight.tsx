@@ -54,6 +54,7 @@ const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChild
 							<Button
 								// eslint-disable-next-line react/jsx-props-no-spreading
 								{...styledBtn}
+								isNeumorphic
 								color={privacyShield ? 'success' : 'light'}
 								isLight={!privacyShield}
 								icon={privacyShield ? 'Security' : 'GppBad'}
@@ -71,6 +72,7 @@ const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChild
 							<Button
 								// eslint-disable-next-line react/jsx-props-no-spreading
 								{...styledBtn}
+								isNeumorphic
 								onClick={() => setDarkModeStatus(!darkModeStatus)}
 								className='btn-only-icon'
 								data-tour='dark-mode'
@@ -90,6 +92,7 @@ const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChild
 							<Button
 								// eslint-disable-next-line react/jsx-props-no-spreading
 								{...styledBtn}
+								isNeumorphic
 								icon={fullScreenStatus ? 'FullscreenExit' : 'Fullscreen'}
 								onClick={() => setFullScreenStatus(!fullScreenStatus)}
 								aria-label='Toggle fullscreen'
@@ -107,6 +110,7 @@ const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChild
 							)}
 							<Button
 								{...styledBtn}
+								isNeumorphic
 								icon='Notifications'
 								onClick={() => setOffcanvasStatus(true)}
 								aria-label='Notifications'

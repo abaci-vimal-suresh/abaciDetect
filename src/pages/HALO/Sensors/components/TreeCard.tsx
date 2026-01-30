@@ -24,6 +24,7 @@ interface TreeCardProps {
     users?: any[];
     onNodeClick?: (node: TreeNode) => void;
     onEditNode?: (nodeContent: any) => void; // New callback for editing area
+    onDeleteNode?: (nodeContent: any) => void; // New callback for deleting area
 }
 
 interface NodePosition {
@@ -31,7 +32,7 @@ interface NodePosition {
     y: number;
 }
 
-const TreeCard: React.FC<TreeCardProps> = ({ data, sensors = [], users = [], onNodeClick, onEditNode }) => {
+const TreeCard: React.FC<TreeCardProps> = ({ data, sensors = [], users = [], onNodeClick, onEditNode, onDeleteNode }) => {
     const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -55,7 +56,10 @@ const TreeCard: React.FC<TreeCardProps> = ({ data, sensors = [], users = [], onN
         const mainAreas = data.filter(area => !area.parent_id || area.parent_id === null);
 
         const buildNode = (area: any): TreeNode => {
-            const areaSensors = sensors.filter(s => s.area?.id === area.id || s.area_name === area.name);
+            const areaSensors = sensors.filter(s => {
+                const sensorAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : s.area;
+                return sensorAreaId === area.id || s.area_name === area.name;
+            });
 
             return {
                 id: area.id,
@@ -253,6 +257,19 @@ const TreeCard: React.FC<TreeCardProps> = ({ data, sensors = [], users = [], onN
                                     title="Edit Area"
                                 >
                                     <Icon icon="Edit" size="sm" />
+                                </button>
+                            )}
+                            {node.type === 'area' && onDeleteNode && (
+                                <button
+                                    className={`${styles.expandButton} ms-1`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const originalArea = data.find(a => a.id === node.id);
+                                        if (originalArea) onDeleteNode(originalArea);
+                                    }}
+                                    title="Delete Area"
+                                >
+                                    <Icon icon="Delete" size="sm" />
                                 </button>
                             )}
                         </div>
