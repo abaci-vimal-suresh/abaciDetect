@@ -2,6 +2,7 @@ import React, { FC } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import Icon from '../../components/icon/Icon';
+import Button from '../../components/bootstrap/Button';
 
 interface IBrandProps {
 	asideStatus: boolean;
@@ -20,15 +21,16 @@ const Brand: FC<IBrandProps> = ({ asideStatus, setAsideStatus, isDark }) => {
 					</div>
 				</Link>
 			</div>
-			<button
+			<Button
 				type='button'
-				className='btn brand-aside-toggle'
+				className='brand-aside-toggle'
 				aria-label='Toggle Aside'
+				isNeumorphic
 				onClick={() => setAsideStatus(!asideStatus)}>
 				<Icon icon='FirstPage' className='brand-aside-toggle-close' />
 				<Icon icon='LastPage' className='brand-aside-toggle-open' />
-			</button>
-		</div>
+			</Button>
+		</div >
 	);
 };
 Brand.propTypes = {

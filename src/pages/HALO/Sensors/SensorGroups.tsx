@@ -12,7 +12,7 @@ import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../components/bootstrap/Modal';
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
-import { useAreas, useCreateSubArea, useAddSensorToSubArea, useSensors, useUsers } from '../../../api/sensors.api';
+import { useAreas, useCreateSubArea, useAddSensorToSubArea, useSensors, useUsers, useUpdateSensor, useDeleteArea } from '../../../api/sensors.api';
 import { Area, User } from '../../../types/sensor';
 import Checks from '../../../components/bootstrap/forms/Checks';
 import Label from '../../../components/bootstrap/forms/Label';
@@ -24,6 +24,7 @@ import { mockRoomBoundaries, mockSensors, saveMockData, mockAreas } from '../../
 import { DEFAULT_ROOM_SETTINGS } from '../utils/roomSettings.utils';
 import { filterSensors, getSensorsByArea, getAvailableSensors } from '../utils/sensorData.utils';
 import EditAreaModal from './modals/EditAreaModal';
+import Swal from 'sweetalert2';
 
 const SensorGroups = () => {
     const { areaId } = useParams<{ areaId: string }>();
@@ -32,6 +33,8 @@ const SensorGroups = () => {
     const { data: users } = useUsers();
     const createSubAreaMutation = useCreateSubArea();
     const addSensorMutation = useAddSensorToSubArea();
+    const updateSensorMutation = useUpdateSensor();
+    const deleteAreaMutation = useDeleteArea();
     const queryClient = useQueryClient();
 
     const [isSubAreaModalOpen, setIsSubAreaModalOpen] = useState(false);
@@ -40,6 +43,12 @@ const SensorGroups = () => {
     const [isSensorModalOpen, setIsSensorModalOpen] = useState(false);
     const [selectedSensorId, setSelectedSensorId] = useState('');
     const [subAreaName, setSubAreaName] = useState('');
+    const [subAreaType, setSubAreaType] = useState('others');
+    const [subAreaPlan, setSubAreaPlan] = useState<File | null>(null);
+    const [subOffsetX, setSubOffsetX] = useState(0);
+    const [subOffsetY, setSubOffsetY] = useState(0);
+    const [subOffsetZ, setSubOffsetZ] = useState(0);
+    const [subScaleFactor, setSubScaleFactor] = useState(1.0);
     const [personInChargeIds, setPersonInChargeIds] = useState<number[]>([]);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -50,10 +59,14 @@ const SensorGroups = () => {
     const [roomSettings, setRoomSettings] = useState<RoomVisibilitySettings>(DEFAULT_ROOM_SETTINGS);
 
     // Use server-side filtering for sensors
+    // NOTE: When using Real Data, we should fetch ALL sensors because:
+    // 1. The backend "area" filter might be strict (direct assignment only), excluding sub-areas.
+    // 2. We need "available sensors" (unassigned) to show in the palette.
+    // 3. The frontend `getSensorsByArea` function handles the hierarchical filtering correctly.
     const { data: allSensors, isLoading: sensorsLoading } = useSensors({
         search: searchTerm || undefined,
         status: filterStatus,
-        areaId: areaId  // Filter by current area
+        // areaId: areaId  <-- REMOVED: Fetch all sensors so we get unassigned ones and sub-area ones
     });
 
     // Find the current area
@@ -90,23 +103,40 @@ const SensorGroups = () => {
             return;
         }
 
-        createSubAreaMutation.mutate(
-            {
-                name: subAreaName,
-                areaId: areaId || '',
-                person_in_charge_ids: personInChargeIds
+        // Create FormData for file upload support
+        const formData = new FormData();
+        formData.append('name', subAreaName);
+        formData.append('area_type', subAreaType);
+        formData.append('parent_id', areaId || '');
+        formData.append('offset_x', subOffsetX.toString());
+        formData.append('offset_y', subOffsetY.toString());
+        formData.append('offset_z', subOffsetZ.toString());
+        formData.append('scale_factor', subScaleFactor.toString());
+
+        if (subAreaPlan) {
+            formData.append('area_plan', subAreaPlan);
+        }
+
+        personInChargeIds.forEach(id => {
+            formData.append('person_in_charge_ids', id.toString());
+        });
+
+        createSubAreaMutation.mutate(formData, {
+            onSuccess: () => {
+                saveMockData();
+                queryClient.invalidateQueries({ queryKey: ['areas'] });
+                setIsSubAreaModalOpen(false);
+                setSubAreaName('');
+                setSubAreaType('others');
+                setSubAreaPlan(null);
+                setSubOffsetX(0);
+                setSubOffsetY(0);
+                setSubOffsetZ(0);
+                setSubScaleFactor(1.0);
+                setPersonInChargeIds([]);
+                setError('');
             },
-            {
-                onSuccess: () => {
-                    saveMockData();
-                    queryClient.invalidateQueries({ queryKey: ['areas'] });
-                    setIsSubAreaModalOpen(false);
-                    setSubAreaName('');
-                    setPersonInChargeIds([]);
-                    setError('');
-                },
-            }
-        );
+        });
     };
 
     const handleAddSensor = () => {
@@ -132,6 +162,54 @@ const SensorGroups = () => {
         setIsEditModalOpen(true);
     };
 
+    const handleDeleteArea = (e: React.MouseEvent, area: Area) => {
+        e.stopPropagation();
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: `You are about to delete sub-area "${area.name}". This action cannot be undone and may affect sensors assigned here.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            background: document.documentElement.className.includes('dark') ? '#1a1a1a' : '#fff',
+            color: document.documentElement.className.includes('dark') ? '#fff' : '#000',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteAreaMutation.mutate(area.id);
+            }
+        });
+    };
+
+    const handleUnassignSensor = (e: React.MouseEvent, sensor: any) => {
+        e.stopPropagation();
+
+        Swal.fire({
+            title: 'Unassign Sensor?',
+            text: `Are you sure you want to remove "${sensor.name}" from this area?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, unassign',
+            cancelButtonText: 'Cancel',
+            customClass: {
+                popup: 'swal-neumorphic-popup',
+                confirmButton: 'btn btn-neumorphic text-danger mx-2',
+                cancelButton: 'btn btn-neumorphic mx-2'
+            },
+            buttonsStyling: false,
+            background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1a1a1a' : '#e0e5ec',
+            color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#4d4d4d',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                updateSensorMutation.mutate({
+                    sensorId: sensor.id,
+                    data: { area: null }
+                });
+            }
+        });
+    };
+
     if (isLoading || sensorsLoading) {
         return (
             <PageWrapper title='Sub Areas'>
@@ -151,45 +229,52 @@ const SensorGroups = () => {
                     </Breadcrumb>
                 </SubHeaderLeft>
                 <SubHeaderRight>
-                    <div className='btn-group me-3'>
+                    <div className='d-flex gap-3'>
+                        <div className='d-flex gap-2'>
+                            <Button
+                                isNeumorphic
+                                color={viewMode === 'grid' ? 'primary' : 'secondary'}
+                                className={viewMode === 'grid' ? 'active' : ''}
+                                icon='GridView'
+                                onClick={() => setViewMode('grid')}
+                                title='Grid View'
+                            >
+                                Grid
+                            </Button>
+                            <Button
+                                isNeumorphic
+                                color={viewMode === 'floorplan' ? 'primary' : 'light'}
+                                className={viewMode === 'floorplan' ? 'active' : ''}
+                                icon='Map'
+                                onClick={() => setViewMode('floorplan')}
+                                title='Floor Plan'
+                            >
+                                Map
+                            </Button>
+                        </div>
                         <Button
-                            color={viewMode === 'grid' ? 'primary' : 'secondary'}
-                            icon='GridView'
-                            onClick={() => setViewMode('grid')}
-                            title='Grid View'
+                            isNeumorphic
+                            color='info'
+                            icon='Add'
+                            onClick={() => setIsSubAreaModalOpen(true)}
                         >
-                            Grid
+                            Create Sub Area
                         </Button>
                         <Button
-                            color={viewMode === 'floorplan' ? 'primary' : 'light'}
-                            icon='Map'
-                            onClick={() => setViewMode('floorplan')}
-                            title='Floor Plan'
+                            isNeumorphic
+                            color='primary'
+                            icon='Sensors'
+                            onClick={() => setIsSensorModalOpen(true)}
                         >
-                            Map
+                            Add Sensor
                         </Button>
                     </div>
-                    <Button
-                        color='info'
-                        icon='Add'
-                        className='me-2'
-                        onClick={() => setIsSubAreaModalOpen(true)}
-                    >
-                        Create Sub Area
-                    </Button>
-                    <Button
-                        color='primary'
-                        icon='Sensors'
-                        onClick={() => setIsSensorModalOpen(true)}
-                    >
-                        Add Sensor
-                    </Button>
                 </SubHeaderRight>
             </SubHeader>
             <Page container='fluid'>
                 {viewMode === 'floorplan' ? (
                     <div className='row'>
-                        <div className='col-md-9'>
+                        <div className='col-md-12'>
                             <div className='d-flex justify-content-between align-items-center'>
                                 {/* <h5 className='mb-0'>
                                     {isEditMode ? 'Edit Sensor Layout' : 'Floor Plan Visualization'}
@@ -226,29 +311,32 @@ const SensorGroups = () => {
                                 onSettingsChange={setRoomSettings}
                                 floorPlanUrl={uploadedFloorPlan || currentArea?.floor_plan_url}
                                 roomBoundaries={mockRoomBoundaries[Number(areaId)]}
+                                currentArea={currentArea}
                                 onSensorClick={(sensor) => !isEditMode && navigate(`/halo/sensors/detail/${sensor.id}`)}
-                                onSensorDrop={(sensorId, x, y, areaId) => {
-                                    const sensorIndex = mockSensors.findIndex(s => s.id === sensorId);
-                                    if (sensorIndex > -1) {
-                                        mockSensors[sensorIndex].x_coordinate = x;
-                                        mockSensors[sensorIndex].y_coordinate = y;
-                                        mockSensors[sensorIndex].area_id = areaId || undefined;
-                                        const targetArea = areas?.find(a => a.id === areaId);
-                                        mockSensors[sensorIndex].area = targetArea;
-                                        if (targetArea && targetArea.floor_level !== undefined) {
-                                            mockSensors[sensorIndex].floor_level = targetArea.floor_level;
+                                onSensorDrop={(sensorId, x, y, dropAreaId) => {
+                                    const id = Number(sensorId);
+                                    // Use direct mutation instead of mock data
+                                    updateSensorMutation.mutate({
+                                        sensorId: id,
+                                        data: {
+                                            id,
+                                            x_val: x,
+                                            y_val: y,
+                                            area: dropAreaId ? Number(dropAreaId) : (areaId ? Number(areaId) : null)
                                         }
-                                        saveMockData();
-                                        queryClient.invalidateQueries({ queryKey: ['sensors'] });
-                                    }
+                                    });
                                 }}
                                 onSensorRemove={(sensorId) => {
-                                    const sensorIndex = mockSensors.findIndex(s => s.id === sensorId);
-                                    if (sensorIndex > -1) {
-                                        (mockSensors[sensorIndex] as any).x_coordinate = undefined;
-                                        (mockSensors[sensorIndex] as any).y_coordinate = undefined;
-                                        (mockSensors[sensorIndex] as any).area = null;
-                                    }
+                                    const id = Number(sensorId);
+                                    updateSensorMutation.mutate({
+                                        sensorId: id,
+                                        data: {
+                                            id,
+                                            x_val: null as any, // Send null to clear
+                                            y_val: null as any,
+                                            area: null
+                                        }
+                                    });
                                 }}
                                 onImageUpload={currentArea?.floor_level !== undefined && currentArea?.floor_level !== null ? (file) => {
                                     const reader = new FileReader();
@@ -258,23 +346,24 @@ const SensorGroups = () => {
                                     reader.readAsDataURL(file);
                                 } : undefined}
                                 onBoundaryUpdate={(sensorId, boundary) => {
-                                    const sensorIndex = mockSensors.findIndex(s => s.id === sensorId);
-                                    if (sensorIndex > -1) {
-                                        mockSensors[sensorIndex].boundary = boundary;
-                                    }
+                                    const id = Number(sensorId);
+                                    updateSensorMutation.mutate({
+                                        sensorId: id,
+                                        data: {
+                                            id,
+                                            x_min: boundary.x_min,
+                                            x_max: boundary.x_max,
+                                            y_min: boundary.y_min,
+                                            y_max: boundary.y_max,
+                                            z_min: boundary.z_min ?? 0,
+                                            z_max: boundary.z_max ?? 1,
+                                            boundary_opacity_val: boundary.boundary_opacity_val ?? 0.5
+                                        }
+                                    });
                                 }}
                                 editMode={isEditMode}
                                 initialZoom={0.5}
                                 initialView="front"
-                            />
-                        </div>
-                        <div className='col-md-3'>
-                            <RoomSettingsPanel
-                                settings={roomSettings}
-                                onSettingsChange={setRoomSettings}
-                                currentArea={currentArea}
-                                areas={areas || []}
-                                sensors={allSensors || []}
                             />
                         </div>
                     </div>
@@ -364,6 +453,15 @@ const SensorGroups = () => {
                                                             className='me-1'
                                                             title='Edit Sub Area'
                                                         />
+                                                        <Button
+                                                            color='danger'
+                                                            isLight
+                                                            icon='Delete'
+                                                            size='sm'
+                                                            onClick={(e: any) => handleDeleteArea(e, subArea)}
+                                                            className='me-1'
+                                                            title='Delete Sub Area'
+                                                        />
                                                         <Badge color='success' isLight>
                                                             Active
                                                         </Badge>
@@ -434,6 +532,15 @@ const SensorGroups = () => {
                                             <CardHeader>
                                                 <CardTitle>{sensor.name}</CardTitle>
                                                 <CardActions>
+                                                    <Button
+                                                        color='danger'
+                                                        isLight
+                                                        icon='LinkOff'
+                                                        size='sm'
+                                                        onClick={(e: any) => handleUnassignSensor(e, sensor)}
+                                                        className='me-2'
+                                                        title='Remove from Area'
+                                                    />
                                                     <Badge color={sensor.is_active ? 'success' : 'danger'} isLight>
                                                         {sensor.is_active ? 'Active' : 'Inactive'}
                                                     </Badge>
@@ -570,46 +677,126 @@ const SensorGroups = () => {
                     </ModalTitle>
                 </ModalHeader>
                 <ModalBody>
-                    <FormGroup label='Sub Area Name'>
-                        <input
-                            type='text'
-                            className={`form-control ${error ? 'is-invalid' : ''}`}
-                            placeholder='e.g. West Wing, Server Room, etc.'
-                            value={subAreaName}
-                            onChange={(e) => {
-                                setSubAreaName(e.target.value);
-                                setError('');
-                            }}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') handleCreateSubArea();
-                            }}
-                        />
-                        {error && <div className='invalid-feedback'>{error}</div>}
-                    </FormGroup>
+                    <div className='row g-3'>
+                        <div className='col-12'>
+                            <FormGroup label='Sub Area Name'>
+                                <input
+                                    type='text'
+                                    className={`form-control ${error ? 'is-invalid' : ''}`}
+                                    placeholder='e.g. West Wing, Server Room, etc.'
+                                    value={subAreaName}
+                                    onChange={(e) => {
+                                        setSubAreaName(e.target.value);
+                                        setError('');
+                                    }}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') handleCreateSubArea();
+                                    }}
+                                />
+                                {error && <div className='invalid-feedback'>{error}</div>}
+                            </FormGroup>
+                        </div>
 
-                    <div className='mt-4'>
-                        <Label>Assign Persons In Charge</Label>
-                        <p className='text-muted small mb-2'>Assign one or more users to manage this sub area.</p>
-                        <div className='p-3 border rounded bg-light bg-opacity-10' style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                            {users?.map((user: User) => (
-                                <div key={user.id} className='mb-2'>
-                                    <Checks
-                                        id={`user-${user.id}`}
-                                        label={`${user.first_name} ${user.last_name} (@${user.username})`}
-                                        checked={personInChargeIds.includes(user.id)}
-                                        onChange={() => {
-                                            setPersonInChargeIds(prev =>
-                                                prev.includes(user.id)
-                                                    ? prev.filter(id => id !== user.id)
-                                                    : [...prev, user.id]
-                                            );
-                                        }}
-                                    />
-                                </div>
-                            ))}
-                            {(!users || users.length === 0) && (
-                                <div className='text-muted small'>No users found.</div>
-                            )}
+                        <div className='col-12'>
+                            <FormGroup label='Area Type'>
+                                <select
+                                    className='form-select'
+                                    value={subAreaType}
+                                    onChange={(e) => setSubAreaType(e.target.value)}
+                                >
+                                    <option value='floor'>Floor</option>
+                                    <option value='room'>Room</option>
+                                    <option value='zone'>Zone</option>
+                                    <option value='others'>Others</option>
+                                </select>
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-12'>
+                            <FormGroup label='Floor Plan Image (Optional)'>
+                                <Input
+                                    type='file'
+                                    accept='image/*'
+                                    onChange={(e: any) => setSubAreaPlan(e.target.files[0])}
+                                />
+                                {subAreaPlan && (
+                                    <div className='mt-2 small text-success'>
+                                        <Icon icon='CheckCircle' size='sm' className='me-1' />
+                                        {subAreaPlan.name}
+                                    </div>
+                                )}
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-md-4'>
+                            <FormGroup label='Offset X'>
+                                <Input
+                                    type='number'
+                                    step={0.1}
+                                    value={subOffsetX}
+                                    onChange={(e: any) => setSubOffsetX(parseFloat(e.target.value) || 0)}
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-md-4'>
+                            <FormGroup label='Offset Y'>
+                                <Input
+                                    type='number'
+                                    step={0.1}
+                                    value={subOffsetY}
+                                    onChange={(e: any) => setSubOffsetY(parseFloat(e.target.value) || 0)}
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-md-4'>
+                            <FormGroup label='Offset Z'>
+                                <Input
+                                    type='number'
+                                    step={0.1}
+                                    value={subOffsetZ}
+                                    onChange={(e: any) => setSubOffsetZ(parseFloat(e.target.value) || 0)}
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-12'>
+                            <FormGroup label='Scale Factor'>
+                                <Input
+                                    type='number'
+                                    step={0.1}
+                                    min={0.1}
+                                    value={subScaleFactor}
+                                    onChange={(e: any) => setSubScaleFactor(parseFloat(e.target.value) || 1.0)}
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-12'>
+                            <Label>Assign Persons In Charge</Label>
+                            <p className='text-muted small mb-2'>Assign one or more users to manage this sub area.</p>
+                            <div className='p-3 border rounded bg-light bg-opacity-10' style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                {users?.map((user: User) => (
+                                    <div key={user.id} className='mb-2'>
+                                        <Checks
+                                            id={`user-${user.id}`}
+                                            label={`${user.first_name} ${user.last_name} (@${user.username})`}
+                                            checked={personInChargeIds.includes(user.id)}
+                                            onChange={() => {
+                                                setPersonInChargeIds(prev =>
+                                                    prev.includes(user.id)
+                                                        ? prev.filter(id => id !== user.id)
+                                                        : [...prev, user.id]
+                                                );
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+                                {(!users || users.length === 0) && (
+                                    <div className='text-muted small'>No users found.</div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </ModalBody>

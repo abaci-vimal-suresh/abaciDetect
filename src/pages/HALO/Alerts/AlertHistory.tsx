@@ -10,7 +10,10 @@ import Icon from '../../../components/icon/Icon';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import useTablestyle from '../../../hooks/useTablestyles';
-import { useAlertTrends, useAlerts, useUpdateAlert, useDeleteAlert, useCreateAlert, useSensors, useAreas } from '../../../api/sensors.api';
+import {
+    useAlertTrends, useAlerts, useUpdateAlert, useDeleteAlert, useCreateAlert, useSensors, useAreas,
+    useAlertFilters, useCreateAlertFilter, useUpdateAlertFilter, useDeleteAlertFilter, useActions
+} from '../../../api/sensors.api';
 import Modal, { ModalHeader, ModalBody, ModalFooter } from '../../../components/bootstrap/Modal';
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
@@ -73,6 +76,14 @@ const AlertHistory = () => {
     const [remarks, setRemarks] = useState('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [alertToDelete, setAlertToDelete] = useState<AlertHistoryItem | null>(null);
+
+    // Alert Filters State
+    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+    const { data: alertFilters } = useAlertFilters();
+    const { data: actions } = useActions();
+    const createFilterMutation = useCreateAlertFilter();
+    const updateFilterMutation = useUpdateAlertFilter();
+    const deleteFilterMutation = useDeleteAlertFilter();
 
     const handleStatusUpdate = async () => {
         if (!selectedAlert || !targetStatus) return;
@@ -389,6 +400,9 @@ const AlertHistory = () => {
                     />
                 </SubHeaderLeft>
                 <SubHeaderRight>
+                    <Button color="info" isLight icon="FilterList" onClick={() => setIsFilterModalOpen(true)} className="me-2">
+                        Manage Filters
+                    </Button>
                     <Button color="primary" isLight icon="Add" onClick={() => setIsCreateModalOpen(true)}>
                         Trigger Alert
                     </Button>
@@ -750,6 +764,87 @@ const AlertHistory = () => {
                     </Button>
                     <Button color="danger" onClick={confirmDelete}>
                         Delete Log
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+            {/* Alert Filters Management Modal */}
+            <Modal isOpen={isFilterModalOpen} setIsOpen={setIsFilterModalOpen} size="xl">
+                <ModalHeader setIsOpen={setIsFilterModalOpen}>
+                    Manage Alert Filters & Automations
+                </ModalHeader>
+                <ModalBody>
+                    <div className="alert alert-info d-flex align-items-center mb-4">
+                        <Icon icon="Info" className="me-2" />
+                        <div>
+                            Alert filters allow you to define rules for when specific actions (Email, SMS, Webhooks) should be triggered based on sensor data.
+                        </div>
+                    </div>
+
+                    <ThemeProvider theme={theme}>
+                        <MaterialTable
+                            title="Active Alert Filters"
+                            columns={[
+                                { title: 'Filter Name', field: 'name' },
+                                { title: 'Description', field: 'description' },
+                                {
+                                    title: 'Rules',
+                                    render: (row: any) => (
+                                        <div className="d-flex flex-wrap gap-1">
+                                            {row.action_for_threshold && <Badge color="warning" isLight>Threshold</Badge>}
+                                            {row.action_for_max && <Badge color="danger" isLight>Max</Badge>}
+                                            {row.action_for_min && <Badge color="info" isLight>Min</Badge>}
+                                        </div>
+                                    )
+                                },
+                                {
+                                    title: 'Actions',
+                                    render: (row: any) => (
+                                        <div className="d-flex flex-wrap gap-1">
+                                            {(row.actions as any[]).map((a: any) => (
+                                                <Badge key={a} color="primary" isLight>
+                                                    {typeof a === 'object' ? a.name : `Action ${a}`}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )
+                                }
+                            ]}
+                            data={alertFilters || []}
+                            options={{
+                                headerStyle: headerStyle(),
+                                rowStyle: rowStyle(),
+                                actionsColumnIndex: -1,
+                                search: true
+                            }}
+                            actions={[
+                                {
+                                    icon: 'Edit',
+                                    tooltip: 'Edit Filter',
+                                    onClick: (event, rowData) => { /* Logic to open edit form */ }
+                                },
+                                {
+                                    icon: 'Delete',
+                                    tooltip: 'Delete Filter',
+                                    onClick: (event, rowData: any) => {
+                                        if (window.confirm('Are you sure you want to delete this filter?')) {
+                                            deleteFilterMutation.mutate(rowData.id);
+                                        }
+                                    }
+                                },
+                                {
+                                    icon: 'Add',
+                                    tooltip: 'Add New Filter',
+                                    isFreeAction: true,
+                                    onClick: (event) => { /* Logic to open create form */ }
+                                }
+                            ]}
+                        />
+                    </ThemeProvider>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="secondary" isLight onClick={() => setIsFilterModalOpen(false)}>
+                        Close
                     </Button>
                 </ModalFooter>
             </Modal>

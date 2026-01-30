@@ -21,7 +21,7 @@ const getViewRotation = (view: string): Rotation => {
         case 'back': return { x: 75, y: 180 };
         case 'right': return { x: 25, y: -45 };
         case 'left': return { x: 25, y: 45 };
-        case 'top': return { x: 20, y: 0 };
+        case 'top': return { x: 0, y: 0 };
         case 'bottom': return { x: -20, y: 0 };
         case 'front': return { x: 75, y: 0 };
         case 'perspective':

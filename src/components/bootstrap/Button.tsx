@@ -18,10 +18,10 @@ import { TIcons } from '../../type/icons-type';
 
 interface IButtonGroupProps extends HTMLAttributes<HTMLDivElement> {
 	children:
-		| ReactElement<IButtonProps>[]
-		| ReactElement<IDropdownProps>[]
-		| JSX.Element
-		| JSX.Element[];
+	| ReactElement<IButtonProps>[]
+	| ReactElement<IDropdownProps>[]
+	| JSX.Element
+	| JSX.Element[];
 	className?: string;
 	isToolbar?: boolean;
 	isVertical?: boolean;
@@ -86,18 +86,18 @@ export interface IButtonProps
 	className?: string;
 	icon?: TIcons;
 	rounded?:
-		| 'default'
-		| 0
-		| 1
-		| 2
-		| 3
-		| 'bottom'
-		| 'top'
-		| 'circle'
-		| 'end'
-		| 'start'
-		| 'pill'
-		| null;
+	| 'default'
+	| 0
+	| 1
+	| 2
+	| 3
+	| 'bottom'
+	| 'top'
+	| 'circle'
+	| 'end'
+	| 'start'
+	| 'pill'
+	| null;
 	size?: 'sm' | null | 'lg';
 	isDisable?: boolean;
 	shadow?: null | 'none' | 'sm' | 'default' | 'lg';
@@ -106,6 +106,7 @@ export interface IButtonProps
 	isVisuallyHidden?: boolean;
 	onClick?(...args: unknown[]): unknown;
 	download?: true;
+	isNeumorphic?: boolean;
 }
 const Button = forwardRef<HTMLAnchorElement, IButtonProps>(
 	(
@@ -129,6 +130,7 @@ const Button = forwardRef<HTMLAnchorElement, IButtonProps>(
 			hoverShadow,
 			target,
 			isVisuallyHidden,
+			isNeumorphic,
 			...props
 		},
 		ref,
@@ -154,6 +156,7 @@ const Button = forwardRef<HTMLAnchorElement, IButtonProps>(
 				'btn-only-icon': !children || isVisuallyHidden,
 				disabled: isDisable,
 				active: isActive,
+				'btn-neumorphic': isNeumorphic,
 			},
 			className,
 		);
@@ -323,6 +326,7 @@ Button.propTypes = {
 		PropTypes.string,
 	]),
 	isVisuallyHidden: PropTypes.bool,
+	isNeumorphic: PropTypes.bool,
 };
 Button.defaultProps = {
 	children: null,
@@ -346,6 +350,7 @@ Button.defaultProps = {
 	isVisuallyHidden: false,
 	onClick: undefined,
 	download: undefined,
+	isNeumorphic: false,
 };
 
 export default Button;

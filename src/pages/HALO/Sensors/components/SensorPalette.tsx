@@ -12,12 +12,21 @@ interface SensorPaletteProps {
 }
 
 const SensorPalette: React.FC<SensorPaletteProps> = ({ sensors, currentAreaId, onDragStart }) => {
-    const localSensors = sensors.filter(s => s.area?.id === currentAreaId);
-    const globalSensors = sensors.filter(s => s.area?.id !== currentAreaId);
+    const localSensors = sensors.filter(s => {
+        const sAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : s.area;
+        return Number(sAreaId) === Number(currentAreaId);
+    });
+    
+    const globalSensors = sensors.filter(s => {
+        const sAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : s.area;
+        return Number(sAreaId) !== Number(currentAreaId);
+    });
 
     const renderSensorList = (list: Sensor[]) => (
         <div className={styles.sensorList}>
-            {list.map((sensor) => (
+            {list.map((sensor) => {
+                const status = sensor.status || (sensor.is_active ? 'Active' : 'Inactive');
+                return (
                 <div
                     key={sensor.id}
                     draggable
@@ -34,14 +43,14 @@ const SensorPalette: React.FC<SensorPaletteProps> = ({ sensors, currentAreaId, o
                         <div className="small text-muted">{sensor.sensor_type}</div>
                     </div>
                     <Badge
-                        color={sensor.status === 'Critical' ? 'danger' : 'success'}
+                        color={status === 'Critical' ? 'danger' : 'success'}
                         isLight
                         className="ms-auto"
                     >
-                        {sensor.status || 'Active'}
+                        {status}
                     </Badge>
                 </div>
-            ))}
+            )})}
         </div>
     );
 

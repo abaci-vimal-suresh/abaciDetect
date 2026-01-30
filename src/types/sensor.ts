@@ -1,3 +1,21 @@
+export interface BackendSensor {
+    id: number;
+    name: string;
+    mac_address: string;
+    ip_address?: string;
+    status?: string;
+    is_active?: boolean;
+    area?: number;
+    subarea_id?: number;
+}
+
+export interface BackendSensorReading {
+    id: number;
+    mac_address: string;
+    timestamp: string;
+    sensors: SensorReadings;
+}
+
 export interface SensorReadings {
     co: number;
     aqi: number;
@@ -80,7 +98,7 @@ export interface Sensor {
     heartbeat_interval?: number;
     subarea_id?: number;
     subarea?: SubArea | null;
-    area?: Area | null;
+    // area?: Area | null;
     // Extended sensor data
     device_name?: string;
     timestamp?: string;
@@ -107,6 +125,11 @@ export interface Sensor {
     y_coordinate?: number;
     z_coordinate?: number;
 
+    // Backend Coordinates (Direct Mapping)
+    x_val?: number;
+    y_val?: number;
+    z_val?: number;
+
     // Room properties
     room_name?: string;
     room_color?: string;
@@ -119,12 +142,28 @@ export interface Sensor {
         y_max: number;
         z_min?: number; // NEW: For volumetric boundaries
         z_max?: number;
+        boundary_opacity_val?: number;
     };
+
+    // Backend Boundary (Direct Mapping)
+    x_min?: number;
+    x_max?: number;
+    y_min?: number;
+    y_max?: number;
+    z_min?: number;
+    z_max?: number;
+    boundary_opacity_val?: number;
+
+    // Spherical properties
+    radius?: number;
+    hemisphere_opacity_val?: number;
 
     // NEW: 3D and Multi-floor support
     area_id?: number; // ✅ Foreign key to Area.id
     floor_level?: number; // Which floor this sensor is on
 
+    // Backend Area ID
+    area?: number | Area | null; // Can be ID or object depending on endpoint
 
     // Personnel Information
     personnel_in_charge?: string;     // Name of responsible person
@@ -156,11 +195,13 @@ export interface Area {
     parent_id: number | null; // ✅ Always use parent_id for hierarchy
 
     // Floor Plan Data
+    area_plan?: string; // ✅ Backend field for floor plan image
     floor_plan_image?: string;
     floor_plan_url?: string; // ✅ NEW: For uploaded floor plan persistence
     floor_plan_width?: number;
     floor_plan_height?: number;
     polygon_coords?: number[][];
+    boundary?: { x_min: number; x_max: number; y_min: number; y_max: number };
 
     // NEW: Multi-floor support
     floor_level?: number | null; // e.g., 0 = ground, 1 = first floor, -1 = basement
@@ -172,6 +213,12 @@ export interface Area {
     wall_opacity?: number;
     show_walls?: boolean;
     person_in_charge_ids?: number[]; // ✅ NEW: Link areas to multiple users
+
+    // NEW: 3D Positioning (Matches backend)
+    offset_x?: number;
+    offset_y?: number;
+    offset_z?: number;
+    scale_factor?: number;
 }
 
 export interface SubArea {
@@ -238,9 +285,41 @@ export interface SensorRegistrationData {
     ip_address?: string;
     mac_address?: string;
     description?: string;
-    area_id?: number;
     username?: string;
     password?: string;
+    area_id?: number;
+}
+
+export interface SensorUpdatePayload {
+    id?: number | string;
+    name?: string;
+    sensorId
+    sensor_type?: string;
+    area_id?: number | null;
+    area?: number | null;
+    x_coordinate?: number;
+    y_coordinate?: number;
+    z_coordinate?: number;
+    x_val?: number | null;
+    y_val?: number | null;
+    z_val?: number | null;
+    x_min?: number;
+    y_min?: number;
+    x_max?: number;
+    y_max?: number;
+    z_min?: number;
+    z_max?: number;
+    boundary_opacity_val?: number;
+    radius?: number;
+    hemisphere_opacity_val?: number;
+    boundary?: {
+        x_min: number;
+        y_min: number;
+        x_max: number;
+        y_max: number;
+        z_min?: number;
+        z_max?: number;
+    };
 }
 
 export interface SensorConfig {
@@ -550,4 +629,37 @@ export interface AlertConfigurationUpdateData {
     recipients?: AlertRecipient[];
     actions?: Partial<AlertActionConfig>;
     enabled?: boolean;
+}
+
+// ============================================
+// ALERT FILTERS & ACTIONS
+// ============================================
+
+export interface Action {
+    id: number;
+    name: string;
+    type: 'email' | 'sms' | 'push_notification' | 'webhook' | 'slack' | 'teams' | 'custom';
+    recipients: number[];
+    device_list?: string;
+    message_type?: string;
+    message_template: string;
+    is_active: boolean;
+    created_by?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AlertFilter {
+    id: number;
+    name: string;
+    description: string;
+    area_list: number[];
+    sensor_config_types: number[];
+    action_for_min: boolean;
+    action_for_max: boolean;
+    action_for_threshold: boolean;
+    sensor_groups: number[];
+    actions: number[] | Action[];
+    created_at: string;
+    updated_at: string;
 }

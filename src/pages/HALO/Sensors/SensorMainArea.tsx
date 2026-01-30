@@ -11,9 +11,10 @@ import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../components/bootstrap/Modal';
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
-import { useAreas, useCreateArea, useAddSensorToSubArea, useSensors, useUsers, useDeleteArea } from '../../../api/sensors.api';
+import { useAreas, useCreateArea, useAddSensorToSubArea, useSensors, useUsers, useDeleteArea, useUpdateArea } from '../../../api/sensors.api';
 import { Area, User } from '../../../types/sensor';
 import TreeCard from './components/TreeCard';
+import Swal from 'sweetalert2';
 import Checks from '../../../components/bootstrap/forms/Checks';
 import Label from '../../../components/bootstrap/forms/Label';
 import EditAreaModal from './modals/EditAreaModal';
@@ -27,6 +28,7 @@ const SensorMainArea = () => {
     const { data: users } = useUsers();
     const createAreaMutation = useCreateArea();
     const addSensorMutation = useAddSensorToSubArea();
+    const deleteAreaMutation = useDeleteArea();
 
     const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -35,6 +37,12 @@ const SensorMainArea = () => {
     const [selectedAreaId, setSelectedAreaId] = useState<string>('');
     const [selectedSensorId, setSelectedSensorId] = useState('');
     const [areaName, setAreaName] = useState('');
+    const [areaType, setAreaType] = useState('building');
+    const [areaPlan, setAreaPlan] = useState<File | null>(null);
+    const [offsetX, setOffsetX] = useState(0);
+    const [offsetY, setOffsetY] = useState(0);
+    const [offsetZ, setOffsetZ] = useState(0);
+    const [scaleFactor, setScaleFactor] = useState(1.0);
     const [personInChargeIds, setPersonInChargeIds] = useState<number[]>([]);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -63,20 +71,37 @@ const SensorMainArea = () => {
             return;
         }
 
-        createAreaMutation.mutate(
-            {
-                name: areaName,
-                person_in_charge_ids: personInChargeIds
+        // Create FormData for file upload support
+        const formData = new FormData();
+        formData.append('name', areaName);
+        formData.append('area_type', areaType);
+        formData.append('offset_x', offsetX.toString());
+        formData.append('offset_y', offsetY.toString());
+        formData.append('offset_z', offsetZ.toString());
+        formData.append('scale_factor', scaleFactor.toString());
+
+        if (areaPlan) {
+            formData.append('area_plan', areaPlan);
+        }
+
+        personInChargeIds.forEach(id => {
+            formData.append('person_in_charge_ids', id.toString());
+        });
+
+        createAreaMutation.mutate(formData, {
+            onSuccess: () => {
+                setIsAreaModalOpen(false);
+                setAreaName('');
+                setAreaType('building');
+                setAreaPlan(null);
+                setOffsetX(0);
+                setOffsetY(0);
+                setOffsetZ(0);
+                setScaleFactor(1.0);
+                setPersonInChargeIds([]);
+                setError('');
             },
-            {
-                onSuccess: () => {
-                    setIsAreaModalOpen(false);
-                    setAreaName('');
-                    setPersonInChargeIds([]);
-                    setError('');
-                },
-            }
-        );
+        });
     };
 
     const handleAddSensor = () => {
@@ -101,6 +126,26 @@ const SensorMainArea = () => {
         e.stopPropagation();
         setEditingArea(area);
         setIsEditModalOpen(true);
+    };
+
+    const handleDeleteArea = (e: React.MouseEvent, area: Area) => {
+        e.stopPropagation();
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: `You are about to delete "${area.name}". This action cannot be undone and may affect sensors assigned to this area.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            background: document.documentElement.className.includes('dark') ? '#1a1a1a' : '#fff',
+            color: document.documentElement.className.includes('dark') ? '#fff' : '#000',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteAreaMutation.mutate(area.id);
+            }
+        });
     };
 
     if (isLoading || sensorsLoading) {
@@ -168,6 +213,23 @@ const SensorMainArea = () => {
                         onEditNode={(area) => {
                             setEditingArea(area);
                             setIsEditModalOpen(true);
+                        }}
+                        onDeleteNode={(area) => {
+                            Swal.fire({
+                                title: 'Are you sure?',
+                                text: `You are about to delete "${area.name}".`,
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                cancelButtonColor: '#3085d6',
+                                confirmButtonText: 'Yes, delete it!',
+                                background: document.documentElement.className.includes('dark') ? '#1a1a1a' : '#fff',
+                                color: document.documentElement.className.includes('dark') ? '#fff' : '#000',
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    deleteAreaMutation.mutate(area.id);
+                                }
+                            });
                         }}
                     />
                 ) : (
@@ -240,6 +302,15 @@ const SensorMainArea = () => {
                                                     onClick={(e: any) => handleEditClick(e, area)}
                                                     className='me-1'
                                                     title='Edit Area'
+                                                />
+                                                <Button
+                                                    color='danger'
+                                                    isLight
+                                                    icon='Delete'
+                                                    size='sm'
+                                                    onClick={(e: any) => handleDeleteArea(e, area)}
+                                                    className='me-1'
+                                                    title='Delete Area'
                                                 />
                                                 <Badge color='success' isLight>
                                                     Active
@@ -321,46 +392,127 @@ const SensorMainArea = () => {
                     <ModalTitle id='create-area-title'>Create New Area</ModalTitle>
                 </ModalHeader>
                 <ModalBody>
-                    <FormGroup label='Area Name'>
-                        <input
-                            type='text'
-                            className={`form-control ${error ? 'is-invalid' : ''}`}
-                            placeholder='e.g. Building A, Ground Floor, etc.'
-                            value={areaName}
-                            onChange={(e) => {
-                                setAreaName(e.target.value);
-                                setError('');
-                            }}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') handleCreateArea();
-                            }}
-                        />
-                        {error && <div className='invalid-feedback'>{error}</div>}
-                    </FormGroup>
+                    <div className='row g-3'>
+                        <div className='col-12'>
+                            <FormGroup label='Area Name'>
+                                <input
+                                    type='text'
+                                    className={`form-control ${error ? 'is-invalid' : ''}`}
+                                    placeholder='e.g. Building A, Ground Floor, etc.'
+                                    value={areaName}
+                                    onChange={(e) => {
+                                        setAreaName(e.target.value);
+                                        setError('');
+                                    }}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') handleCreateArea();
+                                    }}
+                                />
+                                {error && <div className='invalid-feedback'>{error}</div>}
+                            </FormGroup>
+                        </div>
 
-                    <div className='mt-4'>
-                        <Label>Assign Persons In Charge</Label>
-                        <p className='text-muted small mb-2'>Assign one or more users to manage this area.</p>
-                        <div className='p-3 border rounded bg-light bg-opacity-10' style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                            {users?.map((user: User) => (
-                                <div key={user.id} className='mb-2'>
-                                    <Checks
-                                        id={`user-${user.id}`}
-                                        label={`${user.first_name} ${user.last_name} (@${user.username})`}
-                                        checked={personInChargeIds.includes(user.id)}
-                                        onChange={() => {
-                                            setPersonInChargeIds(prev =>
-                                                prev.includes(user.id)
-                                                    ? prev.filter(id => id !== user.id)
-                                                    : [...prev, user.id]
-                                            );
-                                        }}
-                                    />
-                                </div>
-                            ))}
-                            {(!users || users.length === 0) && (
-                                <div className='text-muted small'>No users found.</div>
-                            )}
+                        <div className='col-12'>
+                            <FormGroup label='Area Type'>
+                                <select
+                                    className='form-select'
+                                    value={areaType}
+                                    onChange={(e) => setAreaType(e.target.value)}
+                                >
+                                    <option value='building'>Building</option>
+                                    <option value='floor'>Floor</option>
+                                    <option value='room'>Room</option>
+                                    <option value='zone'>Zone</option>
+                                    <option value='others'>Others</option>
+                                </select>
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-12'>
+                            <FormGroup label='Floor Plan Image (Optional)'>
+                                <Input
+                                    type='file'
+                                    accept='image/*'
+                                    onChange={(e: any) => setAreaPlan(e.target.files[0])}
+                                />
+                                {areaPlan && (
+                                    <div className='mt-2 small text-success'>
+                                        <Icon icon='CheckCircle' size='sm' className='me-1' />
+                                        {areaPlan.name}
+                                    </div>
+                                )}
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-md-4'>
+                            <FormGroup label='Offset X'>
+                                <Input
+                                    type='number'
+                                    step='0.1'
+                                    value={offsetX}
+                                    onChange={(e: any) => setOffsetX(parseFloat(e.target.value) || 0)}
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-md-4'>
+                            <FormGroup label='Offset Y'>
+                                <Input
+                                    type='number'
+                                    step='0.1'
+                                    value={offsetY}
+                                    onChange={(e: any) => setOffsetY(parseFloat(e.target.value) || 0)}
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-md-4'>
+                            <FormGroup label='Offset Z'>
+                                <Input
+                                    type='number'
+                                    step='0.1'
+                                    value={offsetZ}
+                                    onChange={(e: any) => setOffsetZ(parseFloat(e.target.value) || 0)}
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-12'>
+                            <FormGroup label='Scale Factor'>
+                                <Input
+                                    type='number'
+                                    step='0.1'
+                                    min='0.1'
+                                    value={scaleFactor}
+                                    onChange={(e: any) => setScaleFactor(parseFloat(e.target.value) || 1.0)}
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-12'>
+                            <Label>Assign Persons In Charge</Label>
+                            <p className='text-muted small mb-2'>Assign one or more users to manage this area.</p>
+                            <div className='p-3 border rounded bg-light bg-opacity-10' style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                {users?.map((user: User) => (
+                                    <div key={user.id} className='mb-2'>
+                                        <Checks
+                                            id={`user-${user.id}`}
+                                            label={`${user.first_name} ${user.last_name} (@${user.username})`}
+                                            checked={personInChargeIds.includes(user.id)}
+                                            onChange={() => {
+                                                setPersonInChargeIds(prev =>
+                                                    prev.includes(user.id)
+                                                        ? prev.filter(id => id !== user.id)
+                                                        : [...prev, user.id]
+                                                );
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+                                {(!users || users.length === 0) && (
+                                    <div className='text-muted small'>No users found.</div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </ModalBody>

@@ -1,0 +1,44 @@
+button {
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:active {
+  transform: translateY(3px);
+}
+
+span {
+  font-weight: bold;
+  font-size: larger;
+}
+
+.containerItems {
+  display: flex;
+  justify-content: space-around;
+  max-width: 640px;
+  margin-top: 15px;
+}
+
+.off {
+  background: white;
+  color: black;
+  border: 1px solid grey;
+}
+
+.blue {
+  background: #3f51b5;
+}
+
+.green {
+  background: #388e3c;
+}
+
+.together {
+  background-image: linear-gradient(
+    90deg,
+    #388e3c 50%,
+    #3f51b5 50%,
+    #3f51b5 50%
+  );
+}

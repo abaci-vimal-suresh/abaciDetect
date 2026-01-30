@@ -41,17 +41,17 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
     const removeMembersMutation = useRemoveSensorGroupMembers();
     const updateGroupMutation = useUpdateSensorGroup();
 
-    const [selectedSensorIds, setSelectedSensorIds] = useState<string[]>([]);
+    const [selectedSensorIds, setSelectedSensorIds] = useState<(string | number)[]>([]);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [memberIds, setMemberIds] = useState<string[]>([]);
+    const [memberIds, setMemberIds] = useState<(string | number)[]>([]);
 
     // Sync state from group data
     React.useEffect(() => {
         if (group) {
             setName(group.name);
             setDescription(group.description || '');
-            setMemberIds(group.sensor_list?.map(s => String(s.id)) || []);
+            setMemberIds(group.sensor_list?.map(s => s.id) || []);
         }
     }, [group]);
 
@@ -78,7 +78,7 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
         setSelectedSensorIds([]);
     };
 
-    const handleRemoveMember = (sensorId: string) => {
+    const handleRemoveMember = (sensorId: string | number) => {
         setMemberIds(prev => prev.filter(id => String(id) !== String(sensorId)));
     };
 

@@ -1,0 +1,18 @@
+
+.graficas {
+    width: 1200px;
+    height: 300px;
+    border: 1px solid #004D40;
+    margin: 3px
+}
+  
+.resultado {
+    display: flex;
+    width: 450px;
+}
+  
+table, th, td {
+    border: 1px solid black;
+    width: 450px;
+    text-align: center;
+}

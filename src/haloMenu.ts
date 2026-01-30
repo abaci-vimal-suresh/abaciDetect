@@ -88,6 +88,20 @@ export const haloMenu = {
         icon: 'Settings',
         subMenu: null,
     },
+    autocad: {
+        id: 'halo-autocad',
+        text: 'AutoCAD Viewer',
+        path: '/halo/autocad',
+        icon: 'Drawing',
+        subMenu: null,
+    },
+    threed: {
+        id: 'halo-threed',
+        text: 'ThreeJS Adventure',
+        path: '/halo/threed',
+        icon: '3dRotation',
+        subMenu: null,
+    },
     users: {
         id: 'halo-users',
         text: 'User Management',
