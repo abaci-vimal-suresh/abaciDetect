@@ -9,27 +9,45 @@ import HorizontalBarChart from '../components/charts/HorizontalBarChart';
 import VerticalColumnChart from '../components/charts/VerticalColumnChart';
 import CentralLoadGauge from '../components/charts/Centralloadgauge';
 import styles from '../../../../styles/pages/HALO/Sensors/SensorDetail.module.scss';
-import { SensorConfig } from '../../../../types/sensor';
+import { SensorConfig, SensorLog } from '../../../../types/sensor';
 import { getMetricStatusFromConfig, getConfigForMetric, getStatusColor } from '../../../../helpers/thresholdUtils';
+import { getSensorMetricValue } from '../../utils/sensorData.utils';
 
 interface SensorDashboardViewProps {
     sensor: any;
+    latestLog?: SensorLog | null;
     darkModeStatus: boolean;
     configurations: SensorConfig[];
 }
 
-const SensorDashboardView: React.FC<SensorDashboardViewProps> = ({ sensor, darkModeStatus, configurations }) => {
-
+const SensorDashboardView: React.FC<SensorDashboardViewProps> = ({ sensor, latestLog, darkModeStatus, configurations }) => {
     const [isThresholdModalOpen, setIsThresholdModalOpen] = React.useState(false);
 
-    // Extract sensor data
-    const sensorData = sensor.sensor_data?.sensors || (sensor as any).sensors || (sensor as any);
+    // Helper to get value from sensor data, prioritizing real-time log
+    const getValue = (key: string): any => {
+        if (latestLog) {
+            // Map common keys to nested structure
+            if (key === 'humidity') return latestLog.readings_environmental.humidity_percent;
+            if (key === 'light') return latestLog.readings_environmental.light_lux;
+            if (key === 'co2') return latestLog.readings_air.co2_eq;
+            if (key === 'noise') return latestLog.readings_environmental.sound_db || latestLog.readings_derived.noise_db || 0;
+            if (key === 'temp_c') return latestLog.readings_environmental.temperature_c;
+
+            // Check nested groups in latestLog
+            if (key in latestLog.readings_environmental) return (latestLog.readings_environmental as any)[key];
+            if (key in latestLog.readings_air) return (latestLog.readings_air as any)[key];
+            if (key in latestLog.readings_derived) return (latestLog.readings_derived as any)[key];
+            if (key in latestLog.others) return (latestLog.others as any)[key];
+        }
+        return getSensorMetricValue(sensor, key);
+    };
+
     const activeEvents = sensor.sensor_data?.active_events_list || (sensor as any).active_events_list || [];
 
     // Determine status based on thresholds
     const getStatus = (): 'ready' | 'running' | 'warning' | 'error' => {
-        const eventValue = sensor.sensor_data?.val !== undefined ? sensor.sensor_data.val : sensor.event_value;
-        const eventThreshold = sensor.sensor_data?.threshold || sensor.event_threshold;
+        const eventValue = getValue('val') || sensor.event_value;
+        const eventThreshold = getValue('threshold') || sensor.event_threshold;
 
         if (!eventThreshold || !eventValue) return 'ready';
 
@@ -56,54 +74,54 @@ const SensorDashboardView: React.FC<SensorDashboardViewProps> = ({ sensor, darkM
         return defaultValue; // Fallback to chart's specific logic if no config
     };
 
-    // Prepare chart data - ENVIRONMENT METRICS
+    // Prepare chart data - ENVIRONMENT METRICS (Using getValue for live updates)
     const environmentData = [
-        { label: 'Temperature', value: sensorData?.temp_c || 0, unit: '°C', color: '#4d69fa' },
-        { label: 'Humidity', value: sensorData?.humidity || 0, unit: '%', color: '#46bcaa' },
-        { label: 'Pressure', value: sensorData?.pressure_hpa || 0, unit: 'hPa', color: '#ffcf52' },
-        { label: 'Light', value: sensorData?.light || 0, unit: 'lux', color: '#a87ca1' }
+        { label: 'Temperature', value: getValue('temp_c') || 0, unit: '°C', color: '#4d69fa' },
+        { label: 'Humidity', value: getValue('humidity') || 0, unit: '%', color: '#46bcaa' },
+        { label: 'Pressure', value: getValue('pressure_hpa') || 0, unit: 'hPa', color: '#ffcf52' },
+        { label: 'Light', value: getValue('light') || 0, unit: 'lux', color: '#a87ca1' }
     ];
 
     // AIR QUALITY METRICS
     const airQualityData = [
-        { label: 'AQI', value: sensorData?.aqi || 0, unit: '', color: '#f35421' },
-        { label: 'PM2.5 AQI', value: sensorData?.pm25aqi || 0, unit: '', color: '#ffcf52' },
-        { label: 'PM10 AQI', value: sensorData?.pm10aqi || 0, unit: '', color: '#4d69fa' },
-        { label: 'CO AQI', value: sensorData?.coaqi || 0, unit: '', color: '#46bcaa' },
-        { label: 'NO₂ AQI', value: sensorData?.no2aqi || 0, unit: '', color: '#a87ca1' }
+        { label: 'AQI', value: getValue('aqi') || 0, unit: '', color: '#f35421' },
+        { label: 'PM2.5 AQI', value: getValue('pm25aqi') || 0, unit: '', color: '#ffcf52' },
+        { label: 'PM10 AQI', value: getValue('pm10aqi') || 0, unit: '', color: '#4d69fa' },
+        { label: 'CO AQI', value: getValue('coaqi') || 0, unit: '', color: '#46bcaa' },
+        { label: 'NO₂ AQI', value: getValue('no2aqi') || 0, unit: '', color: '#a87ca1' }
     ];
 
     // PARTICULATE MATTER
     const particulateData = [
-        { label: 'PM1', value: sensorData?.pm1 || 0, unit: 'µg/m³', color: '#4d69fa' },
-        { label: 'PM2.5', value: sensorData?.pm25 || 0, unit: 'µg/m³', color: '#f35421' },
-        { label: 'PM10', value: sensorData?.pm10 || 0, unit: 'µg/m³', color: '#ffcf52' }
+        { label: 'PM1', value: getValue('pm1') || 0, unit: 'µg/m³', color: '#4d69fa' },
+        { label: 'PM2.5', value: getValue('pm25') || 0, unit: 'µg/m³', color: '#f35421' },
+        { label: 'PM10', value: getValue('pm10') || 0, unit: 'µg/m³', color: '#ffcf52' }
     ];
 
     // GAS SENSORS
     const gasData = [
-        { label: 'CO₂', value: sensorData?.co2 || 0, unit: 'ppm', color: '#f35421' },
-        { label: 'TVOC', value: sensorData?.tvoc || 0, unit: 'ppb', color: '#ffcf52' },
-        { label: 'CO', value: sensorData?.co || 0, unit: 'ppm', color: '#4d69fa' },
-        { label: 'NO₂', value: sensorData?.no2 || 0, unit: 'ppb', color: '#a87ca1' },
-        { label: 'NH₃', value: sensorData?.nh3 || 0, unit: 'ppm', color: '#46bcaa' }
+        { label: 'CO₂', value: getValue('co2') || 0, unit: 'ppm', color: '#f35421' },
+        { label: 'TVOC', value: getValue('tvoc') || 0, unit: 'ppb', color: '#ffcf52' },
+        { label: 'CO', value: getValue('co') || 0, unit: 'ppm', color: '#4d69fa' },
+        { label: 'NO₂', value: getValue('no2') || 0, unit: 'ppb', color: '#a87ca1' },
+        { label: 'NH₃', value: getValue('nh3') || 0, unit: 'ppm', color: '#46bcaa' }
     ];
 
     // HEALTH INDEX FACTORS
     const healthFactorsData = [
-        { label: 'HI PM1', value: sensorData?.hi_pm1 || 0, color: '#4d69fa' },
-        { label: 'HI PM2.5', value: sensorData?.hi_pm25 || 0, color: '#f35421' },
-        { label: 'HI PM10', value: sensorData?.hi_pm10 || 0, color: '#ffcf52' },
-        { label: 'HI CO₂', value: sensorData?.hi_co2 || 0, color: '#46bcaa' },
-        { label: 'HI TVOC', value: sensorData?.hi_tvoc || 0, color: '#a87ca1' },
-        { label: 'HI Humidity', value: sensorData?.hi_hum || 0, color: '#7a3a6f' }
+        { label: 'HI PM1', value: getValue('hi_pm1') || 0, color: '#4d69fa' },
+        { label: 'HI PM2.5', value: getValue('hi_pm25') || 0, color: '#f35421' },
+        { label: 'HI PM10', value: getValue('hi_pm10') || 0, color: '#ffcf52' },
+        { label: 'HI CO₂', value: getValue('hi_co2') || 0, color: '#46bcaa' },
+        { label: 'HI TVOC', value: getValue('hi_tvoc') || 0, color: '#a87ca1' },
+        { label: 'HI Humidity', value: getValue('hi_hum') || 0, color: '#7a3a6f' }
     ];
 
     // SOUND & SAFETY
     const soundSafetyData = [
-        { label: 'Noise Level', value: sensorData?.noise || 0, unit: 'dB', color: '#4d69fa' },
-        { label: 'Aggression', value: sensorData?.aggression || 0, unit: '', color: '#f35421' },
-        { label: 'Gunshot', value: sensorData?.gunshot || 0, unit: '', color: sensorData?.gunshot > 0 ? '#f35421' : '#46bcaa' }
+        { label: 'Noise Level', value: getValue('noise') || 0, unit: 'dB', color: '#4d69fa' },
+        { label: 'Aggression', value: getValue('aggression') || 0, unit: '', color: '#f35421' },
+        { label: 'Gunshot', value: getValue('gunshot') || 0, unit: '', color: getValue('gunshot') > 0 ? '#f35421' : '#46bcaa' }
     ];
 
     return (
@@ -114,15 +132,15 @@ const SensorDashboardView: React.FC<SensorDashboardViewProps> = ({ sensor, darkM
                 <Card className={styles.gaugeCard}>
                     <CardBody>
                         <RadialGaugeChart
-                            value={sensorData?.temp_c || 0}
+                            value={getValue('temp_c') || 0}
                             max={35}
                             title="TEMPERATURE"
                             subtitle={sensor.building_room || sensor.location}
                             unit="°C"
                             color={
-                                getGaugeColor('temp_c', sensorData?.temp_c,
-                                    sensorData?.temp_c > 30 ? '#f35421' :
-                                        sensorData?.temp_c > 25 ? '#ffcf52' :
+                                getGaugeColor('temp_c', getValue('temp_c'),
+                                    getValue('temp_c') > 30 ? '#f35421' :
+                                        getValue('temp_c') > 25 ? '#ffcf52' :
                                             '#46bcaa'
                                 )
                             }
@@ -134,15 +152,15 @@ const SensorDashboardView: React.FC<SensorDashboardViewProps> = ({ sensor, darkM
                 <Card className={styles.gaugeCard}>
                     <CardBody>
                         <RadialGaugeChart
-                            value={sensorData?.humidity || 0}
+                            value={getValue('humidity') || 0}
                             max={100}
                             title="HUMIDITY"
                             subtitle="Relative Humidity"
                             unit="%"
                             color={
-                                getGaugeColor('humidity', sensorData?.humidity,
-                                    sensorData?.humidity > 70 ? '#f35421' :
-                                        sensorData?.humidity > 60 ? '#ffcf52' :
+                                getGaugeColor('humidity', getValue('humidity'),
+                                    getValue('humidity') > 70 ? '#f35421' :
+                                        getValue('humidity') > 60 ? '#ffcf52' :
                                             '#4d69fa'
                                 )
                             }
@@ -154,15 +172,15 @@ const SensorDashboardView: React.FC<SensorDashboardViewProps> = ({ sensor, darkM
                 <Card className={styles.gaugeCard}>
                     <CardBody>
                         <RadialGaugeChart
-                            value={sensorData?.aqi || 0}
+                            value={getValue('aqi') || 0}
                             max={200}
                             title="AIR QUALITY"
                             subtitle="AQI Index"
                             unit="AQI"
                             color={
-                                getGaugeColor('aqi', sensorData?.aqi,
-                                    sensorData?.aqi > 150 ? '#f35421' :
-                                        sensorData?.aqi > 100 ? '#ffcf52' :
+                                getGaugeColor('aqi', getValue('aqi'),
+                                    getValue('aqi') > 150 ? '#f35421' :
+                                        getValue('aqi') > 100 ? '#ffcf52' :
                                             '#46bcaa'
                                 )
                             }
@@ -174,15 +192,15 @@ const SensorDashboardView: React.FC<SensorDashboardViewProps> = ({ sensor, darkM
                 <Card className={styles.gaugeCard}>
                     <CardBody>
                         <RadialGaugeChart
-                            value={sensorData?.co2 || 0}
+                            value={getValue('co2') || 0}
                             max={3000}
                             title="CO₂ LEVEL"
                             subtitle="Carbon Dioxide"
                             unit="ppm"
                             color={
-                                getGaugeColor('co2', sensorData?.co2,
-                                    sensorData?.co2 > 2000 ? '#f35421' :
-                                        sensorData?.co2 > 1000 ? '#ffcf52' :
+                                getGaugeColor('co2', getValue('co2'),
+                                    getValue('co2') > 2000 ? '#f35421' :
+                                        getValue('co2') > 1000 ? '#ffcf52' :
                                             '#46bcaa'
                                 )
                             }

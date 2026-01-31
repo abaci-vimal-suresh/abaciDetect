@@ -273,87 +273,89 @@ const SensorGroups = () => {
             </SubHeader>
             <Page container='fluid'>
                 {viewMode === 'floorplan' ? (
-                    <div className='row'>
-                        <div className='col-md-12'>
-                            <div className='d-flex justify-content-between align-items-center'>
-                                {/* Section Header removed as it was empty/commented out */}
+                    <div className='row g-0 align-items-stretch' style={{ height: 'calc(100vh - 180px)', overflow: 'hidden' }}>
+                        <div className='col-md-12 d-flex flex-column h-100'>
+                            <div className='d-flex justify-content-between align-items-center mb-3'>
                                 <div>
                                     {/* Buttons removed - moved to FloorPlanCanvas */}
                                 </div>
                             </div>
-                            <FloorPlanCanvas
-                                areaId={Number(areaId)}
-                                sensors={allSensors || []}
-                                paletteSensors={allSensors?.filter(s => {
-                                    // Logic to show unassigned or improperly placed sensors for the current area
-                                    const targetAreaId = Number(areaId);
-                                    const sAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : (s.area || s.area_id);
-                                    const isUnassigned = !sAreaId && !s.area_name;
-                                    const isInArea = Number(sAreaId) === targetAreaId;
-                                    const isUnplaced = (s.x_val === undefined || s.x_val === null) && (s.x_coordinate === undefined || s.x_coordinate === null);
+                            <div className="flex-fill" style={{ position: 'relative', overflow: 'hidden' }}>
+                                <FloorPlanCanvas
+                                    areaId={Number(areaId)}
+                                    sensors={allSensors || []}
+                                    paletteSensors={allSensors?.filter(s => {
+                                        // Logic to show unassigned or improperly placed sensors for the current area
+                                        const targetAreaId = Number(areaId);
+                                        const sAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : (s.area || s.area_id);
+                                        const isUnassigned = !sAreaId && !s.area_name;
+                                        const isInArea = Number(sAreaId) === targetAreaId;
+                                        const isUnplaced = (s.x_val === undefined || s.x_val === null) && (s.x_coordinate === undefined || s.x_coordinate === null);
 
-                                    return isUnassigned || (isInArea && isUnplaced) || s.status === 'Inactive';
-                                }) || []}
-                                areas={areas || []}
-                                roomSettings={roomSettings}
-                                onSettingsChange={setRoomSettings}
-                                floorPlanUrl={uploadedFloorPlan || currentArea?.floor_plan_url}
-                                roomBoundaries={mockRoomBoundaries[Number(areaId)]}
-                                currentArea={currentArea}
-                                onSensorClick={(sensor) => !isEditMode && navigate(`/halo/sensors/detail/${sensor.id}`)}
-                                onSensorDrop={(sensorId, x, y, dropAreaId) => {
-                                    const id = Number(sensorId);
-                                    // Use direct mutation instead of mock data
-                                    updateSensorMutation.mutate({
-                                        sensorId: id,
-                                        data: {
-                                            id,
-                                            x_val: x,
-                                            y_val: y,
-                                            area: dropAreaId ? Number(dropAreaId) : (areaId ? Number(areaId) : null)
-                                        }
-                                    });
-                                }}
-                                onSensorRemove={(sensorId) => {
-                                    const id = Number(sensorId);
-                                    updateSensorMutation.mutate({
-                                        sensorId: id,
-                                        data: {
-                                            id,
-                                            x_val: null as any, // Send null to clear
-                                            y_val: null as any,
-                                            area: null
-                                        }
-                                    });
-                                }}
-                                onImageUpload={currentArea?.floor_level !== undefined && currentArea?.floor_level !== null ? (file) => {
-                                    const reader = new FileReader();
-                                    reader.onload = (e) => {
-                                        setUploadedFloorPlan(e.target?.result as string);
-                                    };
-                                    reader.readAsDataURL(file);
-                                } : undefined}
-                                onBoundaryUpdate={(sensorId, boundary) => {
-                                    const id = Number(sensorId);
-                                    updateSensorMutation.mutate({
-                                        sensorId: id,
-                                        data: {
-                                            id,
-                                            x_min: boundary.x_min,
-                                            x_max: boundary.x_max,
-                                            y_min: boundary.y_min,
-                                            y_max: boundary.y_max,
-                                            z_min: boundary.z_min ?? 0,
-                                            z_max: boundary.z_max ?? 1,
-                                            boundary_opacity_val: boundary.boundary_opacity_val ?? 0.5
-                                        }
-                                    });
-                                }}
-                                editMode={isEditMode}
-                                onEditModeChange={(mode) => setIsEditMode(mode)}
-                                initialZoom={0.5}
-                                initialView="front"
-                            />
+                                        return isUnassigned || (isInArea && isUnplaced) || s.status === 'Inactive';
+                                    }) || []}
+                                    areas={areas || []}
+                                    roomSettings={roomSettings}
+                                    onSettingsChange={setRoomSettings}
+                                    floorPlanUrl={uploadedFloorPlan || currentArea?.floor_plan_url}
+                                    roomBoundaries={mockRoomBoundaries[Number(areaId)]}
+                                    currentArea={currentArea}
+                                    onSensorClick={(sensor) => !isEditMode && navigate(`/halo/sensors/detail/${sensor.id}`)}
+                                    onSensorDrop={(sensorId, x, y, dropAreaId) => {
+                                        const id = Number(sensorId);
+                                        // Use direct mutation instead of mock data
+                                        updateSensorMutation.mutate({
+                                            sensorId: id,
+                                            data: {
+                                                id,
+                                                x_val: x,
+                                                y_val: y,
+                                                area: dropAreaId ? Number(dropAreaId) : (areaId ? Number(areaId) : null)
+                                            }
+                                        });
+                                    }}
+                                    onSensorRemove={(sensorId) => {
+                                        const id = Number(sensorId);
+                                        updateSensorMutation.mutate({
+                                            sensorId: id,
+                                            data: {
+                                                id,
+                                                x_val: null as any, // Send null to clear
+                                                y_val: null as any,
+                                                area: null
+                                            }
+                                        });
+                                    }}
+                                    onImageUpload={currentArea?.floor_level !== undefined && currentArea?.floor_level !== null ? (file) => {
+                                        const reader = new FileReader();
+                                        reader.onload = (e) => {
+                                            setUploadedFloorPlan(e.target?.result as string);
+                                        };
+                                        reader.readAsDataURL(file);
+                                    } : undefined}
+                                    onBoundaryUpdate={(sensorId, boundary) => {
+                                        const id = Number(sensorId);
+                                        updateSensorMutation.mutate({
+                                            sensorId: id,
+                                            data: {
+                                                id,
+                                                x_min: boundary.x_min,
+                                                x_max: boundary.x_max,
+                                                y_min: boundary.y_min,
+                                                y_max: boundary.y_max,
+                                                z_min: boundary.z_min ?? 0,
+                                                z_max: boundary.z_max ?? 1,
+                                                boundary_opacity_val: boundary.boundary_opacity_val ?? 0.5
+                                            }
+                                        });
+                                    }}
+                                    editMode={isEditMode}
+                                    onEditModeChange={(mode) => setIsEditMode(mode)}
+                                    style={{ height: '100%' }}
+                                    initialZoom={0.5}
+                                    initialView="front"
+                                />
+                            </div>
                         </div>
                     </div>
                 ) : (

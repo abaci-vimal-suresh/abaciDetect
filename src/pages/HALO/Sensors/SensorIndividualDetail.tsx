@@ -11,7 +11,7 @@ import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalTitle, ModalBody } from '../../../components/bootstrap/Modal';
 import ThemeContext from '../../../contexts/themeContext';
 
-import { useSensor, useSensorConfigurations } from '../../../api/sensors.api';
+import { useSensor, useSensorConfigurations, useLatestSensorLog } from '../../../api/sensors.api';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryClient';
 import { isSensorOnline } from '../utils/sensorStatus.utils';
@@ -28,6 +28,7 @@ import PersonnelModal from '../../../components/PersonnelModal';
 const SensorIndividualDetail = () => {
     const { id } = useParams<{ id: string }>();
     const { data: sensor, isLoading } = useSensor(id || '');
+    const { data: latestLog } = useLatestSensorLog(id || '', { refetchInterval: 15000 });
     const { data: configurations } = useSensorConfigurations(id || '');
     const { darkModeStatus } = useContext(ThemeContext);
     const queryClient = useQueryClient();
@@ -242,6 +243,7 @@ const SensorIndividualDetail = () => {
                 {currentView === 'sentinel' && (
                     <SentinelDashboardView
                         sensor={sensor}
+                        latestLog={latestLog}
                         darkModeStatus={darkModeStatus}
                         configurations={configurations || []}
                     />
@@ -250,6 +252,7 @@ const SensorIndividualDetail = () => {
                 {currentView === 'cards' && (
                     <SensorCardView
                         sensor={sensor}
+                        latestLog={latestLog}
                         darkModeStatus={darkModeStatus}
                         configurations={configurations || []}
                     />
@@ -258,6 +261,7 @@ const SensorIndividualDetail = () => {
                 {currentView === 'dashboard' && (
                     <SensorDashboardView
                         sensor={sensor}
+                        latestLog={latestLog}
                         darkModeStatus={darkModeStatus}
                         configurations={configurations || []}
                     />

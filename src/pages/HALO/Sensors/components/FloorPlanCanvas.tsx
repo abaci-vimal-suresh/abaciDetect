@@ -8,6 +8,7 @@ import Badge from '../../../../components/bootstrap/Badge';
 import './FloorPlan3D.scss';
 import { RoomVisibilitySettings } from './RoomSettingsPanel';
 import './Room3DBox.scss';
+import { useLatestSensorLog } from '../../../../api/sensors.api';
 
 // MODULAR IMPORTS
 import { use3DScene } from '../hooks/use3DScene';
@@ -39,6 +40,92 @@ const PARAM_META: Record<string, { unit: string; min: number; max: number; thres
 const PARAMETER_GROUPS = {
     left: [] as string[],
     right: ['aqi', 'health_index', 'gunshot_aggression']
+};
+
+const SensorDetailsSidebar: React.FC<{
+    sensor: Sensor;
+    darkMode: boolean;
+    getStatusColor: (s: string) => string;
+    onClose: () => void;
+    onViewDetails: () => void;
+}> = ({ sensor, darkMode, getStatusColor, onClose, onViewDetails }) => {
+    const { data: latestLog, isLoading } = useLatestSensorLog(sensor.id, { refetchInterval: 15000 });
+
+    const status = sensor.status || 'safe';
+
+    // Flatten nested log data for easier display in the terminal grid
+    const displayData = useMemo(() => {
+        if (!latestLog) {
+            // Fallback to existing sensor_data if log is unavailable
+            return sensor.sensor_data?.sensors || {};
+        }
+
+        const flattened: Record<string, any> = {};
+        const groups = [
+            latestLog.readings_environmental,
+            latestLog.readings_air,
+            latestLog.readings_derived,
+            latestLog.others
+        ];
+
+        groups.forEach(group => {
+            if (group) {
+                Object.entries(group).forEach(([key, val]) => {
+                    // Skip ID fields
+                    if (key !== 'id') {
+                        flattened[key] = val;
+                    }
+                });
+            }
+        });
+
+        return flattened;
+    }, [latestLog, sensor.sensor_data]);
+
+    return (
+        <div className="terminal-loader">
+            <div className="terminal-header">
+                <div className="terminal-title">
+                    {isLoading ? 'FETCHING_LOGS...' : `STATUS: ${status.toUpperCase()}`}
+                </div>
+                <div className="terminal-controls">
+                    <div className="control close" onClick={(e) => { e.stopPropagation(); onClose(); }}></div>
+                </div>
+            </div>
+
+            <div className="terminal-content">
+                <div className="sensor-name text-truncate" style={{ maxWidth: '100%' }}>
+                    {sensor.name}
+                </div>
+
+                <div className="hide-scrollbar data-grid" style={{
+                    maxHeight: '180px',
+                    overflowY: 'auto'
+                }}>
+                    {Object.entries(displayData).map(([key, val]) => (
+                        <div key={key} className="data-item">
+                            <span className="label text-capitalize">{key.replace('_', ' ')}:</span>
+                            <span className="value">
+                                {val === null || val === undefined ? '--' : (typeof val === 'number' ? val.toFixed(1).replace(/\.0$/, '') : val)}
+                            </span>
+                        </div>
+                    ))}
+                    {!isLoading && Object.keys(displayData).length === 0 && (
+                        <div className="text-muted opacity-50 small">NO_DATA_AVAILABLE</div>
+                    )}
+                </div>
+            </div>
+
+            <div className="terminal-footer">
+                <button
+                    onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
+                    className="terminal-btn"
+                >
+                    {'>'} RUN_DETAILS
+                </button>
+            </div>
+        </div>
+    );
 };
 
 interface FloorPlanCanvasProps {
@@ -102,6 +189,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
     const [showBoundaryHint, setShowBoundaryHint] = useState(false);
     const [selectedParameters, setSelectedParameters] = useState<string[]>([]);
     const [showParameterCards, setShowParameterCards] = useState(false);
+    const [showRoomSettings, setShowRoomSettings] = useState(false);
 
     const scrollCards = (direction: 'left' | 'right') => {
         if (cardsScrollRef.current) {
@@ -645,6 +733,14 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                     {/* Far Right Nav Buttons */}
                     <div className="d-flex align-items-center gap-2">
                         <button
+                            className={`btn btn-sm ${darkModeStatus ? 'bg-dark bg-opacity-40' : 'bg-secondary bg-opacity-10'} ${showRoomSettings ? 'text-primary' : 'text-muted'} rounded shadow-sm border ${darkModeStatus ? 'border-light border-opacity-10' : 'border-dark border-opacity-10'} p-0 d-flex align-items-center justify-content-center`}
+                            style={{ width: '32px', height: '32px' }}
+                            onClick={() => setShowRoomSettings(!showRoomSettings)}
+                            title="View Settings"
+                        >
+                            <Icon icon="settings" size="sm" />
+                        </button>
+                        <button
                             className={`btn btn-sm ${darkModeStatus ? 'bg-dark bg-opacity-40' : 'bg-secondary bg-opacity-10'} text-primary rounded shadow-sm border ${darkModeStatus ? 'border-light border-opacity-10' : 'border-dark border-opacity-10'} p-0 d-flex align-items-center justify-content-center`}
                             style={{ width: '32px', height: '32px' }}
                             onClick={() => setShowBoundaryHint(!showBoundaryHint)}
@@ -775,14 +871,14 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                 </div>
 
                 {/* INTEGRATED ROOM SETTINGS PANEL (Floating Overlay) */}
-                {!editMode && (
+                {!editMode && showRoomSettings && (
                     <div style={{
                         position: 'absolute',
                         right: '12px',
-                        top: '12px',
+                        top: '60px',
                         zIndex: 1005,
                         width: '320px',
-                        maxHeight: 'calc(100% - 24px)',
+                        maxHeight: 'calc(100% - 72px)',
                         overflowY: 'auto',
                         pointerEvents: 'auto'
                     }} className="hide-scrollbar">
@@ -819,6 +915,34 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                     </div>
                 )}
 
+                {/* SENSOR DETAILS SIDEBAR (Persistent on click, show hover) */}
+                {!editMode && (hoveredSensor || selectedSensor) && (
+                    <div style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '12px',
+                        zIndex: 1006,
+                        width: '180px', // Narrower
+                        maxHeight: 'calc(100% - 24px)',
+                        pointerEvents: 'auto',
+                        animation: 'fadeInLeft 0.3s ease-out'
+                    }}>
+                        {(() => {
+                            const activeId = hoveredSensor || selectedSensor;
+                            const sensor = sensors.find(s => String(s.id) === String(activeId));
+                            return sensor ? (
+                                <SensorDetailsSidebar
+                                    sensor={sensor}
+                                    darkMode={darkModeStatus}
+                                    getStatusColor={getStatusColor}
+                                    onClose={() => setSelectedSensor(null)}
+                                    onViewDetails={() => onSensorClick?.(sensor)}
+                                />
+                            ) : null;
+                        })()}
+                    </div>
+                )}
+
                 <div
                     ref={containerRef}
                     className="canvas-container-3d h-100"
@@ -835,7 +959,7 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                     style={{
                         background: darkModeStatus
                             ? 'radial-gradient(circle at center, #0F172A 0%, #050810 100%)'
-                            : 'radial-gradient(circle, rgb(205, 208, 215) 0%, rgb(5, 8, 16) 100%)',
+                            : 'radial-gradient(circle, rgb(228, 231, 239) 0%, rgb(30, 30, 32) 100%)',
                     }}
                 >
                     <div className="scene-pivot-3d" style={{
@@ -872,7 +996,10 @@ const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                             hoveredSensor={hoveredSensor}
                             selectedSensor={selectedSensor}
                             onSensorMouseDown={handleSensorMouseDown3D}
-                            onSensorClick={(s) => onSensorClick?.(s)}
+                            onSensorClick={(s) => {
+                                setSelectedSensor(s.id);
+                            }}
+                            onSensorHover={(id) => setHoveredSensor(id)}
                             onUpdateRoom={handleUpdateRoom}
                             getStatusColor={getStatusColor}
                             darkModeStatus={darkModeStatus}

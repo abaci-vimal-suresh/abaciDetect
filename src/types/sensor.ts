@@ -49,6 +49,68 @@ export interface SensorReadings {
     pressure_hpa: number;
 }
 
+export interface SensorLogEnvironmental {
+    id: number;
+    temperature_c: number;
+    humidity_percent: number;
+    light_lux: number;
+    hg_mic: number;
+    lg_mic: number;
+    sound_db: number | null;
+    pressure_hpa: number;
+}
+
+export interface SensorLogAir {
+    id: number;
+    tvoc: number;
+    co2_eq: number;
+    co2_cal: number;
+    pm1: number;
+    pm25: number;
+    pm10: number;
+    nh3: number;
+    no2: number;
+    co: number;
+}
+
+export interface SensorLogDerived {
+    id: number;
+    aqi: number;
+    movement: number;
+    motion: number;
+    noise_db: number | null;
+    gunshot: number;
+    health_index: number;
+    aggression: number;
+}
+
+export interface SensorLogOthers {
+    id: number;
+    acc_x: number;
+    acc_y: number;
+    acc_z: number;
+    help: number | null;
+    input: number;
+    panic: number;
+}
+
+export interface SensorLog {
+    id: number;
+    sensor: number;
+    sensor_name: string;
+    area: number | null;
+    readings_environmental: SensorLogEnvironmental;
+    readings_air: SensorLogAir;
+    readings_derived: SensorLogDerived;
+    others: SensorLogOthers;
+    recorded_at: string;
+}
+
+export interface SensorLogResponse {
+    count: number;
+    results: SensorLog[];
+}
+
 export interface SensorData {
     ip: string;
     mac: string;
