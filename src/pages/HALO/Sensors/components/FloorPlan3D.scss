@@ -31,574 +31,209 @@
     backdrop-filter: blur(2px);
 }
 
-// HOLOGRAPHIC FLOATING LABEL
-.sensor-label-3d {
-    position: absolute;
-    bottom: 140%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid currentColor;
-    border-radius: 4px;
-    padding: 2px 8px;
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-    white-space: nowrap;
-    backdrop-filter: blur(4px);
-    box-shadow: 0 0 10px currentColor;
-    pointer-events: none;
-    opacity: 0.9;
-    transition: all 0.3s ease;
-    z-index: 60;
-
-    &::after {
-        content: '';
-        position: absolute;
-        bottom: -5px;
-        left: 50%;
-        transform: translateX(-50%);
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-top: 5px solid currentColor;
-    }
-}
-
-// EXPANDED HOLOGRAPHIC CARD (ON HOVER)
-.sensor-detail-card {
-    position: absolute;
-    bottom: 160%;
-    left: 50%;
-    transform: translateX(-50%) scale(0.8);
-    width: 200px;
-    background: rgba(10, 15, 30, 0.85);
-    border: 1px solid currentColor;
-    border-radius: 8px;
-    padding: 10px;
-    color: white;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 0 20px currentColor, inset 0 0 20px rgba(0, 0, 0, 0.5);
-    transform-origin: bottom center;
-    z-index: 70;
-
-    &::before {
-        content: '';
-        position: absolute;
-        inset: 4px;
-        border: 1px dashed rgba(255, 255, 255, 0.1);
-        background-image:
-            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-        background-size: 20px 20px;
-        z-index: -1;
-    }
-
-    h4 {
-        margin: 0 0 5px 0;
-        font-size: 14px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        padding-bottom: 5px;
-        text-shadow: 0 0 5px currentColor;
-    }
-
-    .data-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 12px;
-        margin-bottom: 4px;
-        color: rgba(255, 255, 255, 0.8);
-
-        span:last-child {
-            font-weight: bold;
-            color: #fff;
-            // text-shadow: 0 0 3px white;
-        }
-    }
-
-    .corner {
-        position: absolute;
-        width: 6px;
-        height: 6px;
-        background: currentColor;
-        box-shadow: 0 0 5px currentColor;
-    }
-
-    .tl {
-        top: -1px;
-        left: -1px;
-    }
-
-    .tr {
-        top: -1px;
-        right: -1px;
-    }
-
-    .bl {
-        bottom: -1px;
-        left: -1px;
-    }
-
-    .br {
-        bottom: -1px;
-        right: -1px;
-    }
-}
-
-.gridOverlay {
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 50px 50px;
-    pointer-events: none;
-}
-
 .sensor3d-wrapper {
     position: absolute;
     width: 0;
     height: 0;
     transform-style: preserve-3d;
-    z-index: 9999;
-    pointer-events: all;
-    transform: translateZ(0);
-
-    // INVISIBLE HIT AREA EXTENSION (From previous step, keeping it as it is good UX)
-    // Note: User's new code put styles on sensor-ball, checking if I should put it here or there.
-    // The user's SCSS has sensor-ball detailed below. I will stick to user's new file structure.
+    z-index: 999;
+    pointer-events: auto;
 }
-
-.sensor-beam {
-    position: absolute;
-    width: 3px;
-    height: 200px;
-    left: -1.5px;
-    top: 0;
-    background: linear-gradient(to bottom,
-            rgba(255, 255, 255, 0),
-            currentColor 20%,
-            currentColor 80%,
-            rgba(255, 255, 255, 0));
-    opacity: 0.5;
-    transform-origin: top center;
-    transform: translateZ(0) rotateX(-90deg) translateY(-100px);
-    box-shadow: 0 0 10px currentColor;
-}
-
 
 .sensor-ball {
     position: absolute;
-    width: 50px;
-    height: 50px;
-    left: -25px;
-    top: -25px;
+    width: 30px;
+    height: 30px;
+    left: -15px;
+    top: -15px;
     transform-style: preserve-3d;
     cursor: pointer;
-    transition: transform 0.2s ease, filter 0.3s ease;
-    // mix-blend-mode: screen; // Removed as it can hide elements on some backdrops
-    filter: none; // No glow for 'safe' status
-    opacity: 1 !important;
-    z-index: 1000;
+    transition: transform 0.2s ease;
 
-    &.warning {
-        filter: drop-shadow(0 0 15px currentColor);
-    }
-
-    &.critical {
-        filter: drop-shadow(0 0 35px currentColor);
-    }
-
-    // Hit area extension (re-adding from previous step as it is good UX and consistent)
-    &::after {
-        content: '';
+    .ball-core {
         position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
+        inset: 0;
         border-radius: 50%;
-        z-index: 10;
-        cursor: pointer;
+        background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9), currentColor 60%, rgba(0, 0, 0, 0.5));
+        box-shadow: 0 0 15px currentColor;
     }
 
-    .pulsating-plane {
-        display: none;
-        pointer-events: none;
+    &.critical .ball-core {
+        box-shadow: 0 0 35px currentColor;
+        animation: pulseCritical 1.5s infinite ease-in-out;
     }
 
-    // ==========================================
-    // PARTICLE SYSTEM FOR ALERTS 💥
-    // ==========================================
-
-    // Critical sensor
-    &.critical {
-        .spark-particle {
-            display: none;
-        }
-    }
-
-    // Warning sensor
-    &.warning {
-        .warning-wave {
-            display: none;
-        }
-    }
-
-    // Status ribbons FLOWING upward for ALL sensors
-    .status-ribbon {
-        display: none;
-    }
-
-    &.pulsating {
-        .pulsating-plane {
-            display: none;
-        }
-
-        .ball-ring {
-            display: none;
-        }
-
-        .ball-core {
-            border-radius: 20px 20px 0 0;
-            box-shadow: 0 0 15px currentColor;
-            background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9), currentColor 60%, rgba(0, 0, 0, 0.5));
-        }
-
-        .sensor-label-3d {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-10px);
-        }
-    }
-
-    &:hover {
-        transform: scale(1.2);
-        z-index: 100 !important;
-
-        .sensor-detail-card {
-            opacity: 1;
-            transform: translateX(-50%) scale(1);
-            pointer-events: auto;
-        }
-
-        .sensor-label-3d {
-            opacity: 0;
-        }
+    &.warning .ball-core {
+        box-shadow: 0 0 20px currentColor;
     }
 }
 
-// ==========================================
-// DANGER ZONE BOUNDARY PULSE
-// ==========================================
-.sensor-boundary-3d {
-    &.critical-boundary {
-        animation: boundaryPulse 1.5s ease-in-out infinite;
-        border-width: 2px !important;
+@keyframes pulseCritical {
 
-        &::before {
-            content: '';
-            position: absolute;
-            inset: -4px;
-            border: 2px solid currentColor;
-            border-radius: inherit;
-            opacity: 0;
-            animation: boundaryExpand 2s ease-out infinite;
-        }
-
-        &::after {
-            content: '';
-            position: absolute;
-            inset: -8px;
-            border: 1px solid currentColor;
-            border-radius: inherit;
-            opacity: 0;
-            animation: boundaryExpand 2s ease-out infinite 0.5s;
-        }
-    }
-}
-
-// ==========================================
-// PARTICLE ANIMATIONS
-// ==========================================
-
-@keyframes sparkEmanate {
-    0% {
-        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0);
+    0%,
+    100% {
+        transform: scale(1);
         opacity: 1;
-        width: 4px;
-        height: 4px;
     }
 
     50% {
-        opacity: 0.8;
-        width: 6px;
-        height: 6px;
-    }
-
-    100% {
-        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(40px);
-        opacity: 0;
-        width: 2px;
-        height: 2px;
-    }
-}
-
-@keyframes wavePropagate {
-    0% {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 0.8;
-        border-width: 3px;
-    }
-
-    50% {
-        opacity: 0.4;
-    }
-
-    100% {
-        transform: translate(-50%, -50%) scale(3);
-        opacity: 0;
-        border-width: 1px;
-    }
-}
-
-@keyframes ribbonFlow {
-    0% {
-        transform: translateX(-50%) translateY(0);
-        opacity: 0;
-    }
-
-    20% {
+        transform: scale(1.15);
         opacity: 0.8;
     }
-
-    80% {
-        opacity: 0.6;
-    }
-
-    100% {
-        transform: translateX(-50%) translateY(-80px);
-        opacity: 0;
-    }
 }
 
-@keyframes criticalShake {
-
-    0%,
-    100% {
-        transform: translateX(0) translateY(0);
-    }
-
-    25% {
-        transform: translateX(-2px) translateY(1px);
-    }
-
+// TERMINAL LOADER STYLES
+@keyframes blinkCursor {
     50% {
-        transform: translateX(2px) translateY(-1px);
-    }
-
-    75% {
-        transform: translateX(-1px) translateY(2px);
+        border-right-color: transparent;
     }
 }
 
-@keyframes boundaryPulse {
+.terminal-loader {
+    // Neural Gray Glassmorphic Base
+    background: rgba(40, 44, 52, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 
-    0%,
-    100% {
-        box-shadow: 0 0 10px currentColor, inset 0 0 10px rgba(239, 68, 68, 0.2);
+    // Neumorphic Inner Depth
+    box-shadow:
+        inset 2px 2px 5px rgba(0, 0, 0, 0.5),
+        inset -2px -2px 5px rgba(255, 255, 255, 0.05),
+        0 10px 30px rgba(0, 0, 0, 0.4);
+
+    color: #e0e0e0;
+    font-family: "Inter", "Courier New", Courier, monospace;
+    font-size: 11px;
+    padding: 1.8em 1em 1em 1em;
+    width: 100%;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+
+    // Remove status-based color overrides
+
+    .terminal-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1.8em;
+        background: rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 0 0.6em;
+        box-sizing: border-box;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
-    50% {
-        box-shadow: 0 0 30px currentColor, inset 0 0 20px rgba(239, 68, 68, 0.4);
-    }
-}
-
-@keyframes boundaryExpand {
-    0% {
-        opacity: 0.6;
-        transform: scale(1);
+    .terminal-title {
+        font-size: 10px;
+        color: #eee;
+        font-weight: bold;
+        text-transform: uppercase;
     }
 
-    100% {
-        opacity: 0;
-        transform: scale(1.2);
-    }
-}
-
-@keyframes floatBall {
-
-    0%,
-    100% {
-        transform: scale(1);
+    .terminal-controls {
+        display: flex;
+        gap: 4px;
     }
 
-    50% {
-        transform: scale(1.05);
-    }
-}
-
-@keyframes pulsateScale {
-    0% {
-        transform: scale(1);
+    .control {
+        width: 0.6em;
+        height: 0.6em;
+        border-radius: 50%;
+        background-color: #777;
     }
 
-    50% {
-        transform: scale(1.1);
+    .control.close {
+        background-color: #e33;
+        cursor: pointer;
+
+        &:hover {
+            opacity: 0.8;
+        }
     }
 
-    100% {
-        transform: scale(1);
-    }
-}
-
-@keyframes pulse3DPlane {
-    0% {
-        transform: translate(-50%, -50%) scale(0.1);
-        opacity: 0;
+    .control.minimize {
+        background-color: #ee0;
     }
 
-    20% {
-        opacity: 0.6;
+    .control.maximize {
+        background-color: #0b0;
     }
 
-    100% {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 0;
-    }
-}
+    .terminal-content {
+        margin-top: 0.5em;
 
-.ball-core {
-    position: absolute;
-    width: 30px; // Standard sphere size
-    height: 30px;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%) translateZ(2px);
-    border-radius: 50%; // Full sphere
-    background: radial-gradient(circle at 35% 35%,
-            rgba(255, 255, 255, 1) 0%,
-            currentColor 60%,
-            rgba(0, 0, 0, 0.4) 100%);
-    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5); // No outer glow by default
-    transition: box-shadow 0.3s ease;
+        .sensor-name {
+            border-right: 0.2em solid currentColor;
+            animation: blinkCursor 0.5s step-end infinite alternate;
+            display: inline-block;
+            margin-bottom: 0.5em;
+            font-weight: bold;
+            font-size: 13px;
+        }
 
-    .sensor-ball.warning & {
-        box-shadow:
-            0 0 20px currentColor,
-            inset 0 0 15px rgba(0, 0, 0, 0.5);
-    }
+        .data-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            opacity: 0.9;
 
-    .sensor-ball.critical & {
-        box-shadow:
-            0 0 40px currentColor,
-            inset 0 0 15px rgba(0, 0, 0, 0.5);
-    }
-}
+            .data-item {
+                display: flex;
+                justify-content: space-between;
+                border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+                padding-bottom: 2px;
 
-.ball-ring {
-    display: none;
-}
+                .label {
+                    opacity: 0.7;
+                }
 
-.ball-ring.x {
-    transform: rotateY(0deg) rotateX(-90deg);
-}
-
-.ball-ring.y {
-    transform: rotateY(90deg) rotateX(-90deg);
-    animation-duration: 5s;
-}
-
-.ball-ring.z {
-    transform: rotateY(45deg) rotateX(-90deg);
-    animation-duration: 6s;
-}
-
-@keyframes rotateDome {
-    from {
-        transform: rotateZ(0deg) rotateX(-90deg);
+                .value {
+                    font-weight: bold;
+                }
+            }
+        }
     }
 
-    to {
-        transform: rotateZ(360deg) rotateX(-90deg);
-    }
-}
+    .terminal-footer {
+        margin-top: 1em;
 
-@keyframes rotateRing {
-    from {
-        transform: rotateY(0deg) rotateX(0deg);
-    }
+        .terminal-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            width: 100%;
+            padding: 8px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            box-shadow:
+                3px 3px 6px rgba(0, 0, 0, 0.3),
+                -1px -1px 3px rgba(255, 255, 255, 0.05);
 
-    to {
-        transform: rotateY(360deg) rotateX(360deg);
-    }
-}
+            &:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: translateY(-1px);
+                box-shadow:
+                    4px 4px 8px rgba(0, 0, 0, 0.4),
+                    -1px -1px 4px rgba(255, 255, 255, 0.08);
+            }
 
-.faceFront {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
-}
-
-.faceBack {
-    background: linear-gradient(135deg, rgba(240, 147, 251, 0.3) 0%, rgba(245, 87, 108, 0.3) 100%);
-}
-
-.faceRight {
-    background: linear-gradient(135deg, rgba(79, 172, 254, 0.3) 0%, rgba(0, 242, 254, 0.3) 100%);
-}
-
-.faceLeft {
-    background: linear-gradient(135deg, rgba(67, 233, 123, 0.3) 0%, rgba(56, 249, 215, 0.3) 100%);
-}
-
-.faceTop {
-    opacity: 0.4;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    backdrop-filter: blur(1px);
-}
-
-.faceBottom {
-    opacity: 0.9;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-.controls3d {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 10px;
-    z-index: 100;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.controlBtn {
-    padding: 8px 16px;
-    background-color: rgba(37, 99, 235, 0.9);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.875rem;
-    font-weight: 500;
-    backdrop-filter: blur(4px);
-
-    &:hover {
-        background-color: rgba(29, 78, 216, 1);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-    }
-
-    &:active {
-        transform: translateY(0);
+            &:active {
+                transform: translateY(0);
+                box-shadow:
+                    inset 2px 2px 4px rgba(0, 0, 0, 0.5);
+            }
+        }
     }
 }

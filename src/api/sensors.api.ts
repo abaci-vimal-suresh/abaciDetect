@@ -8,7 +8,7 @@ import {
     UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData,
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
     AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
-    SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action
+    SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 import {
@@ -16,7 +16,7 @@ import {
     mockSensorGroups, mockPersonnelData, mockUserActivities, mockAlerts, mockAlertTrends, mockSensorConfigs, mockAlertConfigurations
 } from '../mockData/sensors';
 
-export const USE_MOCK_DATA = false;
+export const USE_MOCK_DATA = true;
 
 
 export const useUsers = () => {
@@ -697,6 +697,36 @@ export const useSensorWithReadings = (sensorId: string | number, options?: { ref
             readingsQuery.refetch();
         },
     };
+};
+
+/**
+ * Fetch the latest detailed sensor log for a specific sensor.
+ * Uses the data-management endpoint with nested reading groups.
+ */
+export const useLatestSensorLog = (sensorId: string | number, options?: { refetchInterval?: number }) => {
+    return useQuery({
+        queryKey: ['latestSensorLog', sensorId.toString()],
+        queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                // In mock mode, we could return a transformed version of existing mock data
+                // or just null for simplicity if mock integration isn't required.
+                return null;
+            }
+
+            const { data } = await axiosInstance.get<SensorLogResponse>(
+                '/data-management/sensor-logs/latest/',
+                {
+                    params: { sensor_id: sensorId }
+                }
+            );
+
+            return data.results && data.results.length > 0 ? data.results[0] : null;
+        },
+        enabled: !!sensorId,
+        refetchInterval: options?.refetchInterval || 15000,
+        staleTime: 15000,
+    });
 };
 
 

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import classNames from 'classnames';
 import styles from '../SentinelSensorDetail.module.scss';
 import Icon from '../../../../components/icon/Icon';
-import { Sensor } from '../../../../types/sensor';
+import { Sensor, SensorLog } from '../../../../types/sensor';
 import { getSensorMetricValue } from '../../utils/sensorData.utils';
 import { getMetricStatus } from '../../utils/threshold.utils';
 
 interface SentinelDashboardViewProps {
     sensor: Sensor;
+    latestLog?: SensorLog | null;
     darkModeStatus: boolean;
     configurations: any[];
 }
@@ -23,6 +24,7 @@ interface TooltipState {
 
 const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
     sensor,
+    latestLog,
     darkModeStatus,
     configurations,
 }) => {
@@ -34,8 +36,23 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
         description: ''
     });
 
-    // Helper to get value from sensor data
-    const getValue = (key: string): any => getSensorMetricValue(sensor, key);
+    // Helper to get value from sensor data, prioritizing real-time log
+    const getValue = (key: string): any => {
+        if (latestLog) {
+            // Check groups
+            if (key in latestLog.readings_environmental) return (latestLog.readings_environmental as any)[key];
+            if (key in latestLog.readings_air) return (latestLog.readings_air as any)[key];
+            if (key in latestLog.readings_derived) return (latestLog.readings_derived as any)[key];
+            if (key in latestLog.others) return (latestLog.others as any)[key];
+
+            // Map legacy keys to new log keys if needed
+            if (key === 'humidity') return latestLog.readings_environmental.humidity_percent;
+            if (key === 'light') return latestLog.readings_environmental.light_lux;
+            if (key === 'noise') return latestLog.readings_environmental.sound_db || latestLog.readings_derived.noise_db || 0;
+            if (key === 'co2') return latestLog.readings_air.co2_eq;
+        }
+        return getSensorMetricValue(sensor, key);
+    };
 
     const handleMouseMove = (e: React.MouseEvent, title: string, desc: string, range?: string) => {
         setTooltip({
@@ -64,11 +81,11 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
                 statuses.push(getMetricStatus('health_index', getValue('health_index')));
                 break;
             case 'environment':
-                statuses.push(getMetricStatus('temp_c', getValue('temp_c')));
-                statuses.push(getMetricStatus('humidity', getValue('humidity')));
+                statuses.push(getMetricStatus('temp_c', getValue('temp_c')) || getMetricStatus('temp_c', getValue('temperature_c')));
+                statuses.push(getMetricStatus('humidity', getValue('humidity')) || getMetricStatus('humidity', getValue('humidity_percent')));
                 break;
             case 'gases':
-                statuses.push(getMetricStatus('co2', getValue('co2')));
+                statuses.push(getMetricStatus('co2', getValue('co2')) || getMetricStatus('co2', getValue('co2_eq')));
                 statuses.push(getMetricStatus('tvoc', getValue('tvoc')));
                 statuses.push(getMetricStatus('co', getValue('co')));
                 statuses.push(getMetricStatus('nh3', getValue('nh3')));
@@ -129,24 +146,6 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
                                             <div className={styles.aqiStatus}>{getValue('aqi') < 50 ? 'EXCELLENT' : (getValue('aqi') < 100 ? 'GOOD' : 'MODERATE')}</div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                            <div className={styles.miniMetricGrid}>
-                                <div className={styles.subMetric}>
-                                    <div className={styles.subMetricLabel}>CO AQI</div>
-                                    <div className={styles.subMetricValue}>{getValue('coaqi')}</div>
-                                </div>
-                                <div className={styles.subMetric}>
-                                    <div className={styles.subMetricLabel}>NO2 AQI</div>
-                                    <div className={styles.subMetricValue}>{getValue('no2aqi')}</div>
-                                </div>
-                                <div className={styles.subMetric}>
-                                    <div className={styles.subMetricLabel}>PM10 AQI</div>
-                                    <div className={styles.subMetricValue}>{getValue('pm10aqi')}</div>
-                                </div>
-                                <div className={styles.subMetric}>
-                                    <div className={styles.subMetricLabel}>PM2.5 AQI</div>
-                                    <div className={styles.subMetricValue}>{getValue('pm25aqi')}</div>
                                 </div>
                             </div>
                         </div>
@@ -495,6 +494,75 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
                                 <span className={styles.systemLabel}>CPU TEMP</span>
                                 <span className={styles.systemValue}>42°C</span>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* DIAGNOSTIC TERMINAL (Matches API Response Structure) */}
+                    <div className={classNames(styles.sentinelCard, styles.terminalCard, styles[sensorStatus])}>
+                        <div className={styles.cardHeader}>
+                            <Icon icon="Terminal" style={{ marginRight: '8px' }} />
+                            System Live Diagnostics [Real-time JSON Stream]
+                        </div>
+                        <div className={styles.terminalContainer}>
+                            <div className={styles.terminalSection}>
+                                <div className={styles.terminalHeading}>ENVIRONMENTAL</div>
+                                <div className={styles.terminalGrid}>
+                                    {latestLog ? Object.entries(latestLog.readings_environmental).map(([key, val]) => (
+                                        key !== 'id' && (
+                                            <div key={key} className={styles.terminalItem}>
+                                                <span className={styles.tKey}>{key.toUpperCase()}</span>
+                                                <span className={styles.tVal}>{val !== null ? val : 'NULL'}</span>
+                                            </div>
+                                        )
+                                    )) : <div className={styles.loadingText}>awaiting_stream...</div>}
+                                </div>
+                            </div>
+
+                            <div className={styles.terminalSection}>
+                                <div className={styles.terminalHeading}>AIR_QUALITY</div>
+                                <div className={styles.terminalGrid}>
+                                    {latestLog ? Object.entries(latestLog.readings_air).map(([key, val]) => (
+                                        key !== 'id' && (
+                                            <div key={key} className={styles.terminalItem}>
+                                                <span className={styles.tKey}>{key.toUpperCase()}</span>
+                                                <span className={styles.tVal}>{val !== null ? val : 'NULL'}</span>
+                                            </div>
+                                        )
+                                    )) : <div className={styles.loadingText}>awaiting_stream...</div>}
+                                </div>
+                            </div>
+
+                            <div className={styles.terminalSection}>
+                                <div className={styles.terminalHeading}>DERIVED_METRICS</div>
+                                <div className={styles.terminalGrid}>
+                                    {latestLog ? Object.entries(latestLog.readings_derived).map(([key, val]) => (
+                                        key !== 'id' && (
+                                            <div key={key} className={styles.terminalItem}>
+                                                <span className={styles.tKey}>{key.toUpperCase()}</span>
+                                                <span className={styles.tVal}>{val !== null ? val : 'NULL'}</span>
+                                            </div>
+                                        )
+                                    )) : <div className={styles.loadingText}>awaiting_stream...</div>}
+                                </div>
+                            </div>
+
+                            <div className={styles.terminalSection}>
+                                <div className={styles.terminalHeading}>OTHERS_DIAG</div>
+                                <div className={styles.terminalGrid}>
+                                    {latestLog ? Object.entries(latestLog.others).map(([key, val]) => (
+                                        key !== 'id' && (
+                                            <div key={key} className={styles.terminalItem}>
+                                                <span className={styles.tKey}>{key.toUpperCase()}</span>
+                                                <span className={styles.tVal}>{val !== null ? val : 'NULL'}</span>
+                                            </div>
+                                        )
+                                    )) : <div className={styles.loadingText}>awaiting_stream...</div>}
+                                </div>
+                            </div>
+                        </div>
+                        <div className={styles.terminalFooter}>
+                            <span>LAST_SYNC: {latestLog?.recorded_at || 'NEVER'}</span>
+                            <span className={styles.blinkingCursor}>_</span>
                         </div>
                     </div>
 

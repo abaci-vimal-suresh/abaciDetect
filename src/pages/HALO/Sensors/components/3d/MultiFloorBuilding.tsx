@@ -21,6 +21,7 @@ interface MultiFloorBuildingProps {
     focusedFloorLevel?: number | null;
     rotation: { x: number; y: number };
     selectedParameters: string[];
+    onSensorHover?: (id: string | number | null) => void;
 }
 
 
@@ -40,6 +41,7 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
     darkModeStatus,
     rotation,
     selectedParameters,
+    onSensorHover,
 }) => {
     // 1. Identify the "Main Area" (Building) - parent_id is null and type is building
     const mainArea = areas.find(a => a.parent_id === null && a.area_type === 'building');
@@ -323,6 +325,8 @@ const MultiFloorBuilding: React.FC<MultiFloorBuildingProps> = ({
                                     selectedParameters={selectedParameters}
                                     displayVal={marker.displayVal}
                                     displayType={marker.displayType}
+                                    onMouseEnter={() => onSensorHover?.(marker.sensor.id)}
+                                    onMouseLeave={() => onSensorHover?.(null)}
                                     onClick={(e) => {
                                         if (!editMode) {
                                             e.stopPropagation();
