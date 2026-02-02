@@ -79,7 +79,6 @@ const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChild
 								aria-label='Toggle dark mode'>
 								<Icon
 									icon={darkModeStatus ? 'DarkMode' : 'LightMode'}
-									color={darkModeStatus ? 'info' : 'warning'}
 									className='btn-icon'
 								/>
 							</Button>

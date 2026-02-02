@@ -12,10 +12,9 @@ interface SensorCardViewProps {
     sensor: any;
     latestLog?: SensorLog | null;
     darkModeStatus: boolean;
-    configurations: SensorConfig[];
 }
 
-const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, darkModeStatus, configurations }) => {
+const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, darkModeStatus }) => {
     const [isThresholdModalOpen, setIsThresholdModalOpen] = React.useState(false);
     const [isDeviceModalOpen, setIsDeviceModalOpen] = React.useState(false);
 
@@ -116,7 +115,7 @@ const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, dark
         }
     };
 
-    // NEW: Dynamic status determination using configured thresholds
+    // NEW: Dynamic status determination using sensor event thresholds
     const getMetricStatus = (metric: string, value: number): 'safe' | 'warning' | 'danger' => {
         if (value === undefined || value === null) return 'safe';
 
@@ -127,9 +126,6 @@ const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, dark
         const isPrimarySource = normalizedSource.includes(normalizedMetric) ||
             normalizedMetric.includes(normalizedSource);
 
-        // Try to use configured threshold from settings
-        const configStatus = getMetricStatusFromConfig(metric, value, configurations);
-        const hasConfig = hasActiveConfig(metric, configurations);
         const fallbackStatus = getMetricStatusHardcoded(metric, value);
 
         // If it's the primary source and we have event threshold, use that first
@@ -138,11 +134,6 @@ const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, dark
             if (value > eventThreshold) return 'danger';
             if (percentage >= 80) return 'warning';
             return 'safe';
-        }
-
-        // Use configured threshold if available
-        if (hasConfig) {
-            return configStatus;
         }
 
         // No configuration found, fall back to hardcoded logic
@@ -271,9 +262,6 @@ const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, dark
             if (val !== undefined && val !== null) {
                 const status = getMetricStatus(m.key, val);
 
-                // Check if this metric has a custom configuration
-                const config = getConfigForMetric(m.key, configurations);
-
                 if (status !== 'safe' && !alerts.some(a => a.source.toLowerCase().includes(m.label.toLowerCase()))) {
                     alerts.push({
                         source: m.label,
@@ -282,8 +270,8 @@ const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, dark
                         color: status === 'danger' ? 'danger' : 'warning',
                         label: status === 'danger' ? 'Limit Exceeded' : 'Warning Level',
                         value: val,
-                        threshold: config?.threshold || 0,
-                        hasCustomConfig: !!config // NEW: Flag to show if using custom threshold
+                        threshold: 0,
+                        hasCustomConfig: false
                     });
                 }
             }

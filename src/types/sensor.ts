@@ -385,17 +385,36 @@ export interface SensorUpdatePayload {
 }
 
 export interface SensorConfig {
-    id?: number; // Optional on creation
-    sensor_name: string;
-    sensor_type?: string;
-    unit?: string;
-    description?: string;
+    id?: number; // Database ID
+    sensor_name: string; // Keep for legacy/mock
+    event_id?: string; // Backend key for sensor/event name
+    halo_sensor?: number; // Backend sensor ID
     enabled?: boolean;
     min_value?: number;
     threshold?: number;
     max_value?: number;
-    recipients?: AlertRecipient[];
-    actions?: AlertActionConfig;
+
+    // LED & Audio
+    led_color?: number; // Decimal color code
+    led_pattern?: number;
+    led_priority?: number; // 1-8
+    sound?: string;
+
+    // Actions & Timing
+    relay1?: number; // seconds
+    pause_minutes?: number; // minutes
+    source?: string;
+    conditions?: string;
+
+    // Legacy mapping (to be removed once fully migrated)
+    ledclr?: number;
+    ledpat?: number;
+    ledprority?: number;
+    relay?: number;
+    pause?: number;
+
+    unit?: string;
+    description?: string;
     device?: number; // ID of the device
     created_at?: string;
     updated_at?: string;
