@@ -1,9 +1,6 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
-
 import Page from '../../../layout/Page/Page';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';

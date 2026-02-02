@@ -5,7 +5,7 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Spinner from '../../../../components/bootstrap/Spinner';
 import Icon from '../../../../components/icon/Icon';
 import Select from '../../../../components/bootstrap/forms/Select';
-import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig, useUsers, useUserGroups } from '../../../../api/sensors.api';
+import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig, useUsers, useUserGroups, useSyncHaloConfigs, useTriggerSensor } from '../../../../api/sensors.api';
 import { SensorConfig, SENSOR_CONFIG_CHOICES, AlertActionConfig } from '../../../../types/sensor';
 import Badge from '../../../../components/bootstrap/Badge';
 import styles from '../../../../styles/pages/HALO/Settings/ThresholdManagement.module.scss';
@@ -13,7 +13,6 @@ import classNames from 'classnames';
 import { getMetricStatusFromConfig, getStatusColor, getStatusLabel } from '../../../../helpers/thresholdUtils';
 import ThemeContext from '../../../../contexts/themeContext';
 import Modal, { ModalHeader, ModalTitle, ModalBody, ModalFooter } from '../../../../components/bootstrap/Modal';
-import StatusToggleButton from '../../../../components/CustomComponent/Buttons/StatusToggleButton';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import useTablestyle from '../../../../hooks/useTablestyles';
@@ -132,7 +131,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     const { darkModeStatus } = useContext(ThemeContext);
     const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
 
-    // API calls with mock fallback
+    // API calls
     const { data: apiConfigs, isLoading } = useSensorConfigurations(deviceId);
     const { data: apiSensor } = useSensor(deviceId);
     const { data: remoteConfig } = useRemoteSensorConfig(apiSensor?.sensor_type as string);
@@ -140,11 +139,13 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     const addMutation = useAddSensorConfiguration();
     const updateMutation = useUpdateSensorConfiguration();
     const deleteMutation = useDeleteSensorConfiguration();
+    const syncMutation = useSyncHaloConfigs();
+    const triggerMutation = useTriggerSensor();
     const { data: users } = useUsers();
     const { data: userGroups } = useUserGroups();
 
-    // 🔥 Use mock data if API returns nothing
-    const configs = apiConfigs && apiConfigs.length > 0 ? apiConfigs : MOCK_CONFIGS;
+    // 🔥 Use real data from API
+    const configs = apiConfigs || [];
     const latestSensor = apiSensor || MOCK_SENSOR_DATA;
 
     const sensorConfigChoices = remoteConfig?.data?.sensors.map(s => ({
@@ -158,18 +159,39 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             name;
     };
 
-    const [viewMode, setViewMode] = useState<'visual' | 'list'>('visual');
+    const handleTestSensor = (eventId?: string) => {
+        if (!apiSensor?.ip_address) return;
+
+        triggerMutation.mutate({
+            sensorId: deviceId,
+            event: eventId || 'Alert',
+            ip: apiSensor.ip_address
+        });
+    };
+
+    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
 
     const tableColumns = [
         {
             title: 'Sensor Name',
-            field: 'sensor_name',
-            headerStyle: { textAlign: 'left' as any, paddingLeft: '2rem' },
-            cellStyle: { textAlign: 'left' as any, paddingLeft: '2rem' },
+            field: 'event_id',
+            headerStyle: { textAlign: 'left' as any, paddingLeft: '2.5rem' },
+            cellStyle: { textAlign: 'left' as any, paddingLeft: '2.5rem' },
             render: (rowData: any) => (
                 <div className='fw-bold' style={{ fontSize: '0.95rem' }}>
-                    {displaySensorName(rowData.sensor_name)}
+                    {displaySensorName(rowData.event_id || rowData.sensor_name)}
+                </div>
+            )
+        },
+        {
+            title: 'Source',
+            field: 'source',
+            headerStyle: { textAlign: 'center' as any },
+            cellStyle: { textAlign: 'center' as any },
+            render: (rowData: any) => (
+                <div className='text-muted small'>
+                    {rowData.source || '-'}
                 </div>
             )
         },
@@ -181,17 +203,23 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             cellStyle: { textAlign: 'center' as any },
             render: (rowData: any) => (
                 <div className="d-flex justify-content-center">
-                    <StatusToggleButton
-                        id={`list-toggle-${rowData.id}`}
-                        checked={rowData.enabled ?? true}
-                        onChange={(val: boolean) => {
+                    <div
+                        onClick={() => {
                             updateMutation.mutate({
                                 sensorId: deviceId,
                                 configId: rowData.id!,
-                                config: { ...rowData, enabled: val }
+                                config: { ...rowData, enabled: !rowData.enabled }
                             });
                         }}
-                    />
+                        style={{ cursor: 'pointer' }}
+                        title={rowData.enabled ? 'Enabled' : 'Disabled'}
+                    >
+                        <Icon
+                            icon={rowData.enabled ? 'ToggleOn' : 'ToggleOff'}
+                            size='2x'
+                            color={rowData.enabled ? 'success' : 'secondary'}
+                        />
+                    </div>
                 </div>
             )
         },
@@ -202,7 +230,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             cellStyle: { textAlign: 'center' as any },
             render: (rowData: any) => (
                 <div className="d-flex justify-content-center">
-                    <Badge color='info' isLight className='px-2 py-1' style={{ borderRadius: '50px', minWidth: '35px', textAlign: 'center' as any }}>
+                    <Badge color='info' isLight className='px-3 py-1' style={{ borderRadius: '50px', minWidth: '45px', textAlign: 'center' as any, fontWeight: 600 }}>
                         {rowData.threshold}
                     </Badge>
                 </div>
@@ -214,20 +242,65 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             headerStyle: { textAlign: 'center' as any },
             cellStyle: { textAlign: 'center' as any },
             render: (rowData: any) => (
-                <span className='text-muted' style={{ fontSize: '0.9rem' }}>
-                    {rowData.min_value} - {rowData.max_value}
-                </span>
+                <div className="d-flex justify-content-center">
+                    <span className='text-muted fw-500' style={{ fontSize: '0.9rem' }}>
+                        {rowData.min_value} - {rowData.max_value}
+                    </span>
+                </div>
             )
         },
         {
-            title: 'Actions',
+            title: 'Actions (LED/Sound)',
+            headerStyle: { textAlign: 'center' as any },
+            cellStyle: { textAlign: 'center' as any },
+            render: (rowData: any) => {
+                const hexColor = rowData.led_color ? `#${rowData.led_color.toString(16).padStart(6, '0')}` : '#CCCCCC';
+                return (
+                    <div className="d-flex justify-content-center align-items-center gap-2">
+                        <div
+                            style={{
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                backgroundColor: hexColor,
+                                border: '1px solid rgba(0,0,0,0.1)',
+                                boxShadow: `0 0 5px ${hexColor}`
+                            }}
+                            title={`LED Color: ${hexColor}`}
+                        />
+                        {rowData.sound && (
+                            <Icon icon='VolumeUp' size='sm' className='text-primary' title={rowData.sound} />
+                        )}
+                        {rowData.relay1 > 0 && (
+                            <Badge color='secondary' isLight size='sm' title={`Relay: ${rowData.relay1}s`}>
+                                {rowData.relay1}s
+                            </Badge>
+                        )}
+                    </div>
+                );
+            }
+        },
+        {
+            title: 'Manage',
             field: 'actions',
             sorting: false,
             filtering: false,
-            headerStyle: { textAlign: 'right' as any, paddingRight: '2rem' },
-            cellStyle: { textAlign: 'right' as any, paddingRight: '2rem' },
+            headerStyle: { textAlign: 'right' as any, paddingRight: '2.5rem' },
+            cellStyle: { textAlign: 'right' as any, paddingRight: '2.5rem' },
             render: (rowData: any) => (
                 <div className='d-flex gap-2 justify-content-end align-items-center'>
+                    <Button
+                        color='warning'
+                        isLight
+                        size='sm'
+                        icon={triggerMutation.isPending ? undefined : 'FlashOn'}
+                        className='px-3'
+                        onClick={() => handleTestSensor(rowData.event_id || rowData.sensor_name)}
+                        isDisable={triggerMutation.isPending || !apiSensor?.ip_address}
+                        title={!apiSensor?.ip_address ? 'IP address required' : 'Pulse Test Sensor'}
+                    >
+                        {triggerMutation.isPending ? <Spinner isSmall inButton /> : 'Pulse'}
+                    </Button>
                     <Button
                         color='primary'
                         isLight
@@ -236,7 +309,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                         className='px-3'
                         onClick={() => {
                             setSelectedConfigId(rowData.id!);
-                            setViewMode('visual');
+                            setIsConfigModalOpen(true);
                         }}
                     >
                         Edit
@@ -276,10 +349,18 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     // Form state
     const [formData, setFormData] = useState<Partial<SensorConfig>>({
         sensor_name: 'temperature',
+        event_id: 'temperature',
         min_value: 0,
         max_value: 50,
         threshold: 28,
-        enabled: true
+        enabled: true,
+        led_color: 16777215, // Default White
+        led_pattern: 200004,
+        led_priority: 1,
+        relay1: 0,
+        sound: '',
+        source: '',
+        pause_minutes: 0
     });
 
     // Get selected config
@@ -296,10 +377,19 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     useEffect(() => {
         if (selectedConfig) {
             setFormData({
-                sensor_name: selectedConfig.sensor_name,
+                sensor_name: selectedConfig.sensor_name || '',
+                event_id: selectedConfig.event_id || '',
                 min_value: selectedConfig.min_value,
                 max_value: selectedConfig.max_value,
-                threshold: selectedConfig.threshold
+                threshold: selectedConfig.threshold,
+                enabled: selectedConfig.enabled,
+                led_color: selectedConfig.led_color || selectedConfig.ledclr || 16777215,
+                led_pattern: selectedConfig.led_pattern || selectedConfig.ledpat || 200004,
+                led_priority: selectedConfig.led_priority || selectedConfig.ledprority || 1,
+                relay1: selectedConfig.relay1 || selectedConfig.relay || 0,
+                sound: selectedConfig.sound || '',
+                source: selectedConfig.source || '',
+                pause_minutes: selectedConfig.pause_minutes || selectedConfig.pause || 0
             });
             setIsCreatingNew(false);
             setHasUnsavedChanges(false);
@@ -323,6 +413,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         }
         setSelectedConfigId(configId);
         setIsCreatingNew(false);
+        setIsConfigModalOpen(true);
     };
 
     const filteredChoices = sensorConfigChoices.filter(
@@ -337,11 +428,20 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             setIsCreatingNew(true);
             setFormData({
                 sensor_name: firstAvailable,
+                event_id: firstAvailable,
                 min_value: defaults.min,
                 max_value: defaults.max,
-                threshold: defaults.threshold
+                threshold: defaults.threshold,
+                led_color: 16777215,
+                led_pattern: 200004,
+                led_priority: 1,
+                relay1: 0,
+                sound: '',
+                source: '',
+                pause_minutes: 0
             });
             setHasUnsavedChanges(false);
+            setIsConfigModalOpen(true);
         };
 
         if (hasUnsavedChanges) {
@@ -383,10 +483,18 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
 
         const payload = {
             sensor_name: formData.sensor_name,
+            event_id: formData.event_id || formData.sensor_name,
             threshold: formData.threshold,
             min_value: formData.min_value,
             max_value: formData.max_value,
             enabled: formData.enabled ?? true,
+            led_color: formData.led_color,
+            led_pattern: formData.led_pattern,
+            led_priority: formData.led_priority,
+            relay1: formData.relay1,
+            sound: formData.sound,
+            source: formData.source,
+            pause_minutes: formData.pause_minutes,
         };
 
         if (isCreatingNew) {
@@ -402,7 +510,10 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                     setHasUnsavedChanges(false);
                     setIsCreatingNew(false);
                     setSelectedConfigId(newConfig.id!);
-                    setTimeout(() => setSaveStatus('idle'), 2000);
+                    setTimeout(() => {
+                        setSaveStatus('idle');
+                        setIsConfigModalOpen(false);
+                    }, 1000);
                 },
                 onError: () => {
                     // Even on error, show success for demo
@@ -491,6 +602,10 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                 });
             }
         });
+    };
+
+    const handleSync = () => {
+        syncMutation.mutate(deviceId);
     };
 
     const getSensorLabel = (key: string) => {
@@ -583,136 +698,73 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         </Modal>
     );
 
-    const renderVisualView = () => (
-        <>
-            <div className={styles.detailHeader}>
-                <div className={styles.headerTop}>
-                    <div className={styles.titleSection}>
-                        <Icon icon='TuneOutline' size='2x' className={styles.headerIcon} />
-                        <div className={styles.titleContent}>
-                            <div className={styles.selectorRow}>
-                                {!isCreatingNew ? (
-                                    <Select
-                                        list={sensorDropdownOptions}
-                                        value={selectedConfigId?.toString() || ''}
-                                        onChange={(e: any) => handleSelectConfig(parseInt(e.target.value))}
-                                        ariaLabel='Select Sensor Configuration'
-                                        className={styles.sensorSelector}
-                                    />
-                                ) : (
-                                    <h4>New Configuration</h4>
-                                )}
+    const renderConfigModal = () => (
+        <Modal
+            isOpen={isConfigModalOpen}
+            setIsOpen={(val: boolean) => setIsConfigModalOpen(val)}
+            isCentered
+            isScrollable
+            size='lg'
+        >
+            <ModalHeader setIsOpen={(val: boolean) => setIsConfigModalOpen(val)}>
+                <ModalTitle id='config-modal-title'>
+                    <div className='d-flex align-items-center gap-2'>
+                        <Icon icon='Tune' />
+                        {isCreatingNew ? 'New Configuration' : `Edit ${displaySensorName(formData.sensor_name || '')}`}
+                    </div>
+                </ModalTitle>
+            </ModalHeader>
+            <ModalBody style={{ minHeight: '600px' }}>
+                <div className={styles.visualControl}>
+                    <div className={styles.formSection}>
+                        <div className={styles.sectionLabel}>
+                            <Icon icon='Settings' /> Basic Configuration
+                        </div>
+                        <div className='row g-3'>
+                            <div className={isCreatingNew ? 'col-md-12' : 'col-md-6'}>
+                                <label className='form-label'>Sensor Parameter</label>
+                                <Select
+                                    list={isCreatingNew ? filteredChoices : sensorConfigChoices}
+                                    value={formData.sensor_name || ''}
+                                    onChange={(e: any) => handleFormChange({ sensor_name: e.target.value })}
+                                    disabled={!isCreatingNew}
+                                    ariaLabel='Select Sensor Parameter'
+                                />
                             </div>
+                            {!isCreatingNew && (
+                                <div className='col-md-6'>
+                                    <label className='form-label'>Status</label>
+                                    <div className='d-flex align-items-center h-100' style={{ paddingBottom: '5px' }}>
+
+                                        <div
+                                            onClick={() => handleFormChange({ enabled: !formData.enabled })}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <Icon
+                                                icon={formData.enabled ? 'ToggleOn' : 'ToggleOff'}
+                                                size='2x'
+                                                color={formData.enabled ? 'success' : 'secondary'}
+                                            />
+                                        </div>
+                                        <span className={classNames('ms-2 fw-bold', formData.enabled ? 'text-success' : 'text-danger')}>
+                                            {formData.enabled ? 'Active' : 'Disabled'}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className={styles.headerActions}>
-                        <div className='d-flex align-items-center gap-2 me-3'>
-                            <StatusToggleButton
-                                id='visual-status-toggle'
-                                checked={formData.enabled ?? true}
-                                onChange={(val: boolean) => handleFormChange({ enabled: val })}
-                            />
-                            {/* <span className={classNames(styles.subtitle, 'mb-0')}>
-                                {!formData.enabled ? 'Active' : 'Disabled'}
-                            </span> */}
+
+                    <div className={styles.formSection}>
+                        <div className={styles.sectionLabel}>
+                            <Icon icon='ShowChart' /> Threshold & Range
                         </div>
-                        <div className={styles.viewSwitcher}>
-                            <button
-                                className={classNames(styles.viewBtn, { [styles.active]: viewMode === 'visual' })}
-                                onClick={() => setViewMode('visual')}
-                                title='Visual Editor'
-                            >
-                                <Icon icon='Tune' />
-                                <span className='d-none d-md-inline'>Visual</span>
-                            </button>
-                            <button
-                                className={classNames(styles.viewBtn, { [styles.active]: viewMode === 'list' })}
-                                onClick={() => setViewMode('list')}
-                                title='Manage All'
-                            >
-                                <Icon icon='FormatListBulleted' />
-                                <span className='d-none d-md-inline'>List</span>
-                            </button>
-                        </div>
-                        <Button
-                            color='primary'
-                            size='sm'
-                            icon='Add'
-                            onClick={handleCreateNew}
-                            isLight
-                        >
-                            New
-                        </Button>
-                        {saveStatus !== 'idle' && (
-                            <div className={classNames(styles.saveStatus, styles[saveStatus])}>
-                                {saveStatus === 'saving' && <><Spinner isSmall /> Saving...</>}
-                                {saveStatus === 'saved' && <><Icon icon='CheckCircle' /> Saved</>}
-                                {saveStatus === 'error' && <><Icon icon='Error' /> Error</>}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Live Status Banner */}
-                {liveValue !== null && (
-                    <div className={classNames(styles.liveStatusBanner, styles[liveColor])}>
-                        <div className={styles.bannerContent}>
-                            <div className={styles.liveIndicator}>
-                                <span className={styles.pulse} />
-                                <span>LIVE</span>
-                            </div>
-                            <div className={styles.liveValue}>
-                                <span className={styles.value}>{liveValue.toFixed(2)}</span>
-                                <span className={styles.label}>{liveLabel}</span>
-                            </div>
-                            <div className={styles.thresholdInfo}>
-                                <span>Threshold: {formData.threshold}</span>
-                                <Icon icon={liveValue > (formData.threshold || 0) ? 'TrendingUp' : 'TrendingDown'} />
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className={styles.detailContent}>
-                <div className={styles.formSection}>
-                    <label className={styles.sectionLabel}>
-                        <Icon icon='Category' />
-                        Sensor Type
-                    </label>
-                    <Select
-                        list={isCreatingNew ? filteredChoices : SENSOR_CONFIG_CHOICES}
-                        value={formData.sensor_name}
-                        onChange={(e: any) => handleFormChange({ sensor_name: e.target.value })}
-                        disabled={!isCreatingNew}
-                        ariaLabel='Sensor Type'
-                        className={styles.formSelect}
-                    />
-                    {!isCreatingNew && (
-                        <small className={styles.formHint}>
-                            <Icon icon='Lock' size='sm' />
-                            Sensor type is locked after creation
-                        </small>
-                    )}
-                </div>
-
-                {/* Visual Threshold Control */}
-                <div className={styles.formSection}>
-                    <label className={styles.sectionLabel}>
-                        <Icon icon='Speed' />
-                        Threshold Configuration
-                    </label>
-
-                    <div className={styles.visualControl}>
-                        {/* Gauge Display */}
                         <div className={styles.gaugeDisplay}>
                             <div className={styles.gaugeTrack}>
-                                {/* Safe Zone */}
                                 <div
                                     className={styles.safeZone}
                                     style={{ width: `${getThresholdPosition()}%` }}
                                 />
-                                {/* Warning Zone */}
                                 <div
                                     className={styles.warningZone}
                                     style={{
@@ -720,20 +772,14 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                                         width: `${100 - getThresholdPosition()}%`
                                     }}
                                 />
-
-                                {/* Threshold Marker */}
                                 <div
                                     className={styles.thresholdMarkerNew}
                                     style={{ left: `${getThresholdPosition()}%` }}
                                 >
                                     <div className={styles.markerLine} />
                                     <div className={styles.markerDot} />
-                                    <div className={styles.markerLabel}>
-                                        {formData.threshold?.toFixed(1)}
-                                    </div>
+                                    <div className={styles.markerLabel}>{formData.threshold}</div>
                                 </div>
-
-                                {/* Live Value Pointer */}
                                 {liveValue !== null && (
                                     <div
                                         className={classNames(styles.livePointer, styles[liveColor])}
@@ -742,109 +788,183 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                                         <div className={styles.pointerLine} />
                                         <div className={styles.pointerDot} />
                                         <div className={styles.pointerLabel}>
-                                            {liveValue.toFixed(1)}
+                                            {liveValue.toFixed(2)} - {liveLabel}
                                         </div>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Range Labels */}
                             <div className={styles.rangeLabels}>
                                 <span>{formData.min_value}</span>
                                 <span>{formData.max_value}</span>
                             </div>
                         </div>
 
-                        {/* Slider Control */}
-                        <div className={styles.sliderControl}>
-                            <input
-                                type='range'
-                                min={formData.min_value || 0}
-                                max={formData.max_value || 100}
-                                step={0.1}
-                                value={formData.threshold || 0}
-                                onChange={(e) => handleFormChange({ threshold: parseFloat(e.target.value) })}
-                                className={styles.thresholdSlider}
-                            />
+                        <div className='slider-wrapper mt-4'>
+                            <div className={styles.sliderControl}>
+                                <input
+                                    type='range'
+                                    className={styles.thresholdSlider}
+                                    min={formData.min_value}
+                                    max={formData.max_value}
+                                    step='0.1'
+                                    value={formData.threshold}
+                                    onChange={(e) => handleFormChange({ threshold: parseFloat(e.target.value) })}
+                                />
+                            </div>
+                            <div className='row mt-3'>
+                                <div className='col-md-4'>
+                                    <label className='form-label'>Threshold Val</label>
+                                    <input
+                                        type='number'
+                                        className='form-control'
+                                        value={formData.threshold}
+                                        onChange={(e) => handleFormChange({ threshold: parseFloat(e.target.value) })}
+                                    />
+                                </div>
+                                <div className='col-md-4'>
+                                    <label className='form-label'>Min Range</label>
+                                    <input
+                                        type='number'
+                                        className='form-control'
+                                        value={formData.min_value}
+                                        onChange={(e) => handleFormChange({ min_value: parseFloat(e.target.value) })}
+                                    />
+                                </div>
+                                <div className='col-md-4'>
+                                    <label className='form-label'>Max Range</label>
+                                    <input
+                                        type='number'
+                                        className='form-control'
+                                        value={formData.max_value}
+                                        onChange={(e) => handleFormChange({ max_value: parseFloat(e.target.value) })}
+                                    />
+                                </div>
+                            </div>
                         </div>
+                    </div>
 
-                        {/* Numeric Input */}
-                        <div className={styles.numericInput}>
-                            <Input
-                                type='number'
-                                value={formData.threshold}
-                                onChange={(e: any) => handleFormChange({ threshold: parseFloat(e.target.value) || 0 })}
-                                step={0.1}
-                                className={styles.thresholdInput}
-                            />
-                            <span className={styles.inputLabel}>Alert Threshold</span>
+                    <div className={styles.formSection}>
+                        <div className={styles.sectionLabel}>
+                            <Icon icon='Lightbulb' /> LED & Audio Controls
+                        </div>
+                        <div className='row g-3'>
+                            <div className='col-md-4'>
+                                <label className='form-label'>LED Color</label>
+                                <input
+                                    type='number'
+                                    className='form-control'
+                                    value={formData.led_color}
+                                    onChange={(e) => handleFormChange({ led_color: parseInt(e.target.value) })}
+                                />
+                            </div>
+                            <div className='col-md-4'>
+                                <label className='form-label'>LED Pattern</label>
+                                <input
+                                    type='number'
+                                    className='form-control'
+                                    value={formData.led_pattern}
+                                    onChange={(e) => handleFormChange({ led_pattern: parseInt(e.target.value) })}
+                                />
+                            </div>
+                            <div className='col-md-4'>
+                                <label className='form-label'>LED Priority</label>
+                                <input
+                                    type='number'
+                                    className='form-control'
+                                    min='1'
+                                    max='8'
+                                    value={formData.led_priority}
+                                    onChange={(e) => handleFormChange({ led_priority: parseInt(e.target.value) })}
+                                />
+                            </div>
+                            <div className='col-md-6'>
+                                <label className='form-label'>Sound</label>
+                                <input
+                                    type='text'
+                                    className='form-control'
+                                    value={formData.sound}
+                                    onChange={(e) => handleFormChange({ sound: e.target.value })}
+                                />
+                            </div>
+                            <div className='col-md-6'>
+                                <label className='form-label'>Relay Duration (relay1)</label>
+                                <div className='input-group'>
+                                    <input
+                                        type='number'
+                                        className='form-control'
+                                        value={formData.relay1}
+                                        onChange={(e) => handleFormChange({ relay1: parseInt(e.target.value) })}
+                                    />
+                                    <span className='input-group-text'>sec</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className={styles.formSection}>
+                        <div className={styles.sectionLabel}>
+                            <Icon icon='Info' /> Additional Settings
+                        </div>
+                        <div className='row g-3'>
+                            <div className='col-md-6'>
+                                <label className='form-label'>Source</label>
+                                <input
+                                    type='text'
+                                    className='form-control'
+                                    value={formData.source}
+                                    onChange={(e) => handleFormChange({ source: e.target.value })}
+                                />
+                            </div>
+                            <div className='col-md-6'>
+                                <label className='form-label'>Pause Time (pause_minutes)</label>
+                                <div className='input-group'>
+                                    <input
+                                        type='number'
+                                        className='form-control'
+                                        value={formData.pause_minutes}
+                                        onChange={(e) => handleFormChange({ pause_minutes: parseInt(e.target.value) })}
+                                    />
+                                    <span className='input-group-text'>min</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                {/* Range Configuration */}
-                <div className={styles.formSection}>
-                    <label className={styles.sectionLabel}>
-                        <Icon icon='SyncAlt' />
-                        Expected Range
-                    </label>
-                    <div className={styles.rangeInputs}>
-                        <div className={styles.rangeInput}>
-                            <label>Minimum</label>
-                            <Input
-                                type='number'
-                                value={formData.min_value}
-                                onChange={(e: any) => handleFormChange({ min_value: parseFloat(e.target.value) || 0 })}
-                            />
-                        </div>
-                        <Icon icon='Remove' className={styles.rangeSeparator} />
-                        <div className={styles.rangeInput}>
-                            <label>Maximum</label>
-                            <Input
-                                type='number'
-                                value={formData.max_value}
-                                onChange={(e: any) => handleFormChange({ max_value: parseFloat(e.target.value) || 100 })}
-                            />
-                        </div>
+            </ModalBody>
+            <ModalFooter>
+                <div className='d-flex justify-content-between w-100'>
+                    <div>
+                        {!isCreatingNew && (
+                            <Button
+                                color='danger'
+                                isLight
+                                icon='Delete'
+                                onClick={handleDelete}
+                            >
+                                Delete
+                            </Button>
+                        )}
                     </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className={styles.actionBar}>
-                    {!isCreatingNew && (
-                        <Button
-                            color='danger'
-                            isLight
-                            icon='Delete'
-                            onClick={handleDelete}
-                            isDisable={deleteMutation.isPending}
-                        >
-                            Delete
-                        </Button>
-                    )}
-                    <div className={styles.actionGroup}>
+                    <div className='d-flex gap-2'>
                         <Button
                             color='secondary'
                             isLight
-                            icon='RestartAlt'
-                            onClick={handleReset}
-                            isDisable={!hasUnsavedChanges}
+                            onClick={() => setIsConfigModalOpen(false)}
                         >
-                            Reset
+                            Cancel
                         </Button>
                         <Button
                             color='primary'
                             icon='Save'
                             onClick={handleSave}
-                            isDisable={!hasUnsavedChanges || addMutation.isPending || updateMutation.isPending}
+                            isDisable={!hasUnsavedChanges || saveStatus === 'saving'}
                         >
-                            {(addMutation.isPending || updateMutation.isPending) && <Spinner isSmall inButton />}
-                            {isCreatingNew ? 'Create' : 'Save'}
+                            {saveStatus === 'saving' ? <Spinner isSmall inButton /> : 'Save Changes'}
                         </Button>
                     </div>
                 </div>
-            </div>
-        </>
+            </ModalFooter>
+        </Modal>
     );
 
     const renderListView = () => (
@@ -854,29 +974,22 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                     <div className={styles.titleSection}>
                         <Icon icon='NotificationsActive' size='2x' className={styles.headerIcon} />
                         <div className={styles.titleContent}>
-                            <h4>Manage All Thresholds</h4>
+                            <h5 className="text-light">Manage All Thresholds</h5>
                             <span className={styles.subtitle}>Current configurations for {apiSensor?.name || deviceId}</span>
                         </div>
                     </div>
                     <div className={styles.headerActions}>
-                        <div className={styles.viewSwitcher}>
-                            <button
-                                className={classNames(styles.viewBtn, { [styles.active]: viewMode === 'visual' })}
-                                onClick={() => setViewMode('visual')}
-                                title='Visual Editor'
-                            >
-                                <Icon icon='Tune' />
-                                <span className='d-none d-md-inline'>Visual</span>
-                            </button>
-                            <button
-                                className={classNames(styles.viewBtn, { [styles.active]: viewMode === 'list' })}
-                                onClick={() => setViewMode('list')}
-                                title='Manage All'
-                            >
-                                <Icon icon='FormatListBulleted' />
-                                <span className='d-none d-md-inline'>List</span>
-                            </button>
-                        </div>
+                        <Button
+                            color='info'
+                            size='sm'
+                            icon='Sync'
+                            onClick={handleSync}
+                            isLight
+                            isDisable={syncMutation.isPending}
+                            className='me-2'
+                        >
+                            {syncMutation.isPending ? <Spinner isSmall inButton /> : 'Sync'}
+                        </Button>
                         <Button
                             color='primary'
                             size='sm'
@@ -936,20 +1049,11 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
 
     return (
         <div className={classNames(styles.singlePanelContainer, { [styles.darkMode]: darkModeStatus })}>
-            {renderConfirmModal()}
             <div className={styles.mainPanel}>
-                {viewMode === 'list' ? renderListView() : (
-                    (selectedConfig || isCreatingNew) ? renderVisualView() : (
-                        <div className={styles.emptyState}>
-                            <div className={styles.emptyIcon}>
-                                <Icon icon='TouchApp' />
-                            </div>
-                            <h5>Select a Configuration</h5>
-                            <p>Choose a sensor from the dropdown above to view and edit its configuration.</p>
-                        </div>
-                    )
-                )}
+                {renderListView()}
             </div>
+            {renderConfigModal()}
+            {renderConfirmModal()}
         </div>
     );
 };

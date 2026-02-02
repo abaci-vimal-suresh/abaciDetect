@@ -34,7 +34,6 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
     const handleToggle = (field: keyof AlertFilter, value: number) => {
         const currentList = (formData[field] as any[]) || [];
-        // Handle both number arrays and object arrays by comparing IDs
         const index = currentList.findIndex((item: any) =>
             (typeof item === 'object' ? item.id : item) === value
         );
@@ -88,7 +87,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
             <div className="col-12 mt-4">
                 <h6 className="fw-bold mb-3">1. Trigger Conditions</h6>
-                <div className="card bg-light border-0 shadow-none">
+                <div className="card border-0 shadow-none">
                     <div className="card-body">
                         <div className="row g-3">
                             <div className="col-md-4">
@@ -117,7 +116,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
             <div className="col-12">
                 <h6 className="fw-bold mb-3">2. Active Schedule (Optional)</h6>
-                <div className="card bg-light border-0 shadow-none">
+                <div className="card  border-0 shadow-none">
                     <div className="card-body">
                         <div className="row g-3">
                             <div className="col-md-6">
@@ -126,7 +125,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
                                         <div
                                             key={index}
-                                            className={`p-2 border rounded text-center small ${formData.weekdays?.includes(index) ? 'bg-primary text-white border-primary' : 'bg-white'}`}
+                                            className={`p-2 border rounded text-center small ${formData.weekdays?.includes(index) ? 'bg-primary text-white border-primary' : ''}`}
                                             style={{ cursor: 'pointer', minWidth: '40px', userSelect: 'none' }}
                                             onClick={() => handleDayToggle(index)}
                                         >
@@ -160,7 +159,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
             <div className="col-md-6">
                 <FormGroup label="Apply to Areas">
-                    <div className="border rounded p-2 bg-white" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                    <div className="border rounded p-2 " style={{ maxHeight: '150px', overflowY: 'auto' }}>
                         {areas?.map((a: Area) => (
                             <Checks
                                 key={a.id}
@@ -176,7 +175,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
             <div className="col-md-6">
                 <FormGroup label="Sensor Configurations">
-                    <div className="border rounded p-2 bg-white" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                    <div className="border rounded p-2 " style={{ maxHeight: '150px', overflowY: 'auto' }}>
                         {SENSOR_CONFIG_CHOICES.map((c: any, index: number) => (
                             <Checks
                                 key={c.value}
@@ -192,7 +191,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
             <div className="col-12">
                 <FormGroup label="Sensor Groups (Optional)">
-                    <div className="border rounded p-2 bg-white" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                    <div className="border rounded p-2 " style={{ maxHeight: '150px', overflowY: 'auto' }}>
                         {sensorGroups?.map((g: any) => (
                             <Checks
                                 key={g.id}
@@ -208,7 +207,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
             <div className="col-12">
                 <FormGroup label="Associated Actions">
-                    <div className="border rounded p-3 bg-white">
+                    <div className="border rounded p-3 ">
                         <div className="row g-2">
                             {actions?.map((a: Action) => (
                                 <div key={a.id} className="col-md-6">

@@ -16,7 +16,7 @@ import {
     mockSensorGroups, mockPersonnelData, mockUserActivities, mockAlerts, mockAlertTrends, mockSensorConfigs, mockAlertConfigurations
 } from '../mockData/sensors';
 
-export const USE_MOCK_DATA = true;
+export const USE_MOCK_DATA = false;
 
 
 export const useUsers = () => {
@@ -827,7 +827,7 @@ export const useRemoteSensorConfig = (sensorType?: string) => {
         queryKey: ['remoteSensorConfig', sensorType],
         queryFn: async () => {
             if (!sensorType) return null;
-            const { data } = await axios.get(`http://111.92.105.222:8081/api/devices/sensor-config/`, {
+            const { data } = await axiosInstance.get(`/devices/sensor-config/`, {
                 params: { sensor_type: sensorType }
             });
             return data as RemoteSensorConfigResponse;
@@ -843,12 +843,11 @@ export const useSensorConfigurations = (sensorId: string | number) => {
         queryKey: ['sensorConfigurations', sensorId.toString()],
         queryFn: async () => {
             if (!sensorId) return [];
-            if (USE_MOCK_DATA) {
-                await new Promise((resolve) => setTimeout(resolve, 300));
-                return mockSensorConfigs[sensorId.toString()] || [];
-            }
-            // GET /api/sensors/{id}/configurations/
-            const { data } = await axiosInstance.get(`/devices/sensors/${sensorId}/configurations/`);
+
+            // GET /api/devices/sensor-configurations/
+            const { data } = await axiosInstance.get(`/devices/sensor-configurations/`, {
+                params: { halo_sensor__sensor: sensorId }
+            });
             return data as SensorConfig[];
         },
         enabled: !!sensorId,
@@ -861,8 +860,11 @@ export const useAddSensorConfiguration = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, config }: { sensorId: string | number; config: SensorConfig }) => {
-            // POST /api/sensors/{id}/add_configuration/
-            const { data } = await axiosInstance.post(`/devices/sensors/${sensorId}/add_configuration/`, config);
+            // POST /api/devices/sensor-configurations/
+            const { data } = await axiosInstance.post(`/devices/sensor-configurations/`, {
+                ...config,
+                device: sensorId // Ensure device ID is linked
+            });
             return data as SensorConfig;
         },
         onSuccess: (_, { sensorId }) => {
@@ -885,21 +887,8 @@ export const useUpdateSensorConfiguration = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, configId, config }: { sensorId: string | number; configId: number; config: Partial<SensorConfig> }) => {
-            if (USE_MOCK_DATA) {
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                const sensorConfigs = mockSensorConfigs[sensorId.toString()];
-                if (sensorConfigs) {
-                    const configIndex = sensorConfigs.findIndex(c => c.id === configId);
-                    if (configIndex > -1) {
-                        sensorConfigs[configIndex] = { ...sensorConfigs[configIndex], ...config };
-                        return sensorConfigs[configIndex];
-                    }
-                }
-                // If not found, it might be a new one being added or just missing mock
-                return { id: configId, ...config } as SensorConfig;
-            }
-            // PATCH /api/devices/sensors/{id}/update_configuration/?config_id={id}
-            const { data } = await axiosInstance.patch(`/devices/sensors/${sensorId}/update_configuration/?config_id=${configId}`, config);
+            // PATCH /api/devices/sensor-configurations/{id}/
+            const { data } = await axiosInstance.patch(`/devices/sensor-configurations/${configId}/`, config);
             return data as SensorConfig;
         },
         onSuccess: (_, { sensorId }) => {
@@ -922,8 +911,8 @@ export const useDeleteSensorConfiguration = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, configId }: { sensorId: string | number; configId: number }) => {
-            // DELETE /api/devices/sensors/{id}/delete_configuration/?config_id={id}
-            await axiosInstance.delete(`/devices/sensors/${sensorId}/delete_configuration/?config_id=${configId}`);
+            // DELETE /api/devices/sensor-configurations/{id}/
+            await axiosInstance.delete(`/devices/sensor-configurations/${configId}/`);
         },
         onSuccess: (_, { sensorId }) => {
             queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId.toString()] });
@@ -2420,6 +2409,32 @@ export const useDeleteAction = () => {
         },
         onError: () => {
             showErrorNotification('Failed to delete action');
+        }
+    });
+};
+
+export const useSyncHaloConfigs = () => {
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (sensorId: string | number) => {
+            // Spec: POST /api/devices/sensor-configurations/sync_all_from_sensor/
+            const { data } = await axiosInstance.post(`/devices/sensor-configurations/sync_all_from_sensor/`, {
+                sensor_id: sensorId
+            });
+            return data;
+        },
+        onSuccess: (data, sensorId) => {
+            queryClient.invalidateQueries({ queryKey: ['sensorConfigurations', sensorId.toString()] });
+            showSuccessNotification('Halo configurations synchronized successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(
+                error?.response?.data?.detail ||
+                error?.response?.data?.message ||
+                'Failed to sync Halo configurations'
+            );
         }
     });
 };

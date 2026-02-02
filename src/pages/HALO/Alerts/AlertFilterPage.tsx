@@ -122,7 +122,7 @@ const AlertFilterPage = () => {
                                         }}
                                         actions={[
                                             {
-                                                icon: 'Edit',
+                                                icon: () => <Icon icon="Edit" size='2x' color="primary" />,
                                                 tooltip: 'Edit',
                                                 onClick: (event, rowData: any) => {
                                                     setEditingFilter(rowData);
@@ -130,7 +130,7 @@ const AlertFilterPage = () => {
                                                 }
                                             },
                                             {
-                                                icon: 'Delete',
+                                                icon: () => <Icon icon="Delete" size='2x' color="danger" />,
                                                 tooltip: 'Delete',
                                                 onClick: (event, rowData: any) => {
                                                     if (window.confirm(`Are you sure you want to delete this filter?`)) {
@@ -139,7 +139,7 @@ const AlertFilterPage = () => {
                                                 }
                                             },
                                             {
-                                                icon: 'Add',
+                                                icon: () => <Icon icon="Add" size='2x' color="primary" />,
                                                 tooltip: 'Add Rule',
                                                 isFreeAction: true,
                                                 onClick: (event) => {

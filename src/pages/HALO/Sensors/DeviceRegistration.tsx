@@ -51,9 +51,10 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
     const onSubmit = (data: any) => {
         console.log('Form data received:', data);
 
-        // Filter out fields not expected by the API
-        // const { terms, ...apiData } = data; // terms removed
-        const apiData = { ...data };
+        const apiData = {
+            ...data,
+            mac_address: data.mac_address ? data.mac_address.replace(/:/g, '') : data.mac_address
+        };
 
         console.log('Cleaned API payload:', apiData);
 
@@ -177,13 +178,13 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                                 // Auto-format MAC address
                                                 let value = e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
                                                 if (value.length > 12) value = value.substring(0, 12);
-                                                
+
                                                 const parts = [];
                                                 for (let i = 0; i < value.length; i += 2) {
                                                     parts.push(value.substring(i, i + 2));
                                                 }
                                                 const formatted = parts.join(':');
-                                                
+
                                                 // Use setValue to update without full re-render overhead if possible, 
                                                 // but we need to update the input value immediately.
                                                 // Setting the value in the event target helps, but setValue updates the internal state.
@@ -252,7 +253,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                 </div>
                             </FormGroup>
                         </div>
-                        
+
                         <div className='col-12 col-md-6'>
                             <FormGroup label='Device Username' className='mb-0'>
                                 <div className='input-icon-wrapper'>
@@ -332,8 +333,8 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                             <div className='review-item'>
                                 <div className='review-label'>Area</div>
                                 <div className='review-value'>
-                                    {formValues.area_id 
-                                        ? (flattenAreas(areas || []).find(a => a.id === Number(formValues.area_id))?.name || 'Unknown Area') 
+                                    {formValues.area_id
+                                        ? (flattenAreas(areas || []).find(a => a.id === Number(formValues.area_id))?.name || 'Unknown Area')
                                         : 'Not specified'}
                                 </div>
                             </div>
