@@ -33,7 +33,7 @@ export const AdminRoutes = {
 	haloDashboard: haloMenu.dashboard,
 	haloSensors: haloMenu.sensors,
 	haloArea: haloMenu.area,
-	monitoring: haloMenu.monitoring,
+	// monitoring: haloMenu.monitoring,
 	alerts: haloMenu.alerts,
 	haloActions: haloMenu.actions,
 	privacy: haloMenu.privacy,
