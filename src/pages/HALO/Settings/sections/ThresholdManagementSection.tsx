@@ -5,7 +5,7 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Spinner from '../../../../components/bootstrap/Spinner';
 import Icon from '../../../../components/icon/Icon';
 import Select from '../../../../components/bootstrap/forms/Select';
-import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig, useUsers, useUserGroups, useSyncHaloConfigs, useTriggerSensor } from '../../../../api/sensors.api';
+import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig, useUsers, useUserGroups, useSyncHaloConfigs, useTriggerSensor, useWaveFiles } from '../../../../api/sensors.api';
 import { SensorConfig, SENSOR_CONFIG_CHOICES, AlertActionConfig } from '../../../../types/sensor';
 import Badge from '../../../../components/bootstrap/Badge';
 import styles from '../../../../styles/pages/HALO/Settings/ThresholdManagement.module.scss';
@@ -16,6 +16,56 @@ import Modal, { ModalHeader, ModalTitle, ModalBody, ModalFooter } from '../../..
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import useTablestyle from '../../../../hooks/useTablestyles';
+
+// LED Color Options
+const LED_COLOR_OPTIONS = [
+    { value: 255, label: 'Blue' },
+    { value: 16776960, label: 'Yellow' },
+    { value: 16711935, label: 'Violet' },
+    { value: 65535, label: 'Cyan' },
+    { value: 16711680, label: 'Red' },
+    { value: 65280, label: 'Green' },
+    { value: 16777215, label: 'White' },
+];
+
+// LED Pattern Options
+const LED_PATTERN_OPTIONS = [
+    { value: 200004, label: 'Steady' },
+    { value: 1, label: 'One Second Blink' },
+    { value: 2, label: 'Two Second Blink' },
+    { value: 5, label: 'Five Second Blink' },
+    { value: 100001, label: 'Half Second Once' },
+    { value: 100002, label: 'One Second Once' },
+    { value: 100004, label: 'Two Seconds Once' },
+    { value: 100010, label: 'Five Seconds Once' },
+    { value: 100120, label: 'One Minute Once' },
+    { value: 200001, label: 'Chase Right' },
+    { value: 200002, label: 'Chase Left' },
+    { value: 200003, label: 'Breathe' },
+    { value: 200004, label: 'Strobe' },
+];
+
+// LED Priority Options (1 = Highest, 9 = Lowest)
+const LED_PRIORITY_OPTIONS = [
+    { value: 1, label: '1 (Highest)' },
+    { value: 2, label: '2' },
+    { value: 3, label: '3' },
+    { value: 4, label: '4' },
+    { value: 5, label: '5' },
+    { value: 6, label: '6' },
+    { value: 7, label: '7' },
+    { value: 8, label: '8' },
+    { value: 9, label: '9 (Lowest)' },
+];
+
+// Relay Duration Options
+const RELAY_DURATION_OPTIONS = [
+    { value: 0, label: 'On' },
+    { value: 5, label: '5 sec' },
+    { value: 10, label: '10 sec' },
+    { value: 20, label: '20 sec' },
+    { value: 60, label: '1 min' },
+];
 
 const DEFAULT_SENSOR_VALUES: Record<string, { min: number; max: number; threshold: number }> = {
     temperature: { min: 0, max: 50, threshold: 28 },
@@ -48,6 +98,29 @@ const DEFAULT_SENSOR_VALUES: Record<string, { min: number; max: number; threshol
     hi_pm25: { min: 0, max: 100, threshold: 50 },
     hi_tvoc: { min: 0, max: 100, threshold: 50 },
     hi_no2: { min: 0, max: 100, threshold: 50 },
+};
+
+// Mapping between internal sensor_key and the key used in event_sources mapping
+const SENSOR_KEY_TO_EVENT_SOURCE_KEY: Record<string, string> = {
+    aggression: 'Aggression',
+    aqi: 'AQI',
+    co: 'CO',
+    co2: 'CO2cal',
+    gunshot: 'Gunshot',
+    health_index: 'Health_Index',
+    humidity: 'Humidity',
+    light: 'Light',
+    motion: 'Motion',
+    nh3: 'NH3',
+    no2: 'NO2',
+    pm1: 'PM1',
+    pm25: 'PM2.5',
+    pm10: 'PM10',
+    pressure_hpa: 'Pressure',
+    temp_f: 'Temp_F',
+    noise: 'Sound',
+    temp_c: 'Temp_C',
+    tvoc: 'TVOC'
 };
 
 // 🔥 MOCK DATA - Shows UI immediately without API
@@ -143,6 +216,12 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     const triggerMutation = useTriggerSensor();
     const { data: users } = useUsers();
     const { data: userGroups } = useUserGroups();
+    const { data: wavefilesData } = useWaveFiles(
+        apiSensor?.ip_address,
+        apiSensor?.username,
+        apiSensor?.password
+    );
+    const wavefiles = wavefilesData?.wavefiles || [];
 
     // 🔥 Use real data from API
     const configs = apiConfigs || [];
@@ -152,6 +231,9 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         value: s.sensor_key,
         label: s.sensor_name
     })) || SENSOR_CONFIG_CHOICES;
+
+    // Get event sources mapping from remote config
+    const eventSources = remoteConfig?.event_sources || {};
 
     const displaySensorName = (name: string) => {
         return SENSOR_CONFIG_CHOICES.find(c => c.value === name)?.label ||
@@ -481,26 +563,48 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     const handleSave = () => {
         setSaveStatus('saving');
 
-        const payload = {
+        // Use custom event_id if provided, otherwise auto-generate from sensor_name
+        const eventName = formData.event_id || (formData.sensor_name || '')
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join('_');
+
+        // Auto-map source from event_sources using a robust lookup
+        const sourceMappingKey = SENSOR_KEY_TO_EVENT_SOURCE_KEY[formData.sensor_name || ''] || eventName;
+        const autoSource = eventSources[sourceMappingKey] || eventSources[eventName] || '';
+
+        const bnInstance = 1000 + parseInt(Date.now().toString().slice(-5));
+
+        console.log('💡 Event Name Mapping:', {
             sensor_name: formData.sensor_name,
-            event_id: formData.event_id || formData.sensor_name,
+            customEventId: formData.event_id,
+            finalEventName: eventName,
+            autoSource: autoSource,
+            bnInstance: bnInstance,
+            availableEventSources: Object.keys(eventSources)
+        });
+
+        const payload = {
+            halo_sensor: parseInt(deviceId),
+            event_id: eventName,
+            bn_instance: bnInstance,
+            enabled: formData.enabled ?? true,
             threshold: formData.threshold,
             min_value: formData.min_value,
             max_value: formData.max_value,
-            enabled: formData.enabled ?? true,
             led_color: formData.led_color,
             led_pattern: formData.led_pattern,
             led_priority: formData.led_priority,
             relay1: formData.relay1,
-            sound: formData.sound,
-            source: formData.source,
+            source: autoSource,
+            conditions: '', // Can be made configurable if needed
             pause_minutes: formData.pause_minutes,
+            sound: formData.sound || ''
         };
 
-        if (isCreatingNew) {
-            // Mock save for demo
-            console.log(' MOCK SAVE (New Config):', payload);
+        console.log('📤 Sending Payload:', payload);
 
+        if (isCreatingNew) {
             addMutation.mutate({
                 sensorId: deviceId,
                 config: payload as SensorConfig
@@ -516,16 +620,11 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                     }, 1000);
                 },
                 onError: () => {
-                    // Even on error, show success for demo
-                    setSaveStatus('saved');
-                    setHasUnsavedChanges(false);
+                    setSaveStatus('error');
                     setTimeout(() => setSaveStatus('idle'), 2000);
                 }
             });
         } else if (selectedConfigId) {
-            // Mock update for demo
-            console.log('🔥 MOCK UPDATE (Config #' + selectedConfigId + '):', formData);
-
             updateMutation.mutate({
                 sensorId: deviceId,
                 configId: selectedConfigId,
@@ -537,9 +636,7 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                     setTimeout(() => setSaveStatus('idle'), 2000);
                 },
                 onError: () => {
-                    // Even on error, show success for demo
-                    setSaveStatus('saved');
-                    setHasUnsavedChanges(false);
+                    setSaveStatus('error');
                     setTimeout(() => setSaveStatus('idle'), 2000);
                 }
             });
@@ -721,15 +818,29 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                             <Icon icon='Settings' /> Basic Configuration
                         </div>
                         <div className='row g-3'>
-                            <div className={isCreatingNew ? 'col-md-12' : 'col-md-6'}>
-                                <label className='form-label'>Sensor Parameter</label>
-                                <Select
-                                    list={isCreatingNew ? filteredChoices : sensorConfigChoices}
-                                    value={formData.sensor_name || ''}
-                                    onChange={(e: any) => handleFormChange({ sensor_name: e.target.value })}
-                                    disabled={!isCreatingNew}
-                                    ariaLabel='Select Sensor Parameter'
+                            {isCreatingNew && (
+                                <div className='col-md-12'>
+                                    <label className='form-label'>Sensor Source</label>
+                                    <Select
+                                        list={filteredChoices}
+                                        value={formData.sensor_name || ''}
+                                        onChange={(e: any) => handleFormChange({ sensor_name: e.target.value })}
+                                        ariaLabel='Select Sensor Source'
+                                    />
+                                </div>
+                            )}
+                            <div className='col-md-12'>
+                                <label className='form-label'>Event Name (Custom Identifier)</label>
+                                <input
+                                    type='text'
+                                    className='form-control'
+                                    placeholder='e.g., Aggression_Alert_1, Temp_Warning_Main'
+                                    value={formData.event_id || ''}
+                                    onChange={(e) => handleFormChange({ event_id: e.target.value })}
                                 />
+                                <small className='text-muted'>
+                                    Enter a unique name to identify this configuration. Must be unique for this sensor.
+                                </small>
                             </div>
                             {!isCreatingNew && (
                                 <div className='col-md-6'>
@@ -850,53 +961,48 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                         <div className='row g-3'>
                             <div className='col-md-4'>
                                 <label className='form-label'>LED Color</label>
-                                <input
-                                    type='number'
-                                    className='form-control'
-                                    value={formData.led_color}
-                                    onChange={(e) => handleFormChange({ led_color: parseInt(e.target.value) })}
+                                <Select
+                                    list={LED_COLOR_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+                                    value={formData.led_color?.toString() || '16777215'}
+                                    onChange={(e: any) => handleFormChange({ led_color: parseInt(e.target.value) })}
+                                    ariaLabel='Select LED Color'
                                 />
                             </div>
                             <div className='col-md-4'>
                                 <label className='form-label'>LED Pattern</label>
-                                <input
-                                    type='number'
-                                    className='form-control'
-                                    value={formData.led_pattern}
-                                    onChange={(e) => handleFormChange({ led_pattern: parseInt(e.target.value) })}
+                                <Select
+                                    list={LED_PATTERN_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+                                    value={formData.led_pattern?.toString() || '200004'}
+                                    onChange={(e: any) => handleFormChange({ led_pattern: parseInt(e.target.value) })}
+                                    ariaLabel='Select LED Pattern'
                                 />
                             </div>
                             <div className='col-md-4'>
                                 <label className='form-label'>LED Priority</label>
-                                <input
-                                    type='number'
-                                    className='form-control'
-                                    min='1'
-                                    max='8'
-                                    value={formData.led_priority}
-                                    onChange={(e) => handleFormChange({ led_priority: parseInt(e.target.value) })}
+                                <Select
+                                    list={LED_PRIORITY_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+                                    value={formData.led_priority?.toString() || '1'}
+                                    onChange={(e: any) => handleFormChange({ led_priority: parseInt(e.target.value) })}
+                                    ariaLabel='Select LED Priority'
                                 />
                             </div>
                             <div className='col-md-6'>
                                 <label className='form-label'>Sound</label>
-                                <input
-                                    type='text'
-                                    className='form-control'
-                                    value={formData.sound}
-                                    onChange={(e) => handleFormChange({ sound: e.target.value })}
+                                <Select
+                                    list={wavefiles.map(f => ({ value: f, label: f }))}
+                                    value={formData.sound || ''}
+                                    onChange={(e: any) => handleFormChange({ sound: e.target.value })}
+                                    ariaLabel='Select Sound Alert'
                                 />
                             </div>
                             <div className='col-md-6'>
-                                <label className='form-label'>Relay Duration (relay1)</label>
-                                <div className='input-group'>
-                                    <input
-                                        type='number'
-                                        className='form-control'
-                                        value={formData.relay1}
-                                        onChange={(e) => handleFormChange({ relay1: parseInt(e.target.value) })}
-                                    />
-                                    <span className='input-group-text'>sec</span>
-                                </div>
+                                <label className='form-label'>Relay Duration</label>
+                                <Select
+                                    list={RELAY_DURATION_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+                                    value={formData.relay1?.toString() || '0'}
+                                    onChange={(e: any) => handleFormChange({ relay1: parseInt(e.target.value) })}
+                                    ariaLabel='Select Relay Duration'
+                                />
                             </div>
                         </div>
                     </div>
@@ -906,18 +1012,9 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                             <Icon icon='Info' /> Additional Settings
                         </div>
                         <div className='row g-3'>
-                            <div className='col-md-6'>
-                                <label className='form-label'>Source</label>
-                                <input
-                                    type='text'
-                                    className='form-control'
-                                    value={formData.source}
-                                    onChange={(e) => handleFormChange({ source: e.target.value })}
-                                />
-                            </div>
-                            <div className='col-md-6'>
+                            <div className='col-md-12'>
                                 <label className='form-label'>Pause Time (pause_minutes)</label>
-                                <div className='input-group'>
+                                <div className='input-group' style={{ maxWidth: '300px' }}>
                                     <input
                                         type='number'
                                         className='form-control'

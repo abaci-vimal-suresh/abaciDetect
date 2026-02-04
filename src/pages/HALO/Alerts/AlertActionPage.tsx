@@ -14,6 +14,7 @@ import {
 } from '../../../api/sensors.api';
 import ActionForm from './components/ActionForm';
 import { Action } from '../../../types/sensor';
+import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../../components/bootstrap/Modal';
 
 const AlertActionPage = () => {
     const { theme, headerStyle, rowStyle } = useTablestyle();
@@ -47,106 +48,111 @@ const AlertActionPage = () => {
             <Page container="fluid">
                 <div className="row">
                     <div className="col-12">
-                        {isManagementFormOpen ? (
-                            <Card shadow="none" borderSize={1}>
-                                <CardHeader>
-                                    <CardTitle>
-                                        {editingAction ? 'Edit Action' : 'New Notification Action'}
-                                    </CardTitle>
-                                    <CardActions>
-                                        <Button color="light" icon="Close" onClick={() => setIsManagementFormOpen(false)} />
-                                    </CardActions>
-                                </CardHeader>
-                                <CardBody>
-                                    <ActionForm
-                                        action={editingAction || undefined}
-                                        onSave={handleSaveAction}
-                                        onCancel={() => setIsManagementFormOpen(false)}
-                                    />
-                                </CardBody>
-                            </Card>
-                        ) : (
-                            <>
-                                <div className="alert alert-info d-flex align-items-center mb-4">
-                                    <Icon icon="Info" className="me-2" />
-                                    <div>
-                                        Actions define <strong>HOW</strong> alert notifications are delivered (Email, SMS, etc.) and <strong>TO WHOM</strong>.
-                                    </div>
-                                </div>
+                        <div className="alert alert-info d-flex align-items-center mb-4">
+                            <Icon icon="Info" className="me-2" />
+                            <div>
+                                Actions define <strong>HOW</strong> alert notifications are delivered (Email, SMS, etc.) and <strong>TO WHOM</strong>.
+                            </div>
+                        </div>
 
-                                <ThemeProvider theme={theme}>
-                                    <MaterialTable
-                                        title="Available Notification Actions"
-                                        columns={[
-                                            { title: 'Action Name', field: 'name' },
-                                            { title: 'Type', field: 'type', render: (row: any) => <Badge color="info">{row.type.toUpperCase()}</Badge> },
-                                            {
-                                                title: 'Recipients',
-                                                render: (row: any) => {
-                                                    if (row.type !== 'sms' && row.type !== 'email') return <small className="text-muted">-</small>;
-                                                    return (
-                                                        <small>
-                                                            {row.recipients?.length || 0} Users, {row.user_groups?.length || 0} Groups
-                                                        </small>
-                                                    );
-                                                }
-                                            },
-                                            {
-                                                title: 'Details',
-                                                render: (row: any) => (
-                                                    <small className="text-muted">
-                                                        {row.type === 'webhook' ? row.http_method :
-                                                            (row.type === 'device_notification' || row.type === 'push_notification') ? row.device_type : '-'}
-                                                    </small>
-                                                )
-                                            },
-                                            { title: 'Priority', field: 'message_type' },
-                                            {
-                                                title: 'Status',
-                                                field: 'is_active',
-                                                render: (row: any) => <Badge color={row.is_active ? 'success' : 'light'}>{row.is_active ? 'Active' : 'Inactive'}</Badge>
+                        <ThemeProvider theme={theme}>
+                            <MaterialTable
+                                title="Available Notification Actions"
+                                columns={[
+                                    { title: 'Action Name', field: 'name' },
+                                    { title: 'Type', field: 'type', render: (row: any) => <Badge color="info">{row.type.toUpperCase()}</Badge> },
+                                    {
+                                        title: 'Recipients',
+                                        render: (row: any) => {
+                                            if (row.type !== 'sms' && row.type !== 'email') return <small className="text-muted">-</small>;
+                                            return (
+                                                <small>
+                                                    {row.recipients?.length || 0} Users, {row.user_groups?.length || 0} Groups
+                                                </small>
+                                            );
+                                        }
+                                    },
+                                    {
+                                        title: 'Details',
+                                        render: (row: any) => (
+                                            <small className="text-muted">
+                                                {row.type === 'webhook' ? row.http_method :
+                                                    row.type === 'n8n_workflow' ? (
+                                                        <span>
+                                                            <Icon icon="AccountTree" size="sm" className="me-1" />
+                                                            {row.n8n_workflow_id || 'Workflow'}
+                                                        </span>
+                                                    ) :
+                                                        (row.type === 'device_notification' || row.type === 'push_notification') ? row.device_type : '-'}
+                                            </small>
+                                        )
+                                    },
+                                    { title: 'Priority', field: 'message_type' },
+                                    {
+                                        title: 'Status',
+                                        field: 'is_active',
+                                        render: (row: any) => <Badge color={row.is_active ? 'success' : 'light'}>{row.is_active ? 'Active' : 'Inactive'}</Badge>
+                                    }
+                                ]}
+                                data={actions || []}
+                                options={{
+                                    headerStyle: headerStyle(),
+                                    rowStyle: rowStyle(),
+                                    actionsColumnIndex: -1,
+                                    search: true,
+                                    pageSize: 10
+                                }}
+                                actions={[
+                                    {
+                                        icon: () => <Icon icon="Edit" />,
+                                        tooltip: 'Edit',
+                                        onClick: (event, rowData: any) => {
+                                            setEditingAction(rowData);
+                                            setIsManagementFormOpen(true);
+                                        }
+                                    },
+                                    {
+                                        icon: () => <Icon icon="Delete" />,
+                                        tooltip: 'Delete',
+                                        onClick: (event, rowData: any) => {
+                                            if (window.confirm(`Are you sure you want to delete this action?`)) {
+                                                deleteActionMutation.mutate(rowData.id);
                                             }
-                                        ]}
-                                        data={actions || []}
-                                        options={{
-                                            headerStyle: headerStyle(),
-                                            rowStyle: rowStyle(),
-                                            actionsColumnIndex: -1,
-                                            search: true,
-                                            pageSize: 10
-                                        }}
-                                        actions={[
-                                            {
-                                                icon: 'Edit',
-                                                tooltip: 'Edit',
-                                                onClick: (event, rowData: any) => {
-                                                    setEditingAction(rowData);
-                                                    setIsManagementFormOpen(true);
-                                                }
-                                            },
-                                            {
-                                                icon: 'Delete',
-                                                tooltip: 'Delete',
-                                                onClick: (event, rowData: any) => {
-                                                    if (window.confirm(`Are you sure you want to delete this action?`)) {
-                                                        deleteActionMutation.mutate(rowData.id);
-                                                    }
-                                                }
-                                            },
-                                            {
-                                                icon: 'Add',
-                                                tooltip: 'Add Action',
-                                                isFreeAction: true,
-                                                onClick: (event) => {
-                                                    setEditingAction(null);
-                                                    setIsManagementFormOpen(true);
-                                                }
-                                            }
-                                        ]}
-                                    />
-                                </ThemeProvider>
-                            </>
-                        )}
+                                        }
+                                    },
+                                    {
+                                        icon: () => <Icon icon="Add" />,
+                                        tooltip: 'Add Action',
+                                        isFreeAction: true,
+                                        onClick: (event) => {
+                                            setEditingAction(null);
+                                            setIsManagementFormOpen(true);
+                                        }
+                                    }
+                                ]}
+                            />
+                        </ThemeProvider>
+
+                        <Modal
+                            isOpen={isManagementFormOpen}
+                            setIsOpen={setIsManagementFormOpen}
+                            size='lg'
+                            isCentered
+                            isScrollable
+                        >
+                            <ModalHeader setIsOpen={setIsManagementFormOpen}>
+                                <ModalTitle id='action-form-modal'>
+                                    {editingAction ? 'Edit Action' : 'New Notification Action'}
+                                </ModalTitle>
+                            </ModalHeader>
+                            <ModalBody>
+                                <ActionForm
+                                    action={editingAction || undefined}
+                                    onSave={handleSaveAction}
+                                    onCancel={() => setIsManagementFormOpen(false)}
+                                />
+                            </ModalBody>
+                        </Modal>
                     </div>
                 </div>
             </Page>

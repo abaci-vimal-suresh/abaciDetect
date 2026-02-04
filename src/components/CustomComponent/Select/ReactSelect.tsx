@@ -46,7 +46,6 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
         }),
         menuPortal: (base) => ({
             ...base,
-            backgroundColor: darkModeStatus ? "#212529" : "white",
             zIndex: 9999,
         }),
         singleValue: (provided) => ({
@@ -76,6 +75,7 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
             styles={customStyles}
             options={options}
             value={value}
+            menuPortalTarget={document.body}
         />
     )
 }

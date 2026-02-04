@@ -4,50 +4,68 @@ import Button from '../../../../components/bootstrap/Button';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Spinner from '../../../../components/bootstrap/Spinner';
 import Alert from '../../../../components/bootstrap/Alert';
-import { useDeviceConfig, useUpdateDeviceConfig } from '../../../../api/device.setting.api';
+import { useSensor, useUpdateSensor, useAreas, useSensorGroups, useUploadWaveFile } from '../../../../api/sensors.api';
 import Input from '../../../../components/bootstrap/forms/Input';
+import Checks from '../../../../components/bootstrap/forms/Checks';
+import ReactSelectWithState from '../../../../components/CustomComponent/Select/ReactSelect';
+import InputGroup, { InputGroupText } from '../../../../components/bootstrap/forms/InputGroup';
+import Icon from '../../../../components/icon/Icon';
 
 interface DeviceConfigSectionProps {
     deviceId: string;
 }
 
 const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) => {
-    const { data: config, isLoading } = useDeviceConfig(deviceId);
-    const updateMutation = useUpdateDeviceConfig();
+    const { data: sensor, isLoading } = useSensor(deviceId);
+    const updateMutation = useUpdateSensor();
+    const { data: areas } = useAreas();
+    const { data: sensorGroups } = useSensorGroups();
+    const uploadMutation = useUploadWaveFile();
 
     const [formData, setFormData] = useState({
-        device_name: '',
-        building_wing: '',
-        building_floor: '',
-        building_room: '',
+        name: '',
         description: '',
+        area: undefined as number | undefined,
+        sensor_group_ids: [] as number[],
+        username: '',
+        password: '',
+        is_active: true,
+        is_online: true,
         ip_address: '',
-        network_type: 'DHCP' as 'DHCP' | 'STATIC',
     });
 
     const [successMessage, setSuccessMessage] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        if (config) {
+        if (sensor) {
             setFormData({
-                device_name: config.device_name || '',
-                building_wing: config.building_wing || '',
-                building_floor: config.building_floor || '',
-                building_room: config.building_room || '',
-                description: config.description || '',
-                ip_address: config.ip_address || '',
-                network_type: config.network_type || 'DHCP',
+                name: sensor.name || '',
+                description: sensor.description || '',
+                area: typeof sensor.area === 'object' ? sensor.area?.id : sensor.area,
+                sensor_group_ids: sensor.sensor_group_ids || (sensor as any).sensor_groups?.map((g: any) => g.id) || [],
+                username: (sensor as any).username || '',
+                password: (sensor as any).password || '',
+                is_active: sensor.is_active ?? true,
+                is_online: sensor.is_online ?? true,
+                ip_address: sensor.ip_address || '',
             });
         }
-    }, [config]);
+    }, [sensor]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         updateMutation.mutate(
-            { id: config?.id, ...formData },
+            {
+                sensorId: deviceId,
+                data: {
+                    ...formData,
+                    area: formData.area || null
+                }
+            },
             {
                 onSuccess: () => {
-                    setSuccessMessage('Device configuration updated successfully');
+                    setSuccessMessage('Sensor configuration updated successfully');
                     setTimeout(() => setSuccessMessage(''), 3000);
                 },
             }
@@ -84,152 +102,164 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
                     )}
 
                     <div className='row g-4'>
-                        {/* Basic Information */}
-                        <div className='col-12'>
-                            <h5 className='mb-3'>Basic Information</h5>
-                        </div>
-
                         <div className='col-md-6'>
-                            <FormGroup
-                                label='Device Name'
-                            //  isRequired
-                            >
+                            <FormGroup label='Device Name'>
                                 <Input
-                                    type='text'
-                                    value={formData.device_name}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                        setFormData({ ...formData, device_name: e.target.value })
+                                    value={formData.name}
+                                    onChange={(e: any) =>
+                                        setFormData({ ...formData, name: e.target.value })
                                     }
-                                    required
                                 />
                             </FormGroup>
                         </div>
-
                         <div className='col-md-6'>
                             <FormGroup label='MAC Address'>
-                                <Input
-                                    type='text'
-                                    value={config?.mac_address || ''}
-                                    disabled
-                                    className='font-monospace'
-                                />
-                            </FormGroup>
-                        </div>
-
-                        <div className='col-12'>
-                            <FormGroup label='Description'>
-                                <textarea
-                                    className='form-control'
-                                    rows={3}
-                                    value={formData.description}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, description: e.target.value })
-                                    }
-                                    placeholder='Add a description for this device...'
-                                />
-                            </FormGroup>
-                        </div>
-
-                        {/* Location Information */}
-                        <div className='col-12 mt-4'>
-                            <h5 className='mb-3'>Location Information</h5>
-                        </div>
-
-                        <div className='col-md-4'>
-                            <FormGroup label='Building Wing'>
-                                <Input
-                                    type='text'
-                                    value={formData.building_wing}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                        setFormData({ ...formData, building_wing: e.target.value })
-                                    }
-                                    placeholder='e.g., North Wing'
-                                />
-                            </FormGroup>
-                        </div>
-
-                        <div className='col-md-4'>
-                            <FormGroup label='Building Floor'>
-                                <Input
-                                    type='text'
-                                    value={formData.building_floor}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                        setFormData({ ...formData, building_floor: e.target.value })
-                                    }
-                                    placeholder='e.g., 3rd Floor'
-                                />
-                            </FormGroup>
-                        </div>
-
-                        <div className='col-md-4'>
-                            <FormGroup label='Room Number'>
-                                <Input
-                                    type='text'
-                                    value={formData.building_room}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                        setFormData({ ...formData, building_room: e.target.value })
-                                    }
-                                    placeholder='e.g., Room 301'
-                                />
-                            </FormGroup>
-                        </div>
-
-                        {/* Network Settings */}
-                        <div className='col-12 mt-4'>
-                            <h5 className='mb-3'>Network Settings</h5>
-                        </div>
-
-                        <div className='col-md-6'>
-                            <FormGroup label='Network Type'>
-                                <select
-                                    className='form-select'
-                                    value={formData.network_type}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            network_type: e.target.value as 'DHCP' | 'STATIC',
-                                        })
-                                    }
-                                >
-                                    <option value='DHCP'>DHCP (Automatic)</option>
-                                    <option value='STATIC'>Static IP</option>
-                                </select>
+                                <Input value={sensor?.mac_address || ''} readOnly disabled />
+                                <small className='text-muted'>Hardware identifier (Read-only)</small>
                             </FormGroup>
                         </div>
 
                         <div className='col-md-6'>
                             <FormGroup label='IP Address'>
                                 <Input
-                                    type='text'
                                     value={formData.ip_address}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    onChange={(e: any) =>
                                         setFormData({ ...formData, ip_address: e.target.value })
                                     }
-                                    disabled={formData.network_type === 'DHCP'}
-                                    className='font-monospace'
-                                    placeholder='192.168.1.100'
                                 />
-                                {formData.network_type === 'DHCP' && (
-                                    <small className='text-muted'>
-                                        IP address is automatically assigned via DHCP
-                                    </small>
-                                )}
+                                <small className='text-muted'>Current network address</small>
                             </FormGroup>
                         </div>
 
-                        {/* Firmware Information */}
-                        <div className='col-12 mt-4'>
-                            <h5 className='mb-3'>System Information</h5>
+                        <div className='col-md-6'>
+                            <FormGroup label='Area / Location'>
+                                <ReactSelectWithState
+                                    options={areas?.map((a) => ({ value: a.id, label: a.name })) || []}
+                                    value={areas?.find(a => a.id === formData.area) ? { value: formData.area, label: areas.find(a => a.id === formData.area)?.name } : null}
+                                    setValue={(opt: any) => setFormData({ ...formData, area: opt?.value })}
+                                    placeholder="Select Area"
+                                    isClearable
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-12'>
+                            <FormGroup label='Sensor Groups'>
+                                <ReactSelectWithState
+                                    isMulti
+                                    options={sensorGroups?.map((g) => ({ value: g.id, label: g.name })) || []}
+                                    value={sensorGroups?.filter(g => formData.sensor_group_ids.includes(g.id)).map(g => ({ value: g.id, label: g.name })) || []}
+                                    setValue={(opts: any[]) => setFormData({ ...formData, sensor_group_ids: opts ? opts.map(o => o.value) : [] })}
+                                    placeholder="Select Groups"
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-12'>
+                            <FormGroup label='Description'>
+                                <Input
+                                    value={formData.description}
+                                    onChange={(e: any) =>
+                                        setFormData({ ...formData, description: e.target.value })
+                                    }
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <div className='col-md-6'>
+                            <Card className='border shadow-none mb-0'>
+                                <CardHeader className='p-2 bg-light'><CardTitle className='m-0 fs-6 fw-bold'>Authentication</CardTitle></CardHeader>
+                                <CardBody className='p-3'>
+                                    <div className='row g-3'>
+                                        <div className='col-12'>
+                                            <FormGroup label='Username'>
+                                                <Input
+                                                    value={formData.username}
+                                                    onChange={(e: any) => setFormData({ ...formData, username: e.target.value })}
+                                                    placeholder="Sensor username"
+                                                />
+                                            </FormGroup>
+                                        </div>
+                                        <div className='col-12'>
+                                            <FormGroup label='Password'>
+                                                <InputGroup>
+                                                    <Input
+                                                        type={showPassword ? 'text' : 'password'}
+                                                        value={formData.password}
+                                                        onChange={(e: any) => setFormData({ ...formData, password: e.target.value })}
+                                                        placeholder="Sensor password"
+                                                    />
+                                                    <InputGroupText>
+                                                        <span
+                                                            style={{ cursor: 'pointer' }}
+                                                            onClick={() => setShowPassword(!showPassword)}
+                                                            title={showPassword ? 'Hide Password' : 'Show Password'}
+                                                        >
+                                                            <Icon icon={showPassword ? 'VisibilityOff' : 'Visibility'} />
+                                                        </span>
+                                                    </InputGroupText>
+                                                </InputGroup>
+                                            </FormGroup>
+                                        </div>
+                                    </div>
+                                </CardBody>
+                            </Card>
+                        </div>
+
+                        <div className='col-md-6'>
+                            <Card className='border shadow-none mb-0 h-100'>
+                                <CardHeader className='p-2 bg-light'><CardTitle className='m-0 fs-6 fw-bold'>Audio Management</CardTitle></CardHeader>
+                                <CardBody className='p-3'>
+                                    <div className='d-flex flex-column gap-3'>
+                                        <FormGroup label='Upload Sound Alert (.wav)'>
+                                            <div className='d-flex gap-2'>
+                                                <input
+                                                    type='file'
+                                                    id='sound-upload'
+                                                    className='form-control'
+                                                    accept='.wav,audio/wav'
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) {
+                                                            if (!file.name.toLowerCase().endsWith('.wav')) {
+                                                                alert('Please upload a .wav file only.');
+                                                                e.target.value = '';
+                                                                return;
+                                                            }
+                                                            uploadMutation.mutate({
+                                                                ip_address: formData.ip_address,
+                                                                username: formData.username,
+                                                                password: formData.password,
+                                                                file
+                                                            }, {
+                                                                onSuccess: () => {
+                                                                    e.target.value = '';
+                                                                }
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                            <small className='text-muted mt-2 d-block'>
+                                                Upload custom audio files to be used in Threshold alerts.
+                                            </small>
+                                        </FormGroup>
+
+                                        {uploadMutation.isPending && (
+                                            <div className='d-flex align-items-center gap-2 text-primary'>
+                                                <Spinner isSmall />
+                                                <small>Uploading file to HALO...</small>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardBody>
+                            </Card>
                         </div>
 
                         <div className='col-md-6'>
                             <FormGroup label='Firmware Version'>
-                                <Input
-                                    type='text'
-                                    value={config?.firmware_version || 'Unknown'}
-                                    disabled
-                                    className='font-monospace'
-                                />
+                                <Input value={sensor?.firmware_version || 'v2.1.0'} readOnly disabled />
+                                <small className='text-muted'>Internal device software (Read-only)</small>
                             </FormGroup>
                         </div>
                     </div>
@@ -238,14 +268,16 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
                     <div className='d-flex justify-content-end gap-2'>
                         <Button
                             // color='light'
-                            onClick={() => config && setFormData({
-                                device_name: config.device_name || '',
-                                building_wing: config.building_wing || '',
-                                building_floor: config.building_floor || '',
-                                building_room: config.building_room || '',
-                                description: config.description || '',
-                                ip_address: config.ip_address || '',
-                                network_type: config.network_type || 'DHCP',
+                            onClick={() => sensor && setFormData({
+                                name: sensor.name || '',
+                                description: sensor.description || '',
+                                area: typeof sensor.area === 'object' ? sensor.area?.id : sensor.area,
+                                sensor_group_ids: sensor.sensor_group_ids || (sensor as any).sensor_groups?.map((g: any) => g.id) || [],
+                                username: (sensor as any).username || '',
+                                password: (sensor as any).password || '',
+                                is_active: sensor.is_active ?? true,
+                                is_online: sensor.is_online ?? true,
+                                ip_address: sensor.ip_address || '',
                             })}
                         >
                             Reset

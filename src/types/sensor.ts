@@ -231,6 +231,9 @@ export interface Sensor {
     personnel_in_charge?: string;     // Name of responsible person
     personnel_contact?: string;        // Contact phone number
     personnel_email?: string;
+    sensor_group_ids?: number[];
+    username?: string;
+    password?: string;
 }
 
 // What to send to backend
@@ -355,8 +358,14 @@ export interface SensorRegistrationData {
 export interface SensorUpdatePayload {
     id?: number | string;
     name?: string;
-    sensorId
+    sensor_id?: string;
     sensor_type?: string;
+    description?: string;
+    is_active?: boolean;
+    is_online?: boolean;
+    username?: string;
+    password?: string;
+    sensor_group_ids?: number[];
     area_id?: number | null;
     area?: number | null;
     x_coordinate?: number;
@@ -386,9 +395,10 @@ export interface SensorUpdatePayload {
 
 export interface SensorConfig {
     id?: number; // Database ID
-    sensor_name: string; // Keep for legacy/mock
+    sensor_name?: string; // Keep for legacy/mock (now optional)
     event_id?: string; // Backend key for sensor/event name
     halo_sensor?: number; // Backend sensor ID
+    bn_instance?: number; // Backend instance number
     enabled?: boolean;
     min_value?: number;
     threshold?: number;
@@ -719,7 +729,7 @@ export interface AlertConfigurationUpdateData {
 export interface Action {
     id: number;
     name: string;
-    type: 'email' | 'sms' | 'push_notification' | 'webhook' | 'device_notification' | 'slack' | 'teams' | 'custom';
+    type: 'email' | 'sms' | 'push_notification' | 'webhook' | 'device_notification' | 'n8n_workflow' | 'slack' | 'teams' | 'custom';
     recipients: number[];
     user_groups?: number[];
     device_type?: 'HALO' | 'HALO_SMART' | 'HALO_IOT';
@@ -729,6 +739,14 @@ export interface Action {
     message_type?: string;
     message_template: string;
     is_active: boolean;
+
+    // N8N Workflow specific fields
+    n8n_workflow_url?: string;
+    n8n_workflow_id?: string;
+    n8n_api_key?: string;
+    n8n_auth_header?: string; // Default: 'X-API-Key'
+    n8n_timeout?: number; // Default: 30 seconds
+
     created_by?: number;
     created_at: string;
     updated_at: string;
@@ -740,14 +758,168 @@ export interface AlertFilter {
     description: string;
     area_ids: number[];
     sensor_config_ids: number[];
+    alert_types?: string[]; // NEW: Multiple choices for alert types
+    source_types?: string[]; // NEW: Multiple choices for source types
     action_for_min: boolean;
     action_for_max: boolean;
     action_for_threshold: boolean;
     sensor_group_ids?: number[]; // Optional
-    action_ids?: number[] | Action[]; // Optional
+    action_ids?: number[]; // IDs for save
     weekdays?: number[]; // 0-6 (Mon-Sun)
     start_time?: string; // HH:MM
     end_time?: string; // HH:MM
     created_at: string;
     updated_at: string;
+
+    // Rich data objects from API (GET responses)
+    area_list?: Area[];
+    sensor_groups?: SensorGroup[];
+    actions?: Action[];
+
+    // Legacy fields (to be kept for backward compatibility if needed)
+    alert_type?: string;
+    is_direct_device_alert?: boolean;
+    is_custom_alert_filter?: boolean;
+}
+
+export const ALERT_TYPE_CHOICES = [
+    { value: 'sensor_offline', label: 'Sensor Offline' },
+    { value: 'threshold_exceeded', label: 'Threshold Exceeded' },
+    { value: 'anomaly_detected', label: 'Anomaly Detected' },
+    { value: 'device_error', label: 'Device Error' },
+    { value: 'high_air_quality', label: 'High Air Quality' },
+    { value: 'motion_detected', label: 'Motion Detected' },
+    { value: 'aggression_detected', label: 'Aggression Detected' },
+    { value: 'gunshot_detected', label: 'Gunshot Detected' },
+    { value: 'other', label: 'Other' },
+    { value: 'temp_c', label: 'Temperature (Celsius)' },
+    { value: 'temp_f', label: 'Temperature (Fahrenheit)' },
+    { value: 'humidity', label: 'Humidity (%)' },
+    { value: 'light', label: 'Light Level (lux)' },
+    { value: 'pressure_hpa', label: 'Atmospheric Pressure (hPa)' },
+    { value: 'noise', label: 'Noise Level (dB)' },
+
+    // Air quality sensors
+    { value: 'tvoc', label: 'Total Volatile Organic Compounds' },
+    { value: 'co2', label: 'Carbon Dioxide (ppm)' },
+    { value: 'co2_cal', label: 'CO2 Calibrated' },
+    { value: 'co2_eq', label: 'CO2 Equivalent' },
+    { value: 'nh3', label: 'Ammonia (ppb)' },
+    { value: 'no2', label: 'Nitrogen Dioxide (ppb)' },
+    { value: 'co', label: 'Carbon Monoxide (ppm)' },
+
+    // Particulate matter sensors
+    { value: 'pm1', label: 'Particulate Matter 1µm' },
+    { value: 'pm10', label: 'Particulate Matter 10µm' },
+    { value: 'pm25', label: 'Particulate Matter 2.5µm' },
+
+    // Air quality index
+    { value: 'aqi', label: 'Air Quality Index' },
+    { value: 'pm10aqi', label: 'PM10 AQI' },
+    { value: 'pm25aqi', label: 'PM2.5 AQI' },
+    { value: 'coaqi', label: 'CO AQI' },
+    { value: 'no2aqi', label: 'NO2 AQI' },
+
+    // Derived metrics
+    { value: 'motion', label: 'Motion Detection' },
+    { value: 'aggression', label: 'Aggression Detection' },
+    { value: 'gunshot', label: 'Gunshot Detection' },
+    { value: 'health_index', label: 'Overall Health Index' },
+    { value: 'hi_co2', label: 'CO2 Health Index' },
+    { value: 'hi_hum', label: 'Humidity Health Index' },
+    { value: 'hi_pm1', label: 'PM1 Health Index' },
+    { value: 'hi_pm10', label: 'PM10 Health Index' },
+    { value: 'hi_pm25', label: 'PM2.5 Health Index' },
+    { value: 'hi_tvoc', label: 'TVOC Health Index' },
+    { value: 'hi_no2', label: 'NO2 Health Index' },
+
+    // Accelerometer
+    { value: 'acc_x', label: 'Accelerometer X' },
+    { value: 'acc_y', label: 'Accelerometer Y' },
+    { value: 'acc_z', label: 'Accelerometer Z' },
+
+    // Other readings
+    { value: 'help', label: 'Help/Emergency Button' },
+    { value: 'input', label: 'Input/External Trigger' },
+    { value: 'panic', label: 'Panic Button' },
+];
+
+export const ALERT_SOURCE_CHOICES = [
+    { value: 'Internal', label: 'Internal System' },
+    { value: 'External', label: 'External System' },
+    { value: 'Manual', label: 'Manual Entry' },
+];
+
+// ============================================
+// N8N WORKFLOW INTEGRATION
+// ============================================
+
+export interface N8NAlertPayload {
+    // Webhook metadata
+    payload_version: string; // e.g., "1.0"
+    timestamp: string; // ISO 8601
+    source: string; // "HALO Alert System"
+
+    // Alert information
+    alert: {
+        id: number;
+        type: AlertType | string;
+        severity: 'critical' | 'warning' | 'info';
+        status: AlertStatus;
+        description: string;
+        remarks?: string;
+        created_at: string;
+        updated_at: string;
+        value?: number | string; // Threshold violation value
+    };
+
+    // Sensor context
+    sensor: {
+        id: number;
+        name: string;
+        type?: string;
+        mac_address?: string;
+        ip_address?: string;
+        location?: string;
+        is_online?: boolean;
+        last_heartbeat?: string | null;
+    };
+
+    // Area context
+    area: {
+        id: number;
+        name: string;
+        area_type?: string;
+        parent_area?: {
+            id: number;
+            name: string;
+        } | null;
+    };
+
+    // Alert filter context
+    filter: {
+        id: number;
+        name: string;
+        description?: string;
+        threshold_min?: number;
+        threshold_max?: number;
+        trigger_condition: 'min_violation' | 'max_violation' | 'threshold_violation';
+    };
+
+    // Action metadata
+    action: {
+        id: number;
+        name: string;
+        type: string;
+        workflow_id?: string;
+    };
+
+    // Additional sensor readings (if available)
+    sensor_readings?: {
+        temperature?: number;
+        humidity?: number;
+        co2?: number;
+        aqi?: number;
+        [key: string]: any;
+    };
 }

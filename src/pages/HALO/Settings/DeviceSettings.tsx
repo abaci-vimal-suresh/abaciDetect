@@ -46,12 +46,12 @@ const settingsSections: SettingsSection[] = [
         icon: 'Speed',
         component: ThresholdManagementSection,
     },
-    {
-        id: 'alert-filters',
-        label: 'Alert Filters',
-        icon: 'FilterList',
-        component: AlertFilterSection,
-    },
+    // {
+    //     id: 'alert-filters',
+    //     label: 'Alert Filters',
+    //     icon: 'FilterList',
+    //     component: AlertFilterSection,
+    // },
     // {
     //     id: 'monitoring',
     //     label: 'Event Monitoring',

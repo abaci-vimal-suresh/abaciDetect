@@ -63,14 +63,20 @@ export const haloMenu = {
                 id: 'alerts-filter',
                 text: 'Alert Filter',
                 path: '/halo/alerts/filter',
-                icon: 'History',
+                icon: 'FilterAlt',
             },
             actions: {
                 id: 'alerts-actions',
                 text: 'Alert Actions',
                 path: '/halo/alerts/actions',
-                icon: 'History',
+                icon: 'Notifications',
             },
+            // n8n: {
+            //     id: 'alerts-n8n',
+            //     text: 'N8N Integration',
+            //     path: '/halo/alerts/n8n-tutorial',
+            //     icon: 'AccountTree',
+            // },
         },
     },
     reports: {

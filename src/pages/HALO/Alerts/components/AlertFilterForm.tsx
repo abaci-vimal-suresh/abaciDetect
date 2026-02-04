@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { AlertFilter, Area, Action, SENSOR_CONFIG_CHOICES } from '../../../../types/sensor';
+import React, { useState } from 'react'; // AlertFilterForm UI Refined
+import { AlertFilter, Area, Action, ALERT_TYPE_CHOICES, ALERT_SOURCE_CHOICES } from '../../../../types/sensor';
 import Button from '../../../../components/bootstrap/Button';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../../components/bootstrap/forms/Input';
 import Checks from '../../../../components/bootstrap/forms/Checks';
-import { useAreas, useActions, useSensorGroups } from '../../../../api/sensors.api';
+import Tooltips from '../../../../components/bootstrap/Tooltips';
+import Icon from '../../../../components/icon/Icon';
+import { useAreas, useActions, useSensorGroups, useAlertConfigurations } from '../../../../api/sensors.api';
+import ReactSelectWithState from '../../../../components/CustomComponent/Select/ReactSelect';
 
 interface AlertFilterFormProps {
     filter?: Partial<AlertFilter>;
@@ -13,24 +16,41 @@ interface AlertFilterFormProps {
 }
 
 const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCancel }) => {
-    const [formData, setFormData] = useState<Partial<AlertFilter>>(filter || {
-        name: '',
-        description: '',
-        area_ids: [],
-        sensor_config_ids: [],
-        sensor_group_ids: [],
-        action_ids: [],
-        action_for_min: false,
-        action_for_max: false,
-        action_for_threshold: false,
-        weekdays: [],
-        start_time: '',
-        end_time: ''
+    const [formData, setFormData] = useState<Partial<AlertFilter>>(() => {
+        if (!filter) return {
+            name: '',
+            description: '',
+            area_ids: [],
+            sensor_config_ids: [],
+            alert_types: [],
+            source_types: [],
+            sensor_group_ids: [],
+            action_ids: [],
+            action_for_min: false,
+            action_for_max: false,
+            action_for_threshold: false,
+            weekdays: [],
+            start_time: '',
+            end_time: ''
+        };
+
+        const initial = { ...filter };
+        if (filter.area_list && (!filter.area_ids || filter.area_ids.length === 0)) {
+            initial.area_ids = filter.area_list.map(a => a.id);
+        }
+        if (filter.sensor_groups && (!filter.sensor_group_ids || filter.sensor_group_ids.length === 0)) {
+            initial.sensor_group_ids = filter.sensor_groups.map(g => g.id);
+        }
+        if (filter.actions && (!filter.action_ids || filter.action_ids.length === 0)) {
+            initial.action_ids = filter.actions.map(a => a.id);
+        }
+        return initial;
     });
 
     const { data: areas } = useAreas();
     const { data: actions } = useActions();
     const { data: sensorGroups } = useSensorGroups();
+    const { data: alertConfigs } = useAlertConfigurations();
 
     const handleToggle = (field: keyof AlertFilter, value: number) => {
         const currentList = (formData[field] as any[]) || [];
@@ -85,29 +105,59 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                 </FormGroup>
             </div>
 
-            <div className="col-12 mt-4">
-                <h6 className="fw-bold mb-3">1. Trigger Conditions</h6>
-                <div className="card border-0 shadow-none">
-                    <div className="card-body">
+            <div className="col-12">
+                <div className="card border shadow-sm mb-0">
+                    <div className="card-header bg-light py-2">
+                        <span className="fw-bold small text-uppercase">Logic & Triggers</span>
+                    </div>
+                    <div className="card-body p-3">
                         <div className="row g-3">
                             <div className="col-md-4">
-                                <Checks
-                                    type="switch"
-                                    label="Action for Max Value"
-                                    checked={formData.action_for_max}
-                                    onChange={(e: any) => setFormData({ ...formData, action_for_max: e.target.checked })}
-                                />
-                                <small className="text-muted d-block ms-4">Trigger when value exceeds maximum</small>
+                                <FormGroup label="Alert Types">
+                                    <ReactSelectWithState
+                                        isMulti
+                                        options={ALERT_TYPE_CHOICES}
+                                        value={ALERT_TYPE_CHOICES.filter(c => formData.alert_types?.includes(c.value))}
+                                        setValue={(opts: any) => setFormData({ ...formData, alert_types: opts ? opts.map((o: any) => o.value) : [] })}
+                                        placeholder="Select Types"
+                                    />
+                                </FormGroup>
                             </div>
-
                             <div className="col-md-4">
-                                <Checks
-                                    type="switch"
-                                    label="Action for Min Value"
-                                    checked={formData.action_for_min}
-                                    onChange={(e: any) => setFormData({ ...formData, action_for_min: e.target.checked })}
-                                />
-                                <small className="text-muted d-block ms-4">Trigger when value drops below minimum</small>
+                                <FormGroup label={
+                                    <div className="d-flex align-items-center gap-1">
+                                        Source Types
+                                        <Tooltips title="Internal system rules, external hardware alerts, or manual entries">
+                                            <Icon icon="Info" size="sm" className="text-info cursor-pointer" />
+                                        </Tooltips>
+                                    </div>
+                                }>
+                                    <ReactSelectWithState
+                                        isMulti
+                                        options={ALERT_SOURCE_CHOICES}
+                                        value={ALERT_SOURCE_CHOICES.filter(c => formData.source_types?.includes(c.value))}
+                                        setValue={(opts: any) => setFormData({ ...formData, source_types: opts ? opts.map((o: any) => o.value) : [] })}
+                                        placeholder="Select Sources"
+                                    />
+                                </FormGroup>
+                            </div>
+                            <div className="col-md-4">
+                                <FormGroup label="Trigger Conditions">
+                                    <div className="d-flex gap-3 mt-2">
+                                        <Checks
+                                            type="checkbox"
+                                            label="Max Over"
+                                            checked={formData.action_for_max}
+                                            onChange={(e: any) => setFormData({ ...formData, action_for_max: e.target.checked })}
+                                        />
+                                        <Checks
+                                            type="checkbox"
+                                            label="Min Under"
+                                            checked={formData.action_for_min}
+                                            onChange={(e: any) => setFormData({ ...formData, action_for_min: e.target.checked })}
+                                        />
+                                    </div>
+                                </FormGroup>
                             </div>
                         </div>
                     </div>
@@ -115,19 +165,21 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
             </div>
 
             <div className="col-12">
-                <h6 className="fw-bold mb-3">2. Active Schedule (Optional)</h6>
-                <div className="card  border-0 shadow-none">
-                    <div className="card-body">
+                <div className="card  border shadow-sm">
+                    <div className="card-header bg-light py-2">
+                        <span className="fw-bold small text-uppercase">Active Schedule (Optional)</span>
+                    </div>
+                    <div className="card-body p-3">
                         <div className="row g-3">
-                            <div className="col-md-6">
-                                <label className="form-label d-block">Active Days</label>
-                                <div className="d-flex flex-wrap gap-2">
-                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
+                            <div className="col-md-6 d-flex align-items-end">
+                                <div className="d-flex flex-wrap gap-1">
+                                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
                                         <div
                                             key={index}
-                                            className={`p-2 border rounded text-center small ${formData.weekdays?.includes(index) ? 'bg-primary text-white border-primary' : ''}`}
-                                            style={{ cursor: 'pointer', minWidth: '40px', userSelect: 'none' }}
+                                            className={`border rounded text-center small fw-bold ${formData.weekdays?.includes(index) ? 'bg-primary text-white border-primary' : 'bg-light text-muted'}`}
+                                            style={{ cursor: 'pointer', width: '32px', height: '32px', lineHeight: '32px', userSelect: 'none' }}
                                             onClick={() => handleDayToggle(index)}
+                                            title={['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][index]}
                                         >
                                             {day}
                                         </div>
@@ -140,6 +192,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                                         type="time"
                                         value={formData.start_time || ''}
                                         onChange={(e: any) => setFormData({ ...formData, start_time: e.target.value })}
+                                        size="sm"
                                     />
                                 </FormGroup>
                             </div>
@@ -149,6 +202,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                                         type="time"
                                         value={formData.end_time || ''}
                                         onChange={(e: any) => setFormData({ ...formData, end_time: e.target.value })}
+                                        size="sm"
                                     />
                                 </FormGroup>
                             </div>
@@ -157,80 +211,70 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                 </div>
             </div>
 
-            <div className="col-md-6">
-                <FormGroup label="Apply to Areas">
-                    <div className="border rounded p-2 " style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                        {areas?.map((a: Area) => (
-                            <Checks
-                                key={a.id}
-                                id={`area-${a.id}`}
-                                label={a.name}
-                                checked={isSelected('area_ids', a.id)}
-                                onChange={() => handleToggle('area_ids', a.id)}
-                            />
-                        ))}
+            <div className="col-12">
+                <div className="card border shadow-sm">
+                    <div className="card-header bg-light py-2">
+                        <span className="fw-bold small text-uppercase">Target Assignment</span>
                     </div>
-                </FormGroup>
-            </div>
+                    <div className="card-body p-3">
+                        <div className="row g-3">
+                            <div className="col-md-6">
+                                <FormGroup label="Apply to Areas">
+                                    <ReactSelectWithState
+                                        isMulti
+                                        options={areas?.map((a: Area) => ({ value: a.id, label: a.name })) || []}
+                                        value={areas?.filter((a: Area) => formData.area_ids?.includes(a.id)).map((a: Area) => ({ value: a.id, label: a.name })) || []}
+                                        setValue={(vals: any) => setFormData({ ...formData, area_ids: vals ? vals.map((v: any) => v.value) : [] })}
+                                        placeholder="Select Areas"
+                                    />
+                                </FormGroup>
+                            </div>
 
-            <div className="col-md-6">
-                <FormGroup label="Sensor Configurations">
-                    <div className="border rounded p-2 " style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                        {SENSOR_CONFIG_CHOICES.map((c: any, index: number) => (
-                            <Checks
-                                key={c.value}
-                                id={`config-${c.value}`}
-                                label={c.label}
-                                checked={isSelected('sensor_config_ids', index + 1)}
-                                onChange={() => handleToggle('sensor_config_ids', index + 1)}
-                            />
-                        ))}
+                            <div className="col-md-6">
+                                <FormGroup label="Sensor Groups (Optional)">
+                                    <ReactSelectWithState
+                                        isMulti
+                                        options={sensorGroups?.map((g: any) => ({ value: g.id, label: g.name })) || []}
+                                        value={sensorGroups?.filter((g: any) => formData.sensor_group_ids?.includes(g.id)).map((g: any) => ({ value: g.id, label: g.name })) || []}
+                                        setValue={(vals: any) => setFormData({ ...formData, sensor_group_ids: vals ? vals.map((v: any) => v.value) : [] })}
+                                        placeholder="Select Sensor Groups"
+                                    />
+                                </FormGroup>
+                            </div>
+                        </div>
                     </div>
-                </FormGroup>
+                </div>
             </div>
 
             <div className="col-12">
-                <FormGroup label="Sensor Groups (Optional)">
-                    <div className="border rounded p-2 " style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                        {sensorGroups?.map((g: any) => (
-                            <Checks
-                                key={g.id}
-                                id={`group-${g.id}`}
-                                label={g.name}
-                                checked={isSelected('sensor_group_ids', g.id)}
-                                onChange={() => handleToggle('sensor_group_ids', g.id)}
-                            />
-                        ))}
+                <div className="card border shadow-sm">
+                    <div className="card-header bg-light py-2">
+                        <span className="fw-bold small text-uppercase">Associated Actions</span>
                     </div>
-                </FormGroup>
-            </div>
-
-            <div className="col-12">
-                <FormGroup label="Associated Actions">
-                    <div className="border rounded p-3 ">
-                        <div className="row g-2">
+                    <div className="card-body p-3">
+                        <div className="row g-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                             {actions?.map((a: Action) => (
                                 <div key={a.id} className="col-md-6">
                                     <div
-                                        className={`p-2 border rounded d-flex align-items-center justify-content-between ${isSelected('action_ids', a.id) ? 'border-primary bg-primary-subtle' : ''}`}
+                                        className={`p-2 border rounded d-flex align-items-center justify-content-between ${isSelected('action_ids', a.id) ? 'border-primary bg-primary-subtle' : 'bg-light-subtle'}`}
                                         style={{ cursor: 'pointer' }}
                                         onClick={() => handleToggle('action_ids', a.id)}
                                     >
-                                        <div>
-                                            <div className="fw-bold small">{a.name}</div>
-                                            <small className="text-muted" style={{ fontSize: '0.7rem' }}>{a.type.toUpperCase()} - {a.message_type}</small>
+                                        <div className="text-truncate" style={{ maxWidth: '80%' }}>
+                                            <div className="fw-bold small text-truncate">{a.name}</div>
+                                            <small className="text-muted d-block text-truncate" style={{ fontSize: '0.65rem' }}>{a.type.toUpperCase()} - {a.message_type}</small>
                                         </div>
                                         <Checks
                                             id={`action-${a.id}`}
                                             checked={isSelected('action_ids', a.id)}
-                                            onChange={() => { }} // Controlled by parent div click
+                                            onChange={() => { }}
                                         />
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
-                </FormGroup>
+                </div>
             </div>
 
             <div className="col-12 d-flex justify-content-end gap-2 mt-4">
