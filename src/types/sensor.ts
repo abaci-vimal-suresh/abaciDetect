@@ -726,12 +726,20 @@ export interface AlertConfigurationUpdateData {
 // ALERT FILTERS & ACTIONS
 // ============================================
 
+export interface ActionRecipient {
+    id: number;
+    username: string;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+}
+
 export interface Action {
     id: number;
     name: string;
     type: 'email' | 'sms' | 'push_notification' | 'webhook' | 'device_notification' | 'n8n_workflow' | 'slack' | 'teams' | 'custom';
-    recipients: number[];
-    user_groups?: number[];
+    recipients: number[] | ActionRecipient[];
+    user_groups?: number[] | any[];
     device_type?: 'HALO' | 'HALO_SMART' | 'HALO_IOT';
     device_list?: string;
     http_method?: 'GET' | 'POST' | 'PUT';
@@ -780,6 +788,7 @@ export interface AlertFilter {
     alert_type?: string;
     is_direct_device_alert?: boolean;
     is_custom_alert_filter?: boolean;
+    is_active: boolean;
 }
 
 export const ALERT_TYPE_CHOICES = [

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // AlertFilterForm UI Refined
+import * as React from 'react';
 import { AlertFilter, Area, Action, ALERT_TYPE_CHOICES, ALERT_SOURCE_CHOICES } from '../../../../types/sensor';
 import Button from '../../../../components/bootstrap/Button';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
@@ -16,7 +16,7 @@ interface AlertFilterFormProps {
 }
 
 const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCancel }) => {
-    const [formData, setFormData] = useState<Partial<AlertFilter>>(() => {
+    const [formData, setFormData] = React.useState<Partial<AlertFilter>>(() => {
         if (!filter) return {
             name: '',
             description: '',
@@ -31,10 +31,15 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
             action_for_threshold: false,
             weekdays: [],
             start_time: '',
-            end_time: ''
+            end_time: '',
+            is_active: true
         };
 
         const initial = { ...filter };
+
+        // Ensure is_active is boolean
+        if (typeof initial.is_active === 'undefined') initial.is_active = true;
+
         if (filter.area_list && (!filter.area_ids || filter.area_ids.length === 0)) {
             initial.area_ids = filter.area_list.map(a => a.id);
         }
@@ -86,7 +91,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
     return (
         <div className="row g-3">
-            <div className="col-md-6">
+            <div className="col-md-4">
                 <FormGroup label="Filter Name">
                     <Input
                         value={formData.name}
@@ -95,12 +100,23 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                     />
                 </FormGroup>
             </div>
-            <div className="col-md-6">
+            <div className="col-md-5">
                 <FormGroup label="Description">
                     <Input
                         value={formData.description}
                         onChange={(e: any) => setFormData({ ...formData, description: e.target.value })}
                         placeholder="Purpose of this filter"
+                    />
+                </FormGroup>
+            </div>
+            <div className="col-md-3 d-flex align-items-center">
+                <FormGroup label="Status">
+                    <Checks
+                        id="is_active"
+                        type="switch"
+                        label={formData.is_active ? 'Active' : 'Inactive'}
+                        checked={formData.is_active}
+                        onChange={(e: any) => setFormData({ ...formData, is_active: e.target.checked })}
                     />
                 </FormGroup>
             </div>

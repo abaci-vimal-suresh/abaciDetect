@@ -3,7 +3,7 @@ import { authAxios as axiosInstance } from '../axiosInstance';
 import useToasterNotification from '../hooks/useToasterNotification';
 import { mockSensors } from '../mockData/sensors';
 
-const USE_MOCK_DATA = true;
+import { USE_MOCK_DATA } from '../config';
 
 // Define SensorReading interface
 export interface SensorReading {

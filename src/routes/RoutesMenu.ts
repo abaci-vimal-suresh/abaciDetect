@@ -35,6 +35,7 @@ export const AdminRoutes = {
 	haloArea: haloMenu.area,
 	monitoring: haloMenu.monitoring,
 	alerts: haloMenu.alerts,
+	haloActions: haloMenu.actions,
 	privacy: haloMenu.privacy,
 	users: haloMenu.users,
 	timetravel: haloMenu.timetravel,
@@ -56,6 +57,7 @@ export const ViewerRoutes = {
 	},
 	timetravel: haloMenu.timetravel,
 	reports: haloMenu.reports,
+	haloActions: haloMenu.actions,
 	autocad: haloMenu.autocad,
 	threed: haloMenu.threed,
 };

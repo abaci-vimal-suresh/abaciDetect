@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import SubHeader, { SubHeaderLeft } from '../../../layout/SubHeader/SubHeader';
-import Card, { CardBody, CardHeader, CardTitle, CardActions } from '../../../components/bootstrap/Card';
-import Button from '../../../components/bootstrap/Button';
 import Badge from '../../../components/bootstrap/Badge';
 import Icon from '../../../components/icon/Icon';
 import MaterialTable from '@material-table/core';
@@ -28,10 +26,38 @@ const AlertActionPage = () => {
     const [editingAction, setEditingAction] = useState<Partial<Action> | null>(null);
 
     const handleSaveAction = async (data: Partial<Action>) => {
+        // Clean and prepare payload for backend
+        const payload: any = { ...data };
+
+        // 1. Remove frontend-only or read-only fields that might cause 400 errors
+        delete payload.tableData;
+        delete payload.created_at;
+        delete payload.updated_at;
+        delete payload.created_by_username;
+        delete payload.created_by;
+
+        // 2. Map recipients to ID fields if they are objects
+        if (payload.recipients) {
+            payload.recipient_ids = payload.recipients.map((r: any) =>
+                typeof r === 'object' ? r.id : r
+            );
+        }
+
+        // 3. Map user groups to ID fields if they are objects
+        if (payload.user_groups) {
+            payload.user_group_ids = payload.user_groups.map((g: any) =>
+                typeof g === 'object' ? g.id : g
+            );
+        }
+
+        // 4. Ensure device_list is handled (backend expects string or ID list depending on context)
+        // If it's empty, send empty array or string based on type
+        if (!payload.device_list) payload.device_list = [];
+
         if (data.id) {
-            await updateActionMutation.mutateAsync({ id: data.id, data });
+            await updateActionMutation.mutateAsync({ id: data.id, data: payload });
         } else {
-            await createActionMutation.mutateAsync(data);
+            await createActionMutation.mutateAsync(payload);
         }
         setIsManagementFormOpen(false);
         setEditingAction(null);
@@ -60,38 +86,93 @@ const AlertActionPage = () => {
                                 title="Available Notification Actions"
                                 columns={[
                                     { title: 'Action Name', field: 'name' },
-                                    { title: 'Type', field: 'type', render: (row: any) => <Badge color="info">{row.type.toUpperCase()}</Badge> },
                                     {
-                                        title: 'Recipients',
+                                        title: 'Notification Type',
+                                        field: 'type',
                                         render: (row: any) => {
-                                            if (row.type !== 'sms' && row.type !== 'email') return <small className="text-muted">-</small>;
+                                            const typeMap: any = {
+                                                'email': 'Email Notification',
+                                                'sms': 'SMS Notification',
+                                                'webhook': 'Webhook/HTTP',
+                                                'n8n_workflow': 'n8n Workflow',
+                                                'device_notification': 'Device Command',
+                                                'push_notification': 'Push Notification',
+                                                'slack': 'Slack',
+                                                'teams': 'Microsoft Teams'
+                                            };
                                             return (
-                                                <small>
-                                                    {row.recipients?.length || 0} Users, {row.user_groups?.length || 0} Groups
-                                                </small>
+                                                <div className="d-flex flex-column align-items-start">
+                                                    <Badge color="info" className="mb-1">{typeMap[row.type] || row.type.toUpperCase()}</Badge>
+                                                    {row.type === 'webhook' && row.http_method && (
+                                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                            {row.http_method}: {row.webhook_url ? (row.webhook_url.length > 20 ? row.webhook_url.substring(0, 20) + '...' : row.webhook_url) : 'No URL'}
+                                                        </small>
+                                                    )}
+                                                    {row.type === 'n8n_workflow' && (
+                                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                            <Icon icon="AccountTree" size="sm" className="me-1" />
+                                                            ID: {row.n8n_workflow_id || 'unnamed'}
+                                                        </small>
+                                                    )}
+                                                    {(row.type === 'device_notification' || row.type === 'push_notification') && row.device_type && (
+                                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                            <Icon icon="Devices" size="sm" className="me-1" />
+                                                            {row.device_type}
+                                                        </small>
+                                                    )}
+                                                </div>
                                             );
                                         }
                                     },
                                     {
-                                        title: 'Details',
-                                        render: (row: any) => (
-                                            <small className="text-muted">
-                                                {row.type === 'webhook' ? row.http_method :
-                                                    row.type === 'n8n_workflow' ? (
-                                                        <span>
-                                                            <Icon icon="AccountTree" size="sm" className="me-1" />
-                                                            {row.n8n_workflow_id || 'Workflow'}
-                                                        </span>
-                                                    ) :
-                                                        (row.type === 'device_notification' || row.type === 'push_notification') ? row.device_type : '-'}
-                                            </small>
-                                        )
+                                        title: 'Recipients & Groups',
+                                        render: (row: any) => {
+                                            const userCount = row.recipients?.length || 0;
+                                            const groupCount = row.user_groups?.length || 0;
+
+                                            if (userCount === 0 && groupCount === 0) return <small className="text-muted">None</small>;
+
+                                            let userText = '';
+                                            if (userCount > 0) {
+                                                if (typeof row.recipients[0] === 'object') {
+                                                    const firstUser = row.recipients[0].username || row.recipients[0].first_name || 'User';
+                                                    userText = `${userCount} User${userCount > 1 ? 's' : ''} (${firstUser}${userCount > 1 ? '...' : ''})`;
+                                                } else {
+                                                    userText = `${userCount} User${userCount > 1 ? 's' : ''}`;
+                                                }
+                                            }
+
+                                            let groupText = groupCount > 0 ? `${groupCount} Group${groupCount > 1 ? 's' : ''}` : '';
+
+                                            return (
+                                                <div className="d-flex flex-column">
+                                                    {userText && <small><Icon icon="Person" size="sm" className="me-1" />{userText}</small>}
+                                                    {groupText && <small><Icon icon="Group" size="sm" className="me-1" />{groupText}</small>}
+                                                </div>
+                                            );
+                                        }
                                     },
-                                    { title: 'Priority', field: 'message_type' },
+                                    {
+                                        title: 'Message Format',
+                                        field: 'message_type',
+                                        render: (row: any) => {
+                                            const formatMap: any = {
+                                                'json_data': 'JSON Data',
+                                                'jsondata': 'JSON Data',
+                                                'custom_template': 'Custom Template',
+                                                'custom': 'Custom Message'
+                                            };
+                                            return <small className="fw-bold">{formatMap[row.message_type] || row.message_type || 'Custom'}</small>;
+                                        }
+                                    },
                                     {
                                         title: 'Status',
                                         field: 'is_active',
-                                        render: (row: any) => <Badge color={row.is_active ? 'success' : 'light'}>{row.is_active ? 'Active' : 'Inactive'}</Badge>
+                                        render: (row: any) => (
+                                            <Badge color={row.is_active ? 'success' : 'warning'}>
+                                                {row.is_active ? 'Active' : 'Inactive'}
+                                            </Badge>
+                                        )
                                     }
                                 ]}
                                 data={actions || []}

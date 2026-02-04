@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import SubHeader, { SubHeaderLeft } from '../../../layout/SubHeader/SubHeader';
@@ -17,6 +18,9 @@ import { AlertFilter, ALERT_TYPE_CHOICES, ALERT_SOURCE_CHOICES, Action, Area } f
 import Modal, { ModalHeader, ModalBody, ModalFooter } from '../../../components/bootstrap/Modal';
 
 const AlertFilterPage = () => {
+    const [isManagementFormOpen, setIsManagementFormOpen] = React.useState(false);
+    const [editingFilter, setEditingFilter] = React.useState<Partial<AlertFilter> | null>(null);
+
     const { theme, headerStyle, rowStyle } = useTablestyle();
 
     const { data: alertFilters } = useAlertFilters();
@@ -24,20 +28,33 @@ const AlertFilterPage = () => {
     const updateFilterMutation = useUpdateAlertFilter();
     const deleteFilterMutation = useDeleteAlertFilter();
 
-    const [isManagementFormOpen, setIsManagementFormOpen] = useState(false);
-    const [editingFilter, setEditingFilter] = useState<Partial<AlertFilter> | null>(null);
-
     const handleSaveFilter = async (data: Partial<AlertFilter>) => {
-        // Strip rich data objects before sending to backend
-        const cleanData = { ...data };
-        delete cleanData.area_list;
-        delete cleanData.sensor_groups;
-        delete cleanData.actions;
+        // Clean and prepare payload for backend
+        const payload: any = { ...data };
 
-        if (cleanData.id) {
-            await updateFilterMutation.mutateAsync({ id: cleanData.id, data: cleanData });
+        // 1. Remove read-only/frontend-only fields
+        delete payload.area_list;
+        delete payload.sensor_groups;
+        delete payload.actions;
+        delete payload.tableData;
+        delete payload.created_at;
+        delete payload.updated_at;
+
+        // 2. Map to ID fields if not already present or if we want to be sure
+        if (data.area_list && (!payload.area_ids || payload.area_ids.length === 0)) {
+            payload.area_ids = data.area_list.map(a => a.id);
+        }
+        if (data.sensor_groups && (!payload.sensor_group_ids || payload.sensor_group_ids.length === 0)) {
+            payload.sensor_group_ids = data.sensor_groups.map(g => g.id);
+        }
+        if (data.actions && (!payload.action_ids || payload.action_ids.length === 0)) {
+            payload.action_ids = data.actions.map(a => a.id);
+        }
+
+        if (payload.id) {
+            await updateFilterMutation.mutateAsync({ id: payload.id, data: payload });
         } else {
-            await createFilterMutation.mutateAsync(cleanData);
+            await createFilterMutation.mutateAsync(payload);
         }
         setIsManagementFormOpen(false);
         setEditingFilter(null);
@@ -146,6 +163,15 @@ const AlertFilterPage = () => {
                                                             </Badge>
                                                         ))}
                                                     </div>
+                                                )
+                                            },
+                                            {
+                                                title: 'Status',
+                                                field: 'is_active',
+                                                render: (row: any) => (
+                                                    <Badge color={row.is_active ? 'success' : 'warning'}>
+                                                        {row.is_active ? 'Active' : 'Inactive'}
+                                                    </Badge>
                                                 )
                                             }
                                         ]}
