@@ -8,6 +8,7 @@ import Textarea from '../../../../components/bootstrap/forms/Textarea';
 import Icon from '../../../../components/icon/Icon';
 import { useUsers, useUserGroups } from '../../../../api/sensors.api';
 import ReactSelectWithState from '../../../../components/CustomComponent/Select/ReactSelect';
+import Checks from '../../../../components/bootstrap/forms/Checks';
 
 interface ActionFormProps {
     action?: Partial<Action>;
@@ -16,13 +17,29 @@ interface ActionFormProps {
 }
 
 const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => {
-    const [formData, setFormData] = useState<Partial<Action>>(action || {
-        name: '',
-        type: 'email',
-        recipients: [],
-        message_type: 'custom',
-        message_template: '',
-        is_active: true
+    const [formData, setFormData] = React.useState<Partial<Action>>(() => {
+        if (!action) return {
+            name: '',
+            type: 'email',
+            recipients: [],
+            message_type: 'custom',
+            message_template: '',
+            is_active: true
+        };
+
+        const initial = { ...action };
+
+        // Convert rich recipient objects to IDs for select components
+        if (initial.recipients && Array.isArray(initial.recipients)) {
+            initial.recipients = initial.recipients.map((r: any) => typeof r === 'object' ? r.id : r);
+        }
+
+        // Convert rich user group objects to IDs for select components
+        if (initial.user_groups && Array.isArray(initial.user_groups)) {
+            initial.user_groups = initial.user_groups.map((g: any) => typeof g === 'object' ? g.id : g);
+        }
+
+        return initial;
     });
 
     const { data: users } = useUsers();
@@ -276,15 +293,28 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                         value={formData.message_type || 'custom'}
                         onChange={(e: any) => setFormData({ ...formData, message_type: e.target.value })}
                         list={[
-                            { value: 'custom', text: 'Custom' },
-                            { value: 'jsondata', text: 'JSON Data' },
+                            { value: 'custom', text: 'Plain Text / Custom' },
+                            { value: 'custom_template', text: 'Custom Template' },
+                            { value: 'json_data', text: 'JSON Data' },
                         ]}
                         ariaLabel="Message Type"
                     />
                 </FormGroup>
             </div>
 
-            {formData.message_type === 'custom' && (
+            <div className="col-md-6 d-flex align-items-center">
+                <FormGroup label="Status">
+                    <Checks
+                        id="is_active"
+                        type="switch"
+                        label={formData.is_active ? 'Active' : 'Inactive'}
+                        checked={formData.is_active}
+                        onChange={(e: any) => setFormData({ ...formData, is_active: e.target.checked })}
+                    />
+                </FormGroup>
+            </div>
+
+            {(formData.message_type === 'custom' || formData.message_type === 'custom_template') && (
                 <div className="col-12">
                     <FormGroup label="Message">
                         <Textarea
@@ -304,7 +334,7 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                     isDisable={
                         !formData.name ||
                         (formData.type === 'n8n_workflow' && !formData.n8n_workflow_url) ||
-                        (formData.message_type === 'custom' && !formData.message_template)
+                        ((formData.message_type === 'custom' || formData.message_type === 'custom_template') && !formData.message_template)
                     }
                 >
                     Save Action

@@ -3,7 +3,7 @@ import { publicAxios, authAxios } from '../axiosInstance';
 import { mockAuthService, __mockSessionManager } from '../mockAuthService';
 import useToasterNotification from '../hooks/useToasterNotification';
 import Cookies from 'js-cookie';
-import { USE_MOCK_DATA } from './sensors.api';
+import { USE_MOCK_DATA } from '../config';
 
 // ============================================
 // CONFIGURATION

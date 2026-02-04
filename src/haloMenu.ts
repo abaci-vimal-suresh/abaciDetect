@@ -64,20 +64,15 @@ export const haloMenu = {
                 text: 'Alert Filter',
                 path: '/halo/alerts/filter',
                 icon: 'FilterAlt',
-            },
-            actions: {
-                id: 'alerts-actions',
-                text: 'Alert Actions',
-                path: '/halo/alerts/actions',
-                icon: 'Notifications',
-            },
-            // n8n: {
-            //     id: 'alerts-n8n',
-            //     text: 'N8N Integration',
-            //     path: '/halo/alerts/n8n-tutorial',
-            //     icon: 'AccountTree',
-            // },
+            }
         },
+    },
+    actions: {
+        id: 'halo-actions',
+        text: 'Actions',
+        path: '/halo/alerts/actions',
+        icon: 'NotificationsActive',
+        subMenu: null,
     },
     reports: {
         id: 'halo-reports',

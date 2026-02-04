@@ -3,7 +3,7 @@ import axios from 'axios';
 import { baseURL } from '../helpers/baseURL';
 
 // MOCK DATA FLAG
-const USE_MOCK_DATA = true;
+import { USE_MOCK_DATA } from '../config';
 
 // Mock Data
 const MOCK_DEVICE_CONFIG: DeviceConfig = {

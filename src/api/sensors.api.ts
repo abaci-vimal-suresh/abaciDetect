@@ -16,7 +16,7 @@ import {
     mockSensorGroups, mockPersonnelData, mockUserActivities, mockAlerts, mockAlertTrends, mockSensorConfigs, mockAlertConfigurations
 } from '../mockData/sensors';
 
-export const USE_MOCK_DATA = false;
+import { USE_MOCK_DATA } from '../config';
 
 
 export const useUsers = () => {
