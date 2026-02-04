@@ -13,7 +13,7 @@ interface IFormGroupProps extends HTMLAttributes<HTMLElement> {
 	tag?: 'div' | 'section';
 	isFloating?: boolean;
 	id?: string;
-	label?: string;
+	label?: ReactNode;
 	size?: 'lg' | 'sm' | null;
 	isHiddenLabel?: boolean;
 	isColForLabel?: boolean;
@@ -48,11 +48,11 @@ const FormGroup: FC<IFormGroupProps> = ({
 	const CHILDREN =
 		id && !Array.isArray(children)
 			? cloneElement(children, {
-					id,
-					size: size || children?.props.size,
-					placeholder: isFloating ? label : children.props.placeholder,
-					'aria-describedby': formText ? `${id}-text` : null,
-				})
+				id,
+				size: size || children?.props.size,
+				placeholder: isFloating ? label : children.props.placeholder,
+				'aria-describedby': formText ? `${id}-text` : null,
+			})
 			: children;
 
 	const FORM_TEXT = formText && <FormText id={`${id}-text`}>{formText}</FormText>;
@@ -88,7 +88,7 @@ FormGroup.propTypes = {
 	tag: PropTypes.oneOf(['div', 'section']),
 	isFloating: PropTypes.bool,
 	id: PropTypes.string,
-	label: PropTypes.string,
+	label: PropTypes.node as any,
 	size: PropTypes.oneOf([null, 'lg', 'sm']),
 	isHiddenLabel: PropTypes.bool,
 	isColForLabel: PropTypes.bool,

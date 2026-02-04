@@ -108,13 +108,12 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
     };
 
     return (
-        <Modal isOpen={isOpen} setIsOpen={setIsOpen} size="xl" titleId="create-user-modal">
+        <Modal isOpen={isOpen} setIsOpen={setIsOpen} size="xl" titleId="create-user-modal" isScrollable>
             <ModalHeader setIsOpen={setIsOpen} className="p-4">
                 <ModalTitle id="create-user-modal">Create New User</ModalTitle>
             </ModalHeader>
             <ModalBody className="p-4">
                 <div className="row g-4">
-                    {/* Basic Information */}
                     <div className="col-lg-6">
                         <Card className="shadow-none border h-100" style={{ background: darkModeStatus ? '#1E293B' : '#F8F9FA' }}>
                             <CardHeader className="bg-transparent border-bottom py-3">

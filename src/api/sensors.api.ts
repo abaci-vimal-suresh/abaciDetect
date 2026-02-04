@@ -8,7 +8,7 @@ import {
     UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData,
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
     AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
-    SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse
+    SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse, N8NAlertPayload
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 import {
@@ -819,7 +819,11 @@ export interface RemoteSensorConfigResponse {
         sensor_type: string;
         model_name: string;
         sensors: RemoteSensorConfigItem[];
-    }
+        event_sources?: Record<string, string>;
+    };
+    event_sources?: Record<string, string>;
+    sensor_count?: number;
+    timestamp?: string;
 }
 
 export const useRemoteSensorConfig = (sensorType?: string) => {
@@ -2237,6 +2241,23 @@ export const useActions = (filters?: { search?: string; type?: string; is_active
                         webhook_url: 'https://api.example.com/webhook',
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
+                    },
+                    {
+                        id: 2,
+                        name: "Critical_Alert_N8N_Workflow",
+                        type: "n8n_workflow",
+                        n8n_workflow_url: "https://n8n.example.com/webhook/critical-alerts",
+                        n8n_workflow_id: "critical_alert_handler",
+                        n8n_api_key: "sk_test_xxxxxxxxxxxx",
+                        n8n_auth_header: "X-API-Key",
+                        n8n_timeout: 30,
+                        recipients: [],
+                        user_groups: [],
+                        message_type: "json",
+                        message_template: "N8N Workflow Trigger",
+                        is_active: true,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
                     }
                 ] as Action[];
             }
@@ -2413,6 +2434,138 @@ export const useDeleteAction = () => {
     });
 };
 
+// ============================================
+// N8N WORKFLOW INTEGRATION HELPERS
+// ============================================
+
+/**
+ * Build N8N webhook payload from alert context
+ */
+export const buildN8NAlertPayload = (
+    alert: Alert,
+    sensor: any,
+    area: any,
+    filter: AlertFilter,
+    action: Action,
+    sensorReadings?: any
+): N8NAlertPayload => {
+    // Determine severity
+    const severity: 'critical' | 'warning' | 'info' =
+        (alert.type.includes('smoke') || alert.type.includes('fire') || alert.type === 'sensor_offline')
+            ? 'critical'
+            : (alert.type.includes('high') || alert.type.includes('warning'))
+                ? 'warning'
+                : 'info';
+
+    // Determine trigger condition
+    let triggerCondition: 'min_violation' | 'max_violation' | 'threshold_violation' = 'threshold_violation';
+    if (filter.action_for_min) triggerCondition = 'min_violation';
+    if (filter.action_for_max) triggerCondition = 'max_violation';
+
+    return {
+        payload_version: "1.0",
+        timestamp: new Date().toISOString(),
+        source: "HALO Alert System",
+        alert: {
+            id: alert.id,
+            type: alert.type,
+            severity,
+            status: alert.status,
+            description: alert.description,
+            remarks: alert.remarks,
+            created_at: alert.created_at,
+            updated_at: alert.updated_at,
+            value: alert.description // Could be enhanced to extract numeric value
+        },
+        sensor: {
+            id: typeof sensor === 'object' ? sensor.id : sensor,
+            name: typeof sensor === 'object' ? sensor.name : `Sensor-${sensor}`,
+            type: typeof sensor === 'object' ? sensor.sensor_type : undefined,
+            mac_address: typeof sensor === 'object' ? sensor.mac_address : undefined,
+            ip_address: typeof sensor === 'object' ? sensor.ip_address : undefined,
+            location: typeof sensor === 'object' ? sensor.location : undefined,
+            is_online: typeof sensor === 'object' ? sensor.is_online : undefined,
+            last_heartbeat: typeof sensor === 'object' ? sensor.last_heartbeat : undefined
+        },
+        area: {
+            id: typeof area === 'object' ? area.id : area,
+            name: typeof area === 'object' ? area.name : `Area-${area}`,
+            area_type: typeof area === 'object' ? area.area_type : undefined,
+            parent_area: typeof area === 'object' && area.parent_id
+                ? { id: area.parent_id, name: area.parent_name || `Area-${area.parent_id}` }
+                : null
+        },
+        filter: {
+            id: filter.id,
+            name: filter.name,
+            description: filter.description,
+            threshold_min: undefined, // Would need to be passed from threshold config
+            threshold_max: undefined,
+            trigger_condition: triggerCondition
+        },
+        action: {
+            id: action.id,
+            name: action.name,
+            type: action.type,
+            workflow_id: action.n8n_workflow_id
+        },
+        sensor_readings: sensorReadings || undefined
+    };
+};
+
+/**
+ * Trigger N8N workflow webhook
+ */
+export const triggerN8NWorkflow = async (
+    action: Action,
+    payload: N8NAlertPayload
+): Promise<{ success: boolean; response?: any; error?: string }> => {
+    if (!action.n8n_workflow_url) {
+        return { success: false, error: 'No webhook URL configured' };
+    }
+
+    try {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+
+        // Add API key authentication if configured
+        if (action.n8n_api_key) {
+            const headerName = action.n8n_auth_header || 'X-API-Key';
+            headers[headerName] = action.n8n_api_key;
+        }
+
+        const timeout = (action.n8n_timeout || 30) * 1000;
+
+        console.log('🚀 Triggering N8N workflow:', {
+            workflow_id: action.n8n_workflow_id,
+            url: action.n8n_workflow_url,
+            alert_id: payload.alert.id,
+            sensor: payload.sensor.name
+        });
+
+        const { data } = await axios.post(
+            action.n8n_workflow_url,
+            payload,
+            {
+                headers,
+                timeout
+            }
+        );
+
+        console.log('✅ N8N workflow response:', data);
+
+        return { success: true, response: data };
+    } catch (error: any) {
+        console.error('❌ N8N workflow failed:', error.message);
+        return {
+            success: false,
+            error: error.response?.data?.message || error.message || 'Webhook request failed'
+        };
+    }
+};
+
+
 export const useSyncHaloConfigs = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
     const queryClient = useQueryClient();
@@ -2434,6 +2587,58 @@ export const useSyncHaloConfigs = () => {
                 error?.response?.data?.detail ||
                 error?.response?.data?.message ||
                 'Failed to sync Halo configurations'
+            );
+        }
+    });
+};
+export interface WaveFilesResponse {
+    success: boolean;
+    sensor_ip: string;
+    wavefiles: string[];
+    count: number;
+}
+
+export const useWaveFiles = (ip_address?: string, username?: string, password?: string) => {
+    return useQuery({
+        queryKey: ['wavefiles', ip_address, username, password],
+        queryFn: async () => {
+            const { data } = await axiosInstance.get('devices/wavefiles/list/', {
+                params: {
+                    ip_address,
+                    username,
+                    password
+                }
+            });
+            return data as WaveFilesResponse;
+        },
+        enabled: !!ip_address && !!username && !!password
+    });
+};
+export const useUploadWaveFile = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async ({ ip_address, username, password, file }: { ip_address: string; username: string; password: string; file: File }) => {
+            const url = `devices/wavefiles/add/${file.name}/?ip_address=${encodeURIComponent(ip_address)}&username=${encodeURIComponent(username || 'admin')}&password=${encodeURIComponent(password || 'Abcd@123')}`;
+
+            const { data } = await axiosInstance.post(url, file, {
+                headers: {
+                    'Content-Type': 'application/octet-stream'
+                }
+            });
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['wavefiles'] });
+            showSuccessNotification('Sound file uploaded successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(
+                error?.response?.data?.message ||
+                error?.response?.data?.detail ||
+                error?.response?.data?.error ||
+                'Failed to upload sound file'
             );
         }
     });

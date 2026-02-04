@@ -13,7 +13,7 @@ import {
     useAlertFilters, useCreateAlertFilter, useUpdateAlertFilter, useDeleteAlertFilter
 } from '../../../api/sensors.api';
 import AlertFilterForm from './components/AlertFilterForm';
-import { AlertFilter } from '../../../types/sensor';
+import { AlertFilter, ALERT_TYPE_CHOICES, ALERT_SOURCE_CHOICES, Action, Area } from '../../../types/sensor';
 import Modal, { ModalHeader, ModalBody, ModalFooter } from '../../../components/bootstrap/Modal';
 
 const AlertFilterPage = () => {
@@ -28,10 +28,16 @@ const AlertFilterPage = () => {
     const [editingFilter, setEditingFilter] = useState<Partial<AlertFilter> | null>(null);
 
     const handleSaveFilter = async (data: Partial<AlertFilter>) => {
-        if (data.id) {
-            await updateFilterMutation.mutateAsync({ id: data.id, data });
+        // Strip rich data objects before sending to backend
+        const cleanData = { ...data };
+        delete cleanData.area_list;
+        delete cleanData.sensor_groups;
+        delete cleanData.actions;
+
+        if (cleanData.id) {
+            await updateFilterMutation.mutateAsync({ id: cleanData.id, data: cleanData });
         } else {
-            await createFilterMutation.mutateAsync(data);
+            await createFilterMutation.mutateAsync(cleanData);
         }
         setIsManagementFormOpen(false);
         setEditingFilter(null);
@@ -83,29 +89,60 @@ const AlertFilterPage = () => {
                                             { title: 'Description', field: 'description' },
                                             {
                                                 title: 'Scope',
-                                                render: (row: any) => (
-                                                    <small>
-                                                        {row.area_ids?.length || 0} Areas, {row.sensor_group_ids?.length || 0} Groups
-                                                    </small>
-                                                )
-                                            },
-                                            {
-                                                title: 'Triggers',
-                                                render: (row: any) => (
-                                                    <div className="d-flex flex-wrap gap-1">
-                                                        {row.action_for_threshold && <Badge color="warning" isLight>Warning</Badge>}
-                                                        {row.action_for_max && <Badge color="danger" isLight>Critical</Badge>}
-                                                        {row.action_for_min && <Badge color="info" isLight>Min</Badge>}
+                                                render: (row: AlertFilter) => (
+                                                    <div className="d-flex flex-column gap-1">
+                                                        <small className="text-muted d-block">
+                                                            <strong>Areas:</strong> {row.area_list?.map(a => a.name).join(', ') || 'Global'}
+                                                        </small>
+                                                        {row.sensor_groups && row.sensor_groups.length > 0 && (
+                                                            <small className="text-muted d-block">
+                                                                <strong>Groups:</strong> {row.sensor_groups.map(g => g.name).join(', ')}
+                                                            </small>
+                                                        )}
                                                     </div>
                                                 )
                                             },
                                             {
-                                                title: 'Actions',
-                                                render: (row: any) => (
+                                                title: 'Alert Types',
+                                                render: (row: AlertFilter) => (
+                                                    <div className="d-flex flex-wrap gap-1" style={{ maxWidth: '200px' }}>
+                                                        {row.alert_types?.map((t: string) => (
+                                                            <Badge key={t} color="info" isLight className="text-truncate">
+                                                                {ALERT_TYPE_CHOICES.find(c => c.value === t)?.label || t}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                )
+                                            },
+                                            {
+                                                title: 'Sources',
+                                                render: (row: AlertFilter) => (
                                                     <div className="d-flex flex-wrap gap-1">
-                                                        {(row.action_ids as any[])?.map((a: any) => (
-                                                            <Badge key={typeof a === 'object' ? a.id : a} color="primary" isLight>
-                                                                {typeof a === 'object' ? a.name : `Action ${a}`}
+                                                        {row.source_types?.map((s: string) => (
+                                                            <Badge key={s} color="secondary" isLight>
+                                                                {ALERT_SOURCE_CHOICES.find(c => c.value === s)?.label || s}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                )
+                                            },
+                                            {
+                                                title: 'Triggers',
+                                                render: (row: AlertFilter) => (
+                                                    <div className="d-flex flex-wrap gap-1">
+                                                        {row.action_for_threshold && <Badge color="warning" isLight>Warning</Badge>}
+                                                        {row.action_for_max && <Badge color="danger" isLight>Critical</Badge>}
+                                                        {row.action_for_min && <Badge color="primary" isLight>Min</Badge>}
+                                                    </div>
+                                                )
+                                            },
+                                            {
+                                                title: 'Alert Actions',
+                                                render: (row: AlertFilter) => (
+                                                    <div className="d-flex flex-wrap gap-1">
+                                                        {row.actions?.map((a: Action) => (
+                                                            <Badge key={a.id} color="primary" isLight>
+                                                                {a.name}
                                                             </Badge>
                                                         ))}
                                                     </div>

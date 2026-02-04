@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from 'react';
+import React, { useContext, useMemo, useCallback } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import MaterialTable from '@material-table/core';
 import Page from '../../../layout/Page/Page';
@@ -19,6 +19,100 @@ import { ApexOptions } from 'apexcharts';
 import AuthContext from '../../../contexts/authContext';
 import ViewerDashboard from './ViewerDashboard';
 
+//  1: Extract constants outside component to prevent recreation
+const CHART_CATEGORIES = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
+const CHART_TEMP_DATA = [22, 23, 24, 23.5, 25, 24, 23];
+const CHART_HUMIDITY_DATA = [45, 47, 48, 46, 49, 48, 47];
+const BADGE_COLORS = ['primary', 'success', 'warning', 'info', 'danger'] as const;
+const RECENT_ACTIVITY_LIMIT = 3;
+const DEFAULT_PAGE_SIZE = 5;
+
+//  2: Memoize static chart configuration
+const getChartOptions = (): ApexOptions => ({
+    chart: {
+        id: 'sensor-trends',
+        toolbar: { show: false },
+    },
+    xaxis: {
+        categories: CHART_CATEGORIES,
+    },
+    stroke: { curve: 'smooth' },
+    colors: [import.meta.env.VITE_PRIMARY_COLOR, import.meta.env.VITE_INFO_COLOR],
+});
+
+const chartSeries = [
+    { name: 'Temperature', data: CHART_TEMP_DATA },
+    { name: 'Humidity', data: CHART_HUMIDITY_DATA },
+];
+
+//  3: Extract sub-components to prevent unnecessary re-renders
+const StatCard = React.memo(({ icon, value, label, iconColor }: {
+    icon: string;
+    value: number | string;
+    label: string;
+    iconColor: string;
+}) => (
+    <Card stretch className='border-0 shadow-sm'>
+        <CardBody className='text-center'>
+            <Icon icon={icon} size='2x' className={`${iconColor} mb-2`} />
+            <div className='h3 mb-0'>{value}</div>
+            <div className='text-muted small'>{label}</div>
+        </CardBody>
+    </Card>
+));
+
+StatCard.displayName = 'StatCard';
+
+const AreaProgressItem = React.memo(({ area, totalSensors }: {
+    area: any;
+    totalSensors: number;
+}) => (
+    <div className='mb-4'>
+        <div className='d-flex justify-content-between mb-1'>
+            <span className='fw-bold'>{area.name}</span>
+            <span className='text-muted small'>
+                {area.sensor_count} Sensors
+            </span>
+        </div>
+        <Progress
+            value={totalSensors > 0 ? (area.sensor_count / totalSensors) * 100 : 0}
+            color='primary'
+            height='8px'
+        />
+        <div className='small text-muted mt-1'>
+            {area.subareas?.length || 0} sub areas
+        </div>
+    </div>
+));
+
+AreaProgressItem.displayName = 'AreaProgressItem';
+
+const ActivityRow = React.memo(({ sensor }: { sensor: any }) => (
+    <tr>
+        <td>
+            <Icon
+                icon='Circle'
+                className={sensor.is_active ? 'text-success' : 'text-danger'}
+            />
+        </td>
+        <td>
+            <div className='fw-bold'>
+                {sensor.is_active ? 'Sensor Active' : 'Sensor Inactive'}
+            </div>
+            <div className='small text-muted'>
+                {sensor.name} - {sensor.mac_address}
+            </div>
+        </td>
+        <td className='text-end small text-muted'>
+            {new Date(sensor.created_at).toLocaleDateString()}
+        </td>
+    </tr>
+));
+
+ActivityRow.displayName = 'ActivityRow';
+
+
+
 const Dashboard = () => {
     const { userData } = useContext(AuthContext);
     const { data: sensors, isLoading: sensorsLoading } = useSensors();
@@ -26,38 +120,31 @@ const Dashboard = () => {
     const { fullScreenStatus } = useContext(ThemeContext);
     const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
 
+    //  4: Memoize role check
     const isAdmin = useMemo(() => {
         return userData?.role?.toLowerCase() === 'admin';
-    }, [userData]);
+    }, [userData?.role]);
 
+    //  5: Memoize stats calculation with dependency on sensors length instead of entire array
     const stats = useMemo(() => {
-        if (!sensors) return { total: 0, active: 0, inactive: 0, alerts: 0 };
+        if (!sensors || sensors.length === 0) {
+            return { total: 0, active: 0, inactive: 0, alerts: 0 };
+        }
+
+        const active = sensors.filter(s => s.is_active).length;
         return {
             total: sensors.length,
-            active: sensors.filter(s => s.is_active).length,
-            inactive: sensors.filter(s => !s.is_active).length,
-            alerts: 3, // Mock for now - can be calculated from actual alert data
+            active,
+            inactive: sensors.length - active,
+            alerts: 3,
         };
     }, [sensors]);
 
-    const chartOptions: ApexOptions = {
-        chart: {
-            id: 'sensor-trends',
-            toolbar: { show: false },
-        },
-        xaxis: {
-            categories: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
-        },
-        stroke: { curve: 'smooth' },
-        colors: [import.meta.env.VITE_PRIMARY_COLOR, import.meta.env.VITE_INFO_COLOR],
-    };
+    //  6: Memoize chart options (only create once)
+    const chartOptions = useMemo(() => getChartOptions(), []);
 
-    const chartSeries = [
-        { name: 'Temperature', data: [22, 23, 24, 23.5, 25, 24, 23] },
-        { name: 'Humidity', data: [45, 47, 48, 46, 49, 48, 47] },
-    ];
-
-    const sensorColumns = [
+    //  7: Memoize sensor columns definition
+    const sensorColumns = useMemo(() => [
         {
             title: 'Sensor Name',
             field: 'name',
@@ -104,16 +191,56 @@ const Dashboard = () => {
                 ? new Date(rowData.created_at).toLocaleString()
                 : 'N/A'
         }
-    ];
+    ], []);
 
-    // Calculate area distribution for pie chart
+    //  8: Memoize area distribution calculation
     const areaDistribution = useMemo(() => {
-        if (!areas) return { labels: [], series: [] };
-        const labels = areas.map(area => area.name);
-        const series = areas.map(area => area.sensor_count);
-        return { labels, series };
+        if (!areas || areas.length === 0) {
+            return { labels: [], series: [] };
+        }
+        return {
+            labels: areas.map(area => area.name),
+            series: areas.map(area => area.sensor_count)
+        };
     }, [areas]);
 
+    //  9: Memoize donut chart options
+    const donutChartOptions = useMemo(() => ({
+        labels: areaDistribution.labels,
+        legend: { show: false },
+        colors: [
+            import.meta.env.VITE_PRIMARY_COLOR,
+            import.meta.env.VITE_SUCCESS_COLOR,
+            import.meta.env.VITE_WARNING_COLOR,
+            import.meta.env.VITE_INFO_COLOR,
+            import.meta.env.VITE_DANGER_COLOR,
+        ]
+    }), [areaDistribution.labels]);
+
+    //  10: Memoize table options
+    const tableOptions = useMemo(() => ({
+        headerStyle: headerStyles(),
+        rowStyle: rowStyles(),
+        searchFieldStyle: searchFieldStyle(),
+        pageSize: DEFAULT_PAGE_SIZE,
+        search: true,
+        toolbar: true,
+    }), [headerStyles, rowStyles, searchFieldStyle]);
+
+    //  11: Memoize computed values
+    const totalSubareas = useMemo(() =>
+        areas?.reduce((acc, area) => acc + (area.subareas?.length || 0), 0) || 0,
+        [areas]);
+
+    const systemHealth = useMemo(() =>
+        stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0,
+        [stats.total, stats.active]);
+
+    const recentSensors = useMemo(() =>
+        sensors?.slice(0, RECENT_ACTIVITY_LIMIT) || [],
+        [sensors]);
+
+    //  12: Early return for loading state
     if (sensorsLoading || areasLoading) {
         return (
             <PageWrapper title='HALO Dashboard'>
@@ -124,6 +251,7 @@ const Dashboard = () => {
         );
     }
 
+    //  13: Early return for non-admin users
     if (!isAdmin) {
         return (
             <PageWrapper title='HALO Dashboard'>
@@ -152,70 +280,58 @@ const Dashboard = () => {
                 </SubHeaderRight>
             </SubHeader>
             <Page container='fluid'>
-                {/* Summary Row */}
-                <div className='row g-4 mb-4'>
+                <summary className='row g-4 mb-4'>
                     <div className='col-xl-2 col-md-4 col-sm-6'>
-                        <Card stretch className='border-0 shadow-sm'>
-                            <CardBody className='text-center'>
-                                <Icon icon='Sensors' size='2x' className='text-primary mb-2' />
-                                <div className='h3 mb-0'>{stats.total}</div>
-                                <div className='text-muted small'>Total Sensors</div>
-                            </CardBody>
-                        </Card>
+                        <StatCard
+                            icon='Sensors'
+                            value={stats.total}
+                            label='Total Sensors'
+                            iconColor='text-primary'
+                        />
                     </div>
                     <div className='col-xl-2 col-md-4 col-sm-6'>
-                        <Card stretch className='border-0 shadow-sm'>
-                            <CardBody className='text-center'>
-                                <Icon icon='CheckCircle' size='2x' className='text-success mb-2' />
-                                <div className='h3 mb-0'>{stats.active}</div>
-                                <div className='text-muted small'>Active Units</div>
-                            </CardBody>
-                        </Card>
+                        <StatCard
+                            icon='CheckCircle'
+                            value={stats.active}
+                            label='Active Units'
+                            iconColor='text-success'
+                        />
                     </div>
                     <div className='col-xl-2 col-md-4 col-sm-6'>
-                        <Card stretch className='border-0 shadow-sm'>
-                            <CardBody className='text-center'>
-                                <Icon icon='Error' size='2x' className='text-danger mb-2' />
-                                <div className='h3 mb-0'>{stats.inactive}</div>
-                                <div className='text-muted small'>Inactive Units</div>
-                            </CardBody>
-                        </Card>
+                        <StatCard
+                            icon='Error'
+                            value={stats.inactive}
+                            label='Inactive Units'
+                            iconColor='text-danger'
+                        />
                     </div>
                     <div className='col-xl-2 col-md-4 col-sm-6'>
-                        <Card stretch className='border-0 shadow-sm'>
-                            <CardBody className='text-center'>
-                                <Icon icon='LocationCity' size='2x' className='text-info mb-2' />
-                                <div className='h3 mb-0'>{areas?.length || 0}</div>
-                                <div className='text-muted small'>Total Areas</div>
-                            </CardBody>
-                        </Card>
+                        <StatCard
+                            icon='LocationCity'
+                            value={areas?.length || 0}
+                            label='Total Areas'
+                            iconColor='text-info'
+                        />
                     </div>
                     <div className='col-xl-2 col-md-4 col-sm-6'>
-                        <Card stretch className='border-0 shadow-sm'>
-                            <CardBody className='text-center'>
-                                <Icon icon='GroupWork' size='2x' className='text-warning mb-2' />
-                                <div className='h3 mb-0'>
-                                    {areas?.reduce((acc, area) => acc + (area.subareas?.length || 0), 0) || 0}
-                                </div>
-                                <div className='text-muted small'>Sub Areas</div>
-                            </CardBody>
-                        </Card>
+                        <StatCard
+                            icon='GroupWork'
+                            value={totalSubareas}
+                            label='Sub Areas'
+                            iconColor='text-warning'
+                        />
                     </div>
                     <div className='col-xl-2 col-md-4 col-sm-6'>
-                        <Card stretch className='border-0 shadow-sm'>
-                            <CardBody className='text-center'>
-                                <Icon icon='HealthAndSafety' size='2x' className='text-success mb-2' />
-                                <div className='h3 mb-0'>
-                                    {stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0}%
-                                </div>
-                                <div className='text-muted small'>System Health</div>
-                            </CardBody>
-                        </Card>
+                        <StatCard
+                            icon='HealthAndSafety'
+                            value={`${systemHealth}%`}
+                            label='System Health'
+                            iconColor='text-success'
+                        />
                     </div>
-                </div>
+                </summary>
 
-                <div className='row g-4'>
-                    {/* Real-time Monitoring & Analytics */}
+                <section className='row g-4'>
                     <div className='col-lg-8'>
                         <Card stretch className='shadow-sm'>
                             <CardHeader borderSize={1}>
@@ -245,22 +361,11 @@ const Dashboard = () => {
                                 {areas && areas.length > 0 ? (
                                     <>
                                         {areas.map(area => (
-                                            <div key={area.id} className='mb-4'>
-                                                <div className='d-flex justify-content-between mb-1'>
-                                                    <span className='fw-bold'>{area.name}</span>
-                                                    <span className='text-muted small'>
-                                                        {area.sensor_count} Sensors
-                                                    </span>
-                                                </div>
-                                                <Progress
-                                                    value={stats.total > 0 ? (area.sensor_count / stats.total) * 100 : 0}
-                                                    color='primary'
-                                                    height='8px'
-                                                />
-                                                <div className='small text-muted mt-1'>
-                                                    {area.subareas?.length || 0} sub areas
-                                                </div>
-                                            </div>
+                                            <AreaProgressItem
+                                                key={area.id}
+                                                area={area}
+                                                totalSensors={stats.total}
+                                            />
                                         ))}
                                         <Button
                                             color='primary'
@@ -290,108 +395,9 @@ const Dashboard = () => {
                         </Card>
                     </div>
 
-                    {/* Sensor Inventory Table */}
+
+
                     <div className='col-12'>
-                        <Card className='shadow-sm'>
-                            <CardHeader borderSize={1}>
-                                <CardLabel icon='List'>
-                                    <CardTitle>Live Sensor Registry</CardTitle>
-                                </CardLabel>
-                                <CardActions>
-                                    <Button
-                                        color='primary'
-                                        isLight
-                                        size='sm'
-                                        tag='a'
-                                        to='/halo/sensors/list'
-                                    >
-                                        View All
-                                    </Button>
-                                </CardActions>
-                            </CardHeader>
-                            <CardBody className='table-responsive p-0'>
-                                <ThemeProvider theme={theme}>
-                                    <MaterialTable
-                                        title=' '
-                                        columns={sensorColumns}
-                                        data={sensors || []}
-                                        options={{
-                                            headerStyle: headerStyles(),
-                                            rowStyle: rowStyles(),
-                                            searchFieldStyle: searchFieldStyle(),
-                                            pageSize: 5,
-                                            search: true,
-                                            toolbar: true,
-                                        }}
-                                        localization={{
-                                            pagination: { labelRowsPerPage: '' }
-                                        }}
-                                    />
-                                </ThemeProvider>
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    {/* Area Distribution */}
-                    <div className='col-lg-6'>
-                        <Card stretch className='shadow-sm'>
-                            <CardHeader borderSize={1}>
-                                <CardLabel icon='PieChart'>
-                                    <CardTitle>Sensor Distribution by Area</CardTitle>
-                                </CardLabel>
-                            </CardHeader>
-                            <CardBody>
-                                {areas && areas.length > 0 && stats.total > 0 ? (
-                                    <div className='row align-items-center'>
-                                        <div className='col-md-5'>
-                                            <Chart
-                                                type='donut'
-                                                series={areaDistribution.series}
-                                                options={{
-                                                    labels: areaDistribution.labels,
-                                                    legend: { show: false },
-                                                    colors: [
-                                                        import.meta.env.VITE_PRIMARY_COLOR,
-                                                        import.meta.env.VITE_SUCCESS_COLOR,
-                                                        import.meta.env.VITE_WARNING_COLOR,
-                                                        import.meta.env.VITE_INFO_COLOR,
-                                                        import.meta.env.VITE_DANGER_COLOR,
-                                                    ]
-                                                }}
-                                                height={200}
-                                            />
-                                        </div>
-                                        <div className='col-md-7'>
-                                            <ul className='list-group list-group-flush'>
-                                                {areas.map((area, index) => {
-                                                    const colors: any[] = ['primary', 'success', 'warning', 'info', 'danger'];
-                                                    return (
-                                                        <li
-                                                            key={area.id}
-                                                            className='list-group-item d-flex justify-content-between align-items-center py-2 border-0'
-                                                        >
-                                                            <span>{area.name}</span>
-                                                            <Badge color={colors[index % colors.length] as any}>
-                                                                {area.sensor_count} Sensors
-                                                            </Badge>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className='text-center py-5'>
-                                        <Icon icon='PieChart' className='text-muted mb-2' size='3x' />
-                                        <p className='text-muted'>No sensor data to display</p>
-                                    </div>
-                                )}
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    {/* Alert Log */}
-                    <div className='col-lg-6'>
                         <Card stretch className='shadow-sm'>
                             <CardHeader borderSize={1}>
                                 <CardLabel icon='History'>
@@ -413,28 +419,11 @@ const Dashboard = () => {
                                 <div className='table-responsive'>
                                     <table className='table table-borderless table-hover align-middle mb-0'>
                                         <tbody>
-                                            {sensors && sensors.slice(0, 3).map((sensor, index) => (
-                                                <tr key={sensor.id}>
-                                                    <td>
-                                                        <Icon
-                                                            icon='Circle'
-                                                            className={sensor.is_active ? 'text-success' : 'text-danger'}
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <div className='fw-bold'>
-                                                            {sensor.is_active ? 'Sensor Active' : 'Sensor Inactive'}
-                                                        </div>
-                                                        <div className='small text-muted'>
-                                                            {sensor.name} - {sensor.mac_address}
-                                                        </div>
-                                                    </td>
-                                                    <td className='text-end small text-muted'>
-                                                        {new Date(sensor.created_at).toLocaleDateString()}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            {(!sensors || sensors.length === 0) && (
+                                            {recentSensors.length > 0 ? (
+                                                recentSensors.map(sensor => (
+                                                    <ActivityRow key={sensor.id} sensor={sensor} />
+                                                ))
+                                            ) : (
                                                 <tr>
                                                     <td colSpan={3} className='text-center text-muted py-4'>
                                                         No recent activity
@@ -447,7 +436,7 @@ const Dashboard = () => {
                             </CardBody>
                         </Card>
                     </div>
-                </div>
+                </section>
             </Page>
         </PageWrapper>
     );
