@@ -40,7 +40,7 @@ export const AdminRoutes = {
 	users: haloMenu.users,
 	timetravel: haloMenu.timetravel,
 	reports: haloMenu.reports,
-	autocad: haloMenu.autocad,
+	// autocad: haloMenu.autocad,
 	threed: haloMenu.threed,
 };
 
