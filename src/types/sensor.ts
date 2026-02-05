@@ -353,6 +353,8 @@ export interface SensorRegistrationData {
     username?: string;
     password?: string;
     area_id?: number;
+    z_val?: number;
+    z_max?: number;
 }
 
 export interface SensorUpdatePayload {

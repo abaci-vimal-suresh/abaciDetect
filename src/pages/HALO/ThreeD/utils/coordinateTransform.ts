@@ -1,0 +1,146 @@
+import { Box3, Vector3 } from 'three';
+import { Sensor, Area } from '../../../../types/sensor';
+
+/**
+ * Floor calibration data extracted from .glb model
+ */
+export interface FloorCalibration {
+    width: number;
+    depth: number;
+    height: number;
+    minX: number;
+    minZ: number;
+    minY: number;
+    centerX: number;
+    centerZ: number;
+}
+
+/**
+ * Default calibration for the level-react-draco.glb model
+ * These values are approximate and should be auto-calibrated when possible
+ */
+export const DEFAULT_FLOOR_CALIBRATION: FloorCalibration = {
+    width: 20,
+    depth: 15,
+    height: 2.4,
+    minX: -10,
+    minZ: -7.5,
+    minY: 0,
+    centerX: 0,
+    centerZ: 0
+};
+
+/**
+ * Transform normalized sensor coordinates (0-1) to 3D world space
+ */
+export function transformSensorTo3D(
+    sensor: Sensor,
+    calibration: FloorCalibration,
+    floorSpacing: number = 4
+): { x: number; y: number; z: number } {
+    const x_val = sensor.x_val ?? 0.5;
+    const y_val = sensor.y_val ?? 0.5;
+
+    // Floor level determines the major vertical jump
+    const floorLevel = sensor.floor_level ?? 0;
+    const floorY = floorLevel * floorSpacing;
+
+    // verticalHeight determines the height WITHIN the floor context
+    // If user requested placement at the top of boundaries, we check z_max
+    const z_max = sensor.z_max ?? sensor.boundary?.z_max ?? 1;
+    const verticalOffset = (sensor.z_val !== undefined && sensor.z_val !== floorLevel)
+        ? sensor.z_val // If z_val is provided and NOT equal to floor_level, assume it's a vertical offset
+        : z_max;       // Else place at top of boundary (defaulting to 1.0 = floor height)
+
+    // Map normalized coordinates to 3D space
+    const x = calibration.minX + (x_val * calibration.width);
+    const z = calibration.minZ + (y_val * calibration.depth);
+    const y = floorY + (verticalOffset * calibration.height);
+
+    return { x, y, z };
+}
+
+/**
+ * Transform normalized boundary to 3D box dimensions
+ */
+export function transformBoundaryTo3D(
+    sensor: Sensor,
+    calibration: FloorCalibration,
+    floorSpacing: number = 4
+): { position: [number, number, number]; size: [number, number, number] } | null {
+    // Check if sensor has boundary data
+    const hasDirectBoundary = sensor.x_min !== undefined && sensor.x_max !== undefined;
+    const hasNestedBoundary = sensor.boundary !== undefined;
+
+    if (!hasDirectBoundary && !hasNestedBoundary) return null;
+
+    const x_min = sensor.x_min ?? sensor.boundary?.x_min ?? 0;
+    const x_max = sensor.x_max ?? sensor.boundary?.x_max ?? 1;
+    const y_min = sensor.y_min ?? sensor.boundary?.y_min ?? 0;
+    const y_max = sensor.y_max ?? sensor.boundary?.y_max ?? 1;
+    const z_min = sensor.z_min ?? sensor.boundary?.z_min ?? 0;
+    const z_max = sensor.z_max ?? sensor.boundary?.z_max ?? 1;
+
+    const z_val = sensor.z_val ?? sensor.floor_level ?? 0;
+    const floorY = z_val * floorSpacing;
+
+    // Calculate 3D coordinates
+    const x3D_min = calibration.minX + (x_min * calibration.width);
+    const x3D_max = calibration.minX + (x_max * calibration.width);
+    const z3D_min = calibration.minZ + (y_min * calibration.depth);
+    const z3D_max = calibration.minZ + (y_max * calibration.depth);
+    const y3D_min = floorY + (z_min * calibration.height);
+    const y3D_max = floorY + (z_max * calibration.height);
+
+    // Calculate center position and size
+    const position: [number, number, number] = [
+        (x3D_min + x3D_max) / 2,
+        (y3D_min + y3D_max) / 2,
+        (z3D_min + z3D_max) / 2
+    ];
+
+    const size: [number, number, number] = [
+        x3D_max - x3D_min,
+        y3D_max - y3D_min,
+        z3D_max - z3D_min
+    ];
+
+    return { position, size };
+}
+
+/**
+ * Get sensor status color
+ */
+export function getSensorStatusColor(sensor: Sensor): string {
+    const status = sensor.status?.toLowerCase();
+
+    switch (status) {
+        case 'critical':
+            return '#EF4444';
+        case 'warning':
+            return '#F59E0B';
+        case 'safe':
+        default:
+            return '#10B981';
+    }
+}
+
+/**
+ * Determine sensor status from sensor data
+ */
+export function calculateSensorStatus(sensor: Sensor): 'safe' | 'warning' | 'critical' {
+    if (sensor.status) {
+        const status = sensor.status.toLowerCase();
+        if (status === 'critical') return 'critical';
+        if (status === 'warning') return 'warning';
+        return 'safe';
+    }
+
+    // Fallback: calculate from sensor data
+    const val = sensor.sensor_data?.val || 0;
+    const threshold = sensor.sensor_data?.threshold || 100;
+
+    if (val >= threshold) return 'critical';
+    if (val >= threshold * 0.8) return 'warning';
+    return 'safe';
+}
