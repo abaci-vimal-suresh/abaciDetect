@@ -736,17 +736,25 @@ export const useRegisterSensor = () => {
 
     return useMutation({
         mutationFn: async (registrationData: SensorRegistrationData) => {
+            const payload = {
+                ...registrationData,
+                z_val: registrationData.z_val ?? 0.9,
+                z_max: registrationData.z_max ?? 1.0,
+            };
+
             if (USE_MOCK_DATA) {
                 await new Promise((resolve) => setTimeout(resolve, 800));
 
                 // Construct a new mock sensor
                 const newSensor: Sensor = {
                     id: `S-${Math.floor(Math.random() * 10000)}`,
-                    name: registrationData.name,
-                    sensor_type: registrationData.sensor_type || 'HALO_SMART',
-                    location: registrationData.location,
-                    ip_address: registrationData.ip_address,
-                    mac_address: registrationData.mac_address,
+                    name: payload.name,
+                    sensor_type: payload.sensor_type || 'HALO_SMART',
+                    location: payload.location,
+                    ip_address: payload.ip_address,
+                    mac_address: payload.mac_address,
+                    z_val: payload.z_val,
+                    z_max: payload.z_max,
                     status: 'Inactive',
                     is_online: false,
                     is_active: false,
@@ -759,7 +767,7 @@ export const useRegisterSensor = () => {
                 saveMockData();
                 return newSensor;
             }
-            const { data } = await axiosInstance.post('/devices/sensors/', registrationData);
+            const { data } = await axiosInstance.post('/devices/sensors/', payload);
             return data as Sensor;
         },
         onSuccess: (newSensor) => {

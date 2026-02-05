@@ -31,7 +31,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
         email: '',
         first_name: '',
         last_name: '',
-        role: 'Viewer' as 'Admin' | 'Viewer',
+        role: 'viewer',
         assigned_area_ids: [] as number[],
         is_active: true,
         head_id: null as number | null
@@ -44,7 +44,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                 email: user.email,
                 first_name: user.first_name || '',
                 last_name: user.last_name || '',
-                role: (user.role?.toLowerCase() === 'admin' ? 'Admin' : 'Viewer') as 'Admin' | 'Viewer',
+                role: user.role?.toLowerCase() || 'viewer',
                 assigned_area_ids: user.assigned_area_ids || [],
                 is_active: user.is_active,
                 head_id: user.head_id || null
@@ -220,24 +220,22 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                                     </CardHeader>
                                     <CardBody className="p-4">
                                         <div className="mb-0">
-                                            <Label>Select Role</Label>
-                                            <div className="d-flex gap-3 mt-2">
-                                                <Checks
-                                                    type="radio"
-                                                    name="role"
-                                                    id="edit-role-viewer"
-                                                    label="Viewer"
-                                                    checked={formData.role === 'Viewer'}
-                                                    onChange={() => setFormData({ ...formData, role: 'Viewer' })}
-                                                />
-                                                <Checks
-                                                    type="radio"
-                                                    name="role"
-                                                    id="edit-role-admin"
-                                                    label="Admin"
-                                                    checked={formData.role === 'Admin'}
-                                                    onChange={() => setFormData({ ...formData, role: 'Admin' })}
-                                                />
+                                            <div className="mb-0">
+                                                <Label>Select Role</Label>
+                                                <Select
+                                                    ariaLabel="User Role"
+                                                    value={formData.role.toLowerCase()}
+                                                    onChange={(e: any) => setFormData({ ...formData, role: (e.target.value as any) })}
+                                                >
+                                                    <Option value="admin">Admin</Option>
+                                                    <Option value="viewer">Viewer</Option>
+                                                    <Option value="user">User</Option>
+                                                    <Option value="organization">Organization</Option>
+                                                    <Option value="gtcc">GTCC</Option>
+                                                    <Option value="assistant user">Assistant User</Option>
+                                                    <Option value="establishment">Establishment</Option>
+                                                    <Option value="region">Region</Option>
+                                                </Select>
                                             </div>
                                         </div>
                                     </CardBody>
