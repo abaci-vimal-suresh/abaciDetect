@@ -1,5 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Html } from '@react-three/drei';
+import { useThree } from '@react-three/fiber';
 import { Sensor, Area } from '../../../../types/sensor';
+import Icon from '../../../../components/icon/Icon';
+import Badge from '../../../../components/bootstrap/Badge';
 import { FloorModel, SensorMarker, BoundaryBox } from './FloorComponents';
 import { flattenAreas } from '../utils/dataTransform';
 import {
@@ -19,6 +23,8 @@ interface BuildingSceneProps {
     showBoundaries?: boolean;
     onSensorClick?: (sensor: Sensor) => void;
     calibration?: FloorCalibration;
+    selectedSensorId?: string | null;
+    setSelectedSensorId?: (id: string | null) => void;
 }
 
 /**
@@ -33,12 +39,38 @@ export function BuildingScene({
     floorOpacity = 1,
     showBoundaries = true,
     onSensorClick,
-    calibration = DEFAULT_FLOOR_CALIBRATION
+    calibration = DEFAULT_FLOOR_CALIBRATION,
+    selectedSensorId,
+    setSelectedSensorId
 }: BuildingSceneProps) {
+    const { controls } = useThree() as any;
     const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
-    const [selectedSensor, setSelectedSensor] = useState<string | null>(null);
     const [actualCalibration, setActualCalibration] = useState<FloorCalibration>(calibration);
     const [isCalibrated, setIsCalibrated] = useState(false);
+
+    // Auto-focus camera on selected sensor
+    useEffect(() => {
+        if (selectedSensorId && controls && typeof controls.setLookAt === 'function') {
+            const sensor = sensors.find(s => s.id === selectedSensorId);
+            if (sensor) {
+                const floorLevel = sensor.floor_level ?? 0;
+                const pos = transformSensorTo3D(sensor, actualCalibration, floorLevel, floorSpacing);
+
+                // Adjust for building centering
+                const tx = pos.x - (actualCalibration.centerX || 0);
+                const ty = pos.y;
+                const tz = pos.z - (actualCalibration.centerZ || 0);
+
+                // Smoothly move camera to focus on sensor
+                // We offset the camera slightly so it's not looking straight down
+                controls.setLookAt(
+                    tx + 150, ty + 100, tz + 150, // eye position
+                    tx, ty, tz,                 // target position
+                    true                        // enable transition
+                );
+            }
+        }
+    }, [selectedSensorId, controls, sensors, actualCalibration, floorSpacing]);
 
     // Update actual calibration when floor loads
     const handleFloorLoad = (measuredCal: FloorCalibration) => {
@@ -70,9 +102,22 @@ export function BuildingScene({
     }, [sensors]);
 
     const handleSensorClick = (sensor: Sensor) => {
-        setSelectedSensor(sensor.id);
+        if (setSelectedSensorId) {
+            setSelectedSensorId(sensor.id);
+        }
         onSensorClick?.(sensor);
     };
+
+    // Grouping for sidebar list (inside scene)
+    const sensorsByFloor = useMemo(() => {
+        const grouped: Record<number, Sensor[]> = {};
+        sensors.forEach(s => {
+            const floor = s.floor_level ?? 0;
+            if (!grouped[floor]) grouped[floor] = [];
+            grouped[floor].push(s);
+        });
+        return grouped;
+    }, [sensors]);
 
     return (
         <group>
@@ -85,6 +130,12 @@ export function BuildingScene({
             {floors.map((floor) => {
                 const floorLevel = floor.floor_level ?? floor.offset_z ?? 0;
                 const isVisible = visibleFloors.includes(floorLevel);
+                // GLB Override: If the backend sends a .jpg, we use the local .glb instead
+                // as the 3D scene requires geometry.
+                const rawUrl = floor.area_plan || floor.floor_plan_url || '/floor_tiles.glb';
+                const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+                const isImage = imageExtensions.some(ext => rawUrl.toLowerCase().endsWith(ext));
+                const modelUrl = isImage ? '/floor_tiles.glb' : rawUrl;
                 const floorSensors = sensorsByArea[floor.id] || [];
 
                 return (
@@ -97,7 +148,7 @@ export function BuildingScene({
                             opacity={floorOpacity}
                             onLoad={floorLevel === 0 ? handleFloorLoad : undefined}
                             centerModel={true} // Auto-center building on grid
-                            modelUrl={floor.area_plan || floor.floor_plan_url}
+                            modelUrl={modelUrl}
                         />
 
                         {/* Render sensors for this floor only if floor is visible */}
@@ -108,7 +159,7 @@ export function BuildingScene({
                             const hasBoundary = !!boundary;
                             const status = calculateSensorStatus(sensor);
                             const isHovered = hoveredSensor === sensor.id;
-                            const isSelected = selectedSensor === sensor.id;
+                            const isSelected = selectedSensorId === sensor.id;
 
                             // If calibration is centered, adjust sensor position too
                             const sensorPos: [number, number, number] = [

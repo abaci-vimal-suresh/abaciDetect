@@ -32,6 +32,7 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
         is_active: true,
         is_online: true,
         ip_address: '',
+        mac_address: '',
     });
 
     const [successMessage, setSuccessMessage] = useState('');
@@ -49,6 +50,7 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
                 is_active: sensor.is_active ?? true,
                 is_online: sensor.is_online ?? true,
                 ip_address: sensor.ip_address || '',
+                mac_address: sensor.mac_address || '',
             });
         }
     }, [sensor]);
@@ -114,8 +116,12 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
                         </div>
                         <div className='col-md-6'>
                             <FormGroup label='MAC Address'>
-                                <Input value={sensor?.mac_address || ''} readOnly disabled />
-                                <small className='text-muted'>Hardware identifier (Read-only)</small>
+                                <Input
+                                    value={formData.mac_address}
+                                    onChange={(e: any) =>
+                                        setFormData({ ...formData, mac_address: e.target.value })
+                                    }
+                                />
                             </FormGroup>
                         </div>
 
@@ -278,6 +284,7 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
                                 is_active: sensor.is_active ?? true,
                                 is_online: sensor.is_online ?? true,
                                 ip_address: sensor.ip_address || '',
+                                mac_address: sensor.mac_address || '',
                             })}
                         >
                             Reset

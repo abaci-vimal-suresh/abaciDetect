@@ -161,6 +161,11 @@ const RouteConfig: CustomRouteConfig[] = [
 		element: <ThreeDPage />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
+	{
+		path: '/halo/sensors/areas/:areaId/3d',
+		element: <ThreeDPage />,
+		allowedTo: ['Admin', 'Viewer'],
+	},
 
 	// User Management Routes
 	{
