@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Sensor, Area } from '../../../../types/sensor';
 import { FloorModel, SensorMarker, BoundaryBox } from './FloorComponents';
+import { flattenAreas } from '../utils/dataTransform';
 import {
     transformSensorTo3D,
     transformBoundaryTo3D,
@@ -48,20 +49,22 @@ export function BuildingScene({
         }
     };
 
-    // Extract floor areas
+    // Step 1: Flatten the hierarchy to find all floors
     const floors = useMemo(() => {
-        return areas
-            .filter(area => area.area_type === 'floor' && area.floor_level !== undefined)
-            .sort((a, b) => (a.floor_level ?? 0) - (b.floor_level ?? 0));
+        const flatAreas = flattenAreas(areas);
+        return flatAreas
+            .filter(area => (area.area_type === 'floor' || area.area_type === 'room') &&
+                (area.floor_level !== undefined || area.offset_z !== undefined))
+            .sort((a, b) => (a.floor_level ?? a.offset_z ?? 0) - (b.floor_level ?? b.offset_z ?? 0));
     }, [areas]);
 
-    // Group sensors by floor level
-    const sensorsByFloor = useMemo(() => {
+    // Group sensors by area ID (Floor ID)
+    const sensorsByArea = useMemo(() => {
         const grouped: Record<number, Sensor[]> = {};
         sensors.forEach(sensor => {
-            const floorLevel = sensor.floor_level ?? sensor.z_val ?? 0;
-            if (!grouped[floorLevel]) grouped[floorLevel] = [];
-            grouped[floorLevel].push(sensor);
+            const areaId = sensor.area_id ?? (typeof sensor.area === 'number' ? sensor.area : 0);
+            if (!grouped[areaId]) grouped[areaId] = [];
+            grouped[areaId].push(sensor);
         });
         return grouped;
     }, [sensors]);
@@ -80,36 +83,28 @@ export function BuildingScene({
 
             {/* Render floors */}
             {floors.map((floor) => {
-                const floorLevel = floor.floor_level ?? 0;
+                const floorLevel = floor.floor_level ?? floor.offset_z ?? 0;
                 const isVisible = visibleFloors.includes(floorLevel);
+                const floorSensors = sensorsByArea[floor.id] || [];
 
                 return (
-                    <FloorModel
-                        key={`floor-${floor.id}`}
-                        floorLevel={floorLevel}
-                        floorSpacing={floorSpacing}
-                        visible={isVisible}
-                        opacity={floorOpacity}
-                        onLoad={floorLevel === 0 ? handleFloorLoad : undefined}
-                        centerModel={true} // Auto-center building on grid
-                        modelUrl={floor.floor_plan_url || floor.area_plan}
-                    />
-                );
-            })}
+                    <group key={`floor-group-${floor.id}`}>
+                        <FloorModel
+                            key={`floor-${floor.id}`}
+                            floorLevel={floorLevel}
+                            floorSpacing={floorSpacing}
+                            visible={isVisible}
+                            opacity={floorOpacity}
+                            onLoad={floorLevel === 0 ? handleFloorLoad : undefined}
+                            centerModel={true} // Auto-center building on grid
+                            modelUrl={floor.area_plan || floor.floor_plan_url}
+                        />
 
-            {/* Render sensors */}
-            {Object.entries(sensorsByFloor).map(([floorLevelStr, floorSensors]) => {
-                const floorLevel = parseInt(floorLevelStr);
-                const isFloorVisible = visibleFloors.includes(floorLevel);
-
-                if (!isFloorVisible) return null;
-
-                return (
-                    <group key={`sensors-floor-${floorLevel}`}>
-                        {floorSensors.map((sensor) => {
+                        {/* Render sensors for this floor only if floor is visible */}
+                        {isVisible && floorSensors.map((sensor) => {
                             // Use actualCalibration instead of hardcoded prop
-                            const position3D = transformSensorTo3D(sensor, actualCalibration, floorSpacing);
-                            const boundary = transformBoundaryTo3D(sensor, actualCalibration, floorSpacing);
+                            const position3D = transformSensorTo3D(sensor, actualCalibration, floorLevel, floorSpacing);
+                            const boundary = transformBoundaryTo3D(sensor, actualCalibration, floorLevel, floorSpacing);
                             const hasBoundary = !!boundary;
                             const status = calculateSensorStatus(sensor);
                             const isHovered = hoveredSensor === sensor.id;

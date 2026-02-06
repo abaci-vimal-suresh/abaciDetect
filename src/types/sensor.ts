@@ -191,6 +191,7 @@ export interface Sensor {
     x_val?: number;
     y_val?: number;
     z_val?: number;
+    offset_z?: number;
 
     // Room properties
     room_name?: string;
