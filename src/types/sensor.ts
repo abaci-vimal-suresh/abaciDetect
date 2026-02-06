@@ -368,6 +368,8 @@ export interface SensorUpdatePayload {
     is_online?: boolean;
     username?: string;
     password?: string;
+    mac_address?: string;
+    ip_address?: string;
     sensor_group_ids?: number[];
     area_id?: number | null;
     area?: number | null;

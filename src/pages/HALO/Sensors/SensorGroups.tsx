@@ -251,6 +251,15 @@ const SensorGroups = () => {
                             >
                                 Map
                             </Button>
+                            <Button
+                                isNeumorphic
+                                color='info'
+                                icon='ViewInAr'
+                                onClick={() => navigate(`/halo/sensors/areas/${areaId}/3d`)}
+                                title='3D View'
+                            >
+                                3D View
+                            </Button>
                         </div>
                         <Button
                             isNeumorphic

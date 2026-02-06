@@ -45,3 +45,28 @@
 .threed-canvas {
     filter: saturate(1.15) hue-rotate(345deg);
 }
+
+.scrollbar-hidden {
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.hover-bg-dark:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hover-bg-light:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.transition-all {
+    transition: all 0.15s ease-in-out;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
