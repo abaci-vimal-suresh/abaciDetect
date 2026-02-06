@@ -36,21 +36,21 @@ export const DEFAULT_FLOOR_CALIBRATION: FloorCalibration = {
 export function transformSensorTo3D(
     sensor: Sensor,
     calibration: FloorCalibration,
+    baseLevel: number = 0,
     floorSpacing: number = 4
 ): { x: number; y: number; z: number } {
     const x_val = sensor.x_val ?? 0.5;
     const y_val = sensor.y_val ?? 0.5;
 
     // Floor level determines the major vertical jump
-    const floorLevel = sensor.floor_level ?? 0;
-    const floorY = floorLevel * floorSpacing;
+    const floorY = baseLevel * floorSpacing;
 
     // verticalHeight determines the height WITHIN the floor context
-    // If user requested placement at the top of boundaries, we check z_max
+    // In backend data, z_val (e.g. 0.9) is height within floor
     const z_max = sensor.z_max ?? sensor.boundary?.z_max ?? 1;
-    const verticalOffset = (sensor.z_val !== undefined && sensor.z_val !== floorLevel)
-        ? sensor.z_val // If z_val is provided and NOT equal to floor_level, assume it's a vertical offset
-        : z_max;       // Else place at top of boundary (defaulting to 1.0 = floor height)
+    const verticalOffset = (sensor.z_val !== undefined)
+        ? sensor.z_val
+        : z_max;
 
     // Map normalized coordinates to 3D space
     const x = calibration.minX + (x_val * calibration.width);
@@ -66,6 +66,7 @@ export function transformSensorTo3D(
 export function transformBoundaryTo3D(
     sensor: Sensor,
     calibration: FloorCalibration,
+    baseLevel: number = 0,
     floorSpacing: number = 4
 ): { position: [number, number, number]; size: [number, number, number] } | null {
     // Check if sensor has boundary data
@@ -81,8 +82,7 @@ export function transformBoundaryTo3D(
     const z_min = sensor.z_min ?? sensor.boundary?.z_min ?? 0;
     const z_max = sensor.z_max ?? sensor.boundary?.z_max ?? 1;
 
-    const z_val = sensor.z_val ?? sensor.floor_level ?? 0;
-    const floorY = z_val * floorSpacing;
+    const floorY = baseLevel * floorSpacing;
 
     // Calculate 3D coordinates
     const x3D_min = calibration.minX + (x_min * calibration.width);
@@ -100,9 +100,9 @@ export function transformBoundaryTo3D(
     ];
 
     const size: [number, number, number] = [
-        x3D_max - x3D_min,
-        y3D_max - y3D_min,
-        z3D_max - z3D_min
+        Math.abs(x3D_max - x3D_min),
+        Math.abs(y3D_max - y3D_min),
+        Math.abs(z3D_max - z3D_min)
     ];
 
     return { position, size };
