@@ -448,7 +448,7 @@ const SensorMainArea = () => {
                             <FormGroup label='Offset X'>
                                 <Input
                                     type='number'
-                                    step='0.1'
+                                    step={0.1}
                                     value={offsetX}
                                     onChange={(e: any) => setOffsetX(parseFloat(e.target.value) || 0)}
                                 />
@@ -459,7 +459,7 @@ const SensorMainArea = () => {
                             <FormGroup label='Offset Y'>
                                 <Input
                                     type='number'
-                                    step='0.1'
+                                    step={0.1}
                                     value={offsetY}
                                     onChange={(e: any) => setOffsetY(parseFloat(e.target.value) || 0)}
                                 />
@@ -470,7 +470,7 @@ const SensorMainArea = () => {
                             <FormGroup label='Offset Z'>
                                 <Input
                                     type='number'
-                                    step='0.1'
+                                    step={0.1}
                                     value={offsetZ}
                                     onChange={(e: any) => setOffsetZ(parseFloat(e.target.value) || 0)}
                                 />
@@ -481,8 +481,8 @@ const SensorMainArea = () => {
                             <FormGroup label='Scale Factor'>
                                 <Input
                                     type='number'
-                                    step='0.1'
-                                    min='0.1'
+                                    step={0.1}
+                                    min={0.1}
                                     value={scaleFactor}
                                     onChange={(e: any) => setScaleFactor(parseFloat(e.target.value) || 1.0)}
                                 />

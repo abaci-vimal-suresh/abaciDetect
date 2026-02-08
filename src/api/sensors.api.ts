@@ -40,7 +40,6 @@ export const useAddUser = () => {
 
     return useMutation({
         mutationFn: async (userData: UserCreateData) => {
-            // Spec: POST /api/users/create/
             const payload = {
                 ...userData,
                 role: userData.role?.toLowerCase()
@@ -117,10 +116,7 @@ export const useAreas = () => {
     return useQuery({
         queryKey: ['areas'],
         queryFn: async () => {
-            // Spec: GET /api/areas/?include_subareas=true
             const { data } = await axiosInstance.get('/administration/areas/?include_subareas=true');
-
-            // Return raw data
             return data as Area[];
         },
     });
@@ -133,7 +129,6 @@ export const useCreateArea = () => {
 
     return useMutation({
         mutationFn: async (data: FormData | { name: string; area_type?: string; parent_id?: number | null; person_in_charge_ids?: number[] }) => {
-            // Real backend: Send FormData or JSON
             const headers = data instanceof FormData
                 ? { 'Content-Type': 'multipart/form-data' }
                 : {};
@@ -181,14 +176,12 @@ export const useAddSensorToSubArea = () => {
     });
 };
 
-// Updated: Create sub area using /areas/ with parent relationship
 export const useCreateSubArea = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
         mutationFn: async (data: FormData | { name: string; areaId: string; area_type?: string; person_in_charge_ids?: number[] }) => {
-            // Real backend: Send FormData or JSON
             if (data instanceof FormData) {
                 const headers = { 'Content-Type': 'multipart/form-data' };
                 const response = await axiosInstance.post('/administration/areas/', data, { headers });
@@ -256,7 +249,6 @@ export const useDeleteArea = () => {
     });
 };
 
-// Updated: Fetch sensors for a specific subarea (area with parent)
 export const useSubAreaSensors = (subAreaId: string) => {
     return useQuery({
         queryKey: ['subareas', subAreaId, 'sensors'],
@@ -285,13 +277,8 @@ export const useSensors = (filters?: {
     return useQuery({
         queryKey: queryKeys.sensors.list(filters || {}),
         queryFn: async () => {
-            // ============================================
-            // REAL BACKEND INTEGRATION WITH ADAPTER
-            // ============================================
-
-            // Build query params
             const params = new URLSearchParams();
-            if (filters?.areaId) params.append('area', filters.areaId);  // Backend uses 'area' not 'area_id'
+            if (filters?.areaId) params.append('area', filters.areaId);
             if (filters?.status && filters.status !== 'all') {
                 params.append('is_active', (filters.status === 'active').toString());
             }
@@ -299,17 +286,13 @@ export const useSensors = (filters?: {
             if (filters?.is_online !== undefined) params.append('is_online', filters.is_online.toString());
             if (filters?.search) params.append('search', filters.search);
 
-            // Fetch sensors from backend
             const { data: backendResponse } = await axiosInstance.get<Sensor[] | { results: Sensor[], count: number }>(
                 `/devices/sensors/?${params.toString()}`
             );
 
-            // Handle pagination (DRF returns { results: [], count: ... } for paginated responses)
             const backendSensors = Array.isArray(backendResponse)
                 ? backendResponse
                 : (backendResponse as any).results || [];
-
-            // Return raw data
             return backendSensors as Sensor[];
         },
         staleTime: 2 * 60 * 1000,
@@ -325,41 +308,21 @@ export const useSensor = (sensorId: string | number) => {
     return useQuery({
         queryKey: queryKeys.sensors.detail(sensorId.toString()),
         queryFn: async () => {
-            // Fetch sensor metadata from backend
             const { data: backendSensor } = await axiosInstance.get<Sensor>(`/devices/sensors/${sensorId}/`);
 
             return backendSensor;
         },
         enabled: !!sensorId,
-        // For sensor_4, use longer stale time since WebSocket provides real-time updates
         staleTime: isSensor4 ? 30 * 60 * 1000 : 5 * 60 * 1000, // 30 min vs 5 min
-        // Keep previous data while updating to prevent loading flicker
         placeholderData: (previousData) => previousData,
     });
 };
 
-// ============================================
-// NEW: SENSOR READINGS HOOKS
-// ============================================
 
-/**
- * Fetch latest sensor readings for a specific sensor
- * 
- * Backend stores readings separately from sensor metadata.
- * This hook fetches the latest reading by MAC address.
- * 
- * @param sensorId - Sensor ID to fetch readings for
- * @param options - Query options (refetch interval, etc.)
- */
 export const useSensorReadings = (sensorId: string | number, options?: { refetchInterval?: number }) => {
     return useQuery({
         queryKey: ['sensorReadings', sensorId.toString()],
         queryFn: async () => {
-            // ============================================
-            // REAL BACKEND: Fetch readings separately
-            // ============================================
-
-            // Step 1: Get sensor to find MAC address
             const { data: backendSensor } = await axiosInstance.get<Sensor>(
                 `/devices/sensors/${sensorId}/`
             );
@@ -369,13 +332,12 @@ export const useSensorReadings = (sensorId: string | number, options?: { refetch
                 return null;
             }
 
-            // Step 2: Fetch latest reading by MAC address
             const { data: readings } = await axiosInstance.get<any[]>(
                 '/devices/readings/',
                 {
                     params: {
                         mac_address: backendSensor.mac_address,
-                        limit: 1  // Only get the latest reading
+                        limit: 1
                     }
                 }
             );
@@ -397,38 +359,20 @@ export const useSensorReadings = (sensorId: string | number, options?: { refetch
             return latestReading;
         },
         enabled: !!sensorId,
-        // Poll for real-time updates (every 10 seconds by default)
         refetchInterval: options?.refetchInterval || 10000,
-        staleTime: 5000, // Consider data stale after 5 seconds
+        staleTime: 5000,
     });
 };
 
-/**
- * Fetch sensor with combined metadata + latest readings
- * 
- * This hook combines:
- * 1. Sensor metadata (from useSensor)
- * 2. Latest readings (from useSensorReadings)
- * 
- * Perfect for 3D visualization where you need both!
- * 
- * @param sensorId - Sensor ID
- * @param options - Query options
- */
 export const useSensorWithReadings = (sensorId: string | number, options?: { refetchInterval?: number }) => {
     const sensorQuery = useSensor(sensorId);
     const readingsQuery = useSensorReadings(sensorId, options);
-
-    // Combine the results
     const combinedData = React.useMemo(() => {
         if (!sensorQuery.data) return undefined;
 
-        // If we have readings, combine them with sensor metadata
         if (readingsQuery.data) {
             return { ...sensorQuery.data, sensor_data: readingsQuery.data };
         }
-
-        // Otherwise, return sensor without readings
         return sensorQuery.data;
     }, [sensorQuery.data, readingsQuery.data]);
 
@@ -444,10 +388,6 @@ export const useSensorWithReadings = (sensorId: string | number, options?: { ref
     };
 };
 
-/**
- * Fetch the latest detailed sensor log for a specific sensor.
- * Uses the data-management endpoint with nested reading groups.
- */
 export const useLatestSensorLog = (sensorId: string | number, options?: { refetchInterval?: number }) => {
     return useQuery({
         queryKey: ['latestSensorLog', sensorId.toString()],
@@ -521,7 +461,6 @@ export const useTriggerSensor = () => {
     });
 };
 
-// --- Sensor Configuration APIs ---
 
 export interface RemoteSensorConfigItem {
     sensor_key: string;
@@ -564,7 +503,6 @@ export const useSensorConfigurations = (sensorId: string | number) => {
         queryFn: async () => {
             if (!sensorId) return [];
 
-            // GET /api/devices/sensor-configurations/
             const { data } = await axiosInstance.get(`/devices/sensor-configurations/`, {
                 params: { halo_sensor__sensor: sensorId }
             });
@@ -580,10 +518,9 @@ export const useAddSensorConfiguration = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, config }: { sensorId: string | number; config: SensorConfig }) => {
-            // POST /api/devices/sensor-configurations/
             const { data } = await axiosInstance.post(`/devices/sensor-configurations/`, {
                 ...config,
-                device: sensorId // Ensure device ID is linked
+                device: sensorId
             });
             return data as SensorConfig;
         },
@@ -607,7 +544,6 @@ export const useUpdateSensorConfiguration = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, configId, config }: { sensorId: string | number; configId: number; config: Partial<SensorConfig> }) => {
-            // PATCH /api/devices/sensor-configurations/{id}/
             const { data } = await axiosInstance.patch(`/devices/sensor-configurations/${configId}/`, config);
             return data as SensorConfig;
         },
@@ -631,7 +567,6 @@ export const useDeleteSensorConfiguration = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, configId }: { sensorId: string | number; configId: number }) => {
-            // DELETE /api/devices/sensor-configurations/{id}/
             await axiosInstance.delete(`/devices/sensor-configurations/${configId}/`);
         },
         onSuccess: (_, { sensorId }) => {
@@ -648,7 +583,6 @@ export const useDeleteSensorConfiguration = () => {
     });
 };
 
-//personals allocation
 
 
 
@@ -668,12 +602,10 @@ export const useUpdateSensorPersonnel = () => {
                 personnel_email?: string;
             }
         }) => {
-            // PATCH /api/sensors/{id}/
             const { data } = await axiosInstance.patch(`/devices/sensors/${sensorId}/`, personnelData);
             return data as Sensor;
         },
         onSuccess: (updatedSensor, { sensorId }) => {
-            // Invalidate relevant queries
             queryClient.invalidateQueries({ queryKey: queryKeys.sensors.detail(sensorId.toString()) });
             queryClient.invalidateQueries({ queryKey: queryKeys.sensors.lists() });
             showSuccessNotification('Personnel information updated successfully!');
@@ -688,7 +620,6 @@ export const useUpdateSensorPersonnel = () => {
     });
 };
 
-// Optional: Dedicated hook for just updating personnel in charge name
 export const useUpdatePersonnelInCharge = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -722,15 +653,12 @@ export const useUpdatePersonnelInCharge = () => {
 }
 
 
-// General-purpose sensor update hook
 export const useUpdateSensor = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
     return useMutation({
         mutationFn: async ({ sensorId, data }: { sensorId: string | number; data: Partial<SensorUpdatePayload> }) => {
-            // DIRECT BACKEND: No transformation
-            // We assume the UI now provides the correct backend structure (x_val, etc.)
             const backendPayload = data;
 
             const { data: response } = await axiosInstance.patch(`/devices/sensors/${sensorId}/`, backendPayload);
@@ -751,7 +679,6 @@ export const useUpdateSensor = () => {
     });
 };
 
-// Delete sensor hook
 export const useDeleteSensor = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -795,7 +722,6 @@ export const useCreateSensorGroup = () => {
 
     return useMutation({
         mutationFn: async (data: SensorGroupCreateData) => {
-            // POST /api/devices/sensor-groups/
             const { data: response } = await axiosInstance.post('/devices/sensor-groups/', data);
             return response as SensorGroup;
         },
@@ -928,14 +854,7 @@ export const useDeleteSensorGroup = () => {
     });
 };
 
-// ============================================
-// HALO DATA INGESTION & REAL-TIME QUERY HOOKS
-// ============================================
 
-/**
- * Send Halo sensor data
- * POST /api/devices/halo/data/
- */
 export const useSendHaloData = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
 
@@ -963,10 +882,6 @@ export const useSendHaloData = () => {
     });
 };
 
-/**
- * Send Halo heartbeat
- * POST /api/devices/halo/heartbeat/
- */
 export const useSendHaloHeartbeat = () => {
     return useMutation({
         mutationFn: async (data: {
@@ -982,10 +897,7 @@ export const useSendHaloHeartbeat = () => {
     });
 };
 
-/**
- * Get latest sensor readings
- * GET /api/devices/readings/latest/
- */
+
 export const useLatestReadings = () => {
     return useQuery({
         queryKey: ['latestReadings'],
@@ -1008,15 +920,12 @@ export const useAllSensorsLatestData = () => {
             const { data } = await axiosInstance.get('/devices/latest-data/');
             return data;
         },
-        refetchInterval: 5000, // Refresh every 5 seconds
+        refetchInterval: 5000,
         staleTime: 3000
     });
 };
 
-/**
- * Get active events
- * GET /api/devices/events/active/
- */
+
 export const useActiveEvents = () => {
     return useQuery({
         queryKey: ['activeEvents'],
@@ -1029,10 +938,7 @@ export const useActiveEvents = () => {
     });
 };
 
-/**
- * Get heartbeat status
- * GET /api/devices/heartbeat/status/
- */
+
 export const useHeartbeatStatus = () => {
     return useQuery({
         queryKey: ['heartbeatStatus'],
@@ -1050,10 +956,7 @@ export const useHeartbeatStatus = () => {
     });
 };
 
-/**
- * Get device readings
- * GET /api/devices/devices/{device_id}/readings/
- */
+
 export const useDeviceReadings = (deviceId: string) => {
     return useQuery({
         queryKey: ['deviceReadings', deviceId],
@@ -1066,10 +969,7 @@ export const useDeviceReadings = (deviceId: string) => {
     });
 };
 
-/**
- * List all devices
- * GET /api/devices/devices/
- */
+
 export const useDevices = () => {
     return useQuery({
         queryKey: ['devices'],
@@ -1081,10 +981,7 @@ export const useDevices = () => {
     });
 };
 
-/**
- * Device health check
- * GET /api/devices/health/
- */
+
 export const useDeviceHealth = () => {
     return useQuery({
         queryKey: ['deviceHealth'],
@@ -1100,14 +997,9 @@ export const useDeviceHealth = () => {
     });
 };
 
-// ============================================
-// USER GROUPS API HOOKS
-// ============================================
 
-/**
- * Fetch all user groups
- * GET /api/users/groups/
- */
+
+
 export const useUserGroups = (filters?: { search?: string; ordering?: string }) => {
     return useQuery({
         queryKey: ['userGroups', filters],
@@ -1123,10 +1015,7 @@ export const useUserGroups = (filters?: { search?: string; ordering?: string }) 
     });
 };
 
-/**
- * Fetch single user group details
- * GET /api/users/groups/{id}/
- */
+
 export const useUserGroup = (groupId: number | null) => {
     return useQuery({
         queryKey: ['userGroups', groupId],
@@ -1139,10 +1028,7 @@ export const useUserGroup = (groupId: number | null) => {
     });
 };
 
-/**
- * Create new user group
- * POST /api/users/groups/
- */
+
 export const useCreateUserGroup = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1162,10 +1048,7 @@ export const useCreateUserGroup = () => {
     });
 };
 
-/**
- * Update user group
- * PATCH /api/users/groups/{id}/
- */
+
 export const useUpdateUserGroup = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1186,10 +1069,7 @@ export const useUpdateUserGroup = () => {
     });
 };
 
-/**
- * Add members to group
- * POST /api/users/groups/{id}/add_members/
- */
+
 export const useAddGroupMembers = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1210,10 +1090,7 @@ export const useAddGroupMembers = () => {
     });
 };
 
-/**
- * Remove members from group
- * POST /api/users/groups/{id}/remove_members/
- */
+
 export const useRemoveGroupMembers = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1257,9 +1134,8 @@ export const useDeleteUserGroup = () => {
     });
 };
 
-// ============================================
-// ALERTS API
-// ============================================
+
+
 
 
 // Get all alerts with optional filters
@@ -1368,15 +1244,15 @@ export const useAlertTrends = (filters: AlertTrendFilters) => {
             const { data } = await axiosInstance.get(`/alert-management/alerts/trends/?${params.toString()}`);
             return data as AlertTrendResponse;
         },
-        staleTime: 2 * 60 * 1000, // 2 minutes
+        staleTime: 2 * 60 * 1000,
         enabled: !!filters.period,
     });
 };
 
 
-// ============================================
-// ALERT CONFIGURATION API
-// ============================================
+
+
+
 
 export const useAlertConfigurations = () => {
     return useQuery({
@@ -1387,6 +1263,10 @@ export const useAlertConfigurations = () => {
         }
     });
 };
+
+
+
+
 
 export const useSaveAlertConfiguration = () => {
     const queryClient = useQueryClient();
@@ -1412,14 +1292,11 @@ export const useSaveAlertConfiguration = () => {
     });
 };
 
-// ============================================
-// ALERT FILTERS & ACTIONS API
-// ============================================
 
-/**
- * Fetch all alert filters
- * GET /api/alert-management/alert-filters/
- */
+
+
+
+
 export const useAlertFilters = (filters?: { search?: string; area_id?: number }) => {
     return useQuery({
         queryKey: ['alertFilters', filters],
@@ -1434,10 +1311,11 @@ export const useAlertFilters = (filters?: { search?: string; area_id?: number })
     });
 };
 
-/**
- * Fetch all actions
- * GET /api/alert-management/actions/
- */
+
+
+
+
+
 export const useActions = (filters?: { search?: string; type?: string; is_active?: boolean }) => {
     return useQuery({
         queryKey: ['actions', filters],
@@ -1453,10 +1331,10 @@ export const useActions = (filters?: { search?: string; type?: string; is_active
     });
 };
 
-/**
- * Create new alert filter
- * POST /api/alert-management/alert-filters/
- */
+
+
+
+
 export const useCreateAlertFilter = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1476,10 +1354,11 @@ export const useCreateAlertFilter = () => {
     });
 };
 
-/**
- * Update alert filter
- * PATCH /api/alert-management/alert-filters/{id}/
- */
+
+
+
+
+
 export const useUpdateAlertFilter = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1499,10 +1378,10 @@ export const useUpdateAlertFilter = () => {
     });
 };
 
-/**
- * Delete alert filter
- * DELETE /api/alert-management/alert-filters/{id}/
- */
+
+
+
+
 export const useDeleteAlertFilter = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1521,10 +1400,11 @@ export const useDeleteAlertFilter = () => {
         }
     });
 };
-/**
- * Create new action
- * POST /api/alert-management/actions/
- */
+
+
+
+
+
 export const useCreateAction = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1544,10 +1424,11 @@ export const useCreateAction = () => {
     });
 };
 
-/**
- * Update action
- * PATCH /api/alert-management/actions/{id}/
- */
+
+
+
+
+
 export const useUpdateAction = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1567,10 +1448,12 @@ export const useUpdateAction = () => {
     });
 };
 
-/**
- * Delete action
- * DELETE /api/alert-management/actions/{id}/
- */
+
+
+
+
+
+
 export const useDeleteAction = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1590,13 +1473,11 @@ export const useDeleteAction = () => {
     });
 };
 
-// ============================================
-// N8N WORKFLOW INTEGRATION HELPERS
-// ============================================
 
-/**
- * Build N8N webhook payload from alert context
- */
+
+
+
+
 export const buildN8NAlertPayload = (
     alert: Alert,
     sensor: any,
@@ -1605,7 +1486,6 @@ export const buildN8NAlertPayload = (
     action: Action,
     sensorReadings?: any
 ): N8NAlertPayload => {
-    // Determine severity
     const severity: 'critical' | 'warning' | 'info' =
         (alert.type.includes('smoke') || alert.type.includes('fire') || alert.type === 'sensor_offline')
             ? 'critical'
@@ -1613,7 +1493,6 @@ export const buildN8NAlertPayload = (
                 ? 'warning'
                 : 'info';
 
-    // Determine trigger condition
     let triggerCondition: 'min_violation' | 'max_violation' | 'threshold_violation' = 'threshold_violation';
     if (filter.action_for_min) triggerCondition = 'min_violation';
     if (filter.action_for_max) triggerCondition = 'max_violation';
@@ -1631,7 +1510,7 @@ export const buildN8NAlertPayload = (
             remarks: alert.remarks,
             created_at: alert.created_at,
             updated_at: alert.updated_at,
-            value: alert.description // Could be enhanced to extract numeric value
+            value: alert.description
         },
         sensor: {
             id: typeof sensor === 'object' ? sensor.id : sensor,
@@ -1655,7 +1534,7 @@ export const buildN8NAlertPayload = (
             id: filter.id,
             name: filter.name,
             description: filter.description,
-            threshold_min: undefined, // Would need to be passed from threshold config
+            threshold_min: undefined,
             threshold_max: undefined,
             trigger_condition: triggerCondition
         },
@@ -1669,9 +1548,11 @@ export const buildN8NAlertPayload = (
     };
 };
 
-/**
- * Trigger N8N workflow webhook
- */
+
+
+
+
+
 export const triggerN8NWorkflow = async (
     action: Action,
     payload: N8NAlertPayload
@@ -1685,7 +1566,6 @@ export const triggerN8NWorkflow = async (
             'Content-Type': 'application/json'
         };
 
-        // Add API key authentication if configured
         if (action.n8n_api_key) {
             const headerName = action.n8n_auth_header || 'X-API-Key';
             headers[headerName] = action.n8n_api_key;
@@ -1709,11 +1589,11 @@ export const triggerN8NWorkflow = async (
             }
         );
 
-        console.log('✅ N8N workflow response:', data);
+        console.log(' N8N workflow response:', data);
 
         return { success: true, response: data };
     } catch (error: any) {
-        console.error('❌ N8N workflow failed:', error.message);
+        console.error(' N8N workflow failed:', error.message);
         return {
             success: false,
             error: error.response?.data?.message || error.message || 'Webhook request failed'
@@ -1722,13 +1602,15 @@ export const triggerN8NWorkflow = async (
 };
 
 
+
+
+
 export const useSyncHaloConfigs = () => {
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: async (sensorId: string | number) => {
-            // Spec: POST /api/devices/sensor-configurations/sync_all_from_sensor/
             const { data } = await axiosInstance.post(`/devices/sensor-configurations/sync_all_from_sensor/`, {
                 sensor_id: sensorId
             });
@@ -1747,12 +1629,20 @@ export const useSyncHaloConfigs = () => {
         }
     });
 };
+
+
+
+
 export interface WaveFilesResponse {
     success: boolean;
     sensor_ip: string;
     wavefiles: string[];
     count: number;
 }
+
+
+
+
 
 export const useWaveFiles = (ip_address?: string, username?: string, password?: string) => {
     return useQuery({
@@ -1770,6 +1660,12 @@ export const useWaveFiles = (ip_address?: string, username?: string, password?: 
         enabled: !!ip_address && !!username && !!password
     });
 };
+
+
+
+
+
+
 export const useUploadWaveFile = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
