@@ -16,12 +16,6 @@ import { useAreas, useAddSensorToSubArea, useSensors, useCreateSubArea, useUpdat
 import { useQueryClient } from '@tanstack/react-query';
 import { Area, SensorPlacementPayload } from '../../../types/sensor';
 import Swal from 'sweetalert2';
-import FloorPlanCanvas from './components/FloorPlanCanvas';
-import SensorPalette from './components/SensorPalette';
-import RoomSettingsPanel, { RoomVisibilitySettings } from './components/RoomSettingsPanel';
-import { mockRoomBoundaries, mockSensors, mockAreas, saveMockData } from '../../../mockData/sensors';
-
-import { DEFAULT_ROOM_SETTINGS, syncWallHeight } from '../utils/roomSettings.utils';
 import { buildAreaBreadcrumbPath } from '../utils/navigation.utils';
 import { filterSensors, getSensorsByArea, getAvailableSensors } from '../utils/sensorData.utils';
 
@@ -42,24 +36,6 @@ const SensorGroupDetail = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-    const [viewMode, setViewMode] = useState<'grid' | 'floorplan'>('floorplan');
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [stagedChanges, setStagedChanges] = useState<Record<string, any>>({});
-
-    const [uploadedFloorPlan, setUploadedFloorPlan] = useState<string | null>(null);
-    const [roomSettings, setRoomSettings] = useState<RoomVisibilitySettings>(DEFAULT_ROOM_SETTINGS);
-
-    // Enforce 60% ratio safety on load (Handles stale localStorage or initial mismatch)
-    React.useEffect(() => {
-        setRoomSettings(prev => {
-            const correctHeight = syncWallHeight(prev.floorSpacing);
-            if (prev.wallHeight !== correctHeight) {
-                console.log('🔄 [3D] Synchronizing wall height ratio on load:', { spacing: prev.floorSpacing, height: correctHeight });
-                return { ...prev, wallHeight: correctHeight };
-            }
-            return prev;
-        });
-    }, []);
 
     // Find target subarea directly from the flat list (since the API returns it at top level too)
     const currentSubArea = useMemo(() => {
@@ -70,76 +46,6 @@ const SensorGroupDetail = () => {
     const currentArea = useMemo(() => {
         return areas?.find(area => area.id === Number(areaId));
     }, [areas, areaId]);
-
-    // Auto-sync visible floors based on navigation context
-    React.useEffect(() => {
-        const target = currentSubArea || currentArea;
-        if (target && target.floor_level !== undefined && target.floor_level !== null) {
-            setRoomSettings(prev => ({
-                ...prev,
-                visibleFloors: [Number(target.floor_level)]
-            }));
-        } else {
-            // If at building root, show all discovered floors (empty = all)
-            setRoomSettings(prev => ({
-                ...prev,
-                visibleFloors: []
-            }));
-        }
-    }, [subzoneId, areaId, currentSubArea, currentArea]);
-
-
-    const handleSaveLayout = () => {
-        setIsEditMode(false);
-    };
-
-    const handleSensorRemove = (sensorId: string) => {
-        // TELEMETRY: Console log the removal payload
-        const sensor = allSensors?.find(s => s.id === sensorId);
-        if (sensor) {
-            console.log('🗑️ [TELEMETRY] Sensor removed from floor plan:', {
-                sensorId,
-                previousCoordinates: {
-                    x: sensor.x_val,
-                    y: sensor.y_val
-                }
-            });
-
-            // Use mutation to unassign sensor from area
-            updateSensorMutation.mutate({
-                sensorId,
-                data: {
-                    id: sensorId,
-                    area: null, // Unassign from area
-                    // We can also clear coordinates if desired, but area: null is sufficient to hide it
-                    x_val: null as any,
-                    y_val: null as any
-                }
-            });
-        }
-    };
-
-
-
-    const handleImageUpload = (file: File) => {
-        // Create a local blob URL for the uploaded image
-        const url = URL.createObjectURL(file);
-        setUploadedFloorPlan(url);
-
-        // ✅ PERSIST to mock data structure
-        if (subzoneId) {
-            // ✅ Update the area object with floor_plan_url
-            const areaIndex = mockAreas.findIndex(a => a.id === Number(subzoneId));
-            if (areaIndex !== -1) {
-                mockAreas[areaIndex].floor_plan_url = url;
-            }
-
-            // ✅ PERSIST to localStorage
-            saveMockData();
-        }
-        console.log('🖼️ [MOCK] Floor plan uploaded and persisted:', file.name);
-    };
-
 
     // Get nested sub-areas (sub-areas of this sub-area)
     const nestedSubAreas = currentSubArea?.subareas || [];
@@ -271,26 +177,6 @@ const SensorGroupDetail = () => {
                 </SubHeaderLeft>
                 <SubHeaderRight>
                     <div className='d-flex gap-3'>
-                        <div className='d-flex gap-2'>
-                            <Button
-                                isNeumorphic
-                                className={viewMode === 'grid' ? 'active' : ''}
-                                icon='GridView'
-                                onClick={() => setViewMode('grid')}
-                                title='Grid View'
-                            >
-                                Grid
-                            </Button>
-                            {/* <Button
-                                isNeumorphic
-                                className={viewMode === 'floorplan' ? 'active' : ''}
-                                icon='3d_rotation'
-                                onClick={() => setViewMode('floorplan')}
-                                title='3D View'
-                            >
-                                3D View
-                            </Button> */}
-                        </div>
                         <Button
                             isNeumorphic
                             className='text-info'
@@ -312,321 +198,235 @@ const SensorGroupDetail = () => {
             </SubHeader>
             <Page container='fluid'>
 
-                {viewMode === 'floorplan' ? (
-                    <div className='row g-0 align-items-stretch' style={{ height: 'calc(100vh - 180px)', overflow: 'hidden' }}>
-                        <div className='col-md-12 d-flex flex-column h-100'>
-                            <div className='d-flex justify-content-between align-items-center mb-3'>
-                                <div>
-                                    {/* Buttons removed - moved to FloorPlanCanvas */}
+                {/* Filter Section */}
+                <div className='row mb-4'>
+                    <div className='col-12'>
+                        <Card>
+                            <CardBody>
+                                <div className='row g-3 align-items-end'>
+                                    <div className='col-md-6'>
+                                        <FormGroup label='Search'>
+                                            <div className='input-group'>
+                                                <span className='input-group-text'>
+                                                    <Icon icon='Search' />
+                                                </span>
+                                                <Input
+                                                    type='text'
+                                                    placeholder='Search by name, MAC address, or type...'
+                                                    value={searchTerm}
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                                                />
+                                            </div>
+                                        </FormGroup>
+                                    </div>
+                                    <div className='col-md-3'>
+                                        <FormGroup label='Status Filter'>
+                                            <select
+                                                className='form-select'
+                                                value={filterStatus}
+                                                onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
+                                            >
+                                                <option value='all'>All Status</option>
+                                                <option value='active'>Active Only</option>
+                                                <option value='inactive'>Inactive Only</option>
+                                            </select>
+                                        </FormGroup>
+                                    </div>
+                                    <div className='col-md-3'>
+                                        <Button
+                                            className='w-100'
+                                            onClick={() => {
+                                                setSearchTerm('');
+                                                setFilterStatus('all');
+                                            }}
+                                        >
+                                            Clear Filters
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex-fill" style={{ position: 'relative', overflow: 'hidden' }}>
-                                <FloorPlanCanvas
-                                    areaId={subzoneId ? Number(subzoneId) : Number(areaId)}
-                                    sensors={sensors}
-                                    paletteSensors={allSensors?.filter(s => {
-                                        const targetAreaId = subzoneId ? Number(subzoneId) : Number(areaId);
-                                        const sAreaId = typeof s.area === 'object' && s.area !== null ? s.area.id : (s.area || s.area_id);
-                                        const isUnassigned = !sAreaId && !s.area_name;
-                                        const isInArea = Number(sAreaId) === targetAreaId;
-                                        const isUnplaced = (s.x_val === undefined || s.x_val === null) && (s.x_coordinate === undefined || s.x_coordinate === null);
+                            </CardBody>
+                        </Card>
+                    </div>
+                </div>
 
-                                        return isUnassigned || (isInArea && isUnplaced) || s.status === 'Inactive';
-                                    }) || []}
-                                    areas={areas || []}
-                                    roomSettings={roomSettings}
-                                    onSettingsChange={setRoomSettings}
-                                    floorPlanUrl={
-                                        uploadedFloorPlan ||
-                                        currentSubArea?.area_plan ||
-                                        currentSubArea?.floor_plan_url ||
-                                        currentArea?.area_plan ||
-                                        currentArea?.floor_plan_url
-                                    }
-                                    roomBoundaries={
-                                        (subzoneId ? currentSubArea?.polygon_coords : currentArea?.polygon_coords) ||
-                                        mockRoomBoundaries[subzoneId ? Number(subzoneId) : Number(areaId)]
-                                    }
-                                    currentArea={currentSubArea}
-                                    onSensorClick={(sensor) => !isEditMode && navigate(`/halo/sensors/detail/${sensor.id}`)}
-                                    onSensorDrop={(sensorId, x, y, dropAreaId) => {
-                                        const currentSensor = allSensors?.find(s => s.id === sensorId);
-                                        const targetAreaId = currentSensor?.area_id
-                                            ? currentSensor.area_id
-                                            : (dropAreaId || (subzoneId ? Number(subzoneId) : Number(areaId)));
-
-                                        updateSensorMutation.mutate({
-                                            sensorId,
-                                            data: {
-                                                id: sensorId,
-                                                x_val: x,
-                                                y_val: y,
-                                                area: targetAreaId
-                                            }
-                                        });
-                                    }}
-                                    onSensorRemove={handleSensorRemove}
-                                    onImageUpload={handleImageUpload}
-                                    onBoundaryUpdate={(sensorId, boundary) => {
-                                        updateSensorMutation.mutate({
-                                            sensorId,
-                                            data: {
-                                                id: sensorId,
-                                                x_min: boundary.x_min,
-                                                x_max: boundary.x_max,
-                                                y_min: boundary.y_min,
-                                                y_max: boundary.y_max,
-                                                z_min: boundary.z_min ?? 0,
-                                                z_max: boundary.z_max ?? 1,
-                                                boundary_opacity_val: boundary.boundary_opacity_val ?? 0.5
-                                            }
-                                        });
-                                    }}
-                                    editMode={isEditMode}
-                                    onEditModeChange={(mode) => {
-                                        setIsEditMode(mode);
-                                        if (!mode) handleSaveLayout();
-                                    }}
-                                    style={{ height: '100%' }}
-                                    initialZoom={0.5}
-                                    initialView="front"
-                                />
+                {/* Nested Sub Areas Section */}
+                {nestedSubAreas.length > 0 && (
+                    <div className='mb-4'>
+                        <div className='d-flex align-items-center justify-content-between mb-3'>
+                            <div className='d-flex align-items-center'>
+                                <Icon icon='AccountTree' className='me-2 fs-4' />
+                                <span className='h5 mb-0 fw-bold'>Sub Areas of {currentSubArea?.name}</span>
                             </div>
+                            <Badge color='info' isLight className='fs-6'>
+                                {filteredNestedSubAreas.length} of {nestedSubAreas.length}
+                            </Badge>
+                        </div>
+                        <div className='row g-4 mb-4'>
+                            {filteredNestedSubAreas.map(nestedSubArea => (
+                                <div key={nestedSubArea.id} className='col-md-6 col-xl-4'>
+                                    <Card
+                                        stretch
+                                        className='cursor-pointer transition-shadow'
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => handleNestedCardClick(nestedSubArea.id)}
+                                    >
+                                        <CardHeader>
+                                            <CardTitle>{nestedSubArea.name}</CardTitle>
+                                            <CardActions>
+                                                <Badge color='success' isLight>
+                                                    Active
+                                                </Badge>
+                                            </CardActions>
+                                        </CardHeader>
+                                        <CardBody>
+                                            <div className='d-flex justify-content-between align-items-center mb-2'>
+                                                <div className='text-muted'>
+                                                    <Icon icon='Sensors' size='sm' className='me-1' />
+                                                    Sensors
+                                                </div>
+                                                <div className='fw-bold fs-5'>{nestedSubArea.sensor_count || 0}</div>
+                                            </div>
+                                            {nestedSubArea.subareas && nestedSubArea.subareas.length > 0 && (
+                                                <div className='d-flex justify-content-between align-items-center'>
+                                                    <div className='text-muted'>
+                                                        <Icon icon='AccountTree' size='sm' className='me-1' />
+                                                        Sub Areas
+                                                    </div>
+                                                    <div className='fw-bold fs-5'>{nestedSubArea.subareas.length}</div>
+                                                </div>
+                                            )}
+                                        </CardBody>
+                                    </Card>
+                                </div>
+                            ))}
+                            {filteredNestedSubAreas.length === 0 && searchTerm && (
+                                <div className='col-12'>
+                                    <Card>
+                                        <CardBody className='text-center py-4'>
+                                            <Icon icon='SearchOff' className='fs-1 text-muted mb-2' />
+                                            <p className='text-muted mb-0'>No sub areas match your search</p>
+                                        </CardBody>
+                                    </Card>
+                                </div>
+                            )}
                         </div>
                     </div>
-                ) : (
-                    <>
-                        {/* Filter Section */}
-                        <div className='row mb-4'>
+                )}
+
+                {/* Sensors Section */}
+                <div>
+                    <div className='d-flex align-items-center justify-content-between mb-3'>
+                        <div className='d-flex align-items-center'>
+                            <Icon icon='Sensors' className='me-2 fs-4' />
+                            <span className='h5 mb-0 fw-bold'>Sensors in {currentSubArea?.name}</span>
+                        </div>
+                        <Badge color='success' isLight className='fs-6'>
+                            {filteredSensors.length} of {sensors.length}
+                        </Badge>
+                    </div>
+
+                    <div className='row g-4'>
+                        {filteredSensors.map(sensor => (
+                            <div key={sensor.id} className='col-md-6 col-xl-4'>
+                                <Card stretch>
+                                    <CardHeader>
+                                        <CardTitle>{sensor.name}</CardTitle>
+                                        <CardActions>
+                                            <Button
+                                                color='danger'
+                                                isLight
+                                                icon='LinkOff'
+                                                size='sm'
+                                                onClick={(e: any) => handleUnassignSensor(e, sensor)}
+                                                className='me-2'
+                                                title='Remove from Area'
+                                            />
+                                            <Badge color={sensor.is_active ? 'success' : 'danger'} isLight>
+                                                {sensor.is_active ? 'Active' : 'Inactive'}
+                                            </Badge>
+                                        </CardActions>
+                                    </CardHeader>
+                                    <CardBody>
+                                        <div className='mb-2'>
+                                            <div className='small text-muted'>Type</div>
+                                            <div className='fw-bold'>{sensor.sensor_type || 'N/A'}</div>
+                                        </div>
+                                        <div className='mb-2'>
+                                            <div className='small text-muted'>MAC Address</div>
+                                            <div className='font-monospace small'>{sensor.mac_address || 'N/A'}</div>
+                                        </div>
+                                        {sensor.ip_address && (
+                                            <div className='mb-2'>
+                                                <div className='small text-muted'>IP Address</div>
+                                                <div className='font-monospace small'>{sensor.ip_address}</div>
+                                            </div>
+                                        )}
+                                        {sensor.location && (
+                                            <div className='mb-2'>
+                                                <div className='small text-muted'>Location</div>
+                                                <div>{sensor.location}</div>
+                                            </div>
+                                        )}
+                                    </CardBody>
+                                </Card>
+                            </div>
+                        ))}
+
+                        {nestedSubAreas.length === 0 && sensors.length === 0 && (
                             <div className='col-12'>
                                 <Card>
-                                    <CardBody>
-                                        <div className='row g-3 align-items-end'>
-                                            <div className='col-md-6'>
-                                                <FormGroup label='Search'>
-                                                    <div className='input-group'>
-                                                        <span className='input-group-text'>
-                                                            <Icon icon='Search' />
-                                                        </span>
-                                                        <Input
-                                                            type='text'
-                                                            placeholder='Search by name, MAC address, or type...'
-                                                            value={searchTerm}
-                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                                                        />
-                                                    </div>
-                                                </FormGroup>
-                                            </div>
-                                            <div className='col-md-3'>
-                                                <FormGroup label='Status Filter'>
-                                                    <select
-                                                        className='form-select'
-                                                        value={filterStatus}
-                                                        onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
-                                                    >
-                                                        <option value='all'>All Status</option>
-                                                        <option value='active'>Active Only</option>
-                                                        <option value='inactive'>Inactive Only</option>
-                                                    </select>
-                                                </FormGroup>
-                                            </div>
-                                            <div className='col-md-3'>
-                                                <Button
-                                                    className='w-100'
-                                                    onClick={() => {
-                                                        setSearchTerm('');
-                                                        setFilterStatus('all');
-                                                    }}
-                                                >
-                                                    Clear Filters
-                                                </Button>
-                                            </div>
+                                    <CardBody className='text-center py-5'>
+                                        <Icon icon='Inventory' className='display-1 text-muted mb-3' />
+                                        <h4>No sub areas or sensors yet</h4>
+                                        <p className='text-muted'>
+                                            Create sub areas to further organize this location or add sensors directly.
+                                        </p>
+                                        <div className='d-flex gap-2 justify-content-center mt-3'>
+                                            <Button
+                                                color='info'
+                                                icon='Add'
+                                                onClick={() => setIsSubAreaModalOpen(true)}
+                                            >
+                                                Create Sub Area
+                                            </Button>
+                                            <Button
+                                                color='primary'
+                                                icon='Sensors'
+                                                onClick={() => setIsModalOpen(true)}
+                                            >
+                                                Add Sensor
+                                            </Button>
                                         </div>
                                     </CardBody>
                                 </Card>
                             </div>
-                        </div>
+                        )}
 
-                        {/* Nested Sub Areas Section */}
-                        {nestedSubAreas.length > 0 && (
-                            <div className='mb-4'>
-                                <div className='d-flex align-items-center justify-content-between mb-3'>
-                                    <div className='d-flex align-items-center'>
-                                        <Icon icon='AccountTree' className='me-2 fs-4' />
-                                        <span className='h5 mb-0 fw-bold'>Sub Areas of {currentSubArea?.name}</span>
-                                    </div>
-                                    <Badge color='info' isLight className='fs-6'>
-                                        {filteredNestedSubAreas.length} of {nestedSubAreas.length}
-                                    </Badge>
-                                </div>
-                                <div className='row g-4 mb-4'>
-                                    {filteredNestedSubAreas.map(nestedSubArea => (
-                                        <div key={nestedSubArea.id} className='col-md-6 col-xl-4'>
-                                            <Card
-                                                stretch
-                                                className='cursor-pointer transition-shadow'
-                                                style={{ cursor: 'pointer' }}
-                                                onClick={() => handleNestedCardClick(nestedSubArea.id)}
-                                            >
-                                                <CardHeader>
-                                                    <CardTitle>{nestedSubArea.name}</CardTitle>
-                                                    <CardActions>
-                                                        <Badge color='success' isLight>
-                                                            Active
-                                                        </Badge>
-                                                    </CardActions>
-                                                </CardHeader>
-                                                <CardBody>
-                                                    <div className='d-flex justify-content-between align-items-center mb-2'>
-                                                        <div className='text-muted'>
-                                                            <Icon icon='Sensors' size='sm' className='me-1' />
-                                                            Sensors
-                                                        </div>
-                                                        <div className='fw-bold fs-5'>{nestedSubArea.sensor_count || 0}</div>
-                                                    </div>
-                                                    {nestedSubArea.subareas && nestedSubArea.subareas.length > 0 && (
-                                                        <div className='d-flex justify-content-between align-items-center'>
-                                                            <div className='text-muted'>
-                                                                <Icon icon='AccountTree' size='sm' className='me-1' />
-                                                                Sub Areas
-                                                            </div>
-                                                            <div className='fw-bold fs-5'>{nestedSubArea.subareas.length}</div>
-                                                        </div>
-                                                    )}
-                                                </CardBody>
-                                            </Card>
-                                        </div>
-                                    ))}
-                                    {filteredNestedSubAreas.length === 0 && searchTerm && (
-                                        <div className='col-12'>
-                                            <Card>
-                                                <CardBody className='text-center py-4'>
-                                                    <Icon icon='SearchOff' className='fs-1 text-muted mb-2' />
-                                                    <p className='text-muted mb-0'>No sub areas match your search</p>
-                                                </CardBody>
-                                            </Card>
-                                        </div>
-                                    )}
-                                </div>
+                        {filteredSensors.length === 0 && sensors.length > 0 && (
+                            <div className='col-12'>
+                                <Card>
+                                    <CardBody className='text-center py-4'>
+                                        <Icon icon='SearchOff' className='fs-1 text-muted mb-2' />
+                                        <p className='text-muted mb-0'>No sensors match your filters</p>
+                                    </CardBody>
+                                </Card>
                             </div>
                         )}
 
-                        {/* Sensors Section */}
-                        <div>
-                            <div className='d-flex align-items-center justify-content-between mb-3'>
-                                <div className='d-flex align-items-center'>
-                                    <Icon icon='Sensors' className='me-2 fs-4' />
-                                    <span className='h5 mb-0 fw-bold'>Sensors in {currentSubArea?.name}</span>
-                                </div>
-                                <Badge color='success' isLight className='fs-6'>
-                                    {filteredSensors.length} of {sensors.length}
-                                </Badge>
+                        {sensors.length === 0 && nestedSubAreas.length > 0 && (
+                            <div className='col-12'>
+                                <Card>
+                                    <CardBody className='text-center py-4'>
+                                        <Icon icon='Sensors' className='fs-1 text-muted mb-2' />
+                                        <p className='text-muted mb-0'>
+                                            No sensors directly assigned to this sub area.
+                                        </p>
+                                    </CardBody>
+                                </Card>
                             </div>
-
-                            <div className='row g-4'>
-                                {filteredSensors.map(sensor => (
-                                    <div key={sensor.id} className='col-md-6 col-xl-4'>
-                                        <Card stretch>
-                                            <CardHeader>
-                                                <CardTitle>{sensor.name}</CardTitle>
-                                                <CardActions>
-                                                    <Button
-                                                        color='danger'
-                                                        isLight
-                                                        icon='LinkOff'
-                                                        size='sm'
-                                                        onClick={(e: any) => handleUnassignSensor(e, sensor)}
-                                                        className='me-2'
-                                                        title='Remove from Area'
-                                                    />
-                                                    <Badge color={sensor.is_active ? 'success' : 'danger'} isLight>
-                                                        {sensor.is_active ? 'Active' : 'Inactive'}
-                                                    </Badge>
-                                                </CardActions>
-                                            </CardHeader>
-                                            <CardBody>
-                                                <div className='mb-2'>
-                                                    <div className='small text-muted'>Type</div>
-                                                    <div className='fw-bold'>{sensor.sensor_type || 'N/A'}</div>
-                                                </div>
-                                                <div className='mb-2'>
-                                                    <div className='small text-muted'>MAC Address</div>
-                                                    <div className='font-monospace small'>{sensor.mac_address || 'N/A'}</div>
-                                                </div>
-                                                {sensor.ip_address && (
-                                                    <div className='mb-2'>
-                                                        <div className='small text-muted'>IP Address</div>
-                                                        <div className='font-monospace small'>{sensor.ip_address}</div>
-                                                    </div>
-                                                )}
-                                                {sensor.location && (
-                                                    <div className='mb-2'>
-                                                        <div className='small text-muted'>Location</div>
-                                                        <div>{sensor.location}</div>
-                                                    </div>
-                                                )}
-                                            </CardBody>
-                                        </Card>
-                                    </div>
-                                ))}
-
-                                {nestedSubAreas.length === 0 && sensors.length === 0 && (
-                                    <div className='col-12'>
-                                        <Card>
-                                            <CardBody className='text-center py-5'>
-                                                <Icon icon='Inventory' className='display-1 text-muted mb-3' />
-                                                <h4>No sub areas or sensors yet</h4>
-                                                <p className='text-muted'>
-                                                    Create sub areas to further organize this location or add sensors directly.
-                                                </p>
-                                                <div className='d-flex gap-2 justify-content-center mt-3'>
-                                                    <Button
-                                                        color='info'
-                                                        icon='Add'
-                                                        onClick={() => setIsSubAreaModalOpen(true)}
-                                                    >
-                                                        Create Sub Area
-                                                    </Button>
-                                                    <Button
-                                                        color='primary'
-                                                        icon='Sensors'
-                                                        onClick={() => setIsModalOpen(true)}
-                                                    >
-                                                        Add Sensor
-                                                    </Button>
-                                                </div>
-                                            </CardBody>
-                                        </Card>
-                                    </div>
-                                )}
-
-                                {filteredSensors.length === 0 && sensors.length > 0 && (
-                                    <div className='col-12'>
-                                        <Card>
-                                            <CardBody className='text-center py-4'>
-                                                <Icon icon='SearchOff' className='fs-1 text-muted mb-2' />
-                                                <p className='text-muted mb-0'>No sensors match your filters</p>
-                                            </CardBody>
-                                        </Card>
-                                    </div>
-                                )}
-
-                                {sensors.length === 0 && nestedSubAreas.length > 0 && (
-                                    <div className='col-12'>
-                                        <Card>
-                                            <CardBody className='text-center py-4'>
-                                                <Icon icon='Sensors' className='fs-1 text-muted mb-2' />
-                                                <p className='text-muted mb-0'>
-                                                    No sensors directly assigned to this sub area.
-                                                </p>
-                                            </CardBody>
-                                        </Card>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </>
-                )}
+                        )}
+                    </div>
+                </div>
             </Page>
             {/* Add Sensor Modal */}
             <Modal isOpen={isModalOpen} setIsOpen={setIsModalOpen}>

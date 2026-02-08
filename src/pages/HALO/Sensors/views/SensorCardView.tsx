@@ -12,9 +12,10 @@ interface SensorCardViewProps {
     sensor: any;
     latestLog?: SensorLog | null;
     darkModeStatus: boolean;
+    configurations?: SensorConfig[];
 }
 
-const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, darkModeStatus }) => {
+const SensorCardView: React.FC<SensorCardViewProps> = ({ sensor, latestLog, darkModeStatus, configurations }) => {
     const [isThresholdModalOpen, setIsThresholdModalOpen] = React.useState(false);
     const [isDeviceModalOpen, setIsDeviceModalOpen] = React.useState(false);
 

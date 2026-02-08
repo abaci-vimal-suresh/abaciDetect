@@ -161,85 +161,6 @@ const SensorIndividualDetail = () => {
             </SubHeader>
 
             <Page container='fluid'>
-                {/* ---------------- Personnel Card ---------------- */}
-                {/* <div className='row mb-4'>
-                    <div className='col-12'>
-                        <div className='card'>
-                            <div className='card-header d-flex justify-content-between align-items-center'>
-                                <h5 className='mb-0'>
-                                    <Icon icon='Person' className='me-2' />
-                                    Personnel Information
-                                </h5>
-                                <Button
-                                    color='primary'
-                                    size='sm'
-                                    icon='Edit'
-                                    onClick={() => setIsPersonnelModalOpen(true)}
-                                >
-                                    Manage Personnel
-                                </Button>
-                            </div>
-
-                            <div className='card-body'>
-                                {sensor.personnel_in_charge ||
-                                    sensor.personnel_contact ||
-                                    sensor.personnel_email ? (
-                                    <div className='row g-3'>
-                                        {sensor.personnel_in_charge && (
-                                            <div className='col-md-4'>
-                                                <div className='text-muted small'>Responsible Person</div>
-                                                <div className='fw-bold'>
-                                                    <Icon icon='Person' className='me-2' />
-                                                    {sensor.personnel_in_charge}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {sensor.personnel_contact && (
-                                            <div className='col-md-4'>
-                                                <div className='text-muted small'>Contact</div>
-                                                <div className='fw-bold'>
-                                                    <Icon icon='Phone' className='me-2' />
-                                                    <a href={`tel:${sensor.personnel_contact}`}>
-                                                        {sensor.personnel_contact}
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {sensor.personnel_email && (
-                                            <div className='col-md-4'>
-                                                <div className='text-muted small'>Email</div>
-                                                <div className='fw-bold'>
-                                                    <Icon icon='Email' className='me-2' />
-                                                    <a href={`mailto:${sensor.personnel_email}`}>
-                                                        {sensor.personnel_email}
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className='text-center py-4'>
-                                        <Icon icon='PersonAddAlt' className='fs-1 text-muted mb-2' />
-                                        <p className='text-muted mb-3'>
-                                            No personnel assigned to this sensor
-                                        </p>
-                                        <Button
-                                            color='primary'
-                                            icon='Add'
-                                            onClick={() => setIsPersonnelModalOpen(true)}
-                                        >
-                                            Assign Personnel
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div> */}
-
-                {/* ---------------- Main Views ---------------- */}
                 {currentView === 'sentinel' && (
                     <SentinelDashboardView
                         sensor={sensor}
@@ -248,7 +169,6 @@ const SensorIndividualDetail = () => {
                         configurations={configurations || []}
                     />
                 )}
-
                 {currentView === 'cards' && (
                     <SensorCardView
                         sensor={sensor}
@@ -275,7 +195,6 @@ const SensorIndividualDetail = () => {
                     isSaving={isSavingPersonnel}
                 />
 
-                {/* ---------------- Device Info Modal ---------------- */}
                 <Modal
                     isOpen={isDeviceModalOpen}
                     setIsOpen={setIsDeviceModalOpen}

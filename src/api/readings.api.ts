@@ -63,10 +63,7 @@ export const useSensorReadings = (filters?: {
     });
 };
 
-/**
- * Get sensor reading by ID
- * GET /api/devices/readings/{id}/
- */
+
 export const useSensorReading = (readingId: number) => {
     return useQuery({
         queryKey: ['sensorReadings', readingId],

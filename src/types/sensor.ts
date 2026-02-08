@@ -401,6 +401,7 @@ export interface SensorUpdatePayload {
 export interface SensorConfig {
     id?: number; // Database ID
     sensor_name?: string; // Keep for legacy/mock (now optional)
+    sensor_type?: string; // Type of sensor (e.g., 'Temperature', 'CO2')
     event_id?: string; // Backend key for sensor/event name
     halo_sensor?: number; // Backend sensor ID
     bn_instance?: number; // Backend instance number
