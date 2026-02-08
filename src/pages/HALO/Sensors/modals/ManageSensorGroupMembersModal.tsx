@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import Modal, {
     ModalBody,
     ModalFooter,
@@ -7,20 +7,15 @@ import Modal, {
 } from '../../../../components/bootstrap/Modal';
 import Button from '../../../../components/bootstrap/Button';
 import Spinner from '../../../../components/bootstrap/Spinner';
-import Select from '../../../../components/bootstrap/forms/Select';
-import Option from '../../../../components/bootstrap/Option';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Icon from '../../../../components/icon/Icon';
 import Badge from '../../../../components/bootstrap/Badge';
 import Checks from '../../../../components/bootstrap/forms/Checks';
 import Input from '../../../../components/bootstrap/forms/Input';
-import Label from '../../../../components/bootstrap/forms/Label';
 
 import {
     useSensorGroup,
     useSensors,
-    useAddSensorGroupMembers,
-    useRemoveSensorGroupMembers,
     useUpdateSensorGroup,
 } from '../../../../api/sensors.api';
 
@@ -37,8 +32,6 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
 }) => {
     const { data: group, isLoading: isLoadingGroup } = useSensorGroup(groupId || '');
     const { data: allSensors } = useSensors({});
-    const addMembersMutation = useAddSensorGroupMembers();
-    const removeMembersMutation = useRemoveSensorGroupMembers();
     const updateGroupMutation = useUpdateSensorGroup();
 
     const [selectedSensorIds, setSelectedSensorIds] = useState<(string | number)[]>([]);
@@ -46,8 +39,7 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
     const [description, setDescription] = useState('');
     const [memberIds, setMemberIds] = useState<(string | number)[]>([]);
 
-    // Sync state from group data
-    React.useEffect(() => {
+    useEffect(() => {
         if (group) {
             setName(group.name);
             setDescription(group.description || '');
@@ -62,7 +54,7 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
             data: {
                 name,
                 description,
-                sensor_ids: memberIds
+                sensor_ids: memberIds.map(String)
             }
         });
     };
@@ -96,7 +88,6 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
                     </div>
                 ) : (
                     <div className="row g-4">
-                        {/* Group Information Section */}
                         <div className="col-12 border-bottom pb-4 mb-2">
                             <h6 className="mb-3">Group Information</h6>
                             <div className="row g-3">
@@ -121,7 +112,6 @@ const ManageSensorGroupMembersModal: FC<ManageSensorGroupMembersModalProps> = ({
                             </div>
                         </div>
 
-                        {/* Current Sensors Section */}
                         <div className="col-12">
                             <div className="d-flex align-items-center justify-content-between mb-3">
                                 <h6 className="mb-0">

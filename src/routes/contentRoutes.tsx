@@ -21,7 +21,6 @@ const HaloSensorMainArea = lazy(() => import('../pages/HALO/Sensors/SensorMainAr
 const HaloSensorGroups = lazy(() => import('../pages/HALO/Sensors/SensorGroups'));
 const HaloSensorGroupManager = lazy(() => import('../pages/HALO/Sensors/SensorGroupManager'));
 const HaloTimeTravel = lazy(() => import('../pages/HALO/TimeTravel/TimeTravelPlayback'));
-const AutocadViewer = lazy(() => import('../pages/HALO/Autocad/AutocadViewer'));
 const ThreeDPage = lazy(() => import('../pages/HALO/ThreeD/ThreeDPage'));
 const N8NIntegrationTutorial = lazy(() => import('../pages/HALO/Integrations/N8NIntegrationTutorial'));
 
@@ -152,11 +151,6 @@ const RouteConfig: CustomRouteConfig[] = [
 		allowedTo: ['Admin', 'Viewer'],
 	},
 	{
-		path: '/halo/autocad',
-		element: <AutocadViewer />,
-		allowedTo: ['Admin', 'Viewer'],
-	},
-	{
 		path: '/halo/threed',
 		element: <ThreeDPage />,
 		allowedTo: ['Admin', 'Viewer'],
@@ -167,7 +161,6 @@ const RouteConfig: CustomRouteConfig[] = [
 		allowedTo: ['Admin', 'Viewer'],
 	},
 
-	// User Management Routes
 	{
 		path: '/profile',
 		element: <Profile />,
@@ -178,11 +171,6 @@ const RouteConfig: CustomRouteConfig[] = [
 		element: <UserListPage />,
 		allowedTo: ['Admin'],
 	},
-	// {
-	// 	path: '/users/create',
-	// 	element: <UserCreatePage />,
-	// 	allowedTo: ['Admin'],
-	// },
 	{
 		path: '/users/:id',
 		element: <UserDetailPage />,
@@ -193,11 +181,6 @@ const RouteConfig: CustomRouteConfig[] = [
 		element: <UserGroupsPage />,
 		allowedTo: ['Admin'],
 	},
-	// {
-	// 	path: '/users/:id/edit',
-	// 	element: <UserEditPage />,
-	// 	allowedTo: ['Admin'],
-	// },
 	{
 		path: '/halo/sensors/settings/:deviceId',
 		element: <HaloSettings />,

@@ -74,12 +74,7 @@ const AlertActionPage = () => {
             <Page container="fluid">
                 <div className="row">
                     <div className="col-12">
-                        <div className="alert alert-info d-flex align-items-center mb-4">
-                            <Icon icon="Info" className="me-2" />
-                            <div>
-                                Actions define <strong>HOW</strong> alert notifications are delivered (Email, SMS, etc.) and <strong>TO WHOM</strong>.
-                            </div>
-                        </div>
+
 
                         <ThemeProvider theme={theme}>
                             <MaterialTable

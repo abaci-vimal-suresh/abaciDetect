@@ -1,3 +1,7 @@
+import { haloMenu } from '../haloMenu';
+
+
+
 export const allRoutesObject = {
 	dashboard: {
 		id: 'dashboard',
@@ -16,8 +20,6 @@ export const allRoutesObject = {
 };
 
 
-// import { time } from 'console';
-import { haloMenu } from '../haloMenu';
 
 export const UserRoutes = {
 	dashboard: {
@@ -33,14 +35,12 @@ export const AdminRoutes = {
 	haloDashboard: haloMenu.dashboard,
 	haloSensors: haloMenu.sensors,
 	haloArea: haloMenu.area,
-	// monitoring: haloMenu.monitoring,
 	alerts: haloMenu.alerts,
 	haloActions: haloMenu.actions,
 	privacy: haloMenu.privacy,
 	users: haloMenu.users,
 	timetravel: haloMenu.timetravel,
 	reports: haloMenu.reports,
-	// autocad: haloMenu.autocad,
 	threed: haloMenu.threed,
 };
 

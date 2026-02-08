@@ -91,13 +91,6 @@ const AlertFilterPage = () => {
                             </Card>
                         ) : (
                             <>
-                                <div className="alert alert-info d-flex align-items-center mb-4">
-                                    <Icon icon="Info" className="me-2" />
-                                    <div>
-                                        Alert filters allow you to define 'Smart Rules': <strong>IF [conditions] THEN [actions]</strong>.
-                                    </div>
-                                </div>
-
                                 <ThemeProvider theme={theme}>
                                     <MaterialTable
                                         title="Your Smart Rules"
