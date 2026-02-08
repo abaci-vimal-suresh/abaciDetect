@@ -1,11 +1,12 @@
-import React, { Suspense, useState, useMemo, useEffect } from 'react';
+import { Suspense, useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { CameraControls, PerspectiveCamera, Environment, Html, Loader } from '@react-three/drei';
 import { BuildingScene } from './components/BuildingScene';
+import SensorSettingsOverlay from './components/SensorSettingsOverlay';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
-import Card, { CardBody, CardHeader, CardTitle } from '../../../components/bootstrap/Card';
+import Card, { CardHeader, CardTitle } from '../../../components/bootstrap/Card';
 import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
 import Badge from '../../../components/bootstrap/Badge';
@@ -23,6 +24,8 @@ const ThreeDPage = () => {
     const [floorOpacity, setFloorOpacity] = useState(1);
     const [selectedSensor, setSelectedSensor] = useState<any>(null);
     const [showSidebar, setShowSidebar] = useState(true);
+    const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
+    const [previewSensor, setPreviewSensor] = useState<any>(null);
 
     // Live API Data
     const { data: areasData, isLoading: areasLoading } = useAreas();
@@ -50,6 +53,7 @@ const ThreeDPage = () => {
 
         // Filter sensors that belong to this building or its subareas
         // AND exclude unplaced sensors (0,0)
+
         const sensorsInBuilding = rawSensors.filter(s => {
             const sensorAreaId = typeof s.area === 'object' && s.area !== null
                 ? s.area.id
@@ -227,6 +231,8 @@ const ThreeDPage = () => {
                                                             setVisibleFloors(prev => [...prev, floorLevel]);
                                                         }
                                                         setSelectedSensor(s);
+                                                        setShowSettingsOverlay(true);
+                                                        setPreviewSensor(s);
                                                     }}
                                                     style={{ fontSize: '0.85rem' }}
                                                 >
@@ -290,6 +296,7 @@ const ThreeDPage = () => {
                                             }
                                         }
                                         setSelectedSensor(sensor);
+                                        setShowSettingsOverlay(true);
                                     }}
                                     onSensorClick={(sensor) => {
                                         const floorLevel = sensor.floor_level ?? 0;
@@ -297,6 +304,7 @@ const ThreeDPage = () => {
                                             setVisibleFloors(prev => [...prev, floorLevel]);
                                         }
                                         setSelectedSensor(sensor);
+                                        setShowSettingsOverlay(true);
                                         console.log('Sensor clicked:', sensor);
                                     }}
                                 />
@@ -304,8 +312,16 @@ const ThreeDPage = () => {
                         </Canvas>
                         <Loader />
 
+                        {/* Sensor Settings Overlay (Right Side) */}
+                        {showSettingsOverlay && selectedSensor && (
+                            <SensorSettingsOverlay
+                                sensor={selectedSensor}
+                                onClose={() => setShowSettingsOverlay(false)}
+                            />
+                        )}
+
                         {/* Sensor Details Overlay */}
-                        {selectedSensor && (
+                        {!showSettingsOverlay && selectedSensor && (
                             <div
                                 className='position-absolute top-0 end-0 m-3 p-3 rounded shadow'
                                 style={{

@@ -1,9 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Html } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { Sensor, Area } from '../../../../types/sensor';
-import Icon from '../../../../components/icon/Icon';
-import Badge from '../../../../components/bootstrap/Badge';
 import { FloorModel, SensorMarker, BoundaryBox } from './FloorComponents';
 import { flattenAreas } from '../utils/dataTransform';
 import {
@@ -25,12 +22,10 @@ interface BuildingSceneProps {
     calibration?: FloorCalibration;
     selectedSensorId?: string | null;
     setSelectedSensorId?: (id: string | null) => void;
+    previewData?: any;
 }
 
-/**
- * BuildingScene - Main 3D scene orchestrator
- * Renders all floors, sensors, and boundaries based on data
- */
+
 export function BuildingScene({
     areas,
     sensors,
@@ -41,7 +36,8 @@ export function BuildingScene({
     onSensorClick,
     calibration = DEFAULT_FLOOR_CALIBRATION,
     selectedSensorId,
-    setSelectedSensorId
+    setSelectedSensorId,
+    previewData
 }: BuildingSceneProps) {
     const { controls } = useThree() as any;
     const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
@@ -90,16 +86,28 @@ export function BuildingScene({
             .sort((a, b) => (a.floor_level ?? a.offset_z ?? 0) - (b.floor_level ?? b.offset_z ?? 0));
     }, [areas]);
 
+    // Merge preview data into sensors for real-time visualization
+    const displaySensors = useMemo(() => {
+        if (!previewData || !previewData.id) return sensors;
+
+        return sensors.map(s => {
+            if (String(s.id) === String(previewData.id)) {
+                return { ...s, ...previewData };
+            }
+            return s;
+        });
+    }, [sensors, previewData]);
+
     // Group sensors by area ID (Floor ID)
     const sensorsByArea = useMemo(() => {
         const grouped: Record<number, Sensor[]> = {};
-        sensors.forEach(sensor => {
+        displaySensors.forEach(sensor => {
             const areaId = sensor.area_id ?? (typeof sensor.area === 'number' ? sensor.area : 0);
             if (!grouped[areaId]) grouped[areaId] = [];
             grouped[areaId].push(sensor);
         });
         return grouped;
-    }, [sensors]);
+    }, [displaySensors]);
 
     const handleSensorClick = (sensor: Sensor) => {
         if (setSelectedSensorId) {
@@ -111,13 +119,13 @@ export function BuildingScene({
     // Grouping for sidebar list (inside scene)
     const sensorsByFloor = useMemo(() => {
         const grouped: Record<number, Sensor[]> = {};
-        sensors.forEach(s => {
+        displaySensors.forEach(s => {
             const floor = s.floor_level ?? 0;
             if (!grouped[floor]) grouped[floor] = [];
             grouped[floor].push(s);
         });
         return grouped;
-    }, [sensors]);
+    }, [displaySensors]);
 
     return (
         <group>

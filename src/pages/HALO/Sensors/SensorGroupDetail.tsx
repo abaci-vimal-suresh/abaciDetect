@@ -281,7 +281,7 @@ const SensorGroupDetail = () => {
                             >
                                 Grid
                             </Button>
-                            <Button
+                            {/* <Button
                                 isNeumorphic
                                 className={viewMode === 'floorplan' ? 'active' : ''}
                                 icon='3d_rotation'
@@ -289,7 +289,7 @@ const SensorGroupDetail = () => {
                                 title='3D View'
                             >
                                 3D View
-                            </Button>
+                            </Button> */}
                         </div>
                         <Button
                             isNeumorphic

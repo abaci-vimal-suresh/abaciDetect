@@ -241,7 +241,7 @@ const SensorGroups = () => {
                             >
                                 Grid
                             </Button>
-                            <Button
+                            {/* <Button
                                 isNeumorphic
                                 color={viewMode === 'floorplan' ? 'primary' : 'light'}
                                 className={viewMode === 'floorplan' ? 'active' : ''}
@@ -250,7 +250,7 @@ const SensorGroups = () => {
                                 title='Floor Plan'
                             >
                                 Map
-                            </Button>
+                            </Button> */}
                             <Button
                                 isNeumorphic
                                 color='info'
