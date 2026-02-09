@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { useGLTF, useAnimations } from '@react-three/drei';
+import { useGLTF, useAnimations, PivotControls } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { Mesh, Box3, Vector3 } from 'three';
 import * as THREE from 'three';
@@ -107,6 +107,8 @@ interface SensorMarkerProps {
     scale?: number;
     sensorName?: string;
     hasBoundary?: boolean;
+    onDrag?: (newPos: [number, number, number]) => void;
+    isSelected?: boolean;
 }
 
 /**
@@ -119,7 +121,9 @@ export function SensorMarker({
     onHover,
     scale = 1,
     sensorName,
-    hasBoundary = false
+    hasBoundary = false,
+    onDrag,
+    isSelected = false
 }: SensorMarkerProps) {
     const meshRef = useRef<Mesh>(null);
     const lightRef = useRef<THREE.SpotLight>(null);
@@ -168,59 +172,83 @@ export function SensorMarker({
 
     return (
         <group position={position}>
-            {/* Volumetric SpotLight */}
-            <spotLight
-                ref={lightRef}
-                position={[0, 0, 0]}
-                angle={0.6}
-                penumbra={0.5}
-                intensity={10}
-                color={color}
-                castShadow
-                target-position={[0, -20, 0]} // Points downward toward boundary
-            />
-
-            {/* Visual Light Beam (Cone) - Only if NO boundary */}
-            {!hasBoundary && (
-                <mesh ref={beamRef} position={[0, -5, 0]} rotation={[0, 0, 0]}>
-                    <coneGeometry args={[2, 10, 32, 1, true]} />
-                    <meshBasicMaterial
-                        color={color}
-                        transparent
-                        opacity={0.15}
-                        side={THREE.DoubleSide}
-                    />
-                </mesh>
-            )}
-
-            {tintedScene ? (
-                <primitive
-                    object={tintedScene}
-                    scale={scale}
-                    frustumCulled={false}
-                    onClick={onClick}
-                    onPointerOver={(e: any) => {
-                        e.stopPropagation();
-                        setHovered(true);
-                        onHover?.(true);
-                    }}
-                    onPointerOut={() => {
-                        setHovered(false);
-                        onHover?.(false);
-                    }}
+            <PivotControls
+                anchor={[0, 0, 0]}
+                depthTest={false}
+                scale={75} // Pixel based when fixed=true
+                lineWidth={3}
+                fixed={true}
+                disableRotations={false} // Enable rotation handles as shown in diagram
+                disableAxes={false}
+                disableSliders={false}
+                visible={isSelected}
+                activeAxes={[true, false, true]} // Maintain horizontal dragging constraint
+                onDrag={(local) => {
+                    // Extract position from the matrix
+                    const pos = new THREE.Vector3();
+                    pos.setFromMatrixPosition(local);
+                    // Pass the new global position (offset by the group's position)
+                    onDrag?.([
+                        position[0] + pos.x,
+                        position[1] + pos.y,
+                        position[2] + pos.z
+                    ]);
+                }}
+            >
+                {/* Volumetric SpotLight */}
+                <spotLight
+                    ref={lightRef}
+                    position={[0, 0, 0]}
+                    angle={0.6}
+                    penumbra={0.5}
+                    intensity={10}
+                    color={color}
+                    castShadow
+                    target-position={[0, -20, 0]} // Points downward toward boundary
                 />
-            ) : (
-                <mesh ref={meshRef} onClick={onClick}>
-                    <sphereGeometry args={[1, 16, 16]} />
-                    <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1} />
-                </mesh>
-            )}
 
-            {/* Pulse effect for all sensors now to show activity */}
-            <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-                <ringGeometry args={[0.5, 0.7, 32]} />
-                <meshBasicMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
-            </mesh>
+                {/* Visual Light Beam (Cone) - Only if NO boundary */}
+                {!hasBoundary && (
+                    <mesh ref={beamRef} position={[0, -5, 0]} rotation={[0, 0, 0]}>
+                        <coneGeometry args={[2, 10, 32, 1, true]} />
+                        <meshBasicMaterial
+                            color={color}
+                            transparent
+                            opacity={0.15}
+                            side={THREE.DoubleSide}
+                        />
+                    </mesh>
+                )}
+
+                {tintedScene ? (
+                    <primitive
+                        object={tintedScene}
+                        scale={scale}
+                        frustumCulled={false}
+                        onClick={onClick}
+                        onPointerOver={(e: any) => {
+                            e.stopPropagation();
+                            setHovered(true);
+                            onHover?.(true);
+                        }}
+                        onPointerOut={() => {
+                            setHovered(false);
+                            onHover?.(false);
+                        }}
+                    />
+                ) : (
+                    <mesh ref={meshRef} onClick={onClick}>
+                        <sphereGeometry args={[1, 16, 16]} />
+                        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1} />
+                    </mesh>
+                )}
+
+                {/* Pulse effect for all sensors now to show activity */}
+                <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+                    <ringGeometry args={[scale * 0.5, scale * 0.7, 32]} />
+                    <meshBasicMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
+                </mesh>
+            </PivotControls>
         </group>
     );
 }
@@ -246,19 +274,6 @@ export function BoundaryBox({
     const materialRef = useRef<THREE.MeshStandardMaterial>(null);
     const lightRef = useRef<THREE.PointLight>(null);
 
-    useFrame(({ clock }: any) => {
-        if (materialRef.current) {
-            const t = clock.getElapsedTime();
-            const pulse = (Math.sin(t * 3) + 1) / 2; // Faster pulse for boundaries
-            materialRef.current.emissiveIntensity = 0.5 + pulse * 1.5;
-            materialRef.current.opacity = 0.1 + pulse * 0.3;
-
-            if (lightRef.current) {
-                lightRef.current.intensity = 2 + pulse * 4;
-            }
-        }
-    });
-
     if (!visible) return null;
 
     return (
@@ -281,10 +296,10 @@ export function BoundaryBox({
                     transparent
                     opacity={opacity}
                     emissive={color}
-                    emissiveIntensity={1.0}
+                    emissiveIntensity={1.2}
                     side={THREE.DoubleSide}
                     depthWrite={false}
-                    blending={THREE.AdditiveBlending} // Makes it look more like light
+                    blending={THREE.AdditiveBlending}
                 />
             </mesh>
 

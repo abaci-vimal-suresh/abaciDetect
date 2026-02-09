@@ -144,3 +144,34 @@ export function calculateSensorStatus(sensor: Sensor): 'safe' | 'warning' | 'cri
     if (val >= threshold * 0.8) return 'warning';
     return 'safe';
 }
+/**
+ * Transform 3D world coordinates back to normalized sensor coordinates (0-1)
+ */
+export function transform3DToSensor(
+    position: { x: number; y: number; z: number },
+    calibration: FloorCalibration,
+    baseLevel: number = 0,
+    floorSpacing: number = 4
+): { x_val: number; y_val: number; z_val: number } {
+    const floorY = baseLevel * floorSpacing;
+
+    // Calculate normalized coordinates
+    // Ensure we don't divide by zero
+    const x_val = calibration.width !== 0
+        ? (position.x - calibration.minX) / calibration.width
+        : 0.5;
+
+    const y_val = calibration.depth !== 0
+        ? (position.z - calibration.minZ) / calibration.depth
+        : 0.5;
+
+    const z_val = calibration.height !== 0
+        ? (position.y - floorY) / calibration.height
+        : 0;
+
+    return {
+        x_val: Math.max(0, Math.min(1, x_val)),
+        y_val: Math.max(0, Math.min(1, y_val)),
+        z_val: Math.max(0, Math.min(1, z_val))
+    };
+}
