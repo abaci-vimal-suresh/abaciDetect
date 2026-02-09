@@ -6,6 +6,7 @@ import { flattenAreas } from '../utils/dataTransform';
 import {
     transformSensorTo3D,
     transformBoundaryTo3D,
+    transform3DToSensor,
     calculateSensorStatus,
     DEFAULT_FLOOR_CALIBRATION,
     FloorCalibration
@@ -19,6 +20,7 @@ interface BuildingSceneProps {
     floorOpacity?: number;
     showBoundaries?: boolean;
     onSensorClick?: (sensor: Sensor) => void;
+    onSensorDrag?: (sensor: Sensor, newCoords: { x_val: number, y_val: number, z_val: number }) => void;
     calibration?: FloorCalibration;
     selectedSensorId?: string | null;
     setSelectedSensorId?: (id: string | null) => void;
@@ -34,6 +36,7 @@ export function BuildingScene({
     floorOpacity = 1,
     showBoundaries = true,
     onSensorClick,
+    onSensorDrag,
     calibration = DEFAULT_FLOOR_CALIBRATION,
     selectedSensorId,
     setSelectedSensorId,
@@ -192,21 +195,30 @@ export function BuildingScene({
                                     <SensorMarker
                                         position={sensorPos}
                                         status={status}
-                                        scale={isSelected ? 5.0 : isHovered ? 4.5 : 4.0}
+                                        scale={isSelected ? 8.0 : isHovered ? 7.0 : 6.0}
                                         onClick={() => handleSensorClick(sensor)}
                                         onHover={(hovered) => setHoveredSensor(hovered ? sensor.id : null)}
                                         sensorName={sensor.name}
                                         hasBoundary={hasBoundary}
+                                        isSelected={isSelected}
+                                        onDrag={(newPos) => {
+                                            const newCoords = transform3DToSensor(
+                                                { x: newPos[0] + (actualCalibration.centerX || 0), y: newPos[1], z: newPos[2] + (actualCalibration.centerZ || 0) },
+                                                actualCalibration,
+                                                floorLevel,
+                                                floorSpacing
+                                            );
+                                            onSensorDrag?.(sensor, newCoords);
+                                        }}
                                     />
 
                                     {/* Boundary box */}
-                                    {showBoundaries && boundary && boundaryPos && (
+                                    {showBoundaries && boundary && (
                                         <BoundaryBox
-                                            position={boundaryPos}
+                                            position={boundaryPos || boundary.position}
                                             size={boundary.size}
-                                            color={status === 'critical' ? '#EF4444' : status === 'warning' ? '#F59E0B' : '#10B981'}
-                                            opacity={isSelected ? 0.4 : isHovered ? 0.3 : 0.15}
-                                            visible={true}
+                                            color={status === 'safe' ? '#10B981' : status === 'warning' ? '#F59E0B' : '#EF4444'}
+                                            visible={showBoundaries}
                                         />
                                     )}
                                 </React.Fragment>

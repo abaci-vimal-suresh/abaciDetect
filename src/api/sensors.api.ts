@@ -504,7 +504,7 @@ export const useSensorConfigurations = (sensorId: string | number) => {
             if (!sensorId) return [];
 
             const { data } = await axiosInstance.get(`/devices/sensor-configurations/`, {
-                params: { halo_sensor__sensor: sensorId }
+                params: { halo_sensor__sensor__id: sensorId }
             });
             return data as SensorConfig[];
         },

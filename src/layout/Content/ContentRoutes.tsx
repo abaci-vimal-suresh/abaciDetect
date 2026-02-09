@@ -52,54 +52,54 @@ const ContentRoutes = () => {
 
 
   return (
-    <WebsocketProvider>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/create-organization" element={<CreateOrganizaton />} />
-        <Route path="/public/activation/:string" element={<Registration />} />
-        <Route path="/public/establishment-registration" element={<EstablishmentSelfRegistration />} />
-        <Route path="/public/error" element={<ErrorPage />} />
+    // <WebsocketProvider>
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/create-organization" element={<CreateOrganizaton />} />
+      <Route path="/public/activation/:string" element={<Registration />} />
+      <Route path="/public/establishment-registration" element={<EstablishmentSelfRegistration />} />
+      <Route path="/public/error" element={<ErrorPage />} />
 
-        {/* Protected Routes with Role-Based Access */}
-        {RouteConfig.map((page) => {
-          // Check if route has role restrictions
-          if (page.allowedTo) {
-            const userRole = userData?.role?.toLowerCase();
-            const hasAccess = page.allowedTo.some(role => role.toLowerCase() === userRole);
+      {/* Protected Routes with Role-Based Access */}
+      {RouteConfig.map((page) => {
+        // Check if route has role restrictions
+        if (page.allowedTo) {
+          const userRole = userData?.role?.toLowerCase();
+          const hasAccess = page.allowedTo.some(role => role.toLowerCase() === userRole);
 
-            if (hasAccess) {
-              return (
-                <Route
-                  path={page.path}
-                  element={<ProtectedRoute element={page.element} />}
-                  key={page.path}
-                />
-              );
-            }
-            // User doesn't have permission
+          if (hasAccess) {
             return (
               <Route
                 path={page.path}
-                element={<Unauthorized />}
+                element={<ProtectedRoute element={page.element} />}
                 key={page.path}
               />
             );
           }
-
-          // No role restriction - accessible to all authenticated users
+          // User doesn't have permission
           return (
             <Route
               path={page.path}
-              element={<ProtectedRoute element={page.element} />}
+              element={<Unauthorized />}
               key={page.path}
             />
           );
-        })}
+        }
 
-        <Route path="*" element={<Navigate to="/public/error" />} />
-      </Routes>
-    </WebsocketProvider>
+        // No role restriction - accessible to all authenticated users
+        return (
+          <Route
+            path={page.path}
+            element={<ProtectedRoute element={page.element} />}
+            key={page.path}
+          />
+        );
+      })}
+
+      <Route path="*" element={<Navigate to="/public/error" />} />
+    </Routes>
+    // </WebsocketProvider>
   );
 };
 

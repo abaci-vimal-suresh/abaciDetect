@@ -4,6 +4,8 @@ import { Canvas } from '@react-three/fiber';
 import { CameraControls, PerspectiveCamera, Environment, Html, Loader } from '@react-three/drei';
 import { BuildingScene } from './components/BuildingScene';
 import SensorSettingsOverlay from './components/SensorSettingsOverlay';
+import SensorDataOverlay from './components/SensorDataOverlay';
+import SensorConfigCards from './components/SensorConfigCards';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import Card, { CardHeader, CardTitle } from '../../../components/bootstrap/Card';
@@ -65,9 +67,26 @@ const ThreeDPage = () => {
             return isRelated && isPlaced;
         });
 
+        // Enrich sensors with floor_level information from areas
+        const enrichedSensors = sensorsInBuilding.map(s => {
+            const sensorAreaId = typeof s.area === 'object' && s.area !== null
+                ? s.area.id
+                : (s.area || s.area_id);
+
+            const area = buildingTree.find(a => a.id === Number(sensorAreaId));
+
+            // Derive floor level: Area's floor_level > Area's offset_z > default 0
+            const derivedFloor = area?.floor_level ?? area?.offset_z ?? 0;
+
+            return {
+                ...s,
+                floor_level: s.floor_level !== undefined ? s.floor_level : derivedFloor
+            };
+        });
+
         return {
             filteredAreas: buildingTree,
-            filteredSensors: sensorsInBuilding
+            filteredSensors: enrichedSensors
         };
     }, [areasData, sensorsData, urlAreaId]);
 
@@ -87,10 +106,21 @@ const ThreeDPage = () => {
 
     // Update visible floors when data loads
     useEffect(() => {
-        if (availableFloors.length > 0) {
+        if (availableFloors.length > 0 && !selectedSensor) {
             setVisibleFloors(availableFloors);
         }
     }, [availableFloors]);
+
+    // Floor Isolation: only show sensor's floor when selected
+    useEffect(() => {
+        if (selectedSensor) {
+            const floorLevel = selectedSensor.floor_level ?? 0;
+            setVisibleFloors([floorLevel]);
+        } else if (availableFloors.length > 0) {
+            // Restore all floors when nothing is selected
+            setVisibleFloors(availableFloors);
+        }
+    }, [selectedSensor, availableFloors]);
 
     const toggleFloor = (floorLevel: number) => {
         setVisibleFloors(prev =>
@@ -130,6 +160,20 @@ const ThreeDPage = () => {
                                 <div className='d-flex gap-2 align-items-center'>
                                     {/* Floor toggles */}
                                     <div className='btn-group btn-group-sm'>
+                                        {availableFloors.length > 0 && (
+                                            <Button
+                                                onClick={() => {
+                                                    setSelectedSensor(null);
+                                                    setShowSettingsOverlay(false);
+                                                    setVisibleFloors(availableFloors);
+                                                }}
+                                                size='sm'
+                                                icon='RestartAlt'
+                                                title='Show All Floors'
+                                            >
+                                                Show All
+                                            </Button>
+                                        )}
                                         {availableFloors.map(floor => (
                                             <Button
                                                 key={floor}
@@ -137,7 +181,7 @@ const ThreeDPage = () => {
                                                 onClick={() => toggleFloor(floor)}
                                                 size='sm'
                                             >
-                                                Floor {floor}
+                                                Floor - {floor}
                                             </Button>
                                         ))}
                                         {availableFloors.length === 0 && !isLoading && (
@@ -156,7 +200,7 @@ const ThreeDPage = () => {
                                     </Button>
 
                                     {/* Opacity slider */}
-                                    <div className='d-flex align-items-center gap-2'>
+                                    {/* <div className='d-flex align-items-center gap-2'>
                                         <Icon icon='Opacity' />
                                         <input
                                             type='range'
@@ -167,7 +211,7 @@ const ThreeDPage = () => {
                                             onChange={(e) => setFloorOpacity(parseFloat(e.target.value))}
                                             style={{ width: '100px' }}
                                         />
-                                    </div>
+                                    </div> */}
 
                                     {/* Sidebar Toggle */}
                                     <Button
@@ -199,12 +243,13 @@ const ThreeDPage = () => {
                         {/* Fixed Sensor Sidebar Overlay */}
                         {showSidebar && (
                             <div
-                                className='position-absolute top-0 start-0 m-3 p-0 rounded shadow overflow-hidden d-flex flex-column'
+                                className='position-absolute start-0 m-3 p-0 rounded shadow overflow-hidden d-flex flex-column'
                                 style={{
+                                    top: '80px',
                                     background: darkModeStatus ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
                                     backdropFilter: 'blur(12px)',
                                     width: '320px',
-                                    maxHeight: 'calc(100% - 30px)',
+                                    maxHeight: 'calc(100% - 110px)',
                                     border: darkModeStatus ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
                                     zIndex: 100
                                 }}
@@ -231,7 +276,7 @@ const ThreeDPage = () => {
                                                             setVisibleFloors(prev => [...prev, floorLevel]);
                                                         }
                                                         setSelectedSensor(s);
-                                                        setShowSettingsOverlay(true);
+                                                        setShowSettingsOverlay(false);
                                                         setPreviewSensor(s);
                                                     }}
                                                     style={{ fontSize: '0.85rem' }}
@@ -281,7 +326,14 @@ const ThreeDPage = () => {
                                 {/* Main Scene */}
                                 <BuildingScene
                                     areas={areas}
-                                    sensors={sensors}
+                                    sensors={useMemo(() => {
+                                        return sensors.map(s => {
+                                            if (previewSensor && previewSensor.id === s.id) {
+                                                return previewSensor;
+                                            }
+                                            return s;
+                                        });
+                                    }, [sensors, previewSensor])}
                                     visibleFloors={visibleFloors}
                                     floorSpacing={200}
                                     floorOpacity={floorOpacity}
@@ -304,47 +356,44 @@ const ThreeDPage = () => {
                                             setVisibleFloors(prev => [...prev, floorLevel]);
                                         }
                                         setSelectedSensor(sensor);
-                                        setShowSettingsOverlay(true);
+                                        setShowSettingsOverlay(false);
                                         console.log('Sensor clicked:', sensor);
+                                    }}
+                                    onSensorDrag={(sensor, newCoords) => {
+                                        const updatedSensor = { ...sensor, ...newCoords };
+                                        setPreviewSensor(updatedSensor);
+                                        setSelectedSensor(updatedSensor);
                                     }}
                                 />
                             </Suspense>
                         </Canvas>
                         <Loader />
 
+                        {/* Top Event Config Cards */}
+                        {selectedSensor && (
+                            <SensorConfigCards sensorId={selectedSensor.id} />
+                        )}
+
                         {/* Sensor Settings Overlay (Right Side) */}
                         {showSettingsOverlay && selectedSensor && (
                             <SensorSettingsOverlay
                                 sensor={selectedSensor}
-                                onClose={() => setShowSettingsOverlay(false)}
+                                onClose={() => {
+                                    setShowSettingsOverlay(false);
+                                }}
+                                onPreviewChange={(newValues) => {
+                                    setPreviewSensor({ ...selectedSensor, ...newValues });
+                                }}
                             />
                         )}
 
-                        {/* Sensor Details Overlay */}
+                        {/* Sensor Live Data Overlay */}
                         {!showSettingsOverlay && selectedSensor && (
-                            <div
-                                className='position-absolute top-0 end-0 m-3 p-3 rounded shadow'
-                                style={{
-                                    background: darkModeStatus ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                                    backdropFilter: 'blur(10px)',
-                                    maxWidth: '300px'
-                                }}
-                            >
-                                <div className='d-flex justify-content-between align-items-start mb-2'>
-                                    <h6 className='mb-0'>{selectedSensor.name}</h6>
-                                    <Button
-                                        color='link'
-                                        size='sm'
-                                        icon='Close'
-                                        onClick={() => setSelectedSensor(null)}
-                                    />
-                                </div>
-                                <div className='small'>
-                                    <div>Floor: {selectedSensor.floor_level}</div>
-                                    <div>Status: <Badge color={selectedSensor.status === 'safe' ? 'success' : selectedSensor.status === 'warning' ? 'warning' : 'danger'}>{selectedSensor.status}</Badge></div>
-                                    <div>Position: ({selectedSensor.x_val?.toFixed(2)}, {selectedSensor.y_val?.toFixed(2)})</div>
-                                </div>
-                            </div>
+                            <SensorDataOverlay
+                                sensor={selectedSensor}
+                                onClose={() => setSelectedSensor(null)}
+                                onSettingsClick={() => setShowSettingsOverlay(true)}
+                            />
                         )}
                     </div>
                 </div>

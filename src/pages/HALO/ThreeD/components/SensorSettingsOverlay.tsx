@@ -22,6 +22,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
 
     // Local state for all editable fields
     const [values, setValues] = useState<Partial<SensorUpdatePayload>>({
+        id: sensor.id, // Store ID to prevent unnecessary resets
         x_val: sensor.x_val || 0,
         y_val: sensor.y_val || 0,
         z_val: sensor.z_val || 0,
@@ -36,21 +37,36 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isDirty, setIsDirty] = useState(false);
 
-    // Sync state if sensor changes (though typically overlay re-mounts)
+    // Sync state if sensor changes (important for real-time 3D sync)
     useEffect(() => {
-        setValues({
-            x_val: sensor.x_val || 0,
-            y_val: sensor.y_val || 0,
-            z_val: sensor.z_val || 0,
-            x_min: sensor.x_min || 0,
-            x_max: sensor.x_max || 0,
-            y_min: sensor.y_min || 0,
-            y_max: sensor.y_max || 0,
-            z_min: sensor.z_min || 0,
-            z_max: sensor.z_max || 0,
-        });
-        setIsDirty(false);
-        setErrors({});
+        // If it's a new sensor selection, reset everything
+        if (sensor.id !== (values as any).id) {
+            setValues({
+                id: sensor.id, // Track ID in local state for comparison
+                x_val: sensor.x_val || 0,
+                y_val: sensor.y_val || 0,
+                z_val: sensor.z_val || 0,
+                x_min: sensor.x_min || 0,
+                x_max: sensor.x_max || 0,
+                y_min: sensor.y_min || 0,
+                y_max: sensor.y_max || 0,
+                z_min: sensor.z_min || 0,
+                z_max: sensor.z_max || 0,
+            });
+            setIsDirty(false);
+            setErrors({});
+        } else {
+            // If it's the same sensor but values changed externally (like 3D drag)
+            // merge only the coordinate values to not lose other edits
+            setValues(prev => ({
+                ...prev,
+                x_val: sensor.x_val !== undefined ? sensor.x_val : prev.x_val,
+                y_val: sensor.y_val !== undefined ? sensor.y_val : prev.y_val,
+                z_val: sensor.z_val !== undefined ? sensor.z_val : prev.z_val,
+            }));
+            // Mark as dirty if external coordinates changed
+            setIsDirty(true);
+        }
     }, [sensor]);
 
     const handleInputChange = (field: keyof SensorUpdatePayload, value: number) => {
@@ -160,12 +176,13 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
 
     return (
         <div
-            className='position-absolute top-0 end-0 m-3 p-0 rounded shadow overflow-hidden d-flex flex-column'
+            className='position-absolute end-0 m-3 p-0 rounded shadow overflow-hidden d-flex flex-column'
             style={{
+                top: '80px',
                 background: darkModeStatus ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
                 backdropFilter: 'blur(16px)',
                 width: '350px',
-                maxHeight: 'calc(100% - 30px)',
+                maxHeight: 'calc(100% - 110px)',
                 border: darkModeStatus ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
                 zIndex: 101
             }}
