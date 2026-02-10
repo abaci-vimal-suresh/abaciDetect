@@ -141,12 +141,7 @@ export function BuildingScene({
             {floors.map((floor) => {
                 const floorLevel = floor.floor_level ?? floor.offset_z ?? 0;
                 const isVisible = visibleFloors.includes(floorLevel);
-                // GLB Override: If the backend sends a .jpg, we use the local .glb instead
-                // as the 3D scene requires geometry.
-                const rawUrl = floor.area_plan || floor.floor_plan_url || '/floor_tiles.glb';
-                const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
-                const isImage = imageExtensions.some(ext => rawUrl.toLowerCase().endsWith(ext));
-                const modelUrl = isImage ? '/floor_tiles.glb' : rawUrl;
+                const modelUrl = floor.area_plan || floor.floor_plan_url || '/floor_tiles.glb';
                 const floorSensors = sensorsByArea[floor.id] || [];
 
                 return (

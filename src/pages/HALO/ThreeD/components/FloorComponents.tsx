@@ -1,7 +1,7 @@
-import React, { useRef, useMemo } from 'react';
-import { useGLTF, useAnimations, PivotControls } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
-import { Mesh, Box3, Vector3 } from 'three';
+import React, { useRef, useMemo, useEffect, useState } from 'react';
+import { useGLTF, useAnimations, PivotControls, useTexture } from '@react-three/drei';
+import { useFrame, useLoader } from '@react-three/fiber';
+import { Mesh, Box3, Vector3, TextureLoader } from 'three';
 import * as THREE from 'three';
 
 interface FloorModelProps {
@@ -14,7 +14,6 @@ interface FloorModelProps {
     modelUrl?: string;
 }
 
-
 export function FloorModel({
     floorLevel,
     floorSpacing = 4,
@@ -24,53 +23,104 @@ export function FloorModel({
     centerModel = false,
     modelUrl = '/floor_tiles.glb'
 }: FloorModelProps) {
-    const gltf = useGLTF(modelUrl) as any;
-    const meshRef = useRef<THREE.Group>(null);
-    const [calibrated, setCalibrated] = React.useState(false);
-    const [offset, setOffset] = React.useState(new THREE.Vector3(0, 0, 0));
+    const [calibrated, setCalibrated] = useState(false);
+    const [offset, setOffset] = useState(new THREE.Vector3(0, 0, 0));
+
+    // Detect if modelUrl is an image
+    const isImage = useMemo(() => {
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+        return imageExtensions.some(ext => modelUrl.toLowerCase().endsWith(ext)) ||
+            modelUrl.includes('data:image');
+    }, [modelUrl]);
+
+    // Use a transparent pixel as fallback for texture to avoid loading errors
+    const TEXTURE_FALLBACK = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+
+    // NOTE: useGLTF and useTexture should always be called with a valid string or it might suspend
+    const gltf = useGLTF(isImage ? '/floor_tiles.glb' : modelUrl) as any;
+    const texture = useTexture(isImage ? modelUrl : TEXTURE_FALLBACK) as any;
 
     // Calculate Y position based on floor level
     const yPosition = floorLevel * floorSpacing;
 
-    // Run calibration once model is loaded
-    React.useEffect(() => {
-        if (gltf && !calibrated) {
-            const box = new THREE.Box3().setFromObject(gltf.scene);
-            const size = new THREE.Vector3();
-            box.getSize(size);
-            const center = new THREE.Vector3();
-            box.getCenter(center);
+    // Run calibration once model/image is loaded
+    useEffect(() => {
+        if (!calibrated) {
+            if (isImage && texture) {
+                // For images, we use a default "Large" size to ensure sensors fit
+                // We also give it a simulated "Height" (like room height) so boundaries have volume
+                const IMAGE_SIZE = 800;
+                const IMAGE_HEIGHT = 100;
+                const size = new THREE.Vector3(IMAGE_SIZE, IMAGE_HEIGHT, IMAGE_SIZE);
+                const min = new THREE.Vector3(-IMAGE_SIZE / 2, 0, -IMAGE_SIZE / 2);
+                const center = new THREE.Vector3(0, 0, 0);
 
-            if (centerModel) {
-                setOffset(new THREE.Vector3(-center.x, -box.min.y, -center.z));
-            }
+                if (centerModel) {
+                    setOffset(new THREE.Vector3(0, 0, 0)); // Already centered
+                }
 
-            if (onLoad) {
-                onLoad({
-                    width: size.x,
-                    depth: size.z,
-                    height: size.y,
-                    minX: box.min.x,
-                    minZ: box.min.z,
-                    minY: box.min.y,
-                    centerX: center.x,
-                    centerZ: center.z
-                });
+                if (onLoad) {
+                    onLoad({
+                        width: size.x,
+                        depth: size.z,
+                        height: size.y,
+                        minX: min.x,
+                        minZ: min.z,
+                        minY: min.y,
+                        centerX: center.x,
+                        centerZ: center.z
+                    });
+                }
+                setCalibrated(true);
+            } else if (!isImage && gltf) {
+                const box = new THREE.Box3().setFromObject(gltf.scene);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                const center = new THREE.Vector3();
+                box.getCenter(center);
+
+                if (centerModel) {
+                    setOffset(new THREE.Vector3(-center.x, -box.min.y, -center.z));
+                }
+
+                if (onLoad) {
+                    onLoad({
+                        width: size.x,
+                        depth: size.z,
+                        height: size.y,
+                        minX: box.min.x,
+                        minZ: box.min.z,
+                        minY: box.min.y,
+                        centerX: center.x,
+                        centerZ: center.z
+                    });
+                }
+                setCalibrated(true);
             }
-            setCalibrated(true);
         }
-    }, [gltf, calibrated, onLoad, centerModel]);
+    }, [gltf, texture, isImage, calibrated, onLoad, centerModel]);
 
-    if (!gltf) return null;
+    if (!gltf && !texture) return null;
 
     return (
         <group position={[0, yPosition, 0]} visible={visible}>
-            <primitive
-                object={gltf.scene.clone()}
-                position={centerModel ? [offset.x, offset.y, offset.z] : [0, 0, 0]}
-            >
-                {/* Apply opacity to children if needed */}
-            </primitive>
+            {isImage ? (
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+                    <planeGeometry args={[800, 800]} />
+                    <meshStandardMaterial
+                        map={texture}
+                        transparent={true}
+                        opacity={opacity}
+                        side={THREE.DoubleSide}
+                    />
+                </mesh>
+            ) : (
+                <primitive
+                    object={gltf.scene.clone()}
+                    position={centerModel ? [offset.x, offset.y, offset.z] : [0, 0, 0]}
+                >
+                </primitive>
+            )}
         </group>
     );
 }
@@ -268,7 +318,7 @@ export function BoundaryBox({
     position,
     size,
     color = '#10B981',
-    opacity = 0.2,
+    opacity = 0.3, // Slightly more opaque
     visible = true
 }: BoundaryBoxProps) {
     const materialRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -283,42 +333,41 @@ export function BoundaryBox({
                 ref={lightRef}
                 color={color}
                 distance={Math.max(...size) * 2}
-                decay={2}
-                intensity={3}
+                decay={1}
+                intensity={5}
             />
 
             {/* Main Light Volume */}
             <mesh>
                 <boxGeometry args={size} />
-                <meshStandardMaterial
-                    ref={materialRef}
+                <meshPhongMaterial
                     color={color}
                     transparent
                     opacity={opacity}
                     emissive={color}
-                    emissiveIntensity={1.2}
+                    emissiveIntensity={0.5}
                     side={THREE.DoubleSide}
-                    depthWrite={false}
-                    blending={THREE.AdditiveBlending}
+                    // depthWrite should be true for proper 3D volume visibility
+                    depthWrite={true}
                 />
             </mesh>
 
+            {/* Solid Edges to define the 3D Box shape */}
+            <lineSegments>
+                <edgesGeometry args={[new THREE.BoxGeometry(...size)]} />
+                <lineBasicMaterial color={color} opacity={0.8} transparent linewidth={2} />
+            </lineSegments>
+
             {/* Subtle Core Glow */}
-            <mesh scale={0.95}>
+            <mesh scale={0.99}>
                 <boxGeometry args={size} />
                 <meshBasicMaterial
                     color={color}
                     transparent
                     opacity={0.05}
                     side={THREE.DoubleSide}
-                    depthWrite={false}
                 />
             </mesh>
-
-            <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(...size)]} />
-                <lineBasicMaterial color={color} opacity={0.4} transparent />
-            </lineSegments>
         </group>
     );
 }

@@ -31,10 +31,10 @@ const SensorConfigCards: React.FC<SensorConfigCardsProps> = ({ sensorId }) => {
         <div
             className="position-absolute top-0 start-0 end-0 d-flex gap-3 overflow-auto px-4 py-3 scrollbar-hidden"
             style={{
-                background: darkModeStatus ? 'rgba(15, 23, 42, 0.4)' : 'rgba(255, 255, 255, 0.4)',
-                backdropFilter: 'blur(10px)',
+                background: darkModeStatus ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+                backdropFilter: 'blur(12px)',
                 borderBottom: darkModeStatus ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                zIndex: 110,
+                zIndex: 1000,
                 scrollBehavior: 'smooth'
             }}
         >
@@ -43,31 +43,29 @@ const SensorConfigCards: React.FC<SensorConfigCardsProps> = ({ sensorId }) => {
                 return (
                     <div
                         key={config.id}
-                        className="flex-shrink-0 rounded p-2 d-flex flex-column align-items-center transition-all"
+                        className="flex-shrink-0 rounded-3 d-flex flex-column align-items-center justify-content-center px-3 py-2 transition-all"
                         style={{
-                            background: darkModeStatus ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                            backdropFilter: 'blur(10px)',
-                            border: `2px solid ${color}80`, // 50% opacity border
-                            boxShadow: `0 0 15px ${color}40`, // Integrated glow
-                            minWidth: '120px',
-                            cursor: 'default'
+                            minWidth: '110px',
+                            height: '95px',
+                            background: darkModeStatus ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.5)',
+                            border: darkModeStatus ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(0, 0, 0, 0.02)'
                         }}
                     >
-                        <div className="d-flex align-items-center gap-1 mb-1">
-                            <span className="fw-bold x-small text-truncate" style={{ fontSize: '0.75rem', maxWidth: '100px' }}>
+                        <div className="d-flex align-items-center gap-2 mb-1 opacity-75">
+                            {config.enabled && <div style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />}
+                            <span className="fw-bold text-truncate" style={{ fontSize: '0.65rem', letterSpacing: '0.05em', maxWidth: '90px' }}>
                                 {config.event_id}
                             </span>
-                            {config.enabled && <div style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />}
                         </div>
 
-                        <div className="d-flex flex-column align-items-center gap-0">
+                        <div className="d-flex flex-column align-items-center gap-0 w-100 mt-1">
                             <div className="d-flex align-items-baseline gap-1">
-                                <span className="x-small text-muted" style={{ fontSize: '0.6rem' }}>THR:</span>
+                                <span className="text-muted" style={{ fontSize: '0.6rem' }}>THR:</span>
                                 <span className="fw-bold text-info" style={{ fontSize: '0.8rem' }}>{config.threshold}</span>
                             </div>
-                            <div className="d-flex align-items-center gap-1 opacity-50" style={{ fontSize: '0.6rem' }}>
+                            <div className="d-flex align-items-center gap-1 mt-n1" style={{ fontSize: '0.6rem', opacity: 0.5 }}>
                                 <span>{config.min_value}</span>
-                                <Icon icon="HorizontalRule" />
+                                <Icon icon="HorizontalRule" size="sm" />
                                 <span>{config.max_value}</span>
                             </div>
                         </div>

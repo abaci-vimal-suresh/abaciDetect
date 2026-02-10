@@ -408,6 +408,65 @@ export const useLatestSensorLog = (sensorId: string | number, options?: { refetc
 };
 
 
+export interface AggregatedSensorDataResponse {
+    area_ids: number[];
+    area_ids_included: number[];
+    sensor_group_ids: number[] | null;
+    sensor_count: number;
+    time_window: {
+        from: string;
+        to: string;
+    };
+    aggregated_data: {
+        temperature_min: number | null;
+        temperature_max: number | null;
+        humidity_min: number | null;
+        humidity_max: number | null;
+        light_min: number | null;
+        light_max: number | null;
+        sound_min: number | null;
+        sound_max: number | null;
+        pressure_min: number | null;
+        pressure_max: number | null;
+        tvoc_min: number | null;
+        tvoc_max: number | null;
+        co2_min: number | null;
+        co2_max: number | null;
+        pm1_min: number | null;
+        pm10_min: number | null;
+        pm25_min: number | null;
+        aqi_min: number | null;
+        aqi_max: number | null;
+        movement_min: number | null;
+        movement_max: number | null;
+        noise_min: number | null;
+        noise_max: number | null;
+        health_min: number | null;
+        health_max: number | null;
+        [key: string]: any;
+    };
+}
+
+export const useAggregatedSensorData = (filters: {
+    area_id?: number | string | (number | string)[];
+    sensor_group_id?: number | string | (number | string)[];
+}) => {
+    return useQuery({
+        queryKey: ['aggregatedSensorData', filters],
+        queryFn: async () => {
+            const { data } = await axiosInstance.get<AggregatedSensorDataResponse>('/data-management/sensor-logs/aggregated_data/', {
+                params: {
+                    area_id: Array.isArray(filters.area_id) ? filters.area_id.join(',') : filters.area_id,
+                    sensor_group_id: Array.isArray(filters.sensor_group_id) ? filters.sensor_group_id.join(',') : filters.sensor_group_id
+                }
+            });
+            return data;
+        },
+        enabled: !!filters.area_id || !!filters.sensor_group_id
+    });
+};
+
+
 export const useRegisterSensor = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
