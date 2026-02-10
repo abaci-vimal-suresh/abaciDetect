@@ -13,6 +13,8 @@ import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
 import Badge from '../../../components/bootstrap/Badge';
 import useDarkMode from '../../../hooks/useDarkMode';
+import AggregateMetricCards from './components/AggregateMetricCards';
+import AggregationFilterPanel from './components/AggregationFilterPanel';
 import './ThreeDPage.scss';
 
 import { useAreas, useSensors } from '../../../api/sensors.api';
@@ -26,6 +28,9 @@ const ThreeDPage = () => {
     const [floorOpacity, setFloorOpacity] = useState(1);
     const [selectedSensor, setSelectedSensor] = useState<any>(null);
     const [showSidebar, setShowSidebar] = useState(true);
+    const [sidebarTab, setSidebarTab] = useState<'sensors' | 'filters'>('sensors');
+    const [selectedAreaIds, setSelectedAreaIds] = useState<(number | string)[]>([]);
+    const [selectedGroupIds, setSelectedGroupIds] = useState<(number | string)[]>([]);
     const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
     const [previewSensor, setPreviewSensor] = useState<any>(null);
 
@@ -111,6 +116,13 @@ const ThreeDPage = () => {
         }
     }, [availableFloors]);
 
+    // Initialize selectedAreaIds from URL
+    useEffect(() => {
+        if (urlAreaId) {
+            setSelectedAreaIds([Number(urlAreaId)]);
+        }
+    }, [urlAreaId]);
+
     // Floor Isolation: only show sensor's floor when selected
     useEffect(() => {
         if (selectedSensor) {
@@ -160,33 +172,7 @@ const ThreeDPage = () => {
                                 <div className='d-flex gap-2 align-items-center'>
                                     {/* Floor toggles */}
                                     <div className='btn-group btn-group-sm'>
-                                        {availableFloors.length > 0 && (
-                                            <Button
-                                                onClick={() => {
-                                                    setSelectedSensor(null);
-                                                    setShowSettingsOverlay(false);
-                                                    setVisibleFloors(availableFloors);
-                                                }}
-                                                size='sm'
-                                                icon='RestartAlt'
-                                                title='Show All Floors'
-                                            >
-                                                Show All
-                                            </Button>
-                                        )}
-                                        {availableFloors.map(floor => (
-                                            <Button
-                                                key={floor}
-                                                color={visibleFloors.includes(floor) ? 'primary' : 'light'}
-                                                onClick={() => toggleFloor(floor)}
-                                                size='sm'
-                                            >
-                                                Floor - {floor}
-                                            </Button>
-                                        ))}
-                                        {availableFloors.length === 0 && !isLoading && (
-                                            <span className='text-muted small px-2'>No floors found</span>
-                                        )}
+                                        {/* Unified calibration and visibility moved to sidebar Filter panel */}
                                     </div>
 
                                     {/* Boundaries toggle */}
@@ -243,66 +229,96 @@ const ThreeDPage = () => {
                         {/* Fixed Sensor Sidebar Overlay */}
                         {showSidebar && (
                             <div
-                                className='position-absolute start-0 m-3 p-0 rounded shadow overflow-hidden d-flex flex-column'
+                                className='position-absolute start-0 p-0  shadow overflow-hidden d-flex flex-column'
                                 style={{
-                                    top: '80px',
+                                    top: '122px',
+                                    left: '0',
                                     background: darkModeStatus ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
                                     backdropFilter: 'blur(12px)',
                                     width: '320px',
-                                    maxHeight: 'calc(100% - 110px)',
+                                    height: 'calc(100% - 70px)',
                                     border: darkModeStatus ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
                                     zIndex: 100
                                 }}
                             >
-                                <div className='p-3 border-bottom' style={{ background: darkModeStatus ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)' }}>
-                                    <h6 className={`mb-0 d-flex align-items-center justify-content-between ${darkModeStatus ? 'text-white' : 'text-dark'}`}>
-                                        <span><Icon icon='List' className='me-2 text-info' />Building Sensors</span>
-                                        <Badge color='info' isLight>{sensors.length}</Badge>
-                                    </h6>
+                                <div className='p-0 border-bottom d-flex' >
+                                    <div
+                                        className={`flex-grow-1 p-3 text-center cursor-pointer transition-all ${sidebarTab === 'sensors' ? 'border-bottom border-info border-3 fw-bold text-info' : 'text-muted'}`}
+                                        onClick={() => setSidebarTab('sensors')}
+                                    >
+                                        <Icon icon='Sensors' className='me-2' /> Sensors
+                                    </div>
+                                    <div
+                                        className={`flex-grow-1 p-3 text-center cursor-pointer transition-all ${sidebarTab === 'filters' ? 'border-bottom border-info border-3 fw-bold text-info' : 'text-muted'}`}
+                                        onClick={() => setSidebarTab('filters')}
+                                    >
+                                        <Icon icon='FilterAlt' className='me-2' /> Filters
+                                    </div>
                                 </div>
                                 <div className='flex-grow-1 overflow-auto p-2 scrollbar-hidden'>
-                                    {Object.keys(sensorsByFloor).sort((a, b) => Number(b) - Number(a)).map(floor => (
-                                        <div key={floor} className='mb-3'>
-                                            <div className='small fw-bold mb-1 px-2 text-info text-uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-                                                Floor {floor}
-                                            </div>
-                                            {sensorsByFloor[Number(floor)].map(s => (
-                                                <div
-                                                    key={s.id}
-                                                    className={`p-2 rounded mb-1 cursor-pointer transition-all ${selectedSensor?.id === s.id ? 'bg-info bg-opacity-25 border border-info border-opacity-50 text-info shadow-sm' : (darkModeStatus ? 'hover-bg-dark text-white text-opacity-75' : 'hover-bg-light text-dark text-opacity-75')}`}
-                                                    onClick={() => {
-                                                        const floorLevel = s.floor_level ?? 0;
-                                                        if (!visibleFloors.includes(floorLevel)) {
-                                                            setVisibleFloors(prev => [...prev, floorLevel]);
-                                                        }
-                                                        setSelectedSensor(s);
-                                                        setShowSettingsOverlay(false);
-                                                        setPreviewSensor(s);
-                                                    }}
-                                                    style={{ fontSize: '0.85rem' }}
-                                                >
-                                                    <div className='d-flex align-items-center justify-content-between mb-1'>
-                                                        <div className='text-truncate fw-bold'>{s.name}</div>
-                                                        <Badge
-                                                            color={s.status === 'safe' || s.status === 'Normal' ? 'success' : s.status === 'warning' || s.status === 'Warning' ? 'warning' : 'danger'}
-                                                            isLight
-                                                            style={{ fontSize: '0.7rem' }}
+                                    {sidebarTab === 'sensors' ? (
+                                        <>
+                                            {/* ... sensors list ... */}
+                                            {Object.keys(sensorsByFloor).sort((a, b) => Number(b) - Number(a)).map(floor => (
+                                                <div key={floor} className='mb-3'>
+                                                    <div className='small fw-bold mb-1 px-2 text-info text-uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>
+                                                        Floor {floor}
+                                                    </div>
+                                                    {sensorsByFloor[Number(floor)].map(s => (
+                                                        <div
+                                                            key={s.id}
+                                                            className={`p-2 rounded mb-1 cursor-pointer transition-all ${selectedSensor?.id === s.id ? 'bg-info bg-opacity-25 border border-info border-opacity-50 text-info shadow-sm' : (darkModeStatus ? 'hover-bg-dark text-white text-opacity-75' : 'hover-bg-light text-dark text-opacity-75')}`}
+                                                            onClick={() => {
+                                                                const floorLevel = s.floor_level ?? 0;
+                                                                if (!visibleFloors.includes(floorLevel)) {
+                                                                    setVisibleFloors(prev => [...prev, floorLevel]);
+                                                                }
+                                                                setSelectedSensor(s);
+                                                                setShowSettingsOverlay(false);
+                                                                setPreviewSensor(s);
+                                                            }}
+                                                            style={{ fontSize: '0.85rem' }}
                                                         >
-                                                            {s.status}
-                                                        </Badge>
-                                                    </div>
-                                                    <div className='d-flex gap-2' style={{ fontSize: '0.75rem', opacity: 0.6 }}>
-                                                        <span className='font-monospace'>{s.mac_address || 'NO-MAC'}</span>
-                                                        <span className='ms-auto'>{s.ip_address || 'NO-IP'}</span>
-                                                    </div>
+                                                            <div className='d-flex align-items-center justify-content-between mb-1'>
+                                                                <div className='text-truncate fw-bold'>{s.name}</div>
+                                                                <Badge
+                                                                    color={s.status === 'safe' || s.status === 'Normal' ? 'success' : s.status === 'warning' || s.status === 'Warning' ? 'warning' : 'danger'}
+                                                                    isLight
+                                                                    style={{ fontSize: '0.7rem' }}
+                                                                >
+                                                                    {s.status}
+                                                                </Badge>
+                                                            </div>
+                                                            <div className='d-flex gap-2' style={{ fontSize: '0.75rem', opacity: 0.6 }}>
+                                                                <span className='font-monospace'>{s.mac_address || 'NO-MAC'}</span>
+                                                                <span className='ms-auto'>{s.ip_address || 'NO-IP'}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             ))}
-                                        </div>
-                                    ))}
-                                    {sensors.length === 0 && !isLoading && (
-                                        <div className='text-center py-4 text-muted small'>
-                                            No placed sensors in this area
-                                        </div>
+                                            {sensors.length === 0 && !isLoading && (
+                                                <div className='text-center py-4 text-muted small'>
+                                                    No placed sensors in this area
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <AggregationFilterPanel
+                                            areas={areas}
+                                            selectedAreaIds={selectedAreaIds}
+                                            onAreaSelectionChange={setSelectedAreaIds}
+                                            selectedGroupIds={selectedGroupIds}
+                                            onGroupSelectionChange={setSelectedGroupIds}
+                                            availableFloors={availableFloors}
+                                            visibleFloors={visibleFloors}
+                                            onToggleFloor={toggleFloor}
+                                            onShowAllFloors={() => {
+                                                setSelectedSensor(null);
+                                                setShowSettingsOverlay(false);
+                                                setVisibleFloors(availableFloors);
+                                            }}
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -317,7 +333,7 @@ const ThreeDPage = () => {
                                 <CameraControls
                                     makeDefault
                                     minDistance={5}
-                                    maxDistance={5000}
+                                    maxDistance={1500}
                                 />
 
                                 {/* Environment */}
@@ -370,9 +386,16 @@ const ThreeDPage = () => {
                         <Loader />
 
                         {/* Top Event Config Cards */}
-                        {selectedSensor && (
+                        {selectedSensor ? (
                             <SensorConfigCards sensorId={selectedSensor.id} />
+                        ) : (
+                            <AggregateMetricCards
+                                areaIds={selectedAreaIds}
+                                sensorGroupIds={selectedGroupIds}
+                            />
                         )}
+
+
 
                         {/* Sensor Settings Overlay (Right Side) */}
                         {showSettingsOverlay && selectedSensor && (

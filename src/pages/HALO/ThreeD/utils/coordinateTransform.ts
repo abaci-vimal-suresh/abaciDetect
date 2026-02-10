@@ -53,9 +53,11 @@ export function transformSensorTo3D(
         : z_max;
 
     // Map normalized coordinates to 3D space
+    // No lift - sit exactly on image if verticalOffset is 0
+    const BASE_LIFT = 0;
     const x = calibration.minX + (x_val * calibration.width);
     const z = calibration.minZ + (y_val * calibration.depth);
-    const y = floorY + (verticalOffset * calibration.height);
+    const y = floorY + (verticalOffset * calibration.height) + BASE_LIFT;
 
     return { x, y, z };
 }
@@ -83,14 +85,23 @@ export function transformBoundaryTo3D(
     const z_max = sensor.z_max ?? sensor.boundary?.z_max ?? 1;
 
     const floorY = baseLevel * floorSpacing;
+    const BASE_LIFT = 0; // Sit exactly on floor for accurate placement
+    const MIN_HEIGHT_PELS = 25; // Guaranteed 3D volume even if data is thin
 
     // Calculate 3D coordinates
     const x3D_min = calibration.minX + (x_min * calibration.width);
     const x3D_max = calibration.minX + (x_max * calibration.width);
     const z3D_min = calibration.minZ + (y_min * calibration.depth);
     const z3D_max = calibration.minZ + (y_max * calibration.depth);
-    const y3D_min = floorY + (z_min * calibration.height);
-    const y3D_max = floorY + (z_max * calibration.height);
+
+    // Vertical scaling
+    let y3D_min = floorY + (z_min * calibration.height) + BASE_LIFT;
+    let y3D_max = floorY + (z_max * calibration.height) + BASE_LIFT;
+
+    // Ensure 3D volume
+    if (Math.abs(y3D_max - y3D_min) < MIN_HEIGHT_PELS) {
+        y3D_max = y3D_min + MIN_HEIGHT_PELS;
+    }
 
     // Calculate center position and size
     const position: [number, number, number] = [
@@ -154,6 +165,7 @@ export function transform3DToSensor(
     floorSpacing: number = 4
 ): { x_val: number; y_val: number; z_val: number } {
     const floorY = baseLevel * floorSpacing;
+    const BASE_LIFT = 0;
 
     // Calculate normalized coordinates
     // Ensure we don't divide by zero
@@ -166,7 +178,7 @@ export function transform3DToSensor(
         : 0.5;
 
     const z_val = calibration.height !== 0
-        ? (position.y - floorY) / calibration.height
+        ? (position.y - floorY - BASE_LIFT) / calibration.height
         : 0;
 
     return {
