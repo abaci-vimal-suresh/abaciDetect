@@ -20,11 +20,11 @@ export interface FloorCalibration {
  * These values are approximate and should be auto-calibrated when possible
  */
 export const DEFAULT_FLOOR_CALIBRATION: FloorCalibration = {
-    width: 20,
-    depth: 15,
+    width: 30,
+    depth: 30,
     height: 2.4,
-    minX: -10,
-    minZ: -7.5,
+    minX: -15,
+    minZ: -15,
     minY: 0,
     centerX: 0,
     centerZ: 0
@@ -185,5 +185,43 @@ export function transform3DToSensor(
         x_val: Math.max(0, Math.min(1, x_val)),
         y_val: Math.max(0, Math.min(1, y_val)),
         z_val: Math.max(0, Math.min(1, z_val))
+    };
+}
+
+/**
+ * Transform normalized wall coordinates to 3D position, rotation and size
+ */
+export function transformWallTo3D(
+    wall: any, // Can be Wall or plain object from API
+    calibration: FloorCalibration,
+    baseLevelY: number = 0
+): { position: [number, number, number]; rotation: [number, number, number]; size: [number, number, number] } {
+    // 1. Map normalized points to 3D space
+    const x1 = calibration.minX + (wall.r_x1 * calibration.width);
+    const z1 = calibration.minZ + (wall.r_y1 * calibration.depth);
+    const x2 = calibration.minX + (wall.r_x2 * calibration.width);
+    const z2 = calibration.minZ + (wall.r_y2 * calibration.depth);
+
+    // 2. Calculate vector and length
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+    const length = Math.sqrt(dx * dx + dz * dz);
+
+    // 3. Calculate center point (Horizontal)
+    const centerX = (x1 + x2) / 2;
+    const centerZ = (z1 + z2) / 2;
+
+    // 4. Calculate Vertical position and size
+    const wallHeight = wall.r_height ?? 2.4;
+    const zOffset = wall.r_z_offset ?? 0;
+    const centerY = baseLevelY + zOffset + (wallHeight / 2);
+
+    // 5. Calculate rotation (Y-axis)
+    const rotationY = -Math.atan2(dz, dx);
+
+    return {
+        position: [centerX, centerY, centerZ],
+        rotation: [0, rotationY, 0],
+        size: [length, wallHeight, wall.thickness ?? 0.15]
     };
 }

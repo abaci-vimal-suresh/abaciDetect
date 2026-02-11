@@ -67,7 +67,16 @@ const SensorGroups = () => {
         return areas?.find(area => area.id === Number(areaId));
     }, [areas, areaId]);
 
-    const subAreas = currentArea?.subareas || [];
+    // Map subarea IDs to actual area objects
+    const subAreas = useMemo(() => {
+        const subareaIds = currentArea?.subareas || [];
+        if (!areas || subareaIds.length === 0) return [];
+
+        // Map IDs to actual area objects from the flat areas list
+        return subareaIds
+            .map((id: number) => areas.find(area => area.id === id))
+            .filter((area): area is Area => area !== undefined);
+    }, [currentArea, areas]);
 
     // Get sensors that belong to this area (recursive)
     const areaSensors = useMemo(() => {
@@ -82,7 +91,7 @@ const SensorGroups = () => {
     // Filter sub areas based on search term
     const filteredSubAreas = useMemo(() => {
         return subAreas.filter(subArea =>
-            subArea.name.toLowerCase().includes(searchTerm.toLowerCase())
+            (subArea.name || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [subAreas, searchTerm]);
 

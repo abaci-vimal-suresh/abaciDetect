@@ -23,6 +23,7 @@ const EditAreaModal: React.FC<EditAreaModalProps> = ({ isOpen, setIsOpen, area }
     const [areaType, setAreaType] = useState('building');
     const [areaPlan, setAreaPlan] = useState<File | null>(null);
     const [personInChargeIds, setPersonInChargeIds] = useState<number[]>([]);
+    const [offsetZ, setOffsetZ] = useState<number>(0);
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -30,6 +31,7 @@ const EditAreaModal: React.FC<EditAreaModalProps> = ({ isOpen, setIsOpen, area }
             setName(area.name || '');
             setAreaType(area.area_type || 'building');
             setPersonInChargeIds(area.person_in_charge_ids || []);
+            setOffsetZ(area.offset_z || 0);
             setAreaPlan(null);
             setError('');
         }
@@ -45,6 +47,7 @@ const EditAreaModal: React.FC<EditAreaModalProps> = ({ isOpen, setIsOpen, area }
         const formData = new FormData();
         formData.append('name', name);
         formData.append('area_type', areaType);
+        formData.append('offset_z', offsetZ.toString());
         if (areaPlan) {
             formData.append('area_plan', areaPlan);
         }
@@ -99,6 +102,18 @@ const EditAreaModal: React.FC<EditAreaModalProps> = ({ isOpen, setIsOpen, area }
                                 <option value='zone'>Zone</option>
                                 <option value='other'>Other</option>
                             </select>
+                        </FormGroup>
+                    </div>
+                    <div className='col-12'>
+                        <FormGroup label='Floor Level (Offset Z)'>
+                            <Input
+                                type='number'
+                                step={0.1}
+                                value={offsetZ}
+                                onChange={(e: any) => setOffsetZ(parseFloat(e.target.value) || 0)}
+                                placeholder='0.0'
+                            />
+                            <small className='text-muted'>Vertical offset in meters (e.g., 0 = ground floor, 4 = first floor)</small>
                         </FormGroup>
                     </div>
                     <div className='col-12'>

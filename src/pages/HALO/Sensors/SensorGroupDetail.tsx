@@ -48,7 +48,16 @@ const SensorGroupDetail = () => {
     }, [areas, areaId]);
 
     // Get nested sub-areas (sub-areas of this sub-area)
-    const nestedSubAreas = currentSubArea?.subareas || [];
+    // Since subareas is now an array of IDs, we need to map them to actual area objects
+    const nestedSubAreas = useMemo(() => {
+        const subareaIds = currentSubArea?.subareas || [];
+        if (!areas || subareaIds.length === 0) return [];
+
+        // Map IDs to actual area objects from the flat areas list
+        return subareaIds
+            .map((id: number) => areas.find(area => area.id === id))
+            .filter((area): area is Area => area !== undefined);
+    }, [currentSubArea, areas]);
 
     // Build breadcrumb path from main area to current subarea
     const breadcrumbPath = useMemo(() => {
@@ -80,8 +89,9 @@ const SensorGroupDetail = () => {
 
     // Filter nested sub areas based on search term
     const filteredNestedSubAreas = useMemo(() => {
+        if (!nestedSubAreas) return [];
         return nestedSubAreas.filter(subArea =>
-            subArea.name.toLowerCase().includes(searchTerm.toLowerCase())
+            (subArea.name || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [nestedSubAreas, searchTerm]);
 
@@ -197,8 +207,6 @@ const SensorGroupDetail = () => {
                 </SubHeaderRight>
             </SubHeader>
             <Page container='fluid'>
-
-                {/* Filter Section */}
                 <div className='row mb-4'>
                     <div className='col-12'>
                         <Card>
@@ -248,8 +256,6 @@ const SensorGroupDetail = () => {
                         </Card>
                     </div>
                 </div>
-
-                {/* Nested Sub Areas Section */}
                 {nestedSubAreas.length > 0 && (
                     <div className='mb-4'>
                         <div className='d-flex align-items-center justify-content-between mb-3'>
