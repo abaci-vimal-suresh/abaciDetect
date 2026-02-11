@@ -29,7 +29,7 @@ export const filterSensors = (
 
     return sensors.filter(sensor => {
         const matchesSearch =
-            sensor.name.toLowerCase().includes(term) ||
+            (sensor.name || '').toLowerCase().includes(term) ||
             sensor.mac_address?.toLowerCase().includes(term) ||
             sensor.sensor_type?.toLowerCase().includes(term);
 
@@ -79,10 +79,10 @@ export const getSensorsByArea = (
     return sensors.filter(sensor => {
         // Match by ID (including child areas)
         // Handle case where sensor.area is an object (with id) or a number (the id itself)
-        const sensorAreaId = typeof sensor.area === 'object' && sensor.area !== null 
-            ? sensor.area.id 
+        const sensorAreaId = typeof sensor.area === 'object' && sensor.area !== null
+            ? sensor.area.id
             : sensor.area;
-            
+
         const finalAreaId = Number(sensorAreaId) || Number(sensor.area_id);
 
         if (areaId && areaIds.includes(finalAreaId)) {

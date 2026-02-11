@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
+import { useWalls } from '../../../../api/sensors.api';
 import { Sensor, Area } from '../../../../types/sensor';
-import { FloorModel, SensorMarker, BoundaryBox } from './FloorComponents';
+import { FloorModel, SensorMarker } from './FloorComponents';
+import { WallSegment } from './WallSegment';
 import { flattenAreas } from '../utils/dataTransform';
 import {
     transformSensorTo3D,
-    transformBoundaryTo3D,
+    transformWallTo3D,
     transform3DToSensor,
     calculateSensorStatus,
     DEFAULT_FLOOR_CALIBRATION,
@@ -27,12 +29,45 @@ interface BuildingSceneProps {
     previewData?: any;
 }
 
+/**
+ * Component to handle fetching and rendering walls for a specific area
+ */
+const FloorWallManager = ({
+    areaId,
+    calibration,
+    floorY,
+    isSelected = false
+}: {
+    areaId: number | string,
+    calibration: FloorCalibration,
+    floorY: number,
+    isSelected?: boolean
+}) => {
+    const { data: walls, isLoading } = useWalls(areaId);
+
+    if (isLoading || !walls || walls.length === 0) return null;
+
+    return (
+        <>
+            {walls.map((wall: any) => (
+                <WallSegment
+                    key={`area-wall-${wall.id}`}
+                    wall={wall}
+                    calibration={calibration}
+                    floorY={floorY}
+                    isSelected={isSelected}
+                />
+            ))}
+        </>
+    );
+};
+
 
 export function BuildingScene({
     areas,
     sensors,
     visibleFloors = [0, 1, 2],
-    floorSpacing = 200,
+    floorSpacing = 4.0,
     floorOpacity = 1,
     showBoundaries = true,
     onSensorClick,
@@ -63,7 +98,7 @@ export function BuildingScene({
                 // Smoothly move camera to focus on sensor
                 // We offset the camera slightly so it's not looking straight down
                 controls.setLookAt(
-                    tx + 150, ty + 100, tz + 150, // eye position
+                    tx + 15, ty + 10, tz + 15, // eye position (scaled down from 150)
                     tx, ty, tz,                 // target position
                     true                        // enable transition
                 );
@@ -138,9 +173,14 @@ export function BuildingScene({
             <pointLight position={[-10, 10, -5]} intensity={0.5} />
 
             {/* Render floors */}
-            {floors.map((floor) => {
-                const floorLevel = floor.floor_level ?? floor.offset_z ?? 0;
+            {floors.map((floor, index) => {
+                const floorLevel = floor.floor_level ?? floor.offset_z ?? index;
                 const isVisible = visibleFloors.includes(floorLevel);
+
+                // Use backend offset_z if available, otherwise fallback to floorSpacing
+                // Scale offset_z by a factor (e.g. 4.0) to make it real-world meters if needed
+                const yPosition = floor.offset_z !== undefined ? floor.offset_z * 4.0 : floorLevel * floorSpacing;
+
                 const modelUrl = floor.area_plan || floor.floor_plan_url || '/floor_tiles.glb';
                 const floorSensors = sensorsByArea[floor.id] || [];
 
@@ -149,6 +189,7 @@ export function BuildingScene({
                         <FloorModel
                             key={`floor-${floor.id}`}
                             floorLevel={floorLevel}
+                            yPosition={yPosition}
                             floorSpacing={floorSpacing}
                             visible={isVisible}
                             opacity={floorOpacity}
@@ -157,12 +198,29 @@ export function BuildingScene({
                             modelUrl={modelUrl}
                         />
 
+                        {/* Rendering Walls for this Area/Floor from dedicated endpoint */}
+                        {isVisible && (
+                            <FloorWallManager
+                                areaId={floor.id}
+                                calibration={actualCalibration}
+                                floorY={yPosition}
+                            />
+                        )}
+
+                        {/* Rendering Walls embedded in the floor object (legacy/backup) */}
+                        {isVisible && floor.walls && floor.walls.map((wall) => (
+                            <WallSegment
+                                key={`wall-embedded-${wall.id}`}
+                                wall={wall}
+                                calibration={actualCalibration}
+                                floorY={yPosition}
+                            />
+                        ))}
+
                         {/* Render sensors for this floor only if floor is visible */}
                         {isVisible && floorSensors.map((sensor) => {
                             // Use actualCalibration instead of hardcoded prop
                             const position3D = transformSensorTo3D(sensor, actualCalibration, floorLevel, floorSpacing);
-                            const boundary = transformBoundaryTo3D(sensor, actualCalibration, floorLevel, floorSpacing);
-                            const hasBoundary = !!boundary;
                             const status = calculateSensorStatus(sensor);
                             const isHovered = hoveredSensor === sensor.id;
                             const isSelected = selectedSensorId === sensor.id;
@@ -174,27 +232,16 @@ export function BuildingScene({
                                 position3D.z - (actualCalibration.centerZ || 0)
                             ];
 
-                            // Calculate boundary position if it exists
-                            let boundaryPos: [number, number, number] | null = null;
-                            if (boundary) {
-                                boundaryPos = [
-                                    boundary.position[0] - (actualCalibration.centerX || 0),
-                                    boundary.position[1],
-                                    boundary.position[2] - (actualCalibration.centerZ || 0)
-                                ];
-                            }
-
                             return (
                                 <React.Fragment key={`sensor-${sensor.id}`}>
                                     {/* Sensor marker */}
                                     <SensorMarker
                                         position={sensorPos}
                                         status={status}
-                                        scale={isSelected ? 8.0 : isHovered ? 7.0 : 6.0}
+                                        scale={isSelected ? 0.8 : isHovered ? 0.7 : 0.6}
                                         onClick={() => handleSensorClick(sensor)}
                                         onHover={(hovered) => setHoveredSensor(hovered ? sensor.id : null)}
                                         sensorName={sensor.name}
-                                        hasBoundary={hasBoundary}
                                         isSelected={isSelected}
                                         onDrag={(newPos) => {
                                             const newCoords = transform3DToSensor(
@@ -207,15 +254,16 @@ export function BuildingScene({
                                         }}
                                     />
 
-                                    {/* Boundary box */}
-                                    {showBoundaries && boundary && (
-                                        <BoundaryBox
-                                            position={boundaryPos || boundary.position}
-                                            size={boundary.size}
-                                            color={status === 'safe' ? '#10B981' : status === 'warning' ? '#F59E0B' : '#EF4444'}
-                                            visible={showBoundaries}
+                                    {/* Walls attached directly to the sensor (Room boundaries) */}
+                                    {isSelected && sensor.walls && sensor.walls.map((wall) => (
+                                        <WallSegment
+                                            key={`sensor-wall-${wall.id}`}
+                                            wall={wall}
+                                            calibration={actualCalibration}
+                                            floorY={yPosition}
+                                            isSelected={true}
                                         />
-                                    )}
+                                    ))}
                                 </React.Fragment>
                             );
                         })}
@@ -224,8 +272,8 @@ export function BuildingScene({
             })}
 
 
-            {/* Grid helper for reference */}
-            <gridHelper args={[30, 30, '#444444', '#222222']} position={[0, -0.1, 0]} />
+            {/* Grid helper for reference - 100m grid with 1m squares */}
+            <gridHelper args={[100, 100, '#444444', '#222222']} position={[0, -0.1, 0]} />
         </group>
     );
 }

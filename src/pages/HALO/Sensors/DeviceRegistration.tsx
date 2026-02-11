@@ -51,9 +51,13 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
     const onSubmit = (data: any) => {
         console.log('Form data received:', data);
 
+        // Transform area_id to area for backend
         const apiData = {
             ...data,
-            mac_address: data.mac_address ? data.mac_address.replace(/:/g, '') : data.mac_address
+            mac_address: data.mac_address ? data.mac_address.replace(/:/g, '') : data.mac_address,
+            area: data.area_id, // ✅ Backend expects 'area' not 'area_id'
+            // Remove area_id from payload
+            area_id: undefined
         };
 
         console.log('Cleaned API payload:', apiData);
@@ -293,6 +297,77 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                 </div>
                             </FormGroup>
                         </div>
+
+                        {/* Position Coordinates (X, Y, Z) */}
+                        <div className='col-12'>
+                            <div className='alert alert-info d-flex align-items-center mb-3'>
+                                <Icon icon='Info' className='me-2' />
+                                <small>Set sensor position coordinates (0.0 to 1.0 range). These will place the sensor in the 3D view.</small>
+                            </div>
+                        </div>
+                        <div className='col-12 col-md-4'>
+                            <FormGroup label='X Position (0-1)' className='mb-0'>
+                                <div className='input-icon-wrapper'>
+                                    <Icon icon='SwapHoriz' className='input-icon' />
+                                    <input
+                                        type='number'
+                                        step='0.01'
+                                        min='0'
+                                        max='1'
+                                        className={`form-control input-with-icon ${errors.x_val ? 'is-invalid' : ''}`}
+                                        placeholder='0.5'
+                                        {...register('x_val', {
+                                            valueAsNumber: true,
+                                            min: { value: 0, message: 'X must be between 0 and 1' },
+                                            max: { value: 1, message: 'X must be between 0 and 1' }
+                                        })}
+                                    />
+                                    {errors.x_val && <div className='invalid-feedback'>{errors.x_val.message}</div>}
+                                </div>
+                            </FormGroup>
+                        </div>
+                        <div className='col-12 col-md-4'>
+                            <FormGroup label='Y Position (0-1)' className='mb-0'>
+                                <div className='input-icon-wrapper'>
+                                    <Icon icon='SwapVert' className='input-icon' />
+                                    <input
+                                        type='number'
+                                        step='0.01'
+                                        min='0'
+                                        max='1'
+                                        className={`form-control input-with-icon ${errors.y_val ? 'is-invalid' : ''}`}
+                                        placeholder='0.5'
+                                        {...register('y_val', {
+                                            valueAsNumber: true,
+                                            min: { value: 0, message: 'Y must be between 0 and 1' },
+                                            max: { value: 1, message: 'Y must be between 0 and 1' }
+                                        })}
+                                    />
+                                    {errors.y_val && <div className='invalid-feedback'>{errors.y_val.message}</div>}
+                                </div>
+                            </FormGroup>
+                        </div>
+                        <div className='col-12 col-md-4'>
+                            <FormGroup label='Z Height (meters)' className='mb-0'>
+                                <div className='input-icon-wrapper'>
+                                    <Icon icon='Height' className='input-icon' />
+                                    <input
+                                        type='number'
+                                        step='0.1'
+                                        min='0'
+                                        max='10'
+                                        className={`form-control input-with-icon ${errors.z_val ? 'is-invalid' : ''}`}
+                                        placeholder='0.9'
+                                        {...register('z_val', {
+                                            valueAsNumber: true,
+                                            min: { value: 0, message: 'Z must be at least 0' },
+                                            max: { value: 10, message: 'Z must be at most 10' }
+                                        })}
+                                    />
+                                    {errors.z_val && <div className='invalid-feedback'>{errors.z_val.message}</div>}
+                                </div>
+                            </FormGroup>
+                        </div>
                     </div>
                 )}
 
@@ -338,6 +413,16 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                         : 'Not specified'}
                                 </div>
                             </div>
+                            {(formValues.x_val !== undefined || formValues.y_val !== undefined || formValues.z_val !== undefined) && (
+                                <div className='review-item'>
+                                    <div className='review-label'>Position Coordinates</div>
+                                    <div className='review-value'>
+                                        X: {formValues.x_val ?? 'Not set'} |
+                                        Y: {formValues.y_val ?? 'Not set'} |
+                                        Z: {formValues.z_val ?? 'Not set'}m
+                                    </div>
+                                </div>
+                            )}
                             {(formValues.username || formValues.password) && (
                                 <div className='review-item'>
                                     <div className='review-label'>Credentials</div>

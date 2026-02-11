@@ -4,9 +4,12 @@ import { useFrame, useLoader } from '@react-three/fiber';
 import { Mesh, Box3, Vector3, TextureLoader } from 'three';
 import * as THREE from 'three';
 
+import { FloorImagePlane } from './FloorImagePlane';
+
 interface FloorModelProps {
     floorLevel: number;
     floorSpacing?: number;
+    yPosition?: number;
     visible?: boolean;
     opacity?: number;
     onLoad?: (calibration: any) => void;
@@ -16,7 +19,8 @@ interface FloorModelProps {
 
 export function FloorModel({
     floorLevel,
-    floorSpacing = 4,
+    floorSpacing = 3.5,
+    yPosition,
     visible = true,
     opacity = 1,
     onLoad,
@@ -40,8 +44,8 @@ export function FloorModel({
     const gltf = useGLTF(isImage ? '/floor_tiles.glb' : modelUrl) as any;
     const texture = useTexture(isImage ? modelUrl : TEXTURE_FALLBACK) as any;
 
-    // Calculate Y position based on floor level
-    const yPosition = floorLevel * floorSpacing;
+    // Use provided yPosition or calculate from lower floorLevel
+    const floorY = yPosition !== undefined ? yPosition : floorLevel * floorSpacing;
 
     // Run calibration once model/image is loaded
     useEffect(() => {
@@ -49,8 +53,8 @@ export function FloorModel({
             if (isImage && texture) {
                 // For images, we use a default "Large" size to ensure sensors fit
                 // We also give it a simulated "Height" (like room height) so boundaries have volume
-                const IMAGE_SIZE = 800;
-                const IMAGE_HEIGHT = 100;
+                const IMAGE_SIZE = 30; // 30 meters
+                const IMAGE_HEIGHT = 2.4; // standard room height
                 const size = new THREE.Vector3(IMAGE_SIZE, IMAGE_HEIGHT, IMAGE_SIZE);
                 const min = new THREE.Vector3(-IMAGE_SIZE / 2, 0, -IMAGE_SIZE / 2);
                 const center = new THREE.Vector3(0, 0, 0);
@@ -103,17 +107,22 @@ export function FloorModel({
     if (!gltf && !texture) return null;
 
     return (
-        <group position={[0, yPosition, 0]} visible={visible}>
+        <group position={[0, floorY, 0]} visible={visible}>
             {isImage ? (
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-                    <planeGeometry args={[800, 800]} />
-                    <meshStandardMaterial
-                        map={texture}
-                        transparent={true}
-                        opacity={opacity}
-                        side={THREE.DoubleSide}
-                    />
-                </mesh>
+                <FloorImagePlane
+                    imageUrl={modelUrl}
+                    floorLevel={0} // Positioned by the parent group
+                    floorSpacing={0}
+                    centerModel={centerModel}
+                    visible={visible}
+                    opacity={opacity}
+                    glassThickness={0.1} // 10cm glass thickness
+                    glassTransmission={0.6}
+                    glassRoughness={0.15}
+                    enableEdgeGlow={true}
+                    edgeGlowColor="#4a90e2"
+                    edgeGlowIntensity={0.05}
+                />
             ) : (
                 <primitive
                     object={gltf.scene.clone()}
@@ -180,18 +189,18 @@ export function SensorMarker({
     const beamRef = useRef<THREE.Mesh>(null);
     const [hovered, setHovered] = React.useState(false);
 
-    // Animation for pulsation
-    useFrame(({ clock }: any) => {
-        const t = clock.getElapsedTime();
-        const pulse = (Math.sin(t * 2) + 1) / 2; // 0 to 1
+    // // Animation for pulsation
+    // useFrame(({ clock }: any) => {
+    //     const t = clock.getElapsedTime();
+    //     const pulse = (Math.sin(t * 2) + 1) / 2; // 0 to 1
 
-        if (beamRef.current && !hasBoundary) {
-            (beamRef.current.material as THREE.MeshBasicMaterial).opacity = 0.1 + pulse * 0.2;
-        }
-        if (lightRef.current) {
-            lightRef.current.intensity = 5 + pulse * 10;
-        }
-    });
+    //     if (beamRef.current && !hasBoundary) {
+    //         (beamRef.current.material as THREE.MeshBasicMaterial).opacity = 0.1 + pulse * 0.2;
+    //     }
+    //     if (lightRef.current) {
+    //         lightRef.current.intensity = 5 + pulse * 10;
+    //     }
+    // });
 
     const statusColors = {
         safe: '#10B981',
@@ -299,75 +308,6 @@ export function SensorMarker({
                     <meshBasicMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
                 </mesh>
             </PivotControls>
-        </group>
-    );
-}
-
-interface BoundaryBoxProps {
-    position: [number, number, number];
-    size: [number, number, number];
-    color?: string;
-    opacity?: number;
-    visible?: boolean;
-}
-
-/**
- * BoundaryBox - Transparent pulsating light volume showing sensor coverage
- */
-export function BoundaryBox({
-    position,
-    size,
-    color = '#10B981',
-    opacity = 0.3, // Slightly more opaque
-    visible = true
-}: BoundaryBoxProps) {
-    const materialRef = useRef<THREE.MeshStandardMaterial>(null);
-    const lightRef = useRef<THREE.PointLight>(null);
-
-    if (!visible) return null;
-
-    return (
-        <group position={position}>
-            {/* Internal light source for the volume */}
-            <pointLight
-                ref={lightRef}
-                color={color}
-                distance={Math.max(...size) * 2}
-                decay={1}
-                intensity={5}
-            />
-
-            {/* Main Light Volume */}
-            <mesh>
-                <boxGeometry args={size} />
-                <meshPhongMaterial
-                    color={color}
-                    transparent
-                    opacity={opacity}
-                    emissive={color}
-                    emissiveIntensity={0.5}
-                    side={THREE.DoubleSide}
-                    // depthWrite should be true for proper 3D volume visibility
-                    depthWrite={true}
-                />
-            </mesh>
-
-            {/* Solid Edges to define the 3D Box shape */}
-            <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(...size)]} />
-                <lineBasicMaterial color={color} opacity={0.8} transparent linewidth={2} />
-            </lineSegments>
-
-            {/* Subtle Core Glow */}
-            <mesh scale={0.99}>
-                <boxGeometry args={size} />
-                <meshBasicMaterial
-                    color={color}
-                    transparent
-                    opacity={0.05}
-                    side={THREE.DoubleSide}
-                />
-            </mesh>
         </group>
     );
 }

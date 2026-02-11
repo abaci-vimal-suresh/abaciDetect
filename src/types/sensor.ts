@@ -160,7 +160,8 @@ export interface Sensor {
     heartbeat_interval?: number;
     subarea_id?: number;
     subarea?: SubArea | null;
-    // area?: Area | null;
+    area?: number | Area | null; // Can be ID or object depending on endpoint
+    walls?: Wall[]; // New: Per-sensor walls (e.g. room boundaries)
     // Extended sensor data
     device_name?: string;
     timestamp?: string;
@@ -226,7 +227,7 @@ export interface Sensor {
     floor_level?: number; // Which floor this sensor is on
 
     // Backend Area ID
-    area?: number | Area | null; // Can be ID or object depending on endpoint
+    // area?: number | Area | null; // Can be ID or object depending on endpoint
 
     // Personnel Information
     personnel_in_charge?: string;     // Name of responsible person
@@ -235,6 +236,7 @@ export interface Sensor {
     sensor_group_ids?: number[];
     username?: string;
     password?: string;
+    wall_ids?: number[]; // ✅ Explicit wall IDs
 }
 
 // What to send to backend
@@ -249,12 +251,28 @@ export interface SensorPlacementPayload {
     image_width?: number;
     image_height?: number;
 }
+
+export interface Wall {
+    id: number | string;
+    r_x1: number; // Normalized 0-1
+    r_y1: number; // Normalized 0-1
+    r_x2: number; // Normalized 0-1
+    r_y2: number; // Normalized 0-1
+    r_height?: number; // Meter height (e.g. 2.4)
+    r_z_offset?: number; // Vertical lift
+    color?: string;
+    opacity?: number;
+    thickness?: number;
+    area_ids?: number[]; // ✅ IDs of areas this wall is linked to
+    created_at?: string;
+    updated_at?: string;
+}
 export interface Area {
     id: number;
     name: string;
     area_type?: string; // building, floor, room, etc.
     sensor_count: number;
-    subareas: Area[]; // Changed to Area to support recursion
+    subareas: number[]; // ✅ Array of subarea IDs (flat structure from API)
     description?: string;
     status?: 'Normal' | 'Warning' | 'Critical';
     createdAt?: string;
@@ -285,6 +303,7 @@ export interface Area {
     offset_y?: number;
     offset_z?: number;
     scale_factor?: number;
+    walls?: Wall[]; // New: Area-level walls
 }
 
 export interface SubArea {
@@ -354,6 +373,8 @@ export interface SensorRegistrationData {
     username?: string;
     password?: string;
     area_id?: number;
+    x_val?: number;  // ✅ X coordinate (0-1)
+    y_val?: number;  // ✅ Y coordinate (0-1)
     z_val?: number;
     z_max?: number;
 }
@@ -396,6 +417,7 @@ export interface SensorUpdatePayload {
         z_min?: number;
         z_max?: number;
     };
+    wall_ids?: number[]; // ✅ IDs of walls linked to this sensor
 }
 
 export interface SensorConfig {

@@ -2,20 +2,30 @@ import { Area } from "../../../../types/sensor";
 
 /**
  * Flattens a recursive Area hierarchy into a single array.
- * Useful for finding all floors or rooms across a whole building tree.
+ * If subareas are provided as IDs (numbers), it uses allAreas to find the full objects.
  */
-export function flattenAreas(areas: Area[]): Area[] {
+export function flattenAreas(areas: any[], allAreas?: any[]): Area[] {
     const flat: Area[] = [];
     const seenIds = new Set<number>();
 
-    const traverse = (items: Area[]) => {
+    const traverse = (items: any[]) => {
         items.forEach(item => {
-            if (!seenIds.has(item.id)) {
-                flat.push(item);
-                seenIds.add(item.id);
+            // item can be an Area object or an ID
+            let areaObj: Area | undefined;
+
+            if (typeof item === 'number' || typeof item === 'string') {
+                areaObj = allAreas?.find(a => a.id === Number(item));
+            } else if (item && typeof item === 'object') {
+                areaObj = item as Area;
             }
-            if (item.subareas && item.subareas.length > 0) {
-                traverse(item.subareas);
+
+            if (areaObj && !seenIds.has(areaObj.id)) {
+                flat.push(areaObj);
+                seenIds.add(areaObj.id);
+
+                if (areaObj.subareas && areaObj.subareas.length > 0) {
+                    traverse(areaObj.subareas);
+                }
             }
         });
     };

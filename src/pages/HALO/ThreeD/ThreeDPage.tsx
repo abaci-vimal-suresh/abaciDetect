@@ -2,6 +2,7 @@ import { Suspense, useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { CameraControls, PerspectiveCamera, Environment, Html, Loader } from '@react-three/drei';
+import { EffectComposer, DepthOfField, Bloom, Vignette, Noise } from '@react-three/postprocessing';
 import { BuildingScene } from './components/BuildingScene';
 import SensorSettingsOverlay from './components/SensorSettingsOverlay';
 import SensorDataOverlay from './components/SensorDataOverlay';
@@ -55,7 +56,7 @@ const ThreeDPage = () => {
         }
 
         // Get the building and all its recursive subareas
-        const buildingTree = flattenAreas([targetBuilding]);
+        const buildingTree = flattenAreas([targetBuilding], rawAreas);
         const buildingIds = new Set(buildingTree.map(a => a.id));
 
         // Filter sensors that belong to this building or its subareas
@@ -223,7 +224,7 @@ const ThreeDPage = () => {
                         style={{
                             background: darkModeStatus
                                 ? 'linear-gradient(180deg, #1e1b4b 0%, #0F172A 100%)'
-                                : 'linear-gradient(180deg, #9371b3ff 0%, #ffffff 100%)'
+                                : 'linear-gradient(180deg, #d8d6d9ff 0%, #ffffff 100%)'
                         }}
                     >
                         {/* Fixed Sensor Sidebar Overlay */}
@@ -324,16 +325,16 @@ const ThreeDPage = () => {
                             </div>
                         )}
 
-                        <Canvas>
+                        <Canvas shadows gl={{ antialias: false }}>
                             <Suspense fallback={<Html center><div className='text-white d-flex align-items-center gap-2'><div className='spinner-border spinner-border-sm' /> Initializing 3D Scene...</div></Html>}>
-                                {/* Camera */}
-                                <PerspectiveCamera makeDefault position={[300, 200, 300]} fov={50} />
+                                {/* Camera - Zoomed in for meter scale */}
+                                <PerspectiveCamera makeDefault position={[50, 40, 50]} fov={40} />
 
                                 {/* Controls */}
                                 <CameraControls
                                     makeDefault
-                                    minDistance={5}
-                                    maxDistance={1500}
+                                    minDistance={1}
+                                    maxDistance={500}
                                 />
 
                                 {/* Environment */}
@@ -351,7 +352,7 @@ const ThreeDPage = () => {
                                         });
                                     }, [sensors, previewSensor])}
                                     visibleFloors={visibleFloors}
-                                    floorSpacing={200}
+                                    floorSpacing={4}
                                     floorOpacity={floorOpacity}
                                     showBoundaries={showBoundaries}
                                     selectedSensorId={selectedSensor?.id}

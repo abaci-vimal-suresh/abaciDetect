@@ -8,7 +8,8 @@ import {
     UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData,
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
     AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
-    SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse, N8NAlertPayload
+    SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse, N8NAlertPayload,
+    Wall
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 
@@ -1752,5 +1753,64 @@ export const useUploadWaveFile = () => {
                 'Failed to upload sound file'
             );
         }
+    });
+};
+
+export const useWalls = (areaId: string | number) => {
+    return useQuery({
+        queryKey: ['walls', areaId?.toString()],
+        queryFn: async () => {
+            const { data } = await axiosInstance.get<{ results: Wall[] }>(
+                `/administration/walls/byarea/`,
+                { params: { area_id: areaId } }
+            );
+            return data.results || [];
+        },
+        enabled: !!areaId,
+    });
+};
+
+export const useUpdateWall = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ wallId, data }: { wallId: number | string, data: Partial<Wall> }) => {
+            const response = await axiosInstance.patch<Wall>(`/administration/walls/${wallId}/`, data);
+            return response.data;
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['walls'] });
+            queryClient.invalidateQueries({ queryKey: ['areas'] });
+            queryClient.invalidateQueries({ queryKey: ['sensors'] });
+        },
+    });
+};
+
+export const useCreateWall = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: Partial<Wall>) => {
+            const response = await axiosInstance.post<Wall>('/administration/walls/', data);
+            return response.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['walls'] });
+            queryClient.invalidateQueries({ queryKey: ['areas'] });
+            queryClient.invalidateQueries({ queryKey: ['sensors'] });
+        },
+    });
+};
+
+export const useDeleteWall = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (wallId: number | string) => {
+            await axiosInstance.delete(`/administration/walls/${wallId}/`);
+            return wallId;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['walls'] });
+            queryClient.invalidateQueries({ queryKey: ['areas'] });
+            queryClient.invalidateQueries({ queryKey: ['sensors'] });
+        },
     });
 };
