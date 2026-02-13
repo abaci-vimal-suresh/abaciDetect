@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sensor, SensorUpdatePayload, Wall } from '../../../../types/sensor';
-import { useUpdateSensor, useUpdateWall, useCreateWall, useDeleteWall } from '../../../../api/sensors.api';
+import { useUpdateSensor, useUpdateWall, useCreateWall, useDeleteWall, useWalls } from '../../../../api/sensors.api';
 import Card, { CardBody, CardHeader, CardTitle } from '../../../../components/bootstrap/Card';
 import Button from '../../../../components/bootstrap/Button';
 import Icon from '../../../../components/icon/Icon';
@@ -14,14 +14,18 @@ interface SensorSettingsOverlayProps {
     sensor: Sensor;
     onClose: () => void;
     onPreviewChange?: (values: Partial<SensorUpdatePayload> & { walls?: Wall[] }) => void;
+    onBlinkingWallsChange?: (wallIds: (number | string)[]) => void;
 }
 
-const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, onClose, onPreviewChange }) => {
+const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
+    sensor,
+    onClose,
+    onPreviewChange,
+    onBlinkingWallsChange
+}) => {
     const { darkModeStatus } = useDarkMode();
     const updateSensorMutation = useUpdateSensor();
     const updateWallMutation = useUpdateWall();
-    const createWallMutation = useCreateWall();
-    const deleteWallMutation = useDeleteWall();
 
     // Local state for all editable fields
     const [values, setValues] = useState<Partial<SensorUpdatePayload>>({
@@ -33,12 +37,43 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
 
     const [walls, setWalls] = useState<Wall[]>(sensor.walls || []);
     const [originalWalls, setOriginalWalls] = useState<Wall[]>(JSON.parse(JSON.stringify(sensor.walls || [])));
+    const [collapsedWallIds, setCollapsedWallIds] = useState<(number | string)[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isDirty, setIsDirty] = useState(false);
 
+    // Area Walls Fetching
+    const sensorAreaId = sensor.area_id || (sensor.area as any)?.id || sensor.area;
+    const { data: areaWalls } = useWalls(sensorAreaId);
+
+    const availableAreaWalls = (areaWalls || []).filter(aw =>
+        !walls.find(sw => sw.id === aw.id)
+    );
+
+    // Track hovered wall for blinking
+    const [hoveredWallId, setHoveredWallId] = useState<number | string | null>(null);
+
+    // Sync blinking walls with linked walls + hovered wall
+    useEffect(() => {
+        if (onBlinkingWallsChange) {
+            const linkedIds = walls.map(w => w.id);
+            const allBlinking = hoveredWallId ? [...linkedIds, hoveredWallId] : linkedIds;
+            onBlinkingWallsChange(allBlinking);
+        }
+    }, [walls, hoveredWallId, onBlinkingWallsChange]);
+
+    // Clear blinking on unmount
+    useEffect(() => {
+        return () => {
+            if (onBlinkingWallsChange) onBlinkingWallsChange([]);
+        };
+    }, [onBlinkingWallsChange]);
+
     // Sync state if sensor changes (important for real-time 3D sync)
     useEffect(() => {
-        if (sensor.id !== (values as any).id) {
+        const isSameSensor = sensor.id === (values as any).id;
+
+        if (!isSameSensor) {
+            // Completely different sensor - Reset everything
             setValues({
                 id: sensor.id,
                 x_val: sensor.x_val || 0,
@@ -50,16 +85,24 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
             setOriginalWalls(JSON.parse(JSON.stringify(newWalls)));
             setIsDirty(false);
             setErrors({});
+        } else if (!isDirty) {
+            // Same sensor but background refresh, and user hasn't made changes
+            // Sync current values and walls from prop
+            setValues({
+                id: sensor.id,
+                x_val: sensor.x_val || 0,
+                y_val: sensor.y_val || 0,
+                z_val: sensor.z_val || 0,
+            });
+            const newWalls = sensor.walls || [];
+            setWalls(newWalls);
+            setOriginalWalls(JSON.parse(JSON.stringify(newWalls)));
         } else {
-            setValues(prev => ({
-                ...prev,
-                x_val: sensor.x_val !== undefined ? sensor.x_val : prev.x_val,
-                y_val: sensor.y_val !== undefined ? sensor.y_val : prev.y_val,
-                z_val: sensor.z_val !== undefined ? sensor.z_val : prev.z_val,
-            }));
-            setIsDirty(true);
+            // Same sensor, user has unsaved changes. 
+            // Just update originalWalls so Reset works against latest server data
+            setOriginalWalls(JSON.parse(JSON.stringify(sensor.walls || [])));
         }
-    }, [sensor]);
+    }, [sensor, sensor.id]);
 
     const handleInputChange = (field: keyof SensorUpdatePayload, value: number) => {
         const newValues = { ...values, [field]: value };
@@ -97,6 +140,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
         const initialWalls = JSON.parse(JSON.stringify(originalWalls));
         setValues(initialValues);
         setWalls(initialWalls);
+        setCollapsedWallIds([]);
         setIsDirty(false);
         setErrors({});
 
@@ -108,73 +152,42 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
     const handleSave = async () => {
         if (Object.keys(errors).length > 0) return;
 
-        // 1. Update Sensor Position
-        if (isDirty) {
-            await updateSensorMutation.mutateAsync({
-                sensorId: sensor.id,
-                data: values
+        try {
+            // 1. Handle Modified Walls
+            const modifiedWalls = walls.filter((wall) => {
+                const original = originalWalls.find(ow => ow.id === wall.id);
+                if (!original) return false;
+                return JSON.stringify(wall) !== JSON.stringify(original);
             });
-        }
 
-        // 2. Separate New Walls from Modified Walls and Deleted Walls
-        const newWallsList = walls.filter(w => String(w.id).startsWith('new-'));
-        const existingWallsList = walls.filter(w => !String(w.id).startsWith('new-'));
+            const patchPromises = modifiedWalls.map(wall =>
+                updateWallMutation.mutateAsync({
+                    wallId: wall.id,
+                    data: wall
+                })
+            );
+            await Promise.all(patchPromises);
 
-        // Find deleted walls (walls that were in original but not in current)
-        const deletedWallIds = originalWalls
-            .filter(ow => !walls.find(w => w.id === ow.id))
-            .map(ow => ow.id);
+            // 2. Collect all current wall IDs for unlinking/linking
+            const finalWallIds = walls.map(w => Number(w.id));
 
-        // 3. Handle Created Walls
-        const createPromises = newWallsList.map(wall => {
-            const { id, ...payload } = wall;
-            return createWallMutation.mutateAsync({
-                ...payload,
-                area_ids: (wall.area_ids && wall.area_ids.length > 0)
-                    ? wall.area_ids
-                    : [Number(sensor.area_id || (sensor.area as any)?.id)]
-            });
-        });
+            // 3. Update Sensor with Position AND Wall IDs
+            if (isDirty) {
+                await updateSensorMutation.mutateAsync({
+                    sensorId: sensor.id,
+                    data: {
+                        ...values,
+                        wall_ids: finalWallIds
+                    }
+                });
+            }
 
-        // 4. Handle Modified Walls
-        const modifiedWalls = existingWallsList.filter((wall) => {
-            const original = originalWalls.find(ow => ow.id === wall.id);
-            if (!original) return false;
-            return JSON.stringify(wall) !== JSON.stringify(original);
-        });
-
-        const patchPromises = modifiedWalls.map(wall =>
-            updateWallMutation.mutateAsync({
-                wallId: wall.id,
-                data: wall
-            })
-        );
-
-        // 5. Handle Deleted Walls
-        const deletePromises = deletedWallIds.map(id => deleteWallMutation.mutateAsync(id));
-
-        await Promise.all([...createPromises, ...patchPromises, ...deletePromises]);
-
-        if (onPreviewChange) {
-            onPreviewChange({});
-        }
-        onClose();
-    };
-
-    const handleAddWall = () => {
-        const currentAreaId = Number(sensor.area_id || (sensor.area as any)?.id || sensor.area);
-        const newWall: Wall = {
-            id: `new-${Date.now()}`,
-            r_x1: 0, r_y1: 0, r_x2: 1, r_y2: 0,
-            r_height: 2.4,
-            color: '#ffffff',
-            area_ids: currentAreaId ? [currentAreaId] : []
-        };
-        const updatedWalls = [...walls, newWall];
-        setWalls(updatedWalls);
-        setIsDirty(true);
-        if (onPreviewChange) {
-            onPreviewChange({ ...values, walls: updatedWalls });
+            if (onPreviewChange) {
+                onPreviewChange({});
+            }
+            onClose();
+        } catch (error) {
+            console.error('Error saving sensor settings:', error);
         }
     };
 
@@ -182,6 +195,25 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
         const updatedWalls = walls.filter(w => w.id !== wallId);
         setWalls(updatedWalls);
         setIsDirty(true);
+        if (onPreviewChange) {
+            onPreviewChange({ ...values, walls: updatedWalls });
+        }
+    };
+
+    const toggleWallCollapse = (wallId: number | string) => {
+        setCollapsedWallIds(prev =>
+            prev.includes(wallId)
+                ? prev.filter(id => id !== wallId)
+                : [...prev, wallId]
+        );
+    };
+
+    const handleLinkAreaWall = (areaWall: Wall) => {
+        const updatedWalls = [...walls, areaWall];
+        setWalls(updatedWalls);
+        setIsDirty(true);
+        // Ensure the newly linked wall is expanded
+        setCollapsedWallIds(prev => prev.filter(id => id !== areaWall.id));
         if (onPreviewChange) {
             onPreviewChange({ ...values, walls: updatedWalls });
         }
@@ -275,142 +307,139 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
                         <div className="d-flex align-items-center mb-3">
                             <Icon icon="ViewQuilt" className="text-info me-2" />
                             <h6 className="mb-0 text-uppercase small fw-bold text-info">Wall Configuration</h6>
-                            <Button
-                                color="info" size="sm" isLight
-                                onClick={handleAddWall}
-                                icon="Add"
-                                className="ms-auto"
-                            >
-                                Add Wall
-                            </Button>
                         </div>
 
                         {walls.length === 0 && (
                             <div className="text-muted small py-2 text-center">No walls attached to this sensor</div>
                         )}
 
-                        {walls.map((wall, idx) => (
-                            <div key={wall.id} className="mb-4 pb-3 border-bottom-dashed">
-                                <div className="d-flex justify-content-between align-items-center mb-2">
-                                    <Badge color={String(wall.id).startsWith('new-') ? 'success' : 'light'} isLight className="text-dark">
-                                        {String(wall.id).startsWith('new-') ? 'New Wall' : `Wall Segment ${idx + 1}`}
-                                    </Badge>
-                                    <div className="d-flex align-items-center">
-                                        <div className="small font-monospace opacity-50 me-2">ID: {wall.id}</div>
-                                        <Button
-                                            color="danger" size="sm" isLight
-                                            onClick={() => handleDeleteWall(wall.id)}
-                                            icon="Delete"
-                                            className="p-1"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="mb-3">
-                                    <div className="small text-muted mb-1 x-small font-weight-bold d-flex justify-content-between">
-                                        Linked Areas
-                                    </div>
-                                    <div className="d-flex flex-wrap gap-1 mb-2">
-                                        {wall.area_ids?.map(aId => (
-                                            <Badge key={aId} color="info" isLight className="x-small d-flex align-items-center">
-                                                Area {aId}
-                                                <Icon
-                                                    icon="Close" size="sm" className="ms-1 cursor-pointer"
-                                                    onClick={() => handleRemoveAreaId(wall.id, aId)}
-                                                />
+                        {walls.map((wall, idx) => {
+                            const isCollapsed = collapsedWallIds.includes(wall.id);
+                            return (
+                                <div key={wall.id} className="mb-4 pb-3 border-bottom-dashed">
+                                    <div
+                                        className="d-flex justify-content-between align-items-center mb-2 cursor-pointer"
+                                        onClick={() => toggleWallCollapse(wall.id)}
+                                    >
+                                        <div className="d-flex align-items-center">
+                                            <Icon
+                                                icon={isCollapsed ? "ChevronRight" : "ExpandMore"}
+                                                className="me-2 text-muted"
+                                            />
+                                            <Badge color='light' isLight className="text-dark me-2">
+                                                {`Wall Segment ${idx + 1}`}
                                             </Badge>
-                                        ))}
-                                        {(!wall.area_ids || wall.area_ids.length === 0) && (
-                                            <span className="text-danger x-small">No areas linked</span>
-                                        )}
+                                            {wall.area_ids && wall.area_ids.length > 0 && (
+                                                <Badge color="info" isLight className="text-dark">Area Wall</Badge>
+                                            )}
+                                        </div>
+                                        <div className="d-flex align-items-center">
+                                            <div className="small font-monospace opacity-50 me-2">ID: {wall.id}</div>
+                                            <Button
+                                                color="danger" size="sm" isLight
+                                                onClick={(e: any) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteWall(wall.id);
+                                                }}
+                                                icon="LinkOff"
+                                                className="p-1"
+                                                title="Unlink from sensor"
+                                            />
+                                        </div>
                                     </div>
-                                    <InputGroup size="sm">
-                                        <Input
-                                            type="number" placeholder="Add Area ID..."
-                                            onKeyDown={(e: any) => {
-                                                if (e.key === 'Enter') {
-                                                    handleAreaIdChange(wall.id, e.target.value);
-                                                    e.target.value = '';
-                                                }
-                                            }}
-                                        />
+
+                                    {!isCollapsed && (
+                                        <div className="mt-3 animate-fade-in">
+                                            <div className="row g-2 mb-2">
+                                                <div className="col-6">
+                                                    <FormGroup label="Start X (0-1)">
+                                                        <Input
+                                                            type="number" step={0.01}
+                                                            value={wall.r_x1}
+                                                            onChange={(e: any) => handleWallChange(wall.id, 'r_x1', parseFloat(e.target.value) || 0)}
+                                                        />
+                                                    </FormGroup>
+                                                </div>
+                                                <div className="col-6">
+                                                    <FormGroup label="Start Y (0-1)">
+                                                        <Input
+                                                            type="number" step={0.01}
+                                                            value={wall.r_y1}
+                                                            onChange={(e: any) => handleWallChange(wall.id, 'r_y1', parseFloat(e.target.value) || 0)}
+                                                        />
+                                                    </FormGroup>
+                                                </div>
+                                            </div>
+
+                                            <div className="row g-2 mb-2">
+                                                <div className="col-6">
+                                                    <FormGroup label="End X (0-1)">
+                                                        <Input
+                                                            type="number" step={0.01}
+                                                            value={wall.r_x2}
+                                                            onChange={(e: any) => handleWallChange(wall.id, 'r_x2', parseFloat(e.target.value) || 0)}
+                                                        />
+                                                    </FormGroup>
+                                                </div>
+                                                <div className="col-6">
+                                                    <FormGroup label="End Y (0-1)">
+                                                        <Input
+                                                            type="number" step={0.01}
+                                                            value={wall.r_y2}
+                                                            onChange={(e: any) => handleWallChange(wall.id, 'r_y2', parseFloat(e.target.value) || 0)}
+                                                        />
+                                                    </FormGroup>
+                                                </div>
+                                            </div>
+
+                                            <div className="row g-2">
+                                                <div className="col-6">
+                                                    <FormGroup label="Height (m)">
+                                                        <Input
+                                                            type="number" step={0.1}
+                                                            value={wall.r_height || 2.4}
+                                                            onChange={(e: any) => handleWallChange(wall.id, 'r_height', parseFloat(e.target.value) || 0)}
+                                                        />
+                                                    </FormGroup>
+                                                </div>
+                                                <div className="col-6">
+                                                    <FormGroup label="Color">
+                                                        <Input
+                                                            type="color"
+                                                            value={wall.color || '#ffffff'}
+                                                            onChange={(e: any) => handleWallChange(wall.id, 'color', e.target.value)}
+                                                        />
+                                                    </FormGroup>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {/* Available Area Walls Section */}
+                        {availableAreaWalls.length > 0 && (
+                            <div className="mt-4 pt-3 border-top">
+                                <h6 className="mb-3 text-uppercase small fw-bold text-info">Available Area Walls</h6>
+                                <div className="d-flex flex-wrap gap-2">
+                                    {availableAreaWalls.map(aw => (
                                         <Button
-                                            color="info" isLight size="sm"
-                                            onClick={(e: any) => {
-                                                const input = e.target.closest('.input-group').querySelector('input');
-                                                handleAreaIdChange(wall.id, input.value);
-                                                input.value = '';
-                                            }}
+                                            key={`avail-${aw.id}`}
+                                            color="info" size="sm" isLight
+                                            onClick={() => handleLinkAreaWall(aw)}
+                                            onMouseEnter={() => setHoveredWallId(aw.id)}
+                                            onMouseLeave={() => setHoveredWallId(null)}
+                                            className="d-flex align-items-center"
                                         >
-                                            Link
+                                            <Icon icon="Link" className="me-1" />
+                                            Wall {aw.id}
                                         </Button>
-                                    </InputGroup>
+                                    ))}
                                 </div>
-
-                                <div className="row g-2 mb-2">
-                                    <div className="col-6">
-                                        <FormGroup label="Start X (0-1)">
-                                            <Input
-                                                type="number" step={0.01}
-                                                value={wall.r_x1}
-                                                onChange={(e: any) => handleWallChange(wall.id, 'r_x1', parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormGroup>
-                                    </div>
-                                    <div className="col-6">
-                                        <FormGroup label="Start Y (0-1)">
-                                            <Input
-                                                type="number" step={0.01}
-                                                value={wall.r_y1}
-                                                onChange={(e: any) => handleWallChange(wall.id, 'r_y1', parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormGroup>
-                                    </div>
-                                </div>
-
-                                <div className="row g-2 mb-2">
-                                    <div className="col-6">
-                                        <FormGroup label="End X (0-1)">
-                                            <Input
-                                                type="number" step={0.01}
-                                                value={wall.r_x2}
-                                                onChange={(e: any) => handleWallChange(wall.id, 'r_x2', parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormGroup>
-                                    </div>
-                                    <div className="col-6">
-                                        <FormGroup label="End Y (0-1)">
-                                            <Input
-                                                type="number" step={0.01}
-                                                value={wall.r_y2}
-                                                onChange={(e: any) => handleWallChange(wall.id, 'r_y2', parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormGroup>
-                                    </div>
-                                </div>
-
-                                <div className="row g-2">
-                                    <div className="col-6">
-                                        <FormGroup label="Height (m)">
-                                            <Input
-                                                type="number" step={0.1}
-                                                value={wall.r_height || 2.4}
-                                                onChange={(e: any) => handleWallChange(wall.id, 'r_height', parseFloat(e.target.value) || 0)}
-                                            />
-                                        </FormGroup>
-                                    </div>
-                                    <div className="col-6">
-                                        <FormGroup label="Color">
-                                            <Input
-                                                type="color"
-                                                value={wall.color || '#ffffff'}
-                                                onChange={(e: any) => handleWallChange(wall.id, 'color', e.target.value)}
-                                            />
-                                        </FormGroup>
-                                    </div>
-                                </div>
+                                <div className="text-muted small mt-1">Existing walls from this area that can be linked to the sensor.</div>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </CardBody>
                 <div className="p-3 border-top mt-auto" style={{ background: darkModeStatus ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
@@ -418,10 +447,10 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
                         <Button
                             color="primary"
                             onClick={handleSave}
-                            isDisable={!isDirty || Object.keys(errors).length > 0 || updateSensorMutation.isPending || updateWallMutation.isPending || createWallMutation.isPending || deleteWallMutation.isPending}
+                            isDisable={!isDirty || Object.keys(errors).length > 0 || updateSensorMutation.isPending || updateWallMutation.isPending}
                             isOutline={false}
                         >
-                            {updateSensorMutation.isPending || updateWallMutation.isPending || createWallMutation.isPending || deleteWallMutation.isPending ? (
+                            {updateSensorMutation.isPending || updateWallMutation.isPending ? (
                                 <><span className="spinner-border spinner-border-sm me-2" />Saving...</>
                             ) : (
                                 'Save Changes'
@@ -430,7 +459,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({ sensor, o
                         <Button
                             color="light"
                             onClick={handleReset}
-                            isDisable={!isDirty || updateSensorMutation.isPending || updateWallMutation.isPending || deleteWallMutation.isPending}
+                            isDisable={!isDirty || updateSensorMutation.isPending || updateWallMutation.isPending}
                         >
                             Reset
                         </Button>

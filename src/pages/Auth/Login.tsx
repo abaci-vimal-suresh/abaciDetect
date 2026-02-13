@@ -31,12 +31,8 @@ const Login = () => {
 
     // Redirect if already logged in
     useEffect(() => {
-        if (userData !== null) {
-            if (Object.keys(userData).length > 0) {
-                navigate('/');
-            } else {
-                setTimeout(() => setIsLoading(false), 500);
-            }
+        if (userData && Object.keys(userData).length > 0) {
+            navigate('/');
         } else {
             setTimeout(() => setIsLoading(false), 500);
         }
@@ -126,12 +122,6 @@ const Login = () => {
             className="login-page">
             <Page className='mt-4'>
                 <div className='login-card mx-auto'>
-                    <div className='login-logo d-flex justify-content-between align-items-center'>
-                        <Icon icon='Sensors' color='primary' className='brand-icon' />
-                        <Icon icon='Sensors' color='danger' className='brand-icon' />
-                        <Icon icon='Sensors' color='info' className='brand-icon' />
-                    </div>
-
                     <div className='text-center login-title'>
                         {import.meta.env.VITE_SITE_NAME}
                     </div>
@@ -212,14 +202,6 @@ const Login = () => {
                             </Button>
                         </div>
 
-                        <div className='text-center mt-4'>
-                            <p className='user-select-none small opacity-75'>
-                                Don't have an account?{' '}
-                                <Link to="/public/establishment-registration" className='fw-bold text-decoration-none'>
-                                    Register here
-                                </Link>
-                            </p>
-                        </div>
                     </form>
                 </div>
             </Page>

@@ -12,6 +12,8 @@ import {
     Wall
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
+import { USE_MOCK_DATA } from '../config';
+import { mockAreas, mockSensors } from '../mockData/sensors';
 
 
 export const useUsers = () => {
@@ -117,6 +119,9 @@ export const useAreas = () => {
     return useQuery({
         queryKey: ['areas'],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                return mockAreas;
+            }
             const { data } = await axiosInstance.get('/administration/areas/?include_subareas=true');
             return data as Area[];
         },
@@ -278,6 +283,9 @@ export const useSensors = (filters?: {
     return useQuery({
         queryKey: queryKeys.sensors.list(filters || {}),
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                return mockSensors;
+            }
             const params = new URLSearchParams();
             if (filters?.areaId) params.append('area', filters.areaId);
             if (filters?.status && filters.status !== 'all') {

@@ -120,6 +120,45 @@ export const autoLoginMock = () => {
 // REACT QUERY HOOKS
 // ============================================
 
+export interface RegisterCredentials extends LoginCredentials {
+    email: string;
+}
+
+import { setMockHasUsers } from './system.api';
+
+/**
+ * Register Super Admin Hook
+ */
+export const useRegisterSuperAdmin = () => {
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (credentials: RegisterCredentials): Promise<void> => {
+            if (USE_MOCK_AUTH) {
+                // Mock behavior: simulate successful registration
+                console.log('🚀 Mock Registering Super Admin:', credentials);
+                setMockHasUsers(true); // Simulate account creation
+                return new Promise((resolve) => setTimeout(resolve, 800));
+            }
+
+            // Real API call
+            await publicAxios.post('/users/register-super-admin/', credentials);
+        },
+        onSuccess: () => {
+            console.log('✅ Super Admin Registered Successfully');
+            showSuccessNotification('Super Admin account created successfully');
+            // Invalidate system status to trigger ProductValidation re-check
+            queryClient.invalidateQueries({ queryKey: ['systemStatus'] });
+        },
+        onError: (error: any) => {
+            console.error('❌ Registration Error:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to create Super Admin account';
+            showErrorNotification(errorMessage);
+        },
+    });
+};
+
 /**
  * Login Hook
  * Handles user authentication with automatic token/session management

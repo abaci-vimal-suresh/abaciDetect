@@ -1,4 +1,6 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useTour } from '@reactour/tour';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 
@@ -9,6 +11,7 @@ import Card, { CardBody } from '../../../components/bootstrap/Card';
 import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
 import Spinner from '../../../components/bootstrap/Spinner';
+import Modal, { ModalHeader, ModalBody, ModalTitle, ModalFooter } from '../../../components/bootstrap/Modal';
 
 import ThemeContext from '../../../contexts/themeContext';
 import useTablestyle from '../../../hooks/useTablestyles';
@@ -26,6 +29,18 @@ const UserList = () => {
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editUserId, setEditUserId] = useState<number | null>(null);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { setCurrentStep } = useTour();
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        if (urlParams.get('startTour') === 'true' && localStorage.getItem('showGuidedTour') === 'active') {
+            setIsCreateOpen(true);
+        }
+    }, [location.search]);
 
     const staticColumns = [
         {
@@ -161,7 +176,12 @@ const UserList = () => {
                     <span className="h4 fw-bold mb-0">Users</span>
                 </SubHeaderLeft>
                 <SubHeaderRight>
-                    <Button color="primary" icon="Add" onClick={() => setIsCreateOpen(true)}>
+                    <Button
+                        color="primary"
+                        icon="Add"
+                        onClick={() => setIsCreateOpen(true)}
+                        data-tour="create-user-btn"
+                    >
                         Create User
                     </Button>
                 </SubHeaderRight>
@@ -198,12 +218,57 @@ const UserList = () => {
                 </Card>
             </Page>
 
-            <UserCreateModal isOpen={isCreateOpen} setIsOpen={setIsCreateOpen} />
             <UserEditModal
                 isOpen={!!editUserId}
                 setIsOpen={() => setEditUserId(null)}
                 userId={editUserId}
             />
+
+            {/* User Creation Success Modal (Tour only) */}
+            <UserCreateModal
+                isOpen={isCreateOpen}
+                setIsOpen={setIsCreateOpen}
+                onSuccess={() => {
+                    if (localStorage.getItem('showGuidedTour') === 'active') {
+                        setIsSuccessModalOpen(true);
+                    }
+                }}
+            />
+            <Modal isOpen={isSuccessModalOpen} setIsOpen={setIsSuccessModalOpen} isCentered size='lg'>
+                <ModalHeader setIsOpen={setIsSuccessModalOpen}>
+                    <ModalTitle id='user-success-title'>👤 User Created Successfully!</ModalTitle>
+                </ModalHeader>
+                <ModalBody className='text-center py-4'>
+                    <div className='display-4 text-success mb-3'>
+                        <Icon icon='CheckCircle' />
+                    </div>
+                    <h4>Great job!</h4>
+                    <p className='text-muted'>
+                        You've created your first team member. Now, let's define the physical
+                        <strong> Areas</strong> where your sensors will be located.
+                    </p>
+                </ModalBody>
+                <ModalFooter className='justify-content-center border-0 pb-4'>
+                    <Button
+                        color='primary'
+                        className='w-100 mb-2 py-2'
+                        onClick={() => {
+                            setIsSuccessModalOpen(false);
+                            setCurrentStep(1); // Move to Area creation step
+                            navigate('/halo/sensors/areas?startTour=true');
+                        }}
+                    >
+                        Next: Create an Area
+                    </Button>
+                    <Button
+                        color='light'
+                        className='w-100'
+                        onClick={() => setIsSuccessModalOpen(false)}
+                    >
+                        I'll do it later
+                    </Button>
+                </ModalFooter>
+            </Modal>
         </PageWrapper>
     );
 };

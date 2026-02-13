@@ -4,6 +4,7 @@ import Badge from '../../../../components/bootstrap/Badge';
 import useDarkMode from '../../../../hooks/useDarkMode';
 import Checks from '../../../../components/bootstrap/forms/Checks';
 import { useSensorGroups } from '../../../../api/sensors.api';
+import Button from '../../../../components/bootstrap/Button';
 
 interface AggregationFilterPanelProps {
     areas: any[];
@@ -11,10 +12,8 @@ interface AggregationFilterPanelProps {
     onAreaSelectionChange: (ids: (number | string)[]) => void;
     selectedGroupIds: (number | string)[];
     onGroupSelectionChange: (ids: (number | string)[]) => void;
-    availableFloors: number[];
-    visibleFloors: number[];
-    onToggleFloor: (level: number) => void;
-    onShowAllFloors: () => void;
+    onShowAllAreas: () => void;
+    onEditAreaWalls: (area: any) => void;
 }
 
 const AggregationFilterPanel: React.FC<AggregationFilterPanelProps> = ({
@@ -23,10 +22,8 @@ const AggregationFilterPanel: React.FC<AggregationFilterPanelProps> = ({
     onAreaSelectionChange,
     selectedGroupIds,
     onGroupSelectionChange,
-    availableFloors,
-    visibleFloors,
-    onToggleFloor,
-    onShowAllFloors
+    onShowAllAreas,
+    onEditAreaWalls
 }) => {
     const { darkModeStatus } = useDarkMode();
     const { data: groups, isLoading: groupsLoading } = useSensorGroups();
@@ -56,49 +53,21 @@ const AggregationFilterPanel: React.FC<AggregationFilterPanelProps> = ({
 
     return (
         <div className="p-2 no-scrollbar overflow-auto h-100">
-            {/* Floors Section */}
+            {/* Areas Section */}
             <div className='mb-4'>
                 <div className='d-flex justify-content-between align-items-center mb-2 px-2'>
                     <div className='small fw-bold text-info text-uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-                        <Icon icon="Layers" className="me-1" /> Floors
+                        <Icon icon="PinDrop" className="me-1" /> Areas ({selectedAreaIds.length})
                     </div>
-                    {availableFloors.length > 0 && (
+                    {selectableAreas.length > 0 && (
                         <div
                             className="text-info cursor-pointer hover-text-primary fw-bold"
                             style={{ fontSize: '0.7rem' }}
-                            onClick={onShowAllFloors}
+                            onClick={onShowAllAreas}
                         >
                             SHOW ALL
                         </div>
                     )}
-                </div>
-                {availableFloors.map(floor => (
-                    <div
-                        key={`floor-toggle-${floor}`}
-                        className={`p-2 rounded mb-1 cursor-pointer transition-all d-flex align-items-center justify-content-between ${visibleFloors.includes(floor) ? 'bg-info bg-opacity-25 border border-info border-opacity-50 text-info shadow-sm' : (darkModeStatus ? 'hover-bg-dark text-white text-opacity-75' : 'hover-bg-light text-dark text-opacity-75')}`}
-                        onClick={() => onToggleFloor(floor)}
-                        style={{ fontSize: '0.85rem' }}
-                    >
-                        <div className="d-flex align-items-center">
-                            <Checks
-                                id={`floor-check-${floor}`}
-                                checked={visibleFloors.includes(floor)}
-                                onChange={() => onToggleFloor(floor)}
-                                className="me-2"
-                            />
-                            <div className="fw-bold">Floor {floor}</div>
-                        </div>
-                    </div>
-                ))}
-                {availableFloors.length === 0 && (
-                    <div className="text-center py-2 text-muted x-small">No floors found</div>
-                )}
-            </div>
-
-            {/* Areas Section */}
-            <div className='mb-4'>
-                <div className='small fw-bold mb-2 px-2 text-info text-uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-                    <Icon icon="PinDrop" className="me-1" /> Areas ({selectedAreaIds.length})
                 </div>
                 {selectableAreas.map(area => (
                     <div
@@ -107,14 +76,26 @@ const AggregationFilterPanel: React.FC<AggregationFilterPanelProps> = ({
                         onClick={() => toggleArea(area.id)}
                         style={{ fontSize: '0.85rem' }}
                     >
-                        <div className="d-flex align-items-center">
+                        <div className="d-flex align-items-center flex-grow-1 overflow-hidden">
                             <Checks
                                 id={`area-${area.id}`}
                                 checked={isAreaSelected(area.id)}
                                 onChange={() => toggleArea(area.id)}
                                 className="me-2"
                             />
-                            <div className="fw-bold">{area.name}</div>
+                            <div className="fw-bold text-truncate me-2">{area.name}</div>
+                            <Button
+                                color="info"
+                                size="sm"
+                                isLight
+                                className="p-1 line-height-1 ms-auto"
+                                onClick={(e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    onEditAreaWalls(area);
+                                }}
+                            >
+                                <Icon icon="Settings" size="sm" />
+                            </Button>
                         </div>
                         <div style={{ opacity: 0.6, fontSize: '0.75rem' }}>
                             {area.area_type === 'floor' ? 'Floor' : 'Zone'}

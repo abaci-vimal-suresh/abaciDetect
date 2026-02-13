@@ -17,7 +17,7 @@ import {
 interface BuildingSceneProps {
     areas: Area[];
     sensors: Sensor[];
-    visibleFloors?: number[];
+    visibleAreaIds?: (number | string)[];
     floorSpacing?: number;
     floorOpacity?: number;
     showBoundaries?: boolean;
@@ -27,6 +27,7 @@ interface BuildingSceneProps {
     selectedSensorId?: string | null;
     setSelectedSensorId?: (id: string | null) => void;
     previewData?: any;
+    blinkingWallIds?: (number | string)[];
 }
 
 /**
@@ -36,26 +37,39 @@ const FloorWallManager = ({
     areaId,
     calibration,
     floorY,
-    isSelected = false
+    isSelected = false,
+    previewData,
+    blinkingWallIds = []
 }: {
     areaId: number | string,
     calibration: FloorCalibration,
     floorY: number,
-    isSelected?: boolean
+    isSelected?: boolean,
+    previewData?: any,
+    blinkingWallIds?: (number | string)[]
 }) => {
     const { data: walls, isLoading } = useWalls(areaId);
 
-    if (isLoading || !walls || walls.length === 0) return null;
+    const displayWalls = useMemo(() => {
+        // If previewData exists and is for this area's walls
+        if (previewData && previewData.walls) {
+            return previewData.walls;
+        }
+        return walls || [];
+    }, [walls, previewData]);
+
+    if ((isLoading && !previewData) || displayWalls.length === 0) return null;
 
     return (
         <>
-            {walls.map((wall: any) => (
+            {displayWalls.map((wall: any) => (
                 <WallSegment
                     key={`area-wall-${wall.id}`}
                     wall={wall}
                     calibration={calibration}
                     floorY={floorY}
                     isSelected={isSelected}
+                    isBlinking={blinkingWallIds.includes(wall.id)}
                 />
             ))}
         </>
@@ -66,7 +80,7 @@ const FloorWallManager = ({
 export function BuildingScene({
     areas,
     sensors,
-    visibleFloors = [0, 1, 2],
+    visibleAreaIds = [],
     floorSpacing = 4.0,
     floorOpacity = 1,
     showBoundaries = true,
@@ -75,7 +89,8 @@ export function BuildingScene({
     calibration = DEFAULT_FLOOR_CALIBRATION,
     selectedSensorId,
     setSelectedSensorId,
-    previewData
+    previewData,
+    blinkingWallIds = []
 }: BuildingSceneProps) {
     const { controls } = useThree() as any;
     const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
@@ -175,7 +190,7 @@ export function BuildingScene({
             {/* Render floors */}
             {floors.map((floor, index) => {
                 const floorLevel = floor.floor_level ?? floor.offset_z ?? index;
-                const isVisible = visibleFloors.includes(floorLevel);
+                const isVisible = visibleAreaIds.length === 0 || visibleAreaIds.includes(Number(floor.id));
 
                 // Use backend offset_z if available, otherwise fallback to floorSpacing
                 // Scale offset_z by a factor (e.g. 4.0) to make it real-world meters if needed
@@ -204,6 +219,8 @@ export function BuildingScene({
                                 areaId={floor.id}
                                 calibration={actualCalibration}
                                 floorY={yPosition}
+                                previewData={previewData}
+                                blinkingWallIds={blinkingWallIds}
                             />
                         )}
 
@@ -262,6 +279,7 @@ export function BuildingScene({
                                             calibration={actualCalibration}
                                             floorY={yPosition}
                                             isSelected={true}
+                                            isBlinking={blinkingWallIds.includes(wall.id)}
                                         />
                                     ))}
                                 </React.Fragment>

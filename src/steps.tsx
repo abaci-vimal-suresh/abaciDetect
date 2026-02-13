@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTour } from '@reactour/tour';
 import { createUseStyles } from 'react-jss';
 import SusyDarkMode from './assets/img/wanna/susy/susy-dark-mode.png';
@@ -12,6 +12,7 @@ import Susy7 from './assets/img/wanna/susy/susy7.png';
 import Susy8 from './assets/img/wanna/susy/susy8.png';
 import Susy9 from './assets/img/wanna/susy/susy9.png';
 import Susy10 from './assets/img/wanna/susy/susy10.png';
+import { useNavigate } from 'react-router-dom';
 import useDarkMode from './hooks/useDarkMode';
 import Button from './components/bootstrap/Button';
 import { componentPagesMenu } from './menu';
@@ -57,26 +58,35 @@ const useStyles = createUseStyles({
  * @constructor
  */
 const TourNavigation = () => {
-	const { currentStep, setCurrentStep } = useTour();
+	const { currentStep, setCurrentStep, setIsOpen } = useTour();
 	return (
-		<div className='col-12 mt-3'>
-			<div className='row'>
+		<div className='col-12 mt-4'>
+			<div className='row g-2'>
 				<div className='col'>
 					{!!currentStep && (
 						<Button
 							icon='ArrowBackIos'
 							color='info'
 							isLink
+							size='sm'
 							onClick={() => setCurrentStep(currentStep - 1)}>
-							Prev
+							Back
 						</Button>
 					)}
 				</div>
-				<div className='col-auto'>
+				<div className='col-auto d-flex gap-2'>
+					<Button
+						color='danger'
+						isLink
+						size='sm'
+						onClick={() => setIsOpen(false)}>
+						Exit
+					</Button>
 					<Button
 						icon='ArrowForwardIos'
-						color='info'
+						color='primary'
 						isLight
+						size='sm'
 						onClick={() => setCurrentStep(currentStep + 1)}>
 						Next
 					</Button>
@@ -889,6 +899,158 @@ const steps = [
 	{
 		selector: 'body',
 		content: () => <LastTour />,
+	},
+];
+
+/**
+ * HALO Guided Tour Steps
+ */
+const HaloAreaStep = () => {
+	const classes = useStyles();
+
+	return (
+		<div className='row p-2'>
+			<div className='col-md-4'>
+				<img src={Susy5} className={classes.image} width='100%' alt='' />
+			</div>
+			<div className='col-md-8 d-flex align-items-center'>
+				<div>
+					<p className='lead fw-bold'>Step 2: Create an Area</p>
+					<p>Now, let's define where your sensors will be located. Type a name for your first coverage area (e.g., <strong>Building A</strong> or <strong>Main Floor</strong>).</p>
+				</div>
+			</div>
+			<TourNavigation />
+		</div>
+	);
+};
+
+const HaloSensorStep = () => {
+	const navigate = useNavigate();
+	const classes = useStyles();
+
+	return (
+		<div className='row p-2'>
+			<div className='col-md-4'>
+				<img src={Susy} className={classes.image} width='100%' alt='' />
+			</div>
+			<div className='col-md-8 d-flex align-items-center'>
+				<div>
+					<p className='lead fw-bold'>Step 3: Register a Device</p>
+					<p>Now that you have an area, you can register your HALO sensors. Click <strong>"Register New Device"</strong> to start adding hardware.</p>
+					<Button
+						color='primary'
+						size='sm'
+						className='mt-2'
+						onClick={() => navigate('/halo/sensors/list')}>
+						Go to Sensors List
+					</Button>
+				</div>
+			</div>
+			<TourNavigation />
+		</div>
+	);
+};
+
+const HaloFinishStep = () => {
+	const { setIsOpen } = useTour();
+	const classes = useStyles();
+
+	return (
+		<div className='row p-2 text-center'>
+			<div className='col-12 mb-3'>
+				<img src={Susy10} className={classes.image} height='100' alt='' />
+			</div>
+			<div className='col-12'>
+				<h3 className='fw-bold'>You're all set!</h3>
+				<p className='lead'>You've learned the basics of setting up your HALO system.</p>
+				<Button
+					color='success'
+					className='w-100 py-2 rounded-pill'
+					onClick={() => setIsOpen(false)}>
+					Finish Tour
+				</Button>
+			</div>
+		</div>
+	);
+};
+
+const HaloUserStep = () => {
+	const { setIsOpen } = useTour();
+	return (
+		<div className='row p-2'>
+			<div className='col-md-4'>
+				<img src={Susy} width='100%' alt='' />
+			</div>
+			<div className='col-md-8 d-flex align-items-center'>
+				<div>
+					<p className='lead fw-bold'>Step 1: Create a Team Member</p>
+					<p>Start by adding a user who will manage your sensors. Give them a username, email, and assign them a role.</p>
+					<div className='mt-3 d-flex gap-2'>
+						<Button
+							color='light'
+							size='sm'
+							onClick={() => {
+								setIsOpen(false);
+								localStorage.setItem('showGuidedTour', 'false');
+							}}
+						>
+							Skip for Now
+						</Button>
+					</div>
+				</div>
+			</div>
+			<TourNavigation />
+		</div>
+	);
+};
+
+export const haloSteps = [
+	{
+		selector: '[data-tour="user-username-input"]',
+		content: () => <HaloUserStep />,
+	},
+	{
+		selector: '[data-tour="area-name-input"]',
+		content: () => <HaloAreaStep />,
+	},
+	{
+		selector: '[data-tour="sensor-name-input"]',
+		content: () => (
+			<div className='row p-2'>
+				<div className='col-md-4'>
+					<img src={Susy} width='100%' alt='' />
+				</div>
+				<div className='col-md-8 d-flex align-items-center'>
+					<div>
+						<p className='lead fw-bold'>Step 3: Register a Device</p>
+						<p>Give your sensor a friendly name and select its type. This helps identify the device in your dashboard.</p>
+					</div>
+				</div>
+				<TourNavigation />
+			</div>
+		),
+	},
+	{
+		selector: '[data-tour="sensor-continue-btn"]',
+		content: () => (
+			<div className='p-2'>
+				<p>Click <strong>Continue</strong> to set up network details for this sensor.</p>
+				<TourNavigation />
+			</div>
+		),
+	},
+	{
+		selector: '[data-tour="sensor-confirm-btn"]',
+		content: () => (
+			<div className='p-2'>
+				<p>Review your settings and click <strong>Confirm & Register</strong> to add the sensor to your system.</p>
+				<TourNavigation />
+			</div>
+		),
+	},
+	{
+		selector: 'body',
+		content: () => <HaloFinishStep />,
 	},
 ];
 

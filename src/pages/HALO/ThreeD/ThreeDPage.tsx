@@ -5,6 +5,7 @@ import { CameraControls, PerspectiveCamera, Environment, Html, Loader } from '@r
 import { EffectComposer, DepthOfField, Bloom, Vignette, Noise } from '@react-three/postprocessing';
 import { BuildingScene } from './components/BuildingScene';
 import SensorSettingsOverlay from './components/SensorSettingsOverlay';
+import AreaSettingsOverlay from './components/AreaSettingsOverlay';
 import SensorDataOverlay from './components/SensorDataOverlay';
 import SensorConfigCards from './components/SensorConfigCards';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
@@ -24,16 +25,18 @@ import { flattenAreas } from './utils/dataTransform';
 const ThreeDPage = () => {
     const { areaId: urlAreaId } = useParams<{ areaId: string }>();
     const { darkModeStatus } = useDarkMode();
-    const [visibleFloors, setVisibleFloors] = useState<number[]>([0, 1, 2]);
     const [showBoundaries, setShowBoundaries] = useState(true);
     const [floorOpacity, setFloorOpacity] = useState(1);
-    const [selectedSensor, setSelectedSensor] = useState<any>(null);
+    const [selectedSensorId, setSelectedSensorId] = useState<number | string | null>(null);
     const [showSidebar, setShowSidebar] = useState(true);
     const [sidebarTab, setSidebarTab] = useState<'sensors' | 'filters'>('sensors');
     const [selectedAreaIds, setSelectedAreaIds] = useState<(number | string)[]>([]);
     const [selectedGroupIds, setSelectedGroupIds] = useState<(number | string)[]>([]);
     const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
+    const [editingAreaForWalls, setEditingAreaForWalls] = useState<any>(null);
     const [previewSensor, setPreviewSensor] = useState<any>(null);
+    const [previewAreaWalls, setPreviewAreaWalls] = useState<any>(null);
+    const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
 
     // Live API Data
     const { data: areasData, isLoading: areasLoading } = useAreas();
@@ -99,6 +102,13 @@ const ThreeDPage = () => {
     const areas = filteredAreas;
     const sensors = filteredSensors;
 
+    // Derive selected sensor from ID to ensure we always have the freshest data from the query
+    const selectedSensor = useMemo(() => {
+        if (!selectedSensorId) return null;
+        // Search in sensors list (which contains enriched data)
+        return sensors.find(s => s.id === selectedSensorId) || null;
+    }, [sensors, selectedSensorId]);
+
     // Extract unique floors for UI toggles
     const availableFloors = useMemo(() => {
         const floorLevels = areas
@@ -110,12 +120,13 @@ const ThreeDPage = () => {
         return uniqueLevels.sort((a, b) => a - b);
     }, [areas]);
 
-    // Update visible floors when data loads
+    // Update selected areas when data loads (show everything by default)
     useEffect(() => {
-        if (availableFloors.length > 0 && !selectedSensor) {
-            setVisibleFloors(availableFloors);
+        if (areas.length > 0 && selectedAreaIds.length === 0 && !urlAreaId) {
+            const floorIds = areas.filter(a => a.area_type === 'floor' || a.area_type === 'room').map(a => a.id);
+            setSelectedAreaIds(floorIds);
         }
-    }, [availableFloors]);
+    }, [areas, urlAreaId, selectedAreaIds.length]);
 
     // Initialize selectedAreaIds from URL
     useEffect(() => {
@@ -124,24 +135,18 @@ const ThreeDPage = () => {
         }
     }, [urlAreaId]);
 
-    // Floor Isolation: only show sensor's floor when selected
+    // Area Isolation: only show selected area/room when sensor is selected
     useEffect(() => {
         if (selectedSensor) {
-            const floorLevel = selectedSensor.floor_level ?? 0;
-            setVisibleFloors([floorLevel]);
-        } else if (availableFloors.length > 0) {
-            // Restore all floors when nothing is selected
-            setVisibleFloors(availableFloors);
+            const sensorAreaId = typeof selectedSensor.area === 'object' && selectedSensor.area !== null
+                ? selectedSensor.area.id
+                : (selectedSensor.area || selectedSensor.area_id);
+            if (sensorAreaId) {
+                setSelectedAreaIds([Number(sensorAreaId)]);
+            }
         }
-    }, [selectedSensor, availableFloors]);
+    }, [selectedSensor]);
 
-    const toggleFloor = (floorLevel: number) => {
-        setVisibleFloors(prev =>
-            prev.includes(floorLevel)
-                ? prev.filter(f => f !== floorLevel)
-                : [...prev, floorLevel]
-        );
-    };
 
     const isLoading = areasLoading || sensorsLoading;
 
@@ -218,7 +223,6 @@ const ThreeDPage = () => {
                         </CardHeader>
                     </Card>
 
-                    {/* 3D Canvas */}
                     <div
                         className='flex-grow-1 position-relative'
                         style={{
@@ -270,11 +274,14 @@ const ThreeDPage = () => {
                                                             key={s.id}
                                                             className={`p-2 rounded mb-1 cursor-pointer transition-all ${selectedSensor?.id === s.id ? 'bg-info bg-opacity-25 border border-info border-opacity-50 text-info shadow-sm' : (darkModeStatus ? 'hover-bg-dark text-white text-opacity-75' : 'hover-bg-light text-dark text-opacity-75')}`}
                                                             onClick={() => {
-                                                                const floorLevel = s.floor_level ?? 0;
-                                                                if (!visibleFloors.includes(floorLevel)) {
-                                                                    setVisibleFloors(prev => [...prev, floorLevel]);
+                                                                const sensorAreaId = typeof s.area === 'object' && s.area !== null
+                                                                    ? s.area.id
+                                                                    : (s.area || s.area_id);
+
+                                                                if (sensorAreaId && !selectedAreaIds.includes(Number(sensorAreaId))) {
+                                                                    setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
                                                                 }
-                                                                setSelectedSensor(s);
+                                                                setSelectedSensorId(s.id);
                                                                 setShowSettingsOverlay(false);
                                                                 setPreviewSensor(s);
                                                             }}
@@ -311,13 +318,17 @@ const ThreeDPage = () => {
                                             onAreaSelectionChange={setSelectedAreaIds}
                                             selectedGroupIds={selectedGroupIds}
                                             onGroupSelectionChange={setSelectedGroupIds}
-                                            availableFloors={availableFloors}
-                                            visibleFloors={visibleFloors}
-                                            onToggleFloor={toggleFloor}
-                                            onShowAllFloors={() => {
-                                                setSelectedSensor(null);
+                                            onShowAllAreas={() => {
+                                                setSelectedSensorId(null);
                                                 setShowSettingsOverlay(false);
-                                                setVisibleFloors(availableFloors);
+                                                setEditingAreaForWalls(null);
+                                                const floorIds = areas.filter(a => a.area_type === 'floor' || a.area_type === 'room').map(a => a.id);
+                                                setSelectedAreaIds(floorIds);
+                                            }}
+                                            onEditAreaWalls={(area) => {
+                                                setSelectedSensorId(null);
+                                                setShowSettingsOverlay(false);
+                                                setEditingAreaForWalls(area);
                                             }}
                                         />
                                     )}
@@ -351,36 +362,45 @@ const ThreeDPage = () => {
                                             return s;
                                         });
                                     }, [sensors, previewSensor])}
-                                    visibleFloors={visibleFloors}
+                                    visibleAreaIds={selectedAreaIds}
                                     floorSpacing={4}
                                     floorOpacity={floorOpacity}
                                     showBoundaries={showBoundaries}
-                                    selectedSensorId={selectedSensor?.id}
+                                    selectedSensorId={selectedSensorId}
                                     setSelectedSensorId={(id) => {
                                         const sensor = sensors.find(s => s.id === id);
                                         if (sensor) {
-                                            const floorLevel = sensor.floor_level ?? 0;
-                                            if (!visibleFloors.includes(floorLevel)) {
-                                                setVisibleFloors(prev => [...prev, floorLevel]);
+                                            const sensorAreaId = typeof sensor.area === 'object' && sensor.area !== null
+                                                ? sensor.area.id
+                                                : (sensor.area || sensor.area_id);
+
+                                            if (sensorAreaId && !selectedAreaIds.includes(Number(sensorAreaId))) {
+                                                setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
                                             }
                                         }
-                                        setSelectedSensor(sensor);
+                                        setSelectedSensorId(id);
                                         setShowSettingsOverlay(true);
                                     }}
                                     onSensorClick={(sensor) => {
-                                        const floorLevel = sensor.floor_level ?? 0;
-                                        if (!visibleFloors.includes(floorLevel)) {
-                                            setVisibleFloors(prev => [...prev, floorLevel]);
+                                        const sensorAreaId = typeof sensor.area === 'object' && sensor.area !== null
+                                            ? sensor.area.id
+                                            : (sensor.area || sensor.area_id);
+
+                                        if (sensorAreaId && !selectedAreaIds.includes(Number(sensorAreaId))) {
+                                            setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
                                         }
-                                        setSelectedSensor(sensor);
+                                        setSelectedSensorId(sensor.id);
                                         setShowSettingsOverlay(false);
+                                        setEditingAreaForWalls(null);
                                         console.log('Sensor clicked:', sensor);
                                     }}
                                     onSensorDrag={(sensor, newCoords) => {
                                         const updatedSensor = { ...sensor, ...newCoords };
                                         setPreviewSensor(updatedSensor);
-                                        setSelectedSensor(updatedSensor);
+                                        setSelectedSensorId(sensor.id);
                                     }}
+                                    previewData={previewAreaWalls}
+                                    blinkingWallIds={blinkingWallIds}
                                 />
                             </Suspense>
                         </Canvas>
@@ -408,6 +428,7 @@ const ThreeDPage = () => {
                                 onPreviewChange={(newValues) => {
                                     setPreviewSensor({ ...selectedSensor, ...newValues });
                                 }}
+                                onBlinkingWallsChange={setBlinkingWallIds}
                             />
                         )}
 
@@ -415,8 +436,22 @@ const ThreeDPage = () => {
                         {!showSettingsOverlay && selectedSensor && (
                             <SensorDataOverlay
                                 sensor={selectedSensor}
-                                onClose={() => setSelectedSensor(null)}
+                                onClose={() => setSelectedSensorId(null)}
                                 onSettingsClick={() => setShowSettingsOverlay(true)}
+                            />
+                        )}
+
+                        {/* Area Walls Overlay */}
+                        {editingAreaForWalls && (
+                            <AreaSettingsOverlay
+                                area={editingAreaForWalls}
+                                onClose={() => {
+                                    setEditingAreaForWalls(null);
+                                    setPreviewAreaWalls(null);
+                                }}
+                                onPreviewChange={(values) => {
+                                    setPreviewAreaWalls(values);
+                                }}
                             />
                         )}
                     </div>
