@@ -6,19 +6,6 @@ import { baseURL } from '../helpers/baseURL';
 import { USE_MOCK_DATA } from '../config';
 
 // Mock Data
-const MOCK_DEVICE_CONFIG: DeviceConfig = {
-    id: 304,
-    device_name: "Halo_Abaci",
-    ip_address: "192.168.1.137",
-    mac_address: "B0B353D1A0CE",
-    building_wing: "North Wing",
-    building_floor: "3rd Floor",
-    building_room: "Room 301",
-    description: "Main conference room sensor",
-    network_type: "DHCP",
-    firmware_version: "2.11.0.6.409-3"
-};
-
 const MOCK_THRESHOLDS: ThresholdConfig = {
     device_id: 304,
     motion_sensitivity: 50,
@@ -286,27 +273,6 @@ export interface ReportTemplate {
 // ============================================
 // API CALLS
 // ============================================
-
-// Device Configuration
-export const fetchDeviceConfig = async (deviceId: string): Promise<DeviceConfig> => {
-    if (USE_MOCK_DATA) {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(MOCK_DEVICE_CONFIG), 500);
-        });
-    }
-    const { data } = await axios.get(`${baseURL}/devices/${deviceId}/config`);
-    return data;
-};
-
-export const updateDeviceConfig = async (config: Partial<DeviceConfig>): Promise<DeviceConfig> => {
-    if (USE_MOCK_DATA) {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve({ ...MOCK_DEVICE_CONFIG, ...config }), 500);
-        });
-    }
-    const { data } = await axios.patch(`${baseURL}/devices/${config.id}/config`, config);
-    return data;
-};
 
 // Thresholds
 export const fetchThresholds = async (deviceId: string): Promise<ThresholdConfig> => {
@@ -640,24 +606,6 @@ export const generateReport = async (templateId: number): Promise<Blob> => {
 // ============================================
 // REACT QUERY HOOKS
 // ============================================
-
-export const useDeviceConfig = (deviceId: string) => {
-    return useQuery({
-        queryKey: ['deviceConfig', deviceId],
-        queryFn: () => fetchDeviceConfig(deviceId),
-        enabled: !!deviceId,
-    });
-};
-
-export const useUpdateDeviceConfig = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: updateDeviceConfig,
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ['deviceConfig', data.id] });
-        },
-    });
-};
 
 export const useThresholds = (deviceId: string) => {
     return useQuery({

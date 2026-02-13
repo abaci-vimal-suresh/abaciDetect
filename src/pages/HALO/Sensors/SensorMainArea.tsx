@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTour } from '@reactour/tour';
 import Page from '../../../layout/Page/Page';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
@@ -22,6 +23,7 @@ import EditAreaModal from './modals/EditAreaModal';
 const SensorMainArea = () => {
 
     const navigate = useNavigate();
+    const { setCurrentStep } = useTour();
 
     const { data: areas, isLoading } = useAreas();
     const { data: allSensors, isLoading: sensorsLoading } = useSensors();
@@ -31,6 +33,7 @@ const SensorMainArea = () => {
     const deleteAreaMutation = useDeleteArea();
 
     const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingArea, setEditingArea] = useState<Area | null>(null);
     const [isSensorModalOpen, setIsSensorModalOpen] = useState(false);
@@ -47,6 +50,15 @@ const SensorMainArea = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'tree'>('grid');
+
+    const location = useLocation();
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        if (urlParams.get('startTour') === 'true') {
+            setIsAreaModalOpen(true);
+        }
+    }, [location.search]);
 
     // Get main areas (areas with no parent)
     const mainAreas = useMemo(() => {
@@ -100,6 +112,11 @@ const SensorMainArea = () => {
                 setScaleFactor(1.0);
                 setPersonInChargeIds([]);
                 setError('');
+
+                // Trigger success modal if tour is active
+                if (localStorage.getItem('showGuidedTour') === 'active') {
+                    setIsSuccessModalOpen(true);
+                }
             },
         });
     };
@@ -191,6 +208,7 @@ const SensorMainArea = () => {
                         icon='Add'
                         className='me-2'
                         onClick={() => setIsAreaModalOpen(true)}
+                        data-tour='create-area-btn'
                     >
                         Create New Area
                     </Button>
@@ -407,6 +425,7 @@ const SensorMainArea = () => {
                                     onKeyPress={(e) => {
                                         if (e.key === 'Enter') handleCreateArea();
                                     }}
+                                    data-tour='area-name-input'
                                 />
                                 {error && <div className='invalid-feedback'>{error}</div>}
                             </FormGroup>
@@ -418,6 +437,7 @@ const SensorMainArea = () => {
                                     className='form-select'
                                     value={areaType}
                                     onChange={(e) => setAreaType(e.target.value)}
+                                    data-tour='area-type-select'
                                 >
                                     <option value='building'>Building</option>
                                     <option value='floor'>Floor</option>
@@ -604,6 +624,42 @@ const SensorMainArea = () => {
                 setIsOpen={setIsEditModalOpen}
                 area={editingArea}
             />
+
+            {/* Area Creation Success Modal (Tour only) */}
+            <Modal isOpen={isSuccessModalOpen} setIsOpen={setIsSuccessModalOpen} isCentered size='lg'>
+                <ModalHeader setIsOpen={setIsSuccessModalOpen}>
+                    <ModalTitle id='area-success-title'>✨ Area Created Success!</ModalTitle>
+                </ModalHeader>
+                <ModalBody className='text-center py-4'>
+                    <div className='display-4 text-success mb-3'>
+                        <Icon icon='CheckCircle' />
+                    </div>
+                    <h4>Great job!</h4>
+                    <p className='text-muted'>
+                        Your first coverage area is now set up. The next step is to register and assign sensors to this area.
+                    </p>
+                </ModalBody>
+                <ModalFooter className='flex-column'>
+                    <Button
+                        color='primary'
+                        className='w-100 mb-2 py-2'
+                        onClick={() => {
+                            setIsSuccessModalOpen(false);
+                            setCurrentStep(2); // Move to Sensor registration (Step 3)
+                            navigate('/halo/sensors/list?startTour=true');
+                        }}
+                    >
+                        Go to Sensor Registration <Icon icon='ArrowForward' className='ms-2' />
+                    </Button>
+                    <Button
+                        color='light'
+                        isLink
+                        onClick={() => setIsSuccessModalOpen(false)}
+                    >
+                        I'll do it later
+                    </Button>
+                </ModalFooter>
+            </Modal>
         </PageWrapper >
     );
 };

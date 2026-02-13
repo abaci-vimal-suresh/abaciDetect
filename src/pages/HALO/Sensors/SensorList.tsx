@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import Page from '../../../layout/Page/Page';
@@ -38,6 +39,15 @@ const SensorList = () => {
     const [triggeringId, setTriggeringId] = useState<number | null>(null);
 
     const deleteSensorMutation = useDeleteSensor();
+
+    const location = useLocation();
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        if (urlParams.get('startTour') === 'true') {
+            setIsModalOpen(true);
+        }
+    }, [location.search]);
 
     // Debounce search input
     useEffect(() => {
@@ -421,6 +431,7 @@ const SensorList = () => {
                         color='primary'
                         icon='Add'
                         onClick={() => setIsModalOpen(true)}
+                        data-tour='register-device-btn'
                     >
                         Register New Device
                     </Button>

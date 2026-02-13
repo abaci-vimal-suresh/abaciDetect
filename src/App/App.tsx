@@ -1,8 +1,8 @@
-import React, { useContext, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
+import React, { useContext, useEffect, useLayoutEffect, useRef, useMemo, Suspense } from 'react';
 import { ThemeProvider } from 'react-jss';
 import { ReactNotifications } from 'react-notifications-component';
 import { useFullscreen } from 'react-use';
-import { TourProvider } from '@reactour/tour';
+import { TourProvider, useTour } from '@reactour/tour';
 import { ToastContainer } from 'react-toastify';
 import ThemeContext from '../contexts/themeContext';
 import Wrapper from '../layout/Wrapper/Wrapper';
@@ -13,17 +13,40 @@ import { getOS } from '../helpers/helpers';
 // import steps, { styles } from '../steps';
 import AsideRoutes from '../layout/Aside/AsideRoutes';
 import { ToastCloseButton } from '../components/bootstrap/Toasts';
+import ProductValidation from '../components/ProductValidation';
+import AbaciLoader from '../components/AbaciLoader/AbaciLoader';
+import AuthContext from '../contexts/authContext';
+import WelcomeTourModal from '../components/WelcomeTourModal';
+import { useSystemConfig, useGenerateLicenseKey } from '../api/system.api';
 
 const App = () => {
 	useEffect(() => {
 	}, []);
 
 	const { themeStatus, darkModeStatus } = useDarkMode();
-	const [tourConfig, setTourConfig] = React.useState<{ steps: any[]; styles: any } | null>(null);
+	const [tourConfig, setTourConfig] = React.useState<{ steps: any[]; haloSteps: any[]; styles: any } | null>(null);
+
+	const { data: systemConfig, isLoading: isSystemConfigLoading } = useSystemConfig();
+	const { mutate: generateLicense } = useGenerateLicenseKey();
+
+	useEffect(() => {
+		if (systemConfig) {
+			console.log('🚀 System Configuration:', systemConfig);
+
+			// If not activated, trigger license generation
+			if (systemConfig.is_activated === false && systemConfig.device_id) {
+				generateLicense(systemConfig.device_id);
+			}
+		}
+	}, [systemConfig, generateLicense]);
 
 	useEffect(() => {
 		import('../steps').then((module) => {
-			setTourConfig({ steps: module.default, styles: module.styles });
+			setTourConfig({
+				steps: module.default,
+				haloSteps: module.haloSteps,
+				styles: module.styles
+			});
 		});
 	}, []);
 
@@ -73,17 +96,29 @@ const App = () => {
 		}
 	}, []);
 
+	const { userData } = useContext(AuthContext);
+
+	// Check if we should use halo steps
+	const isHaloTour = localStorage.getItem('showGuidedTour') === 'active';
+	const currentSteps = isHaloTour ? (tourConfig?.haloSteps || []) : (tourConfig?.steps || []);
+
 	return (
 		<ThemeProvider theme={theme}>
 			<TourProvider
-				steps={tourConfig?.steps || []}
+				steps={currentSteps}
 				styles={tourConfig?.styles || {}}
 				showNavigation={false}
 				showBadge={false}>
+				<TourClosedDetector />
 				<div ref={ref} className='app' style={appStyles}>
-					<AsideRoutes />
-					<Wrapper />
+					<ProductValidation>
+						<Suspense fallback={<AbaciLoader />}>
+							{userData && <AsideRoutes />}
+						</Suspense>
+						<Wrapper />
+					</ProductValidation>
 				</div>
+				<WelcomeTourModal />
 				<Portal id='portal-notification'>
 					<ReactNotifications />
 				</Portal>
@@ -92,6 +127,44 @@ const App = () => {
 			</TourProvider>
 		</ThemeProvider>
 	);
+};
+
+const TourClosedDetector = () => {
+	const { isOpen, setIsOpen, currentStep, setCurrentStep } = useTour();
+
+	// 1. Initial Load: If tour is active, restore last step and open
+	useEffect(() => {
+		const status = localStorage.getItem('showGuidedTour');
+		if (status === 'active') {
+			const savedStep = localStorage.getItem('tourCurrentStep');
+			if (savedStep) {
+				setCurrentStep(parseInt(savedStep, 10));
+			}
+			setIsOpen(true);
+		}
+	}, [setIsOpen, setCurrentStep]);
+
+	// 2. Continuous Sync: Save step whenever it changes
+	useEffect(() => {
+		if (isOpen) {
+			localStorage.setItem('tourCurrentStep', currentStep.toString());
+		}
+	}, [currentStep, isOpen]);
+
+	// 3. Cleanup: Reset if tour is closed
+	useEffect(() => {
+		if (!isOpen) {
+			const status = localStorage.getItem('showGuidedTour');
+			if (status === 'active') {
+				localStorage.setItem('showGuidedTour', 'false');
+				localStorage.removeItem('tourCurrentStep');
+				// Reload to revert to default steps if needed
+				window.location.reload();
+			}
+		}
+	}, [isOpen, setIsOpen]);
+
+	return null;
 };
 
 export default App;

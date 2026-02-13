@@ -16,9 +16,10 @@ import Option from '../../../../components/bootstrap/Option';
 interface UserCreateModalProps {
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
+    onSuccess?: () => void;
 }
 
-const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) => {
+const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen, onSuccess }) => {
     const { darkModeStatus } = useDarkMode();
     const { data: areas } = useAreas();
     const { data: users } = useUsers();
@@ -87,6 +88,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
                 head_id: formData.head_id
             });
             handleClose();
+            if (onSuccess) onSuccess();
         } catch (err) {
             console.error("Failed to create user", err);
         }
@@ -102,7 +104,10 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
                     checked={formData.assigned_area_ids.includes(area.id)}
                     onChange={() => handleAreaToggle(area.id)}
                 />
-                {area.subareas && area.subareas.map(sub => renderAreaItem(sub, depth + 1))}
+                {/* @ts-ignore */}
+                {area.subareas && area.subareas.length > 0 && typeof area.subareas[0] === 'object' &&
+                    // @ts-ignore
+                    area.subareas.map((sub: Area) => renderAreaItem(sub, depth + 1))}
             </div>
         );
     };
@@ -131,6 +136,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
                                                 value={formData.username}
                                                 onChange={(e: any) => setFormData({ ...formData, username: e.target.value })}
                                                 placeholder="Unique username"
+                                                data-tour="user-username-input"
                                             />
                                         </FormGroup>
                                     </div>
@@ -142,6 +148,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
                                                 value={formData.email}
                                                 onChange={(e: any) => setFormData({ ...formData, email: e.target.value })}
                                                 placeholder="user@example.com"
+                                                data-tour="user-email-input"
                                             />
                                         </FormGroup>
                                     </div>
@@ -300,6 +307,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen }) 
                     onClick={handleSubmit}
                     isDisable={addUserMutation.isPending}
                     icon={addUserMutation.isPending ? undefined : 'Save'}
+                    data-tour="user-save-btn"
                 >
                     {addUserMutation.isPending ? 'Creating User...' : 'Create User'}
                 </Button>

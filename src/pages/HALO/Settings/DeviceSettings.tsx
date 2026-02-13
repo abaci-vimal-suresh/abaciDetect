@@ -8,23 +8,12 @@ import Card, { CardBody, CardHeader, CardTitle } from '../../../components/boots
 import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
 import Spinner from '../../../components/bootstrap/Spinner';
-import Alert from '../../../components/bootstrap/Alert';
 import classNames from 'classnames';
-import { useDeviceConfig } from '../../../api/device.setting.api';
 import { useSensor } from '../../../api/sensors.api';
 import ThemeContext from '../../../contexts/themeContext';
-
-// Import sub-components
 import DeviceConfigSection from './sections/DeviceConfigSection';
 import ThresholdManagementSection from './sections/ThresholdManagementSection';
-// import CalibrationMaintenanceSection from './sections/CalibrationMaintenanceSection';
-import SafetySecuritySection from './sections/SafetySecuritySection';
-import AlertFilterSection from './sections/AlertFilterSection';
-// import DataLoggingSection from './sections/DataLoggingSection';
-// import DisplayPreferencesSection from './sections/DisplayPreferencesSection';
-// import AdvancedFeaturesSection from './sections/AdvancedFeaturesSection';
-// import SafetySecuritySection from './sections/SafetySecuritySection';
-// import ReportingSection from './sections/ReportingSection';
+
 
 interface SettingsSection {
     id: string;
@@ -45,72 +34,19 @@ const settingsSections: SettingsSection[] = [
         label: 'Thresholds & Configuration',
         icon: 'Speed',
         component: ThresholdManagementSection,
-    },
-    // {
-    //     id: 'alert-filters',
-    //     label: 'Alert Filters',
-    //     icon: 'FilterList',
-    //     component: AlertFilterSection,
-    // },
-    // {
-    //     id: 'monitoring',
-    //     label: 'Event Monitoring',
-    //     icon: 'Visibility',
-    //     component: EventMonitoringSection,
-    // },
-    // {
-    //     id: 'data',
-    //     label: 'Data & History',
-    //     icon: 'Storage',
-    //     component: DataLoggingSection,
-    // },
-    // {
-    //     id: 'display',
-    //     label: 'Display Preferences',
-    //     icon: 'Palette',
-    //     component: DisplayPreferencesSection,
-    // },
-    // {
-    //     id: 'maintenance',
-    //     label: 'Calibration & Maintenance',
-    //     icon: 'Build',
-    //     component: CalibrationMaintenanceSection,
-    // },
-    // {
-    //     id: 'advanced',
-    //     label: 'Advanced Features',
-    //     icon: 'TuneRounded',
-    //     component: AdvancedFeaturesSection,
-    // },
-    // {
-    //     id: 'safety',
-    //     label: 'Safety & Security',
-    //     icon: 'Security',
-    //     component: SafetySecuritySection,
-    // },
-    // {
-    //     id: 'reporting',
-    //     label: 'Reporting',
-    //     icon: 'Assessment',
-    //     component: ReportingSection,
-    // },
+    }
 ];
 
 const DeviceSettings = () => {
     const { deviceId } = useParams<{ deviceId: string }>();
-    const { darkModeStatus } = useContext(ThemeContext);
 
-    // IMPORTANT: Call all hooks at the top level before any conditional returns
-    const { data: deviceConfig, isLoading: isLoadingConfig } = useDeviceConfig(deviceId || '');
-    const { data: sensor, isLoading: isLoadingSensor } = useSensor(deviceId || '');
+    const { data: sensor, isLoading } = useSensor(deviceId || '');
 
     const [activeSection, setActiveSection] = useState<string>('device');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     const ActiveComponent = settingsSections.find((s) => s.id === activeSection)?.component;
 
-    // Now we can do conditional rendering after all hooks are called
-    const isLoading = isLoadingConfig || isLoadingSensor;
 
     if (isLoading) {
         return (
@@ -122,26 +58,14 @@ const DeviceSettings = () => {
         );
     }
 
-    // if (!deviceConfig) {
-    //     return (
-    //         <PageWrapper title='Device Settings'>
-    //             <Page container='fluid'>
-    //                 <Alert color='danger' icon='Error'>
-    //                     Device not found or unable to load configuration.
-    //                 </Alert>
-    //             </Page>
-    //         </PageWrapper>
-    //     );
-    // }
-
     return (
-        <PageWrapper title={`Settings - ${sensor?.name || deviceConfig?.device_name || 'Device'}`}>
+        <PageWrapper title={`Settings - ${sensor?.name || 'Device'}`}>
             <SubHeader>
                 <SubHeaderLeft>
                     <Breadcrumb>
                         <BreadcrumbItem to='/halo/sensors/list'>Sensors</BreadcrumbItem>
                         <BreadcrumbItem to={`/halo/sensors/detail/${deviceId}`}>
-                            {sensor?.name || deviceConfig?.device_name || 'Device'}
+                            {sensor?.name || 'Device'}
                         </BreadcrumbItem>
                         <BreadcrumbItem to="#" isActive>Settings</BreadcrumbItem>
                     </Breadcrumb>

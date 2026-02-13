@@ -18,8 +18,10 @@ const flattenAreas = (areas: Area[], depth = 0): { id: number, name: string, dep
     let result: { id: number, name: string, depth: number }[] = [];
     areas.forEach(area => {
         result.push({ id: area.id, name: area.name, depth });
-        if (area.subareas) {
-            result.push(...flattenAreas(area.subareas, depth + 1));
+        // @ts-ignore - Backend might return flat or nested depending on include parameters
+        if (area.subareas && Array.isArray(area.subareas) && area.subareas.length > 0 && typeof area.subareas[0] === 'object') {
+            // @ts-ignore
+            result.push(...flattenAreas(area.subareas as unknown as Area[], depth + 1));
         }
     });
     return result;
@@ -117,6 +119,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                     <input
                                         className={`form-control input-with-icon ${errors.name ? 'is-invalid' : ''}`}
                                         placeholder='e.g. Cafeteria Sensor 1'
+                                        data-tour='sensor-name-input'
                                         {...register('name', {
                                             required: 'Sensor name is required',
                                             maxLength: {
@@ -135,6 +138,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                     <Icon icon='Category' className='input-icon' />
                                     <select
                                         className={`form-select input-with-icon ${errors.sensor_type ? 'is-invalid' : ''}`}
+                                        data-tour='sensor-type-select'
                                         {...register('sensor_type')}
                                     >
                                         <option value='HALO_SMART'>Halo Smart Sensor</option>
@@ -460,6 +464,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                         type='button'
                         color='primary'
                         icon='ChevronRight'
+                        data-tour='sensor-continue-btn'
                         onClick={async () => {
                             const fields = step === 1
                                 ? ['name', 'sensor_type']
@@ -477,6 +482,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                         color='primary'
                         icon='Check'
                         isDisable={registerSensorMutation.isPending}
+                        data-tour='sensor-confirm-btn'
                     >
                         {registerSensorMutation.isPending && <Spinner isSmall inButton />}
                         Confirm & Register
