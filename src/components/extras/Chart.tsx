@@ -19,24 +19,24 @@ const Chart: FC<IChartProps> = ({ series, options, type, width, height, classNam
 			<ReactApexChart
 				options={{
 					colors: [
-						import.meta.env.VITE_PRIMARY_COLOR,
-						import.meta.env.VITE_SECONDARY_COLOR,
-						import.meta.env.VITE_SUCCESS_COLOR,
-						import.meta.env.VITE_INFO_COLOR,
-						import.meta.env.VITE_WARNING_COLOR,
-						import.meta.env.VITE_DANGER_COLOR,
+						import.meta.env.VITE_PRIMARY_COLOR || '#7a3a6f',
+						import.meta.env.VITE_SECONDARY_COLOR || '#a87ca1',
+						import.meta.env.VITE_SUCCESS_COLOR || '#46bcaa',
+						import.meta.env.VITE_INFO_COLOR || '#4d69fa',
+						import.meta.env.VITE_WARNING_COLOR || '#ffcf52',
+						import.meta.env.VITE_DANGER_COLOR || '#f35421',
 					],
 					plotOptions: {
 						candlestick: {
 							colors: {
-								upward: import.meta.env.VITE_SUCCESS_COLOR,
-								downward: import.meta.env.VITE_DANGER_COLOR,
+								upward: import.meta.env.VITE_SUCCESS_COLOR || '#46bcaa',
+								downward: import.meta.env.VITE_DANGER_COLOR || '#f35421',
 							},
 						},
 						boxPlot: {
 							colors: {
-								upper: import.meta.env.VITE_SUCCESS_COLOR,
-								lower: import.meta.env.VITE_DANGER_COLOR,
+								upper: import.meta.env.VITE_SUCCESS_COLOR || '#46bcaa',
+								lower: import.meta.env.VITE_DANGER_COLOR || '#f35421',
 							},
 						},
 					},

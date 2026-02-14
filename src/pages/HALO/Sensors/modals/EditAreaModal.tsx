@@ -30,7 +30,14 @@ const EditAreaModal: React.FC<EditAreaModalProps> = ({ isOpen, setIsOpen, area }
         if (area) {
             setName(area.name || '');
             setAreaType(area.area_type || 'building');
-            setPersonInChargeIds(area.person_in_charge_ids || []);
+
+            // Resolve IDs from both possible fields
+            let ids = area.person_in_charge_ids || [];
+            if (ids.length === 0 && area.person_in_charge) {
+                ids = area.person_in_charge.map(p => p.id);
+            }
+            setPersonInChargeIds(ids);
+
             setOffsetZ(area.offset_z || 0);
             setAreaPlan(null);
             setError('');

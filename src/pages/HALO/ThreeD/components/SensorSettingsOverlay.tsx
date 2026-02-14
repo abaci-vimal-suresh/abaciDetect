@@ -11,14 +11,16 @@ import Badge from '../../../../components/bootstrap/Badge';
 import useDarkMode from '../../../../hooks/useDarkMode';
 
 interface SensorSettingsOverlayProps {
-    sensor: Sensor;
+    sensor: Sensor; // This can be the preview/merged sensor
+    originalSensor?: Sensor; // This is the actual data-bound sensor from the API
     onClose: () => void;
-    onPreviewChange?: (values: Partial<SensorUpdatePayload> & { walls?: Wall[] }) => void;
+    onPreviewChange?: (values: (Partial<SensorUpdatePayload> & { walls?: Wall[] }) | null) => void;
     onBlinkingWallsChange?: (wallIds: (number | string)[]) => void;
 }
 
 const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     sensor,
+    originalSensor,
     onClose,
     onPreviewChange,
     onBlinkingWallsChange
@@ -85,24 +87,46 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
             setOriginalWalls(JSON.parse(JSON.stringify(newWalls)));
             setIsDirty(false);
             setErrors({});
-        } else if (!isDirty) {
-            // Same sensor but background refresh, and user hasn't made changes
-            // Sync current values and walls from prop
-            setValues({
-                id: sensor.id,
-                x_val: sensor.x_val || 0,
-                y_val: sensor.y_val || 0,
-                z_val: sensor.z_val || 0,
-            });
-            const newWalls = sensor.walls || [];
-            setWalls(newWalls);
-            setOriginalWalls(JSON.parse(JSON.stringify(newWalls)));
         } else {
-            // Same sensor, user has unsaved changes. 
-            // Just update originalWalls so Reset works against latest server data
-            setOriginalWalls(JSON.parse(JSON.stringify(sensor.walls || [])));
+            // Same sensor - PROACTIVELY SYNC COORDINATES from prop (important for 3D drag interaction)
+            // This ensures values in inputs update instantly when dragging in 3D
+            if (
+                (sensor.x_val !== undefined && sensor.x_val !== values.x_val) ||
+                (sensor.y_val !== undefined && sensor.y_val !== values.y_val) ||
+                (sensor.z_val !== undefined && sensor.z_val !== values.z_val)
+            ) {
+                setValues(prev => ({
+                    ...prev,
+                    x_val: sensor.x_val !== undefined ? sensor.x_val : prev.x_val,
+                    y_val: sensor.y_val !== undefined ? sensor.y_val : prev.y_val,
+                    z_val: sensor.z_val !== undefined ? sensor.z_val : prev.z_val,
+                }));
+            }
+
+            // Wall Sync Logic
+            if (!isDirty) {
+                // User hasn't made any local changes yet - full sync from prop
+                const newWalls = sensor.walls || [];
+                setWalls(newWalls);
+                setOriginalWalls(JSON.parse(JSON.stringify(newWalls)));
+            } else {
+                // User has changes - just update original reference for Reset to stay current
+                setOriginalWalls(JSON.parse(JSON.stringify(sensor.walls || [])));
+            }
+
+            // DIRTY CHECK for coordinates against original values
+            // We use originalSensor prop if provided, otherwise the base sensor prop
+            const base = originalSensor || sensor;
+            const posChanged =
+                (values.x_val !== undefined && values.x_val !== base.x_val) ||
+                (values.y_val !== undefined && values.y_val !== base.y_val) ||
+                (values.z_val !== undefined && values.z_val !== base.z_val);
+
+            if (posChanged) {
+                setIsDirty(true);
+            }
         }
-    }, [sensor, sensor.id]);
+    }, [sensor, sensor.id, originalSensor]);
 
     const handleInputChange = (field: keyof SensorUpdatePayload, value: number) => {
         const newValues = { ...values, [field]: value };
@@ -183,7 +207,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
             }
 
             if (onPreviewChange) {
-                onPreviewChange({});
+                onPreviewChange(null);
             }
             onClose();
         } catch (error) {
@@ -249,25 +273,30 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
         setIsDirty(true);
     };
 
-    const renderInput = (label: string, field: keyof SensorUpdatePayload, errorKey?: string) => (
-        <FormGroup label={label} className="mb-3" id={`field-${field}`}>
-            <InputGroup>
-                <Input
-                    type="number"
-                    step={0.1}
-                    value={(values[field] as number | string) ?? ''}
-                    onChange={(e: any) => handleInputChange(field, parseFloat(e.target.value) || 0)}
-                    isValid={!errors[errorKey || (field as string)]}
-                    isTouched={isDirty}
-                    invalidFeedback={errors[errorKey || (field as string)]}
-                    className={(sensor[field] as any) !== values[field] ? 'border-info' : ''}
-                />
-                <Button color="light" size="sm" onClick={() => handleInputChange(field, ((values[field] as number) || 0) + 0.1)}>
-                    <Icon icon="Add" />
-                </Button>
-            </InputGroup>
-        </FormGroup>
-    );
+    const renderInput = (label: string, field: keyof SensorUpdatePayload, errorKey?: string) => {
+        const base = originalSensor || sensor;
+        const isModified = (values[field] ?? (base[field] || 0)) !== (base[field] || 0);
+
+        return (
+            <FormGroup label={label} className="mb-3" id={`field-${field}`}>
+                <InputGroup>
+                    <Input
+                        type="number"
+                        step={0.1}
+                        value={(values[field] as number | string) ?? ''}
+                        onChange={(e: any) => handleInputChange(field, parseFloat(e.target.value) || 0)}
+                        isValid={!errors[errorKey || (field as string)]}
+                        isTouched={isDirty}
+                        invalidFeedback={errors[errorKey || (field as string)]}
+                        className={isModified ? 'border-info' : ''}
+                    />
+                    <Button color="light" size="sm" onClick={() => handleInputChange(field, ((values[field] as number) || 0) + 0.1)}>
+                        <Icon icon="Add" />
+                    </Button>
+                </InputGroup>
+            </FormGroup>
+        );
+    };
 
     return (
         <div

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useWalls } from '../../../../api/sensors.api';
-import { Sensor, Area } from '../../../../types/sensor';
+import { Sensor, Area, Wall } from '../../../../types/sensor';
 import { FloorModel, SensorMarker } from './FloorComponents';
 import { WallSegment } from './WallSegment';
 import { flattenAreas } from '../utils/dataTransform';
@@ -9,6 +9,7 @@ import {
     transformSensorTo3D,
     transformWallTo3D,
     transform3DToSensor,
+    transform3DToNormalized,
     calculateSensorStatus,
     DEFAULT_FLOOR_CALIBRATION,
     FloorCalibration
@@ -23,11 +24,18 @@ interface BuildingSceneProps {
     showBoundaries?: boolean;
     onSensorClick?: (sensor: Sensor) => void;
     onSensorDrag?: (sensor: Sensor, newCoords: { x_val: number, y_val: number, z_val: number }) => void;
+    onWallClick?: (wall: Wall) => void;
+    onWallDrag?: (wall: Wall, delta: { x: number, y: number, z: number }) => void;
     calibration?: FloorCalibration;
-    selectedSensorId?: string | null;
-    setSelectedSensorId?: (id: string | null) => void;
+    onLoad?: (calibration: FloorCalibration) => void;
+    selectedSensorId?: string | number | null;
+    setSelectedSensorId?: (id: string | number | null) => void;
+    selectedWallId?: string | number | null;
     previewData?: any;
     blinkingWallIds?: (number | string)[];
+    // Wall drawing mode
+    wallDrawMode?: boolean;
+    onWallCreated?: (wall: Partial<Wall>) => void;
 }
 
 /**
@@ -37,18 +45,23 @@ const FloorWallManager = ({
     areaId,
     calibration,
     floorY,
-    isSelected = false,
+    selectedWallId,
+    onWallClick,
+    onWallDrag,
     previewData,
     blinkingWallIds = []
 }: {
     areaId: number | string,
     calibration: FloorCalibration,
     floorY: number,
-    isSelected?: boolean,
+    selectedWallId?: string | number | null,
+    onWallClick?: (wall: Wall) => void,
+    onWallDrag?: (wall: Wall, delta: { x: number, y: number, z: number }) => void,
     previewData?: any,
     blinkingWallIds?: (number | string)[]
 }) => {
     const { data: walls, isLoading } = useWalls(areaId);
+    const [hoveredWallId, setHoveredWallId] = useState<string | number | null>(null);
 
     const displayWalls = useMemo(() => {
         // If previewData exists and is for this area's walls
@@ -68,8 +81,12 @@ const FloorWallManager = ({
                     wall={wall}
                     calibration={calibration}
                     floorY={floorY}
-                    isSelected={isSelected}
+                    isSelected={String(selectedWallId) === String(wall.id)}
+                    isHovered={hoveredWallId === wall.id}
                     isBlinking={blinkingWallIds.includes(wall.id)}
+                    onClick={onWallClick}
+                    onHover={(hovered) => setHoveredWallId(hovered ? wall.id : null)}
+                    onDrag={(delta) => onWallDrag?.(wall, delta)}
                 />
             ))}
         </>
@@ -86,16 +103,51 @@ export function BuildingScene({
     showBoundaries = true,
     onSensorClick,
     onSensorDrag,
+    onWallClick,
+    onWallDrag,
     calibration = DEFAULT_FLOOR_CALIBRATION,
+    onLoad,
     selectedSensorId,
     setSelectedSensorId,
+    selectedWallId,
     previewData,
-    blinkingWallIds = []
+    blinkingWallIds = [],
+    wallDrawMode = false,
+    onWallCreated
 }: BuildingSceneProps) {
     const { controls } = useThree() as any;
     const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
-    const [actualCalibration, setActualCalibration] = useState<FloorCalibration>(calibration);
-    const [isCalibrated, setIsCalibrated] = useState(false);
+    const [hoveredWallId, setHoveredWallId] = useState<string | number | null>(null);
+    const [actualCalibration, setActualCalibration] = useState<FloorCalibration>(calibration || DEFAULT_FLOOR_CALIBRATION);
+    const [isCalibrated, setIsCalibrated] = useState(!!calibration && calibration.width > 0);
+
+    // Wall drawing state
+    const [firstPoint, setFirstPoint] = useState<{
+        x: number;
+        y: number;
+        z: number;
+        floorY: number;
+        areaId: number;
+    } | null>(null);
+    const [previewEndPoint, setPreviewEndPoint] = useState<{ x: number, y: number, z: number } | null>(null);
+
+    // Reset wall drawing state when mode is disabled
+    useEffect(() => {
+        if (!wallDrawMode) {
+            setFirstPoint(null);
+            setPreviewEndPoint(null);
+        }
+    }, [wallDrawMode]);
+
+    // Sync calibration prop
+    useEffect(() => {
+        console.log('BuildingScene: Calibration prop changed:', calibration);
+        if (calibration && (calibration.width > 0)) {
+            setActualCalibration(calibration);
+            setIsCalibrated(true);
+            console.log('BuildingScene: Calibration sync successful');
+        }
+    }, [calibration]);
 
     // Auto-focus camera on selected sensor
     useEffect(() => {
@@ -127,6 +179,87 @@ export function BuildingScene({
             console.log('Auto-calibrating building with:', measuredCal);
             setActualCalibration(measuredCal);
             setIsCalibrated(true);
+            onLoad?.(measuredCal);
+        }
+    };
+
+    // Handle floor click for wall drawing
+    const handleFloorClick = (event: any) => {
+        console.log('BuildingScene: Floor Click event:', {
+            wallDrawMode,
+            isCalibrated,
+            point3D: event.point,
+            userData: event.object?.userData,
+            firstPointSet: !!firstPoint
+        });
+
+        const canDraw = wallDrawMode && (isCalibrated || (actualCalibration && actualCalibration.width > 0));
+
+        if (!canDraw) {
+            console.log('BuildingScene: Click ignored - mode disabled or no calibration', {
+                wallDrawMode,
+                isCalibrated,
+                calWidth: actualCalibration?.width
+            });
+            return;
+        }
+        event.stopPropagation();
+
+        const point3D = event.point;
+        const clickedMesh = event.object;
+        const areaId = clickedMesh.userData?.areaId;
+
+        console.log('BuildingScene: Raycast hit areaId:', areaId);
+
+        if (areaId === undefined) {
+            console.warn('BuildingScene: Clicked floor has no areaId in userData');
+            return;
+        }
+
+        if (!firstPoint) {
+            console.log('BuildingScene: Setting first point at', point3D);
+            setFirstPoint({ x: point3D.x, y: point3D.y, z: point3D.z, floorY: point3D.y, areaId: areaId });
+        } else {
+            console.log('BuildingScene: Processing second click at', point3D, 'for firstPoint at', firstPoint);
+            if (Math.abs(point3D.y - firstPoint.floorY) < 0.5) {
+                const normalized1 = transform3DToNormalized({ x: firstPoint.x, y: firstPoint.y, z: firstPoint.z }, actualCalibration, firstPoint.floorY);
+                const normalized2 = transform3DToNormalized({ x: point3D.x, y: point3D.y, z: point3D.z }, actualCalibration, point3D.y);
+
+                console.log('BuildingScene: Normalized coordinates calculated:', { normalized1, normalized2 });
+
+                const newWall: Partial<Wall> = {
+                    r_x1: normalized1.x, r_y1: normalized1.y, r_x2: normalized2.x, r_y2: normalized2.y,
+                    r_height: 2.4, r_z_offset: 0, color: '#ffffff', opacity: 0.7, thickness: 0.15, area_ids: [areaId]
+                };
+
+                console.log('BuildingScene: Calling onWallCreated with:', newWall);
+                onWallCreated?.(newWall);
+                setFirstPoint(null);
+                setPreviewEndPoint(null);
+            } else {
+                console.warn('BuildingScene: Click error - points must be on the same floor level (Y diff too large)', {
+                    y1: firstPoint.floorY,
+                    y2: point3D.y
+                });
+                setFirstPoint(null);
+                setPreviewEndPoint(null);
+            }
+        }
+    };
+
+    const handleFloorPointerMove = (event: any) => {
+        const canDraw = wallDrawMode && firstPoint && (isCalibrated || (actualCalibration && actualCalibration.width > 0));
+
+        if (!canDraw) {
+            if (previewEndPoint) setPreviewEndPoint(null);
+            return;
+        }
+        event.stopPropagation();
+        const point3D = event.point;
+        if (Math.abs(point3D.y - firstPoint.floorY) < 0.5) {
+            setPreviewEndPoint({ x: point3D.x, y: point3D.y, z: point3D.z });
+        } else {
+            if (previewEndPoint) setPreviewEndPoint(null);
         }
     };
 
@@ -204,13 +337,16 @@ export function BuildingScene({
                         <FloorModel
                             key={`floor-${floor.id}`}
                             floorLevel={floorLevel}
+                            areaId={floor.id}
                             yPosition={yPosition}
                             floorSpacing={floorSpacing}
                             visible={isVisible}
                             opacity={floorOpacity}
                             onLoad={floorLevel === 0 ? handleFloorLoad : undefined}
-                            centerModel={true} // Auto-center building on grid
+                            centerModel={true}
                             modelUrl={modelUrl}
+                            onClick={wallDrawMode ? handleFloorClick : undefined}
+                            onPointerMove={wallDrawMode ? handleFloorPointerMove : undefined}
                         />
 
                         {/* Rendering Walls for this Area/Floor from dedicated endpoint */}
@@ -219,6 +355,9 @@ export function BuildingScene({
                                 areaId={floor.id}
                                 calibration={actualCalibration}
                                 floorY={yPosition}
+                                selectedWallId={selectedWallId}
+                                onWallClick={onWallClick}
+                                onWallDrag={onWallDrag}
                                 previewData={previewData}
                                 blinkingWallIds={blinkingWallIds}
                             />
@@ -231,6 +370,11 @@ export function BuildingScene({
                                 wall={wall}
                                 calibration={actualCalibration}
                                 floorY={yPosition}
+                                isSelected={String(selectedWallId) === String(wall.id)}
+                                isHovered={hoveredWallId === wall.id}
+                                onClick={onWallClick}
+                                onHover={(hovered) => setHoveredWallId(hovered ? wall.id : null)}
+                                onDrag={(delta) => onWallDrag?.(wall, delta)}
                             />
                         ))}
 
@@ -272,14 +416,18 @@ export function BuildingScene({
                                     />
 
                                     {/* Walls attached directly to the sensor (Room boundaries) */}
-                                    {isSelected && sensor.walls && sensor.walls.map((wall) => (
+                                    {isVisible && isSelected && sensor.walls && sensor.walls.map((wall) => (
                                         <WallSegment
                                             key={`sensor-wall-${wall.id}`}
                                             wall={wall}
                                             calibration={actualCalibration}
                                             floorY={yPosition}
-                                            isSelected={true}
+                                            isSelected={String(selectedWallId) === String(wall.id)}
+                                            isHovered={hoveredWallId === wall.id}
                                             isBlinking={blinkingWallIds.includes(wall.id)}
+                                            onClick={onWallClick}
+                                            onHover={(hovered) => setHoveredWallId(hovered ? wall.id : null)}
+                                            onDrag={(delta) => onWallDrag?.(wall, delta)}
                                         />
                                     ))}
                                 </React.Fragment>
@@ -292,6 +440,35 @@ export function BuildingScene({
 
             {/* Grid helper for reference - 100m grid with 1m squares */}
             <gridHelper args={[100, 100, '#444444', '#222222']} position={[0, -0.1, 0]} />
+
+            {/* Wall drawing visual feedback */}
+            {wallDrawMode && firstPoint && (
+                <group>
+                    {/* First point marker */}
+                    <mesh position={[firstPoint.x, firstPoint.y, firstPoint.z]}>
+                        <sphereGeometry args={[0.3, 16, 16]} />
+                        <meshBasicMaterial color="yellow" />
+                    </mesh>
+
+                    {/* Preview line */}
+                    {previewEndPoint && (
+                        <line>
+                            <bufferGeometry>
+                                <bufferAttribute
+                                    attach="attributes-position"
+                                    count={2}
+                                    array={new Float32Array([
+                                        firstPoint.x, firstPoint.y, firstPoint.z,
+                                        previewEndPoint.x, previewEndPoint.y, previewEndPoint.z
+                                    ])}
+                                    itemSize={3}
+                                />
+                            </bufferGeometry>
+                            <lineBasicMaterial color="yellow" />
+                        </line>
+                    )}
+                </group>
+            )}
         </group>
     );
 }

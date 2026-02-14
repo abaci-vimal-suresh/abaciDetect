@@ -199,7 +199,6 @@ const SensorGroupManager = () => {
                 </div>
             </Page>
 
-            {/* Create Group Modal */}
             <Modal isOpen={isCreateModalOpen} setIsOpen={setIsCreateModalOpen}>
                 <ModalHeader setIsOpen={setIsCreateModalOpen}>
                     <ModalTitle id='create-group-modal'>Create Sensor Group</ModalTitle>
@@ -242,7 +241,7 @@ const SensorGroupManager = () => {
                                         if (selectedSensorIds.length === allSensors?.length) {
                                             setSelectedSensorIds([]);
                                         } else {
-                                            setSelectedSensorIds(allSensors?.map(s => s.id) || []);
+                                            setSelectedSensorIds(allSensors?.map(s => String(s.id)) || []);
                                         }
                                     }}
                                 >
@@ -255,7 +254,7 @@ const SensorGroupManager = () => {
                                         id={`sensor-${sensor.id}`}
                                         label={`${sensor.name} (${sensor.mac_address || sensor.macAddress})`}
                                         value={sensor.id}
-                                        checked={selectedSensorIds.includes(sensor.id)}
+                                        checked={selectedSensorIds.includes(String(sensor.id))}
                                         onChange={(e: any) => {
                                             const { checked, value } = e.target;
                                             const valStr = String(value);

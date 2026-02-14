@@ -19,8 +19,10 @@ import AggregateMetricCards from './components/AggregateMetricCards';
 import AggregationFilterPanel from './components/AggregationFilterPanel';
 import './ThreeDPage.scss';
 
-import { useAreas, useSensors } from '../../../api/sensors.api';
+import { useAreas, useSensors, useCreateWall } from '../../../api/sensors.api';
 import { flattenAreas } from './utils/dataTransform';
+import { transform3DToWall } from './utils/coordinateTransform';
+import useToasterNotification from '../../../hooks/useToasterNotification';
 
 const ThreeDPage = () => {
     const { areaId: urlAreaId } = useParams<{ areaId: string }>();
@@ -37,6 +39,26 @@ const ThreeDPage = () => {
     const [previewSensor, setPreviewSensor] = useState<any>(null);
     const [previewAreaWalls, setPreviewAreaWalls] = useState<any>(null);
     const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
+    const [selectedWallId, setSelectedWallId] = useState<number | string | null>(null);
+    const [calibration, setCalibration] = useState<any>(null);
+    const [wallDrawMode, setWallDrawMode] = useState(false);
+    const [newlyCreatedWall, setNewlyCreatedWall] = useState<Partial<Wall> | null>(null);
+
+    // Mutations
+    const createWallMutation = useCreateWall();
+    const { showNotification } = useToasterNotification();
+
+    // ESC key listener to cancel wall drawing
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && wallDrawMode) {
+                setWallDrawMode(false);
+                showNotification('Info', 'Wall drawing cancelled', 'info');
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [wallDrawMode, showNotification]);
 
     // Live API Data
     const { data: areasData, isLoading: areasLoading } = useAreas();
@@ -108,6 +130,22 @@ const ThreeDPage = () => {
         // Search in sensors list (which contains enriched data)
         return sensors.find(s => s.id === selectedSensorId) || null;
     }, [sensors, selectedSensorId]);
+
+    const handleWallDrag = (wall: any, delta: { x: number, y: number, z: number }) => {
+        if (!calibration) return;
+
+        // If we are currently editing a sensor's walls
+        if (previewSensor && previewSensor.walls) {
+            const updatedWalls = previewSensor.walls.map((w: any) => {
+                if (String(w.id) === String(wall.id)) {
+                    const newCoords = transform3DToWall(w, delta, calibration);
+                    return { ...w, ...newCoords };
+                }
+                return w;
+            });
+            setPreviewSensor({ ...previewSensor, walls: updatedWalls });
+        }
+    };
 
     // Extract unique floors for UI toggles
     const availableFloors = useMemo(() => {
@@ -181,15 +219,15 @@ const ThreeDPage = () => {
                                         {/* Unified calibration and visibility moved to sidebar Filter panel */}
                                     </div>
 
-                                    {/* Boundaries toggle */}
-                                    <Button
-                                        color={showBoundaries ? 'info' : 'light'}
-                                        onClick={() => setShowBoundaries(!showBoundaries)}
-                                        size='sm'
-                                        icon='BorderAll'
-                                    >
-                                        Boundaries
-                                    </Button>
+                                    <div className='d-flex align-items-center gap-2'>
+                                        <Button
+                                            color='info'
+                                            isLight={!showBoundaries}
+                                            icon='Visibility'
+                                            onClick={() => setShowBoundaries(!showBoundaries)}>
+                                            {showBoundaries ? 'Hide Boundaries' : 'Show Boundaries'}
+                                        </Button>
+                                    </div>
 
                                     {/* Opacity slider */}
                                     {/* <div className='d-flex align-items-center gap-2'>
@@ -399,8 +437,30 @@ const ThreeDPage = () => {
                                         setPreviewSensor(updatedSensor);
                                         setSelectedSensorId(sensor.id);
                                     }}
-                                    previewData={previewAreaWalls}
+                                    previewData={previewAreaWalls || previewSensor}
                                     blinkingWallIds={blinkingWallIds}
+                                    wallDrawMode={wallDrawMode}
+                                    onWallCreated={(newWall) => {
+                                        console.log('ThreeDPage: onWallCreated received:', newWall);
+                                        if (editingAreaForWalls) {
+                                            console.log('ThreeDPage: Buffering wall for AreaSettingsOverlay');
+                                            // Pass to overlay instead of immediate mutation
+                                            setNewlyCreatedWall(newWall);
+                                            // Small delay to ensure prop propagates before we reset it
+                                            setTimeout(() => setNewlyCreatedWall(null), 100);
+                                        } else {
+                                            console.log('ThreeDPage: Creating wall via mutation');
+                                            createWallMutation.mutate(newWall);
+                                        }
+                                        setWallDrawMode(false);
+                                    }}
+                                    selectedWallId={selectedWallId}
+                                    onWallClick={(wall) => {
+                                        setSelectedWallId(wall.id);
+                                        console.log('Wall clicked:', wall);
+                                    }}
+                                    onWallDrag={handleWallDrag}
+                                    onLoad={(cal) => setCalibration(cal)}
                                 />
                             </Suspense>
                         </Canvas>
@@ -421,12 +481,21 @@ const ThreeDPage = () => {
                         {/* Sensor Settings Overlay (Right Side) */}
                         {showSettingsOverlay && selectedSensor && (
                             <SensorSettingsOverlay
-                                sensor={selectedSensor}
+                                sensor={
+                                    previewSensor?.id === selectedSensor.id
+                                        ? { ...selectedSensor, ...previewSensor }
+                                        : selectedSensor
+                                }
+                                originalSensor={selectedSensor}
                                 onClose={() => {
                                     setShowSettingsOverlay(false);
                                 }}
                                 onPreviewChange={(newValues) => {
-                                    setPreviewSensor({ ...selectedSensor, ...newValues });
+                                    if (newValues === null) {
+                                        setPreviewSensor(null);
+                                    } else {
+                                        setPreviewSensor({ ...selectedSensor, ...newValues });
+                                    }
                                 }}
                                 onBlinkingWallsChange={setBlinkingWallIds}
                             />
@@ -445,9 +514,13 @@ const ThreeDPage = () => {
                         {editingAreaForWalls && (
                             <AreaSettingsOverlay
                                 area={editingAreaForWalls}
+                                isDrawing={wallDrawMode}
+                                onToggleDrawing={setWallDrawMode}
+                                newlyCreatedWall={newlyCreatedWall}
                                 onClose={() => {
                                     setEditingAreaForWalls(null);
                                     setPreviewAreaWalls(null);
+                                    setWallDrawMode(false);
                                 }}
                                 onPreviewChange={(values) => {
                                     setPreviewAreaWalls(values);

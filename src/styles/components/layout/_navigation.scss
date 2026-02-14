@@ -79,18 +79,7 @@
 			@include menu-item-visible(4);
 		}
 
-		//  Sub Menu Item
-		// stylelint-disable no-duplicate-selectors
-		#{ $self } #{ $self } & {
-			@include padding(map.get($navigation, margin-y) 0 0 map.get($navigation, margin-x));
-
-			@include aside-close {
-				@include padding(map.get($navigation, margin-y) 0 0 0);
-			}
-		}
-
-		// Header sub menu item
-
+		// Horizontal Header sub menu item
 		#{ $self }#{ $self }-menu #{ $self } & {
 			@include padding((map.get($navigation, padding-y) * 0.5) map.get($navigation, padding-x));
 		}
@@ -98,8 +87,51 @@
 		#{ $self }#{ $self }-menu>&:first-child {
 			@include padding-left(0);
 		}
+	}
 
-		// stylelint-enable no-duplicate-selectors
+	// Nested sub-menu list (UL)
+	#{ $self } {
+		@include margin-left(map.get($navigation, padding-x) + 0.5rem);
+		@include padding-left(0);
+
+		@include aside-close {
+			margin-left: 0;
+		}
+
+		// Sub-menu items
+		.navigation-item {
+			padding: 0;
+		}
+
+		// Sub-menu links
+		.navigation-link {
+			margin: 0.25rem 0.5rem;
+			height: 2.25rem;
+			font-size: 0.825rem;
+			font-weight: 500;
+			opacity: 0.85;
+
+			.navigation-icon {
+				font-size: 1rem;
+				opacity: 0.7;
+			}
+
+			// Sub-menu active/hover (subtle flats instead of full neumorphism)
+			&.active,
+			&:hover {
+				background-color: rgba($black, 0.04);
+				box-shadow: none;
+				opacity: 1;
+
+				@include dark-mode {
+					background-color: rgba($white, 0.06);
+				}
+
+				.navigation-icon {
+					opacity: 1;
+				}
+			}
+		}
 	}
 
 	// Title
@@ -214,9 +246,7 @@
 			}
 
 			// stylelint-disable no-duplicate-selectors
-			#{$self}-icon {
-				// color: $primary;
-			}
+
 
 			#{ $self }#{ $self }-menu & {
 				@include dark-mode {

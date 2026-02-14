@@ -13,9 +13,19 @@ interface AreaSettingsOverlayProps {
     area: Area;
     onClose: () => void;
     onPreviewChange?: (values: { walls?: Wall[] }) => void;
+    isDrawing?: boolean;
+    onToggleDrawing?: (active: boolean) => void;
+    newlyCreatedWall?: Partial<Wall> | null;
 }
 
-const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({ area, onClose, onPreviewChange }) => {
+const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
+    area,
+    onClose,
+    onPreviewChange,
+    isDrawing = false,
+    onToggleDrawing,
+    newlyCreatedWall
+}) => {
     const { darkModeStatus } = useDarkMode();
     const { data: areaWalls, isLoading: wallsLoading } = useWalls(area.id);
 
@@ -35,6 +45,29 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({ area, onClose
             setIsDirty(false);
         }
     }, [areaWalls]);
+
+    // Handle walls added from the 3D scene
+    useEffect(() => {
+        if (newlyCreatedWall) {
+            console.log('AreaSettingsOverlay: Received newlyCreatedWall:', newlyCreatedWall);
+            const newWall: Wall = {
+                id: `new-${Date.now()}`,
+                r_x1: newlyCreatedWall.r_x1 || 0,
+                r_y1: newlyCreatedWall.r_y1 || 0,
+                r_x2: newlyCreatedWall.r_x2 || 0,
+                r_y2: newlyCreatedWall.r_y2 || 0,
+                r_height: newlyCreatedWall.r_height || 2.4,
+                color: newlyCreatedWall.color || '#ffffff',
+                area_ids: [area.id]
+            };
+            const updatedWalls = [...walls, newWall];
+            setWalls(updatedWalls);
+            setIsDirty(true);
+            if (onPreviewChange) {
+                onPreviewChange({ walls: updatedWalls });
+            }
+        }
+    }, [newlyCreatedWall]);
 
     const handleWallChange = (wallId: number | string, field: keyof Wall, value: any) => {
         const newWalls = walls.map(w => w.id === wallId ? { ...w, [field]: value } : w);
@@ -149,14 +182,25 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({ area, onClose
                         <div className="d-flex align-items-center mb-3">
                             <Icon icon="ViewQuilt" className="text-info me-2" />
                             <h6 className="mb-0 text-uppercase small fw-bold text-info">Wall Segments</h6>
-                            <Button
-                                color="info" size="sm" isLight
-                                onClick={handleAddWall}
-                                icon="Add"
-                                className="ms-auto"
-                            >
-                                Add Wall
-                            </Button>
+                            <div className="ms-auto d-flex gap-2">
+                                <Button
+                                    color={isDrawing ? "warning" : "info"}
+                                    size="sm"
+                                    isLight={!isDrawing}
+                                    onClick={() => onToggleDrawing?.(!isDrawing)}
+                                    icon={isDrawing ? "Mouse" : "AdsClick"}
+                                    className={isDrawing ? "animate-pulse" : ""}
+                                >
+                                    {isDrawing ? "Click on Map..." : "Draw on Map"}
+                                </Button>
+                                <Button
+                                    color="info" size="sm" isLight
+                                    onClick={handleAddWall}
+                                    icon="Add"
+                                >
+                                    Manual Add
+                                </Button>
+                            </div>
                         </div>
 
                         {wallsLoading ? (

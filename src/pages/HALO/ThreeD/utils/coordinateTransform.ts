@@ -225,3 +225,50 @@ export function transformWallTo3D(
         size: [length, wallHeight, wall.thickness ?? 0.15]
     };
 }
+/**
+ * Transform 3D world translation back to normalized wall coordinates
+ */
+export function transform3DToWall(
+    currentWall: any,
+    translation3D: { x: number; y: number; z: number },
+    calibration: FloorCalibration
+): { r_x1: number; r_y1: number; r_x2: number; r_y2: number; r_z_offset: number } {
+    // Calculate normalized deltas
+    const deltaX = calibration.width !== 0 ? translation3D.x / calibration.width : 0;
+    const deltaY = calibration.depth !== 0 ? translation3D.z / calibration.depth : 0;
+    const deltaZ = translation3D.y; // Keep vertical in meters as per API expectation for z_offset if applicable
+
+    return {
+        r_x1: Math.max(0, Math.min(1, currentWall.r_x1 + deltaX)),
+        r_y1: Math.max(0, Math.min(1, currentWall.r_y1 + deltaY)),
+        r_x2: Math.max(0, Math.min(1, currentWall.r_x2 + deltaX)),
+        r_y2: Math.max(0, Math.min(1, currentWall.r_y2 + deltaY)),
+        r_z_offset: (currentWall.r_z_offset || 0) + deltaZ
+    };
+}
+
+/**
+ * Transform 3D world coordinates to normalized 0-1 coordinates
+ * This is the INVERSE of the transformation used in transformWallTo3D
+ * Used for converting raycasting click positions to wall coordinates
+ */
+export function transform3DToNormalized(
+    position: { x: number; y: number; z: number },
+    calibration: FloorCalibration,
+    baseLevelY: number = 0
+): { x: number; y: number } {
+    // Reverse the transformation from transformWallTo3D
+    // Account for centering offset
+    const adjustedX = position.x - calibration.minX;
+    const adjustedZ = position.z - calibration.minZ;
+
+    // Convert to normalized 0-1 coordinates
+    const normalizedX = calibration.width !== 0 ? adjustedX / calibration.width : 0.5;
+    const normalizedY = calibration.depth !== 0 ? adjustedZ / calibration.depth : 0.5;
+
+    // Clamp to 0-1 range to ensure valid coordinates
+    return {
+        x: Math.max(0, Math.min(1, normalizedX)),
+        y: Math.max(0, Math.min(1, normalizedY))
+    };
+}

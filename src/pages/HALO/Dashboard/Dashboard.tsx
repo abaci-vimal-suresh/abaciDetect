@@ -37,7 +37,10 @@ const getChartOptions = (): ApexOptions => ({
         categories: CHART_CATEGORIES,
     },
     stroke: { curve: 'smooth' },
-    colors: [import.meta.env.VITE_PRIMARY_COLOR, import.meta.env.VITE_INFO_COLOR],
+    colors: [
+        import.meta.env.VITE_PRIMARY_COLOR || '#7a3a6f',
+        import.meta.env.VITE_INFO_COLOR || '#4d69fa'
+    ],
 });
 
 const chartSeries = [
@@ -209,11 +212,11 @@ const Dashboard = () => {
         labels: areaDistribution.labels,
         legend: { show: false },
         colors: [
-            import.meta.env.VITE_PRIMARY_COLOR,
-            import.meta.env.VITE_SUCCESS_COLOR,
-            import.meta.env.VITE_WARNING_COLOR,
-            import.meta.env.VITE_INFO_COLOR,
-            import.meta.env.VITE_DANGER_COLOR,
+            import.meta.env.VITE_PRIMARY_COLOR || '#7a3a6f',
+            import.meta.env.VITE_SUCCESS_COLOR || '#46bcaa',
+            import.meta.env.VITE_WARNING_COLOR || '#ffcf52',
+            import.meta.env.VITE_INFO_COLOR || '#4d69fa',
+            import.meta.env.VITE_DANGER_COLOR || '#f35421',
         ]
     }), [areaDistribution.labels]);
 

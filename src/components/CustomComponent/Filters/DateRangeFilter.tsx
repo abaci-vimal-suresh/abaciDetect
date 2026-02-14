@@ -8,13 +8,13 @@ import Popovers from '../../bootstrap/customPopoverForDateRange';
 // import Popovers from '../../bootstrap/customPopoverForDateRange';
 
 interface DateRangeFilterProps {
-  onFilter: (date: { selection: { startDate: Date; endDate: Date; key: string,endDateFilter:string,startDateFilter:string } } | null) => void;
-  selectedDate:{ selection: { startDate: Date; endDate: Date; key: string ,endDateFilter:string,startDateFilter:string,} }
+  onFilter: (date: { selection: { startDate: Date; endDate: Date; key: string, endDateFilter: string, startDateFilter: string } } | null) => void;
+  selectedDate: { selection: { startDate: Date; endDate: Date; key: string, endDateFilter: string, startDateFilter: string, } }
 
 }
 
-const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ onFilter ,selectedDate}) => {
-  const [date, setDate] = useState<{ selection: { startDate: Date; endDate: Date; key: string ,endDateFilter:string,startDateFilter:string} } | null>(null);
+const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ onFilter, selectedDate }) => {
+  const [date, setDate] = useState<{ selection: { startDate: Date; endDate: Date; key: string, endDateFilter: string, startDateFilter: string } } | null>(null);
   const { mobileDesign } = useContext(ThemeContext);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -25,7 +25,7 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ onFilter ,selectedDat
   };
 
   const handleClear = () => {
-    if(selectedDate){
+    if (selectedDate) {
       onFilter(null);
     }
     setDate(null);
@@ -38,8 +38,8 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ onFilter ,selectedDat
     : dayjs().add(3, 'month').toDate();
 
 
-    const datePicker=(
-      <div className="d-flex flex-column">
+  const datePicker = (
+    <div className="d-flex flex-column">
       <DateRangePicker
         onChange={(item: any) => {
           const startDate = item?.selection?.startDate || dayjs().toDate();
@@ -52,12 +52,12 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ onFilter ,selectedDat
               startDate,
               endDate,
               key: 'selection',
-              startDateFilter:dayjs(startDate).format('YYYY-MM-DD'),
-              endDateFilter:dayjs(endDate).format('YYYY-MM-DD'),
+              startDateFilter: dayjs(startDate).format('YYYY-MM-DD'),
+              endDateFilter: dayjs(endDate).format('YYYY-MM-DD'),
 
             },
           });
-          
+
         }}
         moveRangeOnFirstSelection={false}
         months={2}
@@ -70,7 +70,7 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ onFilter ,selectedDat
         ]}
         maxDate={maxDate}
         direction={mobileDesign ? 'vertical' : 'horizontal'}
-        rangeColors={[String(import.meta.env.VITE_PRIMARY_COLOR)]}
+        rangeColors={[String(import.meta.env.VITE_PRIMARY_COLOR || '#7a3a6f')]}
         inputRanges={[]}
       />
       <div
@@ -89,25 +89,25 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ onFilter ,selectedDat
         </Button>
       </div>
     </div>
-    )
+  )
 
   return (
-        <Popovers
-          placement='right-start'
-          popoverOpen={popoverOpen}
-          setPopoverOpen={setPopoverOpen}
-          className='mw-100 overflow-hidden'
-          data-tour='date-range-menu'
-          bodyClassName='p-0'
-          trigger='click'
-          desc={datePicker}
-        >
-          <Button color='primary' isLight  icon='DateRange'>
-            {selectedDate
-              ? `${dayjs(selectedDate.selection.startDate).format('YYYY/MM/DD')} - ${dayjs(selectedDate.selection.endDate).format('YYYY/MM/DD')}`
-              : 'Date Filter'}
-          </Button>
-        </Popovers>
+    <Popovers
+      placement='right-start'
+      popoverOpen={popoverOpen}
+      setPopoverOpen={setPopoverOpen}
+      className='mw-100 overflow-hidden'
+      data-tour='date-range-menu'
+      bodyClassName='p-0'
+      trigger='click'
+      desc={datePicker}
+    >
+      <Button color='primary' isLight icon='DateRange'>
+        {selectedDate
+          ? `${dayjs(selectedDate.selection.startDate).format('YYYY/MM/DD')} - ${dayjs(selectedDate.selection.endDate).format('YYYY/MM/DD')}`
+          : 'Date Filter'}
+      </Button>
+    </Popovers>
   );
 };
 

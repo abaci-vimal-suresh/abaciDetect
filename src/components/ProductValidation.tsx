@@ -25,9 +25,9 @@ const ProductValidation: FC<ProductValidationProps> = ({ children }) => {
     }
 
     // 2. Superuser Existence Check
-    if (!config.is_firstuser_created) {
-        return <SuperAdminPage />;
-    }
+    // if (!config.is_firstuser_created) {
+    //     return <SuperAdminPage />;
+    // }
 
     // All checks passed
     return <>{children}</>;
