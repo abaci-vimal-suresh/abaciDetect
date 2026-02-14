@@ -19,6 +19,7 @@ import AggregateMetricCards from './components/AggregateMetricCards';
 import AggregationFilterPanel from './components/AggregationFilterPanel';
 import './ThreeDPage.scss';
 
+import { Area, Sensor, Wall } from '../../../types/sensor';
 import { useAreas, useSensors, useCreateWall } from '../../../api/sensors.api';
 import { flattenAreas } from './utils/dataTransform';
 import { transform3DToWall } from './utils/coordinateTransform';
@@ -35,9 +36,9 @@ const ThreeDPage = () => {
     const [selectedAreaIds, setSelectedAreaIds] = useState<(number | string)[]>([]);
     const [selectedGroupIds, setSelectedGroupIds] = useState<(number | string)[]>([]);
     const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
-    const [editingAreaForWalls, setEditingAreaForWalls] = useState<any>(null);
+    const [editingAreaForWalls, setEditingAreaForWalls] = useState<Area | null>(null);
     const [previewSensor, setPreviewSensor] = useState<any>(null);
-    const [previewAreaWalls, setPreviewAreaWalls] = useState<any>(null);
+    const [previewAreaWalls, setPreviewAreaWalls] = useState<{ walls?: Wall[] } | null>(null);
     const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
     const [selectedWallId, setSelectedWallId] = useState<number | string | null>(null);
     const [calibration, setCalibration] = useState<any>(null);
@@ -131,7 +132,7 @@ const ThreeDPage = () => {
         return sensors.find(s => s.id === selectedSensorId) || null;
     }, [sensors, selectedSensorId]);
 
-    const handleWallDrag = (wall: any, delta: { x: number, y: number, z: number }) => {
+    const handleWallDrag = (wall: Wall, delta: { x: number, y: number, z: number }) => {
         if (!calibration) return;
 
         // If we are currently editing a sensor's walls
