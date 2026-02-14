@@ -25,13 +25,13 @@ const CommonPercentageOfLoadChart = () => {
 			},
 		],
 		options: {
-			colors: [import.meta.env.VITE_PRIMARY_COLOR],
+			colors: [import.meta.env.VITE_PRIMARY_COLOR || '#7a3a6f'],
 			chart: {
 				type: 'line',
 				height: 200,
 				dropShadow: {
 					enabled: false,
-					color: import.meta.env.VITE_PRIMARY_COLOR,
+					color: import.meta.env.VITE_PRIMARY_COLOR || '#7a3a6f',
 					top: 0,
 					left: 0,
 					blur: 10,
@@ -101,8 +101,8 @@ const CommonPercentageOfLoadChart = () => {
 					<Button
 						color='primary'
 						tag='a'
-						// to={`../${demoPagesMenu.appointment.subMenu.employeeList.path}`}
-						>
+					// to={`../${demoPagesMenu.appointment.subMenu.employeeList.path}`}
+					>
 						View Employees
 					</Button>
 				</CardActions>

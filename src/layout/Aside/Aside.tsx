@@ -41,7 +41,7 @@ const Aside: FC<IAsideProps> = ({ children }) => {
 
 	const classes = classNames(
 		'aside',
-		
+
 		{ open: asideStatus },
 		{
 			'aside-touch-bar': hasTouchButton && isModernDesign,

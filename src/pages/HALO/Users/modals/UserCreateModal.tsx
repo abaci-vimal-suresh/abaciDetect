@@ -104,10 +104,14 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen, on
                     checked={formData.assigned_area_ids.includes(area.id)}
                     onChange={() => handleAreaToggle(area.id)}
                 />
-                {/* @ts-ignore */}
-                {area.subareas && area.subareas.length > 0 && typeof area.subareas[0] === 'object' &&
-                    // @ts-ignore
-                    area.subareas.map((sub: Area) => renderAreaItem(sub, depth + 1))}
+                {area.subareas && area.subareas.length > 0 &&
+                    area.subareas.map((sub: any) => {
+                        const subObj = typeof sub === 'number'
+                            ? areas?.find(a => a.id === sub)
+                            : sub;
+                        return subObj ? renderAreaItem(subObj as Area, depth + 1) : null;
+                    })
+                }
             </div>
         );
     };
@@ -217,7 +221,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen, on
                                                     value={formData.head_id ? String(formData.head_id) : ""}
                                                     onChange={(e: any) => setFormData({ ...formData, head_id: e.target.value ? Number(e.target.value) : null })}
                                                 >
-                                                    <Option value="">No Head User</Option>
+                                                    <Option key="none" value="">No Head User</Option>
                                                     {users?.map(user => (
                                                         <Option key={user.id} value={String(user.id)}>
                                                             {`${user.first_name} ${user.last_name} (${user.username})`}
@@ -290,7 +294,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen, on
                             <CardBody className="p-4">
                                 <p className="text-muted small mb-3">Select which areas this user should have access to.</p>
                                 <div className="p-3 border rounded  dark:bg-slate-800" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                    {areas?.map(area => renderAreaItem(area))}
+                                    {areas?.filter(area => !area.parent_id).map(area => renderAreaItem(area))}
                                     {(!areas || areas.length === 0) && <div className="text-center py-4 text-muted">No areas configured in the system.</div>}
                                 </div>
                             </CardBody>

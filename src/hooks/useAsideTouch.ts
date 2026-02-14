@@ -37,7 +37,7 @@ const useAsideTouch = () => {
 		}
 
 		// @ts-ignore
-		const unsubscribeX = x.onChange(updateX);
+		const unsubscribeX = x.on('change', updateX);
 
 		return () => {
 			unsubscribeX();
@@ -50,7 +50,7 @@ const useAsideTouch = () => {
 		if (!hasTouchButton) {
 			x.set(0);
 		}
-		return () => {};
+		return () => { };
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [hasTouchButton, deviceScreen.width]);
 
@@ -60,7 +60,7 @@ const useAsideTouch = () => {
 			x.set(0);
 			setTouchStatus(false);
 		}
-		return () => {};
+		return () => { };
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [asideStatus]);
 

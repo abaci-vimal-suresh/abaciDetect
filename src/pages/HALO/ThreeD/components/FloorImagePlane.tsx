@@ -8,6 +8,7 @@ interface FloorImagePlaneProps {
     // Required props
     imageUrl: string;
     floorLevel: number;
+    areaId?: number; // Area ID for raycasting identification
 
     // Positioning & sizing
     floorSpacing?: number;
@@ -60,12 +61,15 @@ interface FloorImagePlaneProps {
 
     // Callbacks
     onLoad?: (calibration: any) => void;
+    onClick?: (event: any) => void;
+    onPointerMove?: (event: any) => void;
 }
 
 export function FloorImagePlane({
     // Required
     imageUrl,
     floorLevel,
+    areaId,
 
     // Positioning
     floorSpacing = 4.0,
@@ -117,7 +121,9 @@ export function FloorImagePlane({
     receiveShadow = true,
 
     // Callbacks
-    onLoad
+    onLoad,
+    onClick,
+    onPointerMove
 }: FloorImagePlaneProps) {
     const groupRef = useRef<THREE.Group>(null);
     const glassPanelRef = useRef<THREE.Mesh>(null);
@@ -206,6 +212,9 @@ export function FloorImagePlane({
                 position={[0, 0, 0]}
                 castShadow={castShadow}
                 receiveShadow={receiveShadow}
+                userData={{ isFloor: true, areaId: areaId || floorLevel }}
+                onClick={onClick}
+                onPointerMove={onPointerMove}
             >
                 {/* We use a thin BoxGeometry to give it real 3D thickness */}
                 <boxGeometry args={[width, glassThickness, height]} />

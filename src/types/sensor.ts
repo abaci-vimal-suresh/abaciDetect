@@ -297,6 +297,7 @@ export interface Area {
     wall_opacity?: number;
     show_walls?: boolean;
     person_in_charge_ids?: number[]; // ✅ NEW: Link areas to multiple users
+    person_in_charge?: User[]; // ✅ Backend returns full user objects
 
     // NEW: 3D Positioning (Matches backend)
     offset_x?: number;

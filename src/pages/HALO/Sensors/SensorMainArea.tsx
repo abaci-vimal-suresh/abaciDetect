@@ -350,15 +350,27 @@ const SensorMainArea = () => {
                                                     Persons in Charge
                                                 </div>
                                                 <div className='d-flex flex-wrap gap-1'>
-                                                    {area.person_in_charge_ids && area.person_in_charge_ids.length > 0 ? (
-                                                        area.person_in_charge_ids.map(userId => {
-                                                            const user = users?.find(u => u.id === userId);
-                                                            return user ? (
-                                                                <Badge key={userId} color='primary' isLight className='rounded-pill'>
-                                                                    {user.first_name} {user.last_name}
-                                                                </Badge>
-                                                            ) : null;
-                                                        })
+                                                    {((area.person_in_charge && area.person_in_charge.length > 0) || (area.person_in_charge_ids && area.person_in_charge_ids.length > 0)) ? (
+                                                        <>
+                                                            {/* Prefer full objects if available */}
+                                                            {area.person_in_charge && area.person_in_charge.length > 0 ? (
+                                                                area.person_in_charge.map(person => (
+                                                                    <Badge key={person.id} color='primary' isLight className='rounded-pill'>
+                                                                        {person.first_name} {person.last_name}
+                                                                    </Badge>
+                                                                ))
+                                                            ) : (
+                                                                /* Fallback to ID-based lookup if only IDs are present */
+                                                                area.person_in_charge_ids?.map(userId => {
+                                                                    const user = users?.find(u => u.id === userId);
+                                                                    return user ? (
+                                                                        <Badge key={userId} color='primary' isLight className='rounded-pill'>
+                                                                            {user.first_name} {user.last_name}
+                                                                        </Badge>
+                                                                    ) : null;
+                                                                })
+                                                            )}
+                                                        </>
                                                     ) : (
                                                         <span className='text-muted small italic'>Unassigned</span>
                                                     )}

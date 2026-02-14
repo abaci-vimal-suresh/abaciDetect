@@ -17,7 +17,6 @@ import { Area, User } from '../../../types/sensor';
 import Checks from '../../../components/bootstrap/forms/Checks';
 import Label from '../../../components/bootstrap/forms/Label';
 import { useQueryClient } from '@tanstack/react-query';
-import { mockSensors, saveMockData, mockAreas } from '../../../mockData/sensors';
 import { filterSensors, getSensorsByArea, getAvailableSensors } from '../utils/sensorData.utils';
 import EditAreaModal from './modals/EditAreaModal';
 import Swal from 'sweetalert2';
@@ -124,7 +123,6 @@ const SensorGroups = () => {
 
         createSubAreaMutation.mutate(formData, {
             onSuccess: () => {
-                saveMockData();
                 queryClient.invalidateQueries({ queryKey: ['areas'] });
                 setIsSubAreaModalOpen(false);
                 setSubAreaName('');
@@ -372,15 +370,25 @@ const SensorGroups = () => {
                                                     Persons in Charge
                                                 </div>
                                                 <div className='d-flex flex-wrap gap-1'>
-                                                    {subArea.person_in_charge_ids && subArea.person_in_charge_ids.length > 0 ? (
-                                                        subArea.person_in_charge_ids.map(userId => {
-                                                            const user = users?.find(u => u.id === userId);
-                                                            return user ? (
-                                                                <Badge key={userId} color='primary' isLight className='rounded-pill'>
-                                                                    {user.first_name} {user.last_name}
-                                                                </Badge>
-                                                            ) : null;
-                                                        })
+                                                    {((subArea.person_in_charge && subArea.person_in_charge.length > 0) || (subArea.person_in_charge_ids && subArea.person_in_charge_ids.length > 0)) ? (
+                                                        <>
+                                                            {subArea.person_in_charge && subArea.person_in_charge.length > 0 ? (
+                                                                subArea.person_in_charge.map(person => (
+                                                                    <Badge key={person.id} color='primary' isLight className='rounded-pill'>
+                                                                        {person.first_name} {person.last_name}
+                                                                    </Badge>
+                                                                ))
+                                                            ) : (
+                                                                subArea.person_in_charge_ids?.map(userId => {
+                                                                    const user = users?.find(u => u.id === userId);
+                                                                    return user ? (
+                                                                        <Badge key={userId} color='primary' isLight className='rounded-pill'>
+                                                                            {user.first_name} {user.last_name}
+                                                                        </Badge>
+                                                                    ) : null;
+                                                                })
+                                                            )}
+                                                        </>
                                                     ) : (
                                                         <span className='text-muted small italic text-opacity-50'>Unassigned</span>
                                                     )}

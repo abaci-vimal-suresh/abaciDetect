@@ -12,8 +12,6 @@ import {
     Wall
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
-import { USE_MOCK_DATA } from '../config';
-import { mockAreas, mockSensors } from '../mockData/sensors';
 
 
 export const useUsers = () => {
@@ -119,9 +117,6 @@ export const useAreas = () => {
     return useQuery({
         queryKey: ['areas'],
         queryFn: async () => {
-            if (USE_MOCK_DATA) {
-                return mockAreas;
-            }
             const { data } = await axiosInstance.get('/administration/areas/?include_subareas=true');
             return data as Area[];
         },
@@ -283,9 +278,6 @@ export const useSensors = (filters?: {
     return useQuery({
         queryKey: queryKeys.sensors.list(filters || {}),
         queryFn: async () => {
-            if (USE_MOCK_DATA) {
-                return mockSensors;
-            }
             const params = new URLSearchParams();
             if (filters?.areaId) params.append('area', filters.areaId);
             if (filters?.status && filters.status !== 'all') {
@@ -1795,16 +1787,26 @@ export const useUpdateWall = () => {
 
 export const useCreateWall = () => {
     const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
     return useMutation({
         mutationFn: async (data: Partial<Wall>) => {
             const response = await axiosInstance.post<Wall>('/administration/walls/', data);
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: (newWall) => {
             queryClient.invalidateQueries({ queryKey: ['walls'] });
             queryClient.invalidateQueries({ queryKey: ['areas'] });
             queryClient.invalidateQueries({ queryKey: ['sensors'] });
+            showSuccessNotification('Wall created successfully!');
         },
+        onError: (error: any) => {
+            showErrorNotification(
+                error?.response?.data?.detail ||
+                error?.response?.data?.message ||
+                'Failed to create wall'
+            );
+        }
     });
 };
 

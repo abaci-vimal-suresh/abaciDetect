@@ -98,7 +98,14 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                     checked={formData.assigned_area_ids.includes(area.id)}
                     onChange={() => handleAreaToggle(area.id)}
                 />
-                {area.subareas && area.subareas.map(sub => renderAreaItem(sub, depth + 1))}
+                {area.subareas && area.subareas.length > 0 &&
+                    area.subareas.map((sub: any) => {
+                        const subObj = typeof sub === 'number'
+                            ? areas?.find(a => a.id === sub)
+                            : sub;
+                        return subObj ? renderAreaItem(subObj as Area, depth + 1) : null;
+                    })
+                }
             </div>
         );
     };
@@ -227,14 +234,14 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                                                     value={formData.role.toLowerCase()}
                                                     onChange={(e: any) => setFormData({ ...formData, role: (e.target.value as any) })}
                                                 >
-                                                    <Option value="admin">Admin</Option>
-                                                    <Option value="viewer">Viewer</Option>
-                                                    <Option value="user">User</Option>
-                                                    <Option value="organization">Organization</Option>
-                                                    <Option value="gtcc">GTCC</Option>
-                                                    <Option value="assistant user">Assistant User</Option>
-                                                    <Option value="establishment">Establishment</Option>
-                                                    <Option value="region">Region</Option>
+                                                    <Option key="admin" value="admin">Admin</Option>
+                                                    <Option key="viewer" value="viewer">Viewer</Option>
+                                                    <Option key="user" value="user">User</Option>
+                                                    <Option key="organization" value="organization">Organization</Option>
+                                                    <Option key="gtcc" value="gtcc">GTCC</Option>
+                                                    <Option key="assistant user" value="assistant user">Assistant User</Option>
+                                                    <Option key="establishment" value="establishment">Establishment</Option>
+                                                    <Option key="region" value="region">Region</Option>
                                                 </Select>
                                             </div>
                                         </div>
@@ -254,7 +261,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                                 </CardHeader>
                                 <CardBody className="p-4">
                                     <div className="p-3 border rounded  dark:bg-slate-800" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                        {areas?.map(area => renderAreaItem(area))}
+                                        {areas?.filter(area => !area.parent_id).map(area => renderAreaItem(area))}
                                     </div>
                                 </CardBody>
                             </Card>

@@ -8,6 +8,7 @@ import { FloorImagePlane } from './FloorImagePlane';
 
 interface FloorModelProps {
     floorLevel: number;
+    areaId?: number; // Area ID for raycasting identification
     floorSpacing?: number;
     yPosition?: number;
     visible?: boolean;
@@ -15,17 +16,22 @@ interface FloorModelProps {
     onLoad?: (calibration: any) => void;
     centerModel?: boolean;
     modelUrl?: string;
+    onClick?: (event: any) => void;
+    onPointerMove?: (event: any) => void;
 }
 
 export function FloorModel({
     floorLevel,
+    areaId,
     floorSpacing = 3.5,
     yPosition,
     visible = true,
     opacity = 1,
     onLoad,
     centerModel = false,
-    modelUrl = '/floor_tiles.glb'
+    modelUrl = '/floor_tiles.glb',
+    onClick,
+    onPointerMove
 }: FloorModelProps) {
     const [calibrated, setCalibrated] = useState(false);
     const [offset, setOffset] = useState(new THREE.Vector3(0, 0, 0));
@@ -112,6 +118,7 @@ export function FloorModel({
                 <FloorImagePlane
                     imageUrl={modelUrl}
                     floorLevel={0} // Positioned by the parent group
+                    areaId={areaId} // Pass for raycasting
                     floorSpacing={0}
                     centerModel={centerModel}
                     visible={visible}
@@ -122,6 +129,8 @@ export function FloorModel({
                     enableEdgeGlow={true}
                     edgeGlowColor="#4a90e2"
                     edgeGlowIntensity={0.05}
+                    onClick={onClick}
+                    onPointerMove={onPointerMove}
                 />
             ) : (
                 <primitive
