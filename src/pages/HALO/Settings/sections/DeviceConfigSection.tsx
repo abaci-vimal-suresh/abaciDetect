@@ -212,55 +212,6 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
                             </Card>
                         </div>
 
-                        <div className='col-md-6'>
-                            <Card className='border shadow-none mb-0 h-100'>
-                                <CardHeader className='p-2 bg-light'><CardTitle className='m-0 fs-6 fw-bold'>Audio Management</CardTitle></CardHeader>
-                                <CardBody className='p-3'>
-                                    <div className='d-flex flex-column gap-3'>
-                                        <FormGroup label='Upload Sound Alert (.wav)'>
-                                            <div className='d-flex gap-2'>
-                                                <input
-                                                    type='file'
-                                                    id='sound-upload'
-                                                    className='form-control'
-                                                    accept='.wav,audio/wav'
-                                                    onChange={(e) => {
-                                                        const file = e.target.files?.[0];
-                                                        if (file) {
-                                                            if (!file.name.toLowerCase().endsWith('.wav')) {
-                                                                alert('Please upload a .wav file only.');
-                                                                e.target.value = '';
-                                                                return;
-                                                            }
-                                                            uploadMutation.mutate({
-                                                                ip_address: formData.ip_address,
-                                                                username: formData.username,
-                                                                password: formData.password,
-                                                                file
-                                                            }, {
-                                                                onSuccess: () => {
-                                                                    e.target.value = '';
-                                                                }
-                                                            });
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                            <small className='text-muted mt-2 d-block'>
-                                                Upload custom audio files to be used in Threshold alerts.
-                                            </small>
-                                        </FormGroup>
-
-                                        {uploadMutation.isPending && (
-                                            <div className='d-flex align-items-center gap-2 text-primary'>
-                                                <Spinner isSmall />
-                                                <small>Uploading file to HALO...</small>
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardBody>
-                            </Card>
-                        </div>
 
                         <div className='col-md-6'>
                             <FormGroup label='Firmware Version'>

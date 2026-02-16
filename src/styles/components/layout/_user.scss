@@ -7,8 +7,8 @@
 
 	display: flex;
 	align-items: center;
-	background-color: auto-shade-tint(map-deep-get($aside, background-color), 8%);
-	color: color-contrast(auto-shade-tint(map-deep-get($aside, background-color), 8%),
+	background-color: tint-color($primary, 10%);
+	color: color-contrast(tint-color($primary, 20%),
 			map-deep-get($navigation, item, color-dark),
 			map-deep-get($navigation, item, color-light));
 	cursor: pointer;

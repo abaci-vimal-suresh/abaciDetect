@@ -81,6 +81,7 @@ const AlertHistory = () => {
     const [selectedAlert, setSelectedAlert] = useState<AlertHistoryItem | null>(null);
     const [targetStatus, setTargetStatus] = useState<AlertStatus | null>(null);
     const [remarks, setRemarks] = useState('');
+    const [nextTriggerTime, setNextTriggerTime] = useState<string>('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [alertToDelete, setAlertToDelete] = useState<AlertHistoryItem | null>(null);
 
@@ -104,6 +105,10 @@ const AlertHistory = () => {
             payload.user_acknowledged = 1;
         }
 
+        if (targetStatus === 'suspended' && nextTriggerTime) {
+            payload.next_trigger_time = nextTriggerTime;
+        }
+
         await updateAlertMutation.mutateAsync({
             alertId: selectedAlert.originalId,
             data: payload
@@ -111,6 +116,7 @@ const AlertHistory = () => {
 
         setIsStatusModalOpen(false);
         setRemarks('');
+        setNextTriggerTime('');
         setSelectedAlert(null);
         setTargetStatus(null);
     };
@@ -118,6 +124,7 @@ const AlertHistory = () => {
     const openStatusModal = (alert: AlertHistoryItem, status: AlertStatus) => {
         setSelectedAlert(alert);
         setTargetStatus(status);
+        setNextTriggerTime('');
         setIsStatusModalOpen(true);
     };
 
@@ -362,7 +369,7 @@ const AlertHistory = () => {
                             onClick={() => openStatusModal(rowData, 'resolved')}
                         />
                     )}
-                    {rowData.status === 'active' && (
+                    {(rowData.status === 'active' || rowData.status === 'suspended') && (
                         <>
                             <Button
                                 color="secondary"
@@ -372,14 +379,16 @@ const AlertHistory = () => {
                                 title="Dismiss Alert"
                                 onClick={() => openStatusModal(rowData, 'dismissed')}
                             />
-                            <Button
-                                color="dark"
-                                isLight
-                                icon="PauseCircle"
-                                size="sm"
-                                title="Suspend Alert"
-                                onClick={() => openStatusModal(rowData, 'suspended')}
-                            />
+                            {rowData.status === 'active' && (
+                                <Button
+                                    color="dark"
+                                    isLight
+                                    icon="PauseCircle"
+                                    size="sm"
+                                    title="Suspend Alert"
+                                    onClick={() => openStatusModal(rowData, 'suspended')}
+                                />
+                            )}
                         </>
                     )}
                     <Button
@@ -641,6 +650,17 @@ const AlertHistory = () => {
                                 />
                             </FormGroup>
                         </div>
+                        {targetStatus === 'suspended' && (
+                            <div className="col-12">
+                                <FormGroup label="Next Trigger Time" formText="The alert will be reactivated after this time.">
+                                    <Input
+                                        type="datetime-local"
+                                        value={nextTriggerTime}
+                                        onChange={(e: any) => setNextTriggerTime(e.target.value)}
+                                    />
+                                </FormGroup>
+                            </div>
+                        )}
                     </div>
                 </ModalBody>
                 <ModalFooter>
@@ -655,7 +675,7 @@ const AlertHistory = () => {
                         }
                         icon="Save"
                         onClick={handleStatusUpdate}
-                        isDisable={updateAlertMutation.isPending || !remarks.trim()}
+                        isDisable={updateAlertMutation.isPending || !remarks.trim() || (targetStatus === 'suspended' && !nextTriggerTime)}
                     >
                         Confirm Update
                     </Button>

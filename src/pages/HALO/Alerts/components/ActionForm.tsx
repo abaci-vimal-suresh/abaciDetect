@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { Action, User } from '../../../../types/sensor';
+import { Action, User, SoundFile } from '../../../../types/sensor';
 import Button from '../../../../components/bootstrap/Button';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../../components/bootstrap/forms/Input';
 import Select from '../../../../components/bootstrap/forms/Select';
 import Textarea from '../../../../components/bootstrap/forms/Textarea';
 import Icon from '../../../../components/icon/Icon';
-import { useUsers, useUserGroups } from '../../../../api/sensors.api';
+import { useUsers, useUserGroups, useSoundFiles, useAddSoundFile } from '../../../../api/sensors.api';
 import ReactSelectWithState from '../../../../components/CustomComponent/Select/ReactSelect';
 import Checks from '../../../../components/bootstrap/forms/Checks';
+import {
+    LED_COLOR_OPTIONS,
+    LED_PATTERN_OPTIONS,
+    LED_PRIORITY_OPTIONS
+} from '../../../../constants/halo.constants';
 
 interface ActionFormProps {
     action?: Partial<Action>;
@@ -24,7 +29,12 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
             recipients: [],
             message_type: 'custom',
             message_template: '',
-            is_active: true
+            is_active: true,
+            alert_on_failure: false,
+            device_led_color: 0,
+            device_led_pattern: 0,
+            device_led_priority: 1,
+            action_duration_minutes: 1
         };
 
         const initial = { ...action };
@@ -44,9 +54,12 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
 
     const { data: users } = useUsers();
     const { data: userGroups } = useUserGroups();
+    const { data: soundFiles } = useSoundFiles();
+    const addSoundMutation = useAddSoundFile();
 
     const userOptions = users?.map((u: User) => ({ value: u.id, label: u.username })) || [];
     const groupOptions = userGroups?.map((g: any) => ({ value: g.id, label: g.name })) || [];
+    const soundOptions = soundFiles?.map((s: SoundFile) => ({ value: s.name, text: s.name })) || [];
 
     return (
         <div className="row g-3">
@@ -67,7 +80,7 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                         list={[
                             { value: 'email', text: 'Email' },
                             { value: 'sms', text: 'SMS' },
-                            { value: 'device_notification', text: 'Device Command' },
+                            { value: 'device_notification', text: 'Device Command (HALO)' },
                             { value: 'webhook', text: 'Webhook' },
                             { value: 'n8n_workflow', text: 'N8N Workflow' },
                         ]}
@@ -79,21 +92,24 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
             {/* Webhook Specific */}
             {formData.type === 'webhook' && (
                 <>
-                    <div className="col-md-6">
+                    <div className="col-md-4">
                         <FormGroup label="HTTP Method">
                             <Select
                                 value={formData.http_method || 'POST'}
                                 onChange={(e: any) => setFormData({ ...formData, http_method: e.target.value })}
                                 list={[
-                                    { value: 'POST', text: 'POST' },
                                     { value: 'GET', text: 'GET' },
+                                    { value: 'POST', text: 'POST' },
                                     { value: 'PUT', text: 'PUT' },
+                                    { value: 'PATCH', text: 'PATCH' },
+                                    { value: 'DELETE', text: 'DELETE' },
+                                    { value: 'HEAD', text: 'HEAD' },
                                 ]}
                                 ariaLabel="HTTP Method"
                             />
                         </FormGroup>
                     </div>
-                    <div className="col-12">
+                    <div className="col-md-8">
                         <FormGroup label="Webhook URL">
                             <Input
                                 value={formData.webhook_url || ''}
@@ -103,6 +119,84 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                             />
                         </FormGroup>
                     </div>
+
+                    {/* Webhook Auth */}
+                    <div className="col-md-4">
+                        <FormGroup label="Auth Type">
+                            <Select
+                                value={formData.webhook_auth_type || 'none'}
+                                onChange={(e: any) => setFormData({ ...formData, webhook_auth_type: e.target.value })}
+                                list={[
+                                    { value: 'none', text: 'None' },
+                                    { value: 'bearer', text: 'Bearer Token' },
+                                    { value: 'basic', text: 'Basic Auth' },
+                                    { value: 'api_key', text: 'API Key' },
+                                ]}
+                                ariaLabel="Auth Type"
+                            />
+                        </FormGroup>
+                    </div>
+
+                    {formData.webhook_auth_type === 'bearer' && (
+                        <div className="col-md-8">
+                            <FormGroup label="Token">
+                                <Input
+                                    value={formData.webhook_auth_token || ''}
+                                    onChange={(e: any) => setFormData({ ...formData, webhook_auth_token: e.target.value })}
+                                    placeholder="Enter bearer token"
+                                    type="password"
+                                />
+                            </FormGroup>
+                        </div>
+                    )}
+
+                    {formData.webhook_auth_type === 'basic' && (
+                        <>
+                            <div className="col-md-4">
+                                <FormGroup label="Username">
+                                    <Input
+                                        value={formData.webhook_auth_username || ''}
+                                        onChange={(e: any) => setFormData({ ...formData, webhook_auth_username: e.target.value })}
+                                        placeholder="Username"
+                                    />
+                                </FormGroup>
+                            </div>
+                            <div className="col-md-4">
+                                <FormGroup label="Password">
+                                    <Input
+                                        value={formData.webhook_auth_password || ''}
+                                        onChange={(e: any) => setFormData({ ...formData, webhook_auth_password: e.target.value })}
+                                        placeholder="Password"
+                                        type="password"
+                                    />
+                                </FormGroup>
+                            </div>
+                        </>
+                    )}
+
+                    {formData.webhook_auth_type === 'api_key' && (
+                        <>
+                            <div className="col-md-4">
+                                <FormGroup label="Header/Key Name">
+                                    <Input
+                                        value={formData.webhook_auth_username || ''}
+                                        onChange={(e: any) => setFormData({ ...formData, webhook_auth_username: e.target.value })}
+                                        placeholder="X-API-Key"
+                                    />
+                                </FormGroup>
+                            </div>
+                            <div className="col-md-4">
+                                <FormGroup label="API Key Value">
+                                    <Input
+                                        value={formData.webhook_auth_token || ''}
+                                        onChange={(e: any) => setFormData({ ...formData, webhook_auth_token: e.target.value })}
+                                        placeholder="Value"
+                                        type="password"
+                                    />
+                                </FormGroup>
+                            </div>
+                        </>
+                    )}
                 </>
             )}
 
@@ -113,25 +207,80 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                         <FormGroup label="Device Type">
                             <Select
                                 value={formData.device_type || 'HALO'}
-                                onChange={(e: any) => setFormData({ ...formData, device_type: e.target.value })}
+                                onChange={(e: any) => setFormData({ ...formData, device_type: e.target.value as any })}
                                 list={[
-                                    { value: 'HALO', text: 'HALO Standard' },
-                                    { value: 'HALO_SMART', text: 'HALO Smart' },
-                                    { value: 'HALO_IOT', text: 'HALO IoT' },
+                                    { value: 'HALO', text: 'HALO' },
                                 ]}
                                 ariaLabel="Device Type"
                             />
                         </FormGroup>
                     </div>
-                    <div className="col-12">
+                    <div className="col-md-6">
+                        <FormGroup label="Sound File">
+                            <Select
+                                value={formData.device_sound || ''}
+                                onChange={(e: any) => setFormData({ ...formData, device_sound: e.target.value })}
+                                list={[
+                                    { value: '', text: 'No Sound' },
+                                    ...soundOptions
+                                ]}
+                                ariaLabel="Sound Selection"
+                            />
+                        </FormGroup>
+                    </div>
+                    <div className="col-md-4">
+                        <FormGroup label="LED Color">
+                            <Select
+                                value={String(formData.device_led_color || 16777215)}
+                                onChange={(e: any) => setFormData({ ...formData, device_led_color: parseInt(e.target.value) || 16777215 })}
+                                list={LED_COLOR_OPTIONS.map(opt => ({ value: opt.value.toString(), text: opt.label }))}
+                                ariaLabel="LED Color"
+                            />
+                        </FormGroup>
+                    </div>
+                    <div className="col-md-4">
+                        <FormGroup label="LED Pattern">
+                            <Select
+                                value={String(formData.device_led_pattern || 200004)}
+                                onChange={(e: any) => setFormData({ ...formData, device_led_pattern: parseInt(e.target.value) || 200004 })}
+                                list={LED_PATTERN_OPTIONS.map(opt => ({ value: opt.value.toString(), text: opt.label }))}
+                                ariaLabel="LED Pattern"
+                            />
+                        </FormGroup>
+                    </div>
+                    <div className="col-md-4">
+                        <FormGroup label="Priority">
+                            <Select
+                                value={String(formData.device_led_priority || 1)}
+                                onChange={(e: any) => setFormData({ ...formData, device_led_priority: parseInt(e.target.value) || 1 })}
+                                list={LED_PRIORITY_OPTIONS.map(opt => ({ value: opt.value.toString(), text: opt.label }))}
+                                ariaLabel="Priority"
+                            />
+                        </FormGroup>
+                    </div>
+                    <div className="col-md-6">
+                        <FormGroup label="Action Duration (Minutes)">
+                            <Input
+                                type="number"
+                                min={1}
+                                value={formData.action_duration_minutes || 1}
+                                onChange={(e: any) => setFormData({ ...formData, action_duration_minutes: parseInt(e.target.value) || 1 })}
+                            />
+                        </FormGroup>
+                    </div>
+                    <div className="col-md-12">
                         <FormGroup label="Target Device List (Comma Separation)">
                             <Input
-                                value={formData.device_list || ''}
-                                onChange={(e: any) => setFormData({ ...formData, device_list: e.target.value })}
+                                value={Array.isArray(formData.device_list) ? formData.device_list.join(', ') : formData.device_list || ''}
+                                onChange={(e: any) => {
+                                    const val = e.target.value;
+                                    setFormData({ ...formData, device_list: val.split(',').map((s: string) => s.trim()).filter(Boolean) });
+                                }}
                                 placeholder="device_001, device_002"
                             />
                         </FormGroup>
                     </div>
+
                 </>
             )}
 
@@ -267,7 +416,7 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                             <ReactSelectWithState
                                 isMulti
                                 options={userOptions}
-                                value={userOptions.filter(o => formData.recipients?.includes(o.value))}
+                                value={userOptions.filter(o => (formData.recipients as number[])?.includes(o.value))}
                                 setValue={(vals: any[]) => setFormData({ ...formData, recipients: vals.map(v => v.value) })}
                                 placeholder="Select Users..."
                             />
@@ -278,7 +427,7 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                             <ReactSelectWithState
                                 isMulti
                                 options={groupOptions}
-                                value={groupOptions.filter(o => formData.user_groups?.includes(o.value))}
+                                value={groupOptions.filter(o => (formData.user_groups as number[])?.includes(o.value))}
                                 setValue={(vals: any[]) => setFormData({ ...formData, user_groups: vals.map(v => v.value) })}
                                 placeholder="Select Groups..."
                             />
@@ -287,22 +436,23 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                 </>
             )}
 
-            <div className="col-md-6">
-                <FormGroup label="Message Type">
-                    <Select
-                        value={formData.message_type || 'custom'}
-                        onChange={(e: any) => setFormData({ ...formData, message_type: e.target.value })}
-                        list={[
-                            { value: 'custom', text: 'Plain Text / Custom' },
-                            { value: 'custom_template', text: 'Custom Template' },
-                            { value: 'json_data', text: 'JSON Data' },
-                        ]}
-                        ariaLabel="Message Type"
-                    />
-                </FormGroup>
-            </div>
+            {formData.type !== 'device_notification' && (
+                <div className="col-md-6">
+                    <FormGroup label="Message Type">
+                        <Select
+                            value={formData.message_type || 'custom'}
+                            onChange={(e: any) => setFormData({ ...formData, message_type: e.target.value })}
+                            list={[
+                                { value: 'custom', text: 'Plain Text / Custom' },
+                                { value: 'json_data', text: 'JSON Data' },
+                            ]}
+                            ariaLabel="Message Type"
+                        />
+                    </FormGroup>
+                </div>
+            )}
 
-            <div className="col-md-6 d-flex align-items-center">
+            <div className="col-md-3">
                 <FormGroup label="Status">
                     <Checks
                         id="is_active"
@@ -314,7 +464,19 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                 </FormGroup>
             </div>
 
-            {(formData.message_type === 'custom' || formData.message_type === 'custom_template') && (
+            <div className="col-md-3">
+                <FormGroup label="Alert on Failure">
+                    <Checks
+                        id="alert_on_failure"
+                        type="switch"
+                        label={formData.alert_on_failure ? 'Yes' : 'No'}
+                        checked={formData.alert_on_failure}
+                        onChange={(e: any) => setFormData({ ...formData, alert_on_failure: e.target.checked })}
+                    />
+                </FormGroup>
+            </div>
+
+            {formData.type !== 'device_notification' && (formData.message_type === 'custom' || formData.message_type === 'custom_template') && (
                 <div className="col-12">
                     <FormGroup label="Message">
                         <Textarea
@@ -331,11 +493,6 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                 <Button
                     color="primary"
                     onClick={() => onSave(formData)}
-                    isDisable={
-                        !formData.name ||
-                        (formData.type === 'n8n_workflow' && !formData.n8n_workflow_url) ||
-                        ((formData.message_type === 'custom' || formData.message_type === 'custom_template') && !formData.message_template)
-                    }
                 >
                     Save Action
                 </Button>

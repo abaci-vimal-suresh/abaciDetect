@@ -155,6 +155,7 @@ export function calculateSensorStatus(sensor: Sensor): 'safe' | 'warning' | 'cri
     if (val >= threshold * 0.8) return 'warning';
     return 'safe';
 }
+
 /**
  * Transform 3D world coordinates back to normalized sensor coordinates (0-1)
  */
@@ -225,6 +226,7 @@ export function transformWallTo3D(
         size: [length, wallHeight, wall.thickness ?? 0.15]
     };
 }
+
 /**
  * Transform 3D world translation back to normalized wall coordinates
  */
@@ -251,6 +253,8 @@ export function transform3DToWall(
  * Transform 3D world coordinates to normalized 0-1 coordinates
  * This is the INVERSE of the transformation used in transformWallTo3D
  * Used for converting raycasting click positions to wall coordinates
+ * 
+ * ✨ ENHANCED: Now includes validation and clamping (Fixes Issue #7)
  */
 export function transform3DToNormalized(
     position: { x: number; y: number; z: number },
@@ -266,9 +270,86 @@ export function transform3DToNormalized(
     const normalizedX = calibration.width !== 0 ? adjustedX / calibration.width : 0.5;
     const normalizedY = calibration.depth !== 0 ? adjustedZ / calibration.depth : 0.5;
 
-    // Clamp to 0-1 range to ensure valid coordinates
+    // ✨ NEW: Track if clamping occurred
+    const wasClampedX = normalizedX < 0 || normalizedX > 1;
+    const wasClampedY = normalizedY < 0 || normalizedY > 1;
+
+    // ✨ NEW: Clamp to 0-1 range to ensure valid coordinates (Fixes Issue #7)
+    const clampedX = Math.max(0, Math.min(1, normalizedX));
+    const clampedY = Math.max(0, Math.min(1, normalizedY));
+
+    // ✨ NEW: Warn if clamping occurred (helps with debugging)
+    if (wasClampedX || wasClampedY) {
+        console.warn('⚠️ Wall coordinates were outside bounds and have been clamped:', {
+            original: {
+                x: normalizedX.toFixed(3),
+                y: normalizedY.toFixed(3)
+            },
+            clamped: {
+                x: clampedX.toFixed(3),
+                y: clampedY.toFixed(3)
+            },
+            position3D: {
+                x: position.x.toFixed(2),
+                y: position.y.toFixed(2),
+                z: position.z.toFixed(2)
+            },
+            calibration: {
+                minX: calibration.minX,
+                minZ: calibration.minZ,
+                width: calibration.width,
+                depth: calibration.depth
+            }
+        });
+    }
+
     return {
-        x: Math.max(0, Math.min(1, normalizedX)),
-        y: Math.max(0, Math.min(1, normalizedY))
+        x: clampedX,
+        y: clampedY
+    };
+}
+
+/**
+ * ✨ NEW: Validate if 3D coordinates are within calibration bounds
+ * 
+ * Purpose: Pre-validate coordinates before transformation
+ * 
+ * @param position - 3D world position
+ * @param calibration - Floor calibration
+ * @returns Validation result with details
+ */
+export function validate3DCoordinates(
+    position: { x: number; y: number; z: number },
+    calibration: FloorCalibration
+): {
+    valid: boolean;
+    withinBounds: boolean;
+    normalizedX: number;
+    normalizedZ: number;
+    reason?: string;
+} {
+    const adjustedX = position.x - calibration.minX;
+    const adjustedZ = position.z - calibration.minZ;
+
+    const normalizedX = calibration.width !== 0 ? adjustedX / calibration.width : 0.5;
+    const normalizedZ = calibration.depth !== 0 ? adjustedZ / calibration.depth : 0.5;
+
+    const withinBounds = normalizedX >= 0 && normalizedX <= 1 && normalizedZ >= 0 && normalizedZ <= 1;
+
+    if (!withinBounds) {
+        return {
+            valid: false,
+            withinBounds: false,
+            normalizedX,
+            normalizedZ,
+            reason: `Coordinates outside building bounds: X=${normalizedX.toFixed(2)}, Z=${normalizedZ.toFixed(2)}`
+        };
+    }
+
+    return {
+        valid: true,
+        withinBounds: true,
+        normalizedX,
+        normalizedZ
     };
 }

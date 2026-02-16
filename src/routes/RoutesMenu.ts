@@ -42,6 +42,7 @@ export const AdminRoutes = {
 	timetravel: haloMenu.timetravel,
 	reports: haloMenu.reports,
 	threed: haloMenu.threed,
+	systemSettings: haloMenu.systemSettings,
 };
 
 export const ViewerRoutes = {

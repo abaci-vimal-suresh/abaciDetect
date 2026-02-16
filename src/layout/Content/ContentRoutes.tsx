@@ -59,6 +59,7 @@ const ContentRoutes = () => {
       <Route path="/create-organization" element={<CreateOrganizaton />} />
       <Route path="/public/activation/:string" element={<Registration />} />
       <Route path="/public/establishment-registration" element={<EstablishmentSelfRegistration />} />
+      <Route path="/public/establishment-registration" element={<EstablishmentSelfRegistration />} />
       <Route path="/public/error" element={<ErrorPage />} />
 
       {/* Protected Routes with Role-Based Access */}

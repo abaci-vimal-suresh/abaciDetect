@@ -9,7 +9,7 @@ import {
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
     AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
     SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse, N8NAlertPayload,
-    Wall
+    Wall, SoundFile
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 
@@ -1484,11 +1484,6 @@ export const useCreateAction = () => {
     });
 };
 
-
-
-
-
-
 export const useUpdateAction = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1508,12 +1503,6 @@ export const useUpdateAction = () => {
     });
 };
 
-
-
-
-
-
-
 export const useDeleteAction = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -1529,6 +1518,64 @@ export const useDeleteAction = () => {
         },
         onError: () => {
             showErrorNotification('Failed to delete action');
+        }
+    });
+};
+
+// ============================================
+// SOUND FILES API
+// ============================================
+
+export const useSoundFiles = (filters?: { search?: string }) => {
+    return useQuery({
+        queryKey: ['soundFiles', filters],
+        queryFn: async () => {
+            const params = new URLSearchParams();
+            if (filters?.search) params.append('search', filters.search);
+
+            const { data } = await axiosInstance.get('/administration/sound-files/', { params });
+            // Handle paginated response
+            return (data.results || data) as SoundFile[];
+        }
+    });
+};
+
+export const useAddSoundFile = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (formData: FormData) => {
+            const { data } = await axiosInstance.post('/administration/sound-files/', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return data as SoundFile;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['soundFiles'] });
+            showSuccessNotification('Sound file uploaded successfully');
+        },
+        onError: () => {
+            showErrorNotification('Failed to upload sound file');
+        }
+    });
+};
+
+export const useDeleteSoundFile = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            await axiosInstance.delete(`/administration/sound-files/${id}/`);
+            return { success: true };
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['soundFiles'] });
+            showSuccessNotification('Sound file deleted successfully');
+        },
+        onError: () => {
+            showErrorNotification('Failed to delete sound file');
         }
     });
 };
@@ -1780,6 +1827,7 @@ export const useUpdateWall = () => {
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['walls'] });
             queryClient.invalidateQueries({ queryKey: ['areas'] });
+            queryClient.invalidateQueries({ queryKey: ['walls-centralized'] });
             queryClient.invalidateQueries({ queryKey: ['sensors'] });
         },
     });
@@ -1798,6 +1846,7 @@ export const useCreateWall = () => {
             queryClient.invalidateQueries({ queryKey: ['walls'] });
             queryClient.invalidateQueries({ queryKey: ['areas'] });
             queryClient.invalidateQueries({ queryKey: ['sensors'] });
+            queryClient.invalidateQueries({ queryKey: ['walls-centralized'] })
             showSuccessNotification('Wall created successfully!');
         },
         onError: (error: any) => {
@@ -1819,6 +1868,7 @@ export const useDeleteWall = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['walls'] });
+            queryClient.invalidateQueries({ queryKey: ['walls-centralized'] });
             queryClient.invalidateQueries({ queryKey: ['areas'] });
             queryClient.invalidateQueries({ queryKey: ['sensors'] });
         },
