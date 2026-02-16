@@ -667,6 +667,7 @@ export interface Alert {
     user_acknowledged?: number | null;
     user_acknowledged_username?: string | null;
     time_of_acknowledgment?: string | null;
+    next_trigger_time?: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -684,6 +685,7 @@ export interface AlertUpdateData {
     status?: AlertStatus;
     remarks?: string;
     user_acknowledged?: number;
+    next_trigger_time?: string | null;
 }
 
 export interface AlertFilters {
@@ -763,19 +765,43 @@ export interface ActionRecipient {
     last_name?: string;
 }
 
+export interface SoundFile {
+    id: number;
+    name: string;
+    file: string;
+    file_name: string;
+    file_size: number;
+    uploaded_at: string;
+}
+
+
 export interface Action {
     id: number;
     name: string;
     type: 'email' | 'sms' | 'push_notification' | 'webhook' | 'device_notification' | 'n8n_workflow' | 'slack' | 'teams' | 'custom';
     recipients: number[] | ActionRecipient[];
+    recipient_ids?: number[];
     user_groups?: number[] | any[];
+    user_group_ids?: number[];
     device_type?: 'HALO' | 'HALO_SMART' | 'HALO_IOT';
-    device_list?: string;
-    http_method?: 'GET' | 'POST' | 'PUT';
-    webhook_url?: string;
+    device_list?: string | any[];
+    device_list_ids?: number[];
+    device_led_color?: number;
+    device_led_pattern?: number;
+    device_led_priority?: number;
+    action_duration_minutes?: number;
+    device_sound?: string;
     message_type?: string;
     message_template: string;
+    http_method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
+    webhook_url?: string;
+    webhook_auth_type?: 'none' | 'bearer' | 'basic' | 'api_key' | 'digest' | 'oauth2' | string;
+    webhook_auth_token?: string;
+    webhook_auth_username?: string;
+    webhook_auth_password?: string;
+    webhook_headers?: object;
     is_active: boolean;
+    alert_on_failure?: boolean;
 
     // N8N Workflow specific fields
     n8n_workflow_url?: string;

@@ -11,6 +11,7 @@ import {
     useActions, useCreateAction, useUpdateAction, useDeleteAction
 } from '../../../api/sensors.api';
 import ActionForm from './components/ActionForm';
+import ActionViewModal from './components/ActionViewModal';
 import { Action } from '../../../types/sensor';
 import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../../components/bootstrap/Modal';
 
@@ -24,6 +25,8 @@ const AlertActionPage = () => {
 
     const [isManagementFormOpen, setIsManagementFormOpen] = useState(false);
     const [editingAction, setEditingAction] = useState<Partial<Action> | null>(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewingAction, setViewingAction] = useState<Action | null>(null);
 
     const handleSaveAction = async (data: Partial<Action>) => {
         // Clean and prepare payload for backend
@@ -35,24 +38,29 @@ const AlertActionPage = () => {
         delete payload.updated_at;
         delete payload.created_by_username;
         delete payload.created_by;
+        delete payload.recipients; // Use recipient_ids
+        delete payload.user_groups; // Use user_group_ids
 
-        // 2. Map recipients to ID fields if they are objects
-        if (payload.recipients) {
-            payload.recipient_ids = payload.recipients.map((r: any) =>
+        // 2. Map recipients to ID fields if they were passed (backup if ActionForm didn't)
+        if (data.recipients && Array.isArray(data.recipients)) {
+            payload.recipient_ids = data.recipients.map((r: any) =>
                 typeof r === 'object' ? r.id : r
             );
         }
 
-        // 3. Map user groups to ID fields if they are objects
-        if (payload.user_groups) {
-            payload.user_group_ids = payload.user_groups.map((g: any) =>
+        // 3. Map user groups to ID fields
+        if (data.user_groups && Array.isArray(data.user_groups)) {
+            payload.user_group_ids = data.user_groups.map((g: any) =>
                 typeof g === 'object' ? g.id : g
             );
         }
 
-        // 4. Ensure device_list is handled (backend expects string or ID list depending on context)
-        // If it's empty, send empty array or string based on type
-        if (!payload.device_list) payload.device_list = [];
+        // 4. Handle device_list (ensure it's an array of strings as per Readme 'device_list' array)
+        if (data.type === 'device_notification') {
+            if (typeof data.device_list === 'string') {
+                payload.device_list = data.device_list.split(',').map(s => s.trim()).filter(Boolean);
+            }
+        }
 
         if (data.id) {
             await updateActionMutation.mutateAsync({ id: data.id, data: payload });
@@ -109,11 +117,27 @@ const AlertActionPage = () => {
                                                             ID: {row.n8n_workflow_id || 'unnamed'}
                                                         </small>
                                                     )}
-                                                    {(row.type === 'device_notification' || row.type === 'push_notification') && row.device_type && (
-                                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                                            <Icon icon="Devices" size="sm" className="me-1" />
-                                                            {row.device_type}
-                                                        </small>
+                                                    {(row.type === 'device_notification' || row.type === 'push_notification') && (
+                                                        <div className="d-flex flex-column">
+                                                            {row.device_type && (
+                                                                <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                                    <Icon icon="Devices" size="sm" className="me-1" />
+                                                                    {row.device_type}
+                                                                </small>
+                                                            )}
+                                                            {row.device_sound && (
+                                                                <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                                    <Icon icon="MusicNote" size="sm" className="me-1" />
+                                                                    {row.device_sound}
+                                                                </small>
+                                                            )}
+                                                            {row.device_led_color !== undefined && (
+                                                                <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                                    <Icon icon="Lightbulb" size="sm" className="me-1" />
+                                                                    LED: {row.device_led_color}, P:{row.device_led_pattern}
+                                                                </small>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             );
@@ -148,19 +172,6 @@ const AlertActionPage = () => {
                                         }
                                     },
                                     {
-                                        title: 'Message Format',
-                                        field: 'message_type',
-                                        render: (row: any) => {
-                                            const formatMap: any = {
-                                                'json_data': 'JSON Data',
-                                                'jsondata': 'JSON Data',
-                                                'custom_template': 'Custom Template',
-                                                'custom': 'Custom Message'
-                                            };
-                                            return <small className="fw-bold">{formatMap[row.message_type] || row.message_type || 'Custom'}</small>;
-                                        }
-                                    },
-                                    {
                                         title: 'Status',
                                         field: 'is_active',
                                         render: (row: any) => (
@@ -179,6 +190,14 @@ const AlertActionPage = () => {
                                     pageSize: 10
                                 }}
                                 actions={[
+                                    {
+                                        icon: () => <Icon icon="Visibility" />,
+                                        tooltip: 'View Details',
+                                        onClick: (event, rowData: any) => {
+                                            setViewingAction(rowData);
+                                            setIsViewModalOpen(true);
+                                        }
+                                    },
                                     {
                                         icon: () => <Icon icon="Edit" />,
                                         tooltip: 'Edit',
@@ -229,6 +248,12 @@ const AlertActionPage = () => {
                                 />
                             </ModalBody>
                         </Modal>
+
+                        <ActionViewModal
+                            action={viewingAction}
+                            isOpen={isViewModalOpen}
+                            setIsOpen={setIsViewModalOpen}
+                        />
                     </div>
                 </div>
             </Page>

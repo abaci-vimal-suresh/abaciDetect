@@ -95,6 +95,13 @@ export const haloMenu = {
         icon: 'Settings',
         subMenu: null,
     },
+    systemSettings: {
+        id: 'halo-system-settings',
+        text: 'System Settings',
+        path: '/halo/system-settings',
+        icon: 'SettingsSuggest',
+        subMenu: null,
+    },
     autocad: {
         id: 'halo-autocad',
         text: 'AutoCAD Viewer',

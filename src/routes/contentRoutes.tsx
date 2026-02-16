@@ -23,6 +23,7 @@ const HaloSensorGroupManager = lazy(() => import('../pages/HALO/Sensors/SensorGr
 const HaloTimeTravel = lazy(() => import('../pages/HALO/TimeTravel/TimeTravelPlayback'));
 const ThreeDPage = lazy(() => import('../pages/HALO/ThreeD/ThreeDPage'));
 const N8NIntegrationTutorial = lazy(() => import('../pages/HALO/Integrations/N8NIntegrationTutorial'));
+const HaloSystemSettings = lazy(() => import('../pages/settings/HaloSettings'));
 
 
 const HaloSensorMonitoringDashboard = lazy(() => import('../pages/HALO/Sensors/SensorMonitoringDashboard'));
@@ -159,6 +160,11 @@ const RouteConfig: CustomRouteConfig[] = [
 		path: '/halo/sensors/areas/:areaId/3d',
 		element: <ThreeDPage />,
 		allowedTo: ['Admin', 'Viewer'],
+	},
+	{
+		path: '/halo/system-settings',
+		element: <HaloSystemSettings />,
+		allowedTo: ['Admin'],
 	},
 
 	{
