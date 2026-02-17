@@ -99,7 +99,7 @@ export const haloMenu = {
         id: 'halo-system-settings',
         text: 'System Settings',
         path: '/halo/system-settings',
-        icon: 'SettingsSuggest',
+        icon: 'Settings',
         subMenu: null,
     },
     autocad: {
@@ -107,13 +107,6 @@ export const haloMenu = {
         text: 'AutoCAD Viewer',
         path: '/halo/autocad',
         icon: 'Drawing',
-        subMenu: null,
-    },
-    threed: {
-        id: 'halo-threed',
-        text: 'ThreeJS Adventure',
-        path: '/halo/threed',
-        icon: '3dRotation',
         subMenu: null,
     },
     users: {

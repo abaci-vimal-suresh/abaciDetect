@@ -56,6 +56,7 @@ const AlertHistory = () => {
     const [filter, setFilter] = useState<'all' | 'critical' | 'warning'>('all');
     const [timelineFilter, setTimelineFilter] = useState<'today' | '24h' | 'all'>('all');
     const [chartTimeRange, setChartTimeRange] = useState<'24h' | '7d'>('7d');
+    const [showTableFilters, setShowTableFilters] = useState(false);
 
 
     // Fetch trends and alerts from API
@@ -307,18 +308,7 @@ const AlertHistory = () => {
                 </div>
             ),
         },
-        {
-            title: 'Severity',
-            field: 'severity',
-            render: (rowData: AlertHistoryItem) => (
-                <Badge
-                    color={rowData.severity === 'critical' ? 'danger' : rowData.severity === 'warning' ? 'warning' : 'info'}
-                    isLight
-                >
-                    {rowData.severity.toUpperCase()}
-                </Badge>
-            ),
-        },
+       
         { title: 'Type', field: 'alert_type' },
         { title: 'Sensor', field: 'sensor_name', render: (row: any) => <code>{row.sensor_name}</code> },
         { title: 'Area', field: 'area_name' },
@@ -542,9 +532,17 @@ const AlertHistory = () => {
                                                 rowStyle: rowStyle(),
                                                 pageSize: 5,
                                                 search: true,
-                                                filtering: true,
+                                                filtering: showTableFilters,
                                                 actionsColumnIndex: -1,
                                             }}
+                                            actions={[
+                                                {
+                                                    icon: () => <Icon icon="FilterAlt" />,
+                                                    tooltip: showTableFilters ? 'Hide filters' : 'Show filters',
+                                                    isFreeAction: true,
+                                                    onClick: () => setShowTableFilters(prev => !prev),
+                                                },
+                                            ]}
                                         />
                                     </ThemeProvider>
                                 </div>

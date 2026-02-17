@@ -183,8 +183,13 @@ const Modal: FC<IModalProps> = ({
 
 	// Backdrop close function
 	const closeModal = (event: { target: any }) => {
+		const target = event.target as Node;
+		const multiSelectPanel = document.getElementById('msd-portal-panel');
+		if (multiSelectPanel && multiSelectPanel.contains(target)) {
+			return;
+		}
 		// @ts-ignore
-		if (ref.current && !ref.current.contains(event.target) && !isStaticBackdrop) {
+		if (ref.current && !ref.current.contains(target) && !isStaticBackdrop) {
 			setIsOpen(false);
 		}
 	};
@@ -193,8 +198,13 @@ const Modal: FC<IModalProps> = ({
 
 	// Backdrop static function
 	const modalStatic = (event: { target: any }) => {
+		const target = event.target as Node;
+		const multiSelectPanel = document.getElementById('msd-portal-panel');
+		if (multiSelectPanel && multiSelectPanel.contains(target)) {
+			return;
+		}
 		// @ts-ignore
-		if (ref.current && !ref.current.contains(event.target) && isStaticBackdrop) {
+		if (ref.current && !ref.current.contains(target) && isStaticBackdrop) {
 			// @ts-ignore
 			refModal.current.classList.add('modal-static');
 			// @ts-ignore

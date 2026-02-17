@@ -387,6 +387,10 @@ export interface SensorUpdatePayload {
     sensor_type?: string;
     description?: string;
     is_active?: boolean;
+    person_in_charge_ids?: number[]; // ✅ NEW: Link sensors to multiple users
+    personnel_in_charge?: string;
+    personnel_contact?: string;
+    personnel_email?: string;
     is_online?: boolean;
     username?: string;
     password?: string;

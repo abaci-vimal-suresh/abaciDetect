@@ -222,36 +222,21 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
     const tagStyle: React.CSSProperties = {
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '4px',
-        padding: '2px 6px 2px 8px',
-        backgroundColor: dm ? '#35373C' : '#EFF2F7',
-        color: dm ? 'white' : 'black',
-        borderRadius: '3px',
+        justifyContent: 'center',
+        width: 22,
+        height: 22,
+        backgroundColor: dm ? '#212529' : '#ffffff',
+        color: dm ? '#ffffff' : '#495057',
+        borderRadius: '50%',
+        border: dm ? '1px solid #343a40' : '1px solid #ced4da',
         fontSize: '11px',
-        fontWeight: 600,
-        maxWidth: '120px',
+        fontWeight: 700,
     };
 
     const tagLabelStyle: React.CSSProperties = {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-    };
-
-    const tagRemoveStyle: React.CSSProperties = {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '14px',
-        height: '14px',
-        border: 'none',
-        background: 'transparent',
-        color: dm ? '#aaa' : '#666',
-        cursor: 'pointer',
-        padding: 0,
-        fontSize: '10px',
-        flexShrink: 0,
-        borderRadius: '2px',
     };
 
     const searchInputStyle: React.CSSProperties = {
@@ -268,7 +253,7 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
     };
 
     const listStyle: React.CSSProperties = {
-        maxHeight: '150px',       // matches your react-select maxHeight: 150px
+        maxHeight: '100px',       // matches your react-select maxHeight: 150px
         overflowY: 'auto',
         padding: '4px 0',
     };
@@ -356,21 +341,14 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
                         </span>
                     ) : (
                         <>
-                            {visibleTags.map((lbl, i) => (
-                                <span key={value[i]} style={tagStyle}>
-                                    <span style={tagLabelStyle}>{lbl}</span>
-                                    {!disabled && (
-                                        <button
-                                            style={tagRemoveStyle}
-                                            onClick={e => {
-                                                e.stopPropagation();
-                                                onChange?.(value.filter((_, idx) => idx !== i));
-                                            }}
-                                            tabIndex={-1}
-                                        >×</button>
-                                    )}
-                                </span>
-                            ))}
+                            {visibleTags.map((lbl, i) => {
+                                const initial = (lbl || '').trim().charAt(0).toUpperCase();
+                                return (
+                                    <span key={value[i]} style={tagStyle}>
+                                        <span style={tagLabelStyle}>{initial}</span>
+                                    </span>
+                                );
+                            })}
                             {overflow > 0 && (
                                 <span style={{ fontSize: '11px', color: dm ? '#888' : '#999', fontWeight: 400 }}>
                                     +{overflow} more
