@@ -40,7 +40,7 @@ const SensorDataOverlay: React.FC<SensorDataOverlayProps> = ({ sensor, onClose, 
         <div
             className='position-absolute end-0  p-0  shadow overflow-hidden d-flex flex-column transition-all'
             style={{
-                top: '114px',
+                top: '1px',
                 background: darkModeStatus ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
                 backdropFilter: 'blur(16px)',
                 width: '320px',

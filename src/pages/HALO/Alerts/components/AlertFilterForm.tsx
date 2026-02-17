@@ -55,19 +55,6 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
     const { data: actions } = useActions();
     const { data: sensorGroups } = useSensorGroups();
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
-
-    const handleToggle = (field: keyof AlertFilter, value: number) => {
-        const currentList = (formData[field] as any[]) || [];
-        const index = currentList.findIndex((item: any) =>
-            (typeof item === 'object' ? item.id : item) === value
-        );
-        const newList = [...currentList];
-        if (index > -1) newList.splice(index, 1);
-        else newList.push(value);
-        setFormData({ ...formData, [field]: newList });
-    };
-
     const handleDayToggle = (day: number) => {
         const currentDays = formData.weekdays || [];
         const index = currentDays.indexOf(day);
@@ -82,9 +69,6 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
         return list.some((item: any) => (typeof item === 'object' ? item.id : item) === id);
     };
 
-    // ── Derived option lists for MultiSelectDropdown ─────────────────────────
-
-    // ALERT_TYPE_CHOICES already has { value, label } — map value to string
     const alertTypeOptions: Option[] = ALERT_TYPE_CHOICES.map(c => ({
         value: String(c.value),
         label: c.label,
@@ -103,6 +87,11 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
     const sensorGroupOptions: Option[] = (sensorGroups ?? []).map((g: any) => ({
         value: String(g.id),
         label: g.name,
+    }));
+
+    const actionOptions: Option[] = (actions ?? []).map((a: Action) => ({
+        value: String(a.id),
+        label: a.name,
     }));
 
     return (
@@ -139,12 +128,8 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                 </FormGroup>
             </div>
 
-            {/* ── Logic & Triggers ────────────────────────────────────────── */}
             <div className="col-12">
-                <div className="card border shadow-sm mb-0">
-                    <div className="card-header bg-light py-2">
-                        <span className="fw-bold small text-uppercase">Logic &amp; Triggers</span>
-                    </div>
+                    
                     <div className="card-body p-3">
                         <div className="row g-3">
 
@@ -213,15 +198,9 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
                         </div>
                     </div>
-                </div>
             </div>
 
-            {/* ── Active Schedule ─────────────────────────────────────────── */}
             <div className="col-12">
-                <div className="card border shadow-sm">
-                    <div className="card-header bg-light py-2">
-                        <span className="fw-bold small text-uppercase">Active Schedule (Optional)</span>
-                    </div>
                     <div className="card-body p-3">
                         <div className="row g-3">
                             <div className="col-md-6 d-flex align-items-end">
@@ -229,7 +208,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                                     {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
                                         <div
                                             key={index}
-                                            className={`border rounded text-center small fw-bold ${formData.weekdays?.includes(index) ? 'bg-primary text-white border-primary' : 'bg-light text-muted'}`}
+                                            className={`border rounded text-center small fw-bold ${formData.weekdays?.includes(index) ? 'bg-primary text-white border-primary' : ' text-muted'}`}
                                             style={{ cursor: 'pointer', width: '32px', height: '32px', lineHeight: '32px', userSelect: 'none' }}
                                             onClick={() => handleDayToggle(index)}
                                             title={['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][index]}
@@ -261,15 +240,11 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
 
             {/* ── Target Assignment ───────────────────────────────────────── */}
             <div className="col-12">
-                <div className="card border shadow-sm">
-                    <div className="card-header bg-light py-2">
-                        <span className="fw-bold small text-uppercase">Target Assignment</span>
-                    </div>
+                   
                     <div className="card-body p-3">
                         <div className="row g-3">
 
@@ -311,39 +286,27 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
                         </div>
                     </div>
-                </div>
             </div>
 
-            {/* ── Associated Actions — kept as click-cards (no change) ─────── */}
+            {/* ── Associated Actions ───────────────────────────────────────── */}
             <div className="col-12">
-                <div className="card border shadow-sm">
-                    <div className="card-header bg-light py-2">
+                    <div className="card-header  py-2">
                         <span className="fw-bold small text-uppercase">Associated Actions</span>
                     </div>
                     <div className="card-body p-3">
-                        <div className="row g-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                            {actions?.map((a: Action) => (
-                                <div key={a.id} className="col-md-6">
-                                    <div
-                                        className={`p-2 border rounded d-flex align-items-center justify-content-between ${isSelected('action_ids', a.id) ? 'border-primary bg-primary-subtle' : 'bg-light-subtle'}`}
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => handleToggle('action_ids', a.id)}
-                                    >
-                                        <div className="text-truncate" style={{ maxWidth: '80%' }}>
-                                            <div className="fw-bold small text-truncate">{a.name}</div>
-                                            <small className="text-muted d-block text-truncate" style={{ fontSize: '0.65rem' }}>{a.type.toUpperCase()} - {a.message_type}</small>
-                                        </div>
-                                        <Checks
-                                            id={`action-${a.id}`}
-                                            checked={isSelected('action_ids', a.id)}
-                                            onChange={() => { }}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                    <MultiSelectDropdown
+                        options={actionOptions}
+                        value={(formData.action_ids ?? []).map(String)}
+                        onChange={(vals) =>
+                            setFormData({ ...formData, action_ids: vals.map(Number) })
+                        }
+                        placeholder="Select Actions"
+                        searchPlaceholder="Search actions…"
+                        selectAll
+                        clearable
+                        className="w-100"
+                    />
                     </div>
-                </div>
             </div>
 
             {/* ── Footer ─────────────────────────────────────────────────── */}

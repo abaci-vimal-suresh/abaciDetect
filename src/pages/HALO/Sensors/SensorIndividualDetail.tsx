@@ -11,13 +11,13 @@ import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalTitle, ModalBody } from '../../../components/bootstrap/Modal';
 import ThemeContext from '../../../contexts/themeContext';
 
-import { useSensor, useSensorConfigurations, useLatestSensorLog } from '../../../api/sensors.api';
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '../../../lib/queryClient';
+import {
+    useSensor,
+    useSensorConfigurations,
+    useLatestSensorLog,
+    useUpdateSensor,
+} from '../../../api/sensors.api';
 import { isSensorOnline } from '../utils/sensorStatus.utils';
-
-// Personnel
-import { mockSensors, saveMockData } from '../../../mockData/sensors';
 
 // Views
 import SensorCardView from './views/SensorCardView';
@@ -31,10 +31,10 @@ const SensorIndividualDetail = () => {
     const { data: latestLog } = useLatestSensorLog(id || '', { refetchInterval: 15000 });
     const { data: configurations } = useSensorConfigurations(id || '');
     const { darkModeStatus } = useContext(ThemeContext);
-    const queryClient = useQueryClient();
+    const updateSensorMutation = useUpdateSensor();
 
     // View toggle
-    const [currentView, setCurrentView] = useState<'cards' | 'dashboard' | 'sentinel'>('sentinel');
+    const [currentView, setCurrentView] = useState<'cards' | 'dashboard' | 'sentinel'>('cards');
 
     // Modals
     const [isThresholdModalOpen, setIsThresholdModalOpen] = useState(false);
@@ -87,29 +87,18 @@ const SensorIndividualDetail = () => {
         setIsSavingPersonnel(true);
 
         try {
-            const index = mockSensors.findIndex(s => s.id === sensor.id);
-
-            if (index > -1) {
-                mockSensors[index] = {
-                    ...mockSensors[index],
-                    ...personnelData,
-                };
-
-                saveMockData();
-
-                queryClient.invalidateQueries({
-                    queryKey: queryKeys.sensors.detail(sensor.id),
-                });
-                queryClient.invalidateQueries({
-                    queryKey: queryKeys.sensors.lists(),
-                });
-
-                console.log('✅ Personnel updated:', personnelData);
-            }
+            await updateSensorMutation.mutateAsync({
+                sensorId: sensor.id,
+                data: {
+                    personnel_in_charge: personnelData.personnel_in_charge,
+                    personnel_contact: personnelData.personnel_contact,
+                    personnel_email: personnelData.personnel_email,
+                },
+            });
 
             setIsPersonnelModalOpen(false);
         } catch (err) {
-            console.error('❌ Failed to save personnel:', err);
+            console.error('Failed to save personnel:', err);
         } finally {
             setIsSavingPersonnel(false);
         }

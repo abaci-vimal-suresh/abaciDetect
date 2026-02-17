@@ -3,17 +3,19 @@ import * as React from 'react';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import SubHeader, { SubHeaderLeft } from '../../../layout/SubHeader/SubHeader';
-import Card, { CardBody, CardHeader, CardTitle, CardActions } from '../../../components/bootstrap/Card';
-import Button from '../../../components/bootstrap/Button';
 import Badge from '../../../components/bootstrap/Badge';
 import Icon from '../../../components/icon/Icon';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import useTablestyle from '../../../hooks/useTablestyles';
 import {
-    useAlertFilters, useCreateAlertFilter, useUpdateAlertFilter, useDeleteAlertFilter
+    useAlertFilters,
+    useCreateAlertFilter,
+    useUpdateAlertFilter,
+    useDeleteAlertFilter,
 } from '../../../api/sensors.api';
 import AlertFilterForm from './components/AlertFilterForm';
+import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../../components/bootstrap/Modal';
 import { AlertFilter, ALERT_TYPE_CHOICES, ALERT_SOURCE_CHOICES, Action } from '../../../types/sensor';
 
 const AlertFilterPage = () => {
@@ -84,33 +86,6 @@ const AlertFilterPage = () => {
                 <div className="row">
                     <div className="col-12">
 
-                        {/* ── Form Panel ──────────────────────────────────────────── */}
-                        {isManagementFormOpen && (
-                            <Card shadow="none" borderSize={1} className="mb-3">
-                                <CardHeader>
-                                    <CardTitle>
-                                        {editingFilter ? 'Edit Filter' : 'New Smart Rule'}
-                                    </CardTitle>
-                                    <CardActions>
-                                        <Button color="light" icon="Close" onClick={handleClose} />
-                                    </CardActions>
-                                </CardHeader>
-                                {/*
-                                  * KEY FIX: overflow:visible on CardBody so the dropdown panels
-                                  * (position:absolute) are not clipped by the card's overflow.
-                                  * We also add position:relative + z-index so stacking is correct.
-                                */}
-                                <CardBody style={{ overflow: 'visible', position: 'relative', zIndex: 10 }}>
-                                    <AlertFilterForm
-                                        filter={editingFilter || undefined}
-                                        onSave={handleSaveFilter}
-                                        onCancel={handleClose}
-                                    />
-                                </CardBody>
-                            </Card>
-                        )}
-
-                        {/* ── Table ───────────────────────────────────────────────── */}
                         <ThemeProvider theme={theme}>
                             <MaterialTable
                                 title="Your Smart Rules"
@@ -136,27 +111,49 @@ const AlertFilterPage = () => {
                                     },
                                     {
                                         title: 'Alert Types',
-                                        render: (row: AlertFilter) => (
-                                            <div className="d-flex flex-wrap gap-1" style={{ maxWidth: 200 }}>
-                                                {row.alert_types?.map((t: string) => (
-                                                    <Badge key={t} color="info" isLight className="text-truncate">
-                                                        {ALERT_TYPE_CHOICES.find(c => c.value === t)?.label || t}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        )
+                                        render: (row: AlertFilter) => {
+                                            const max = 3;
+                                            const types = row.alert_types || [];
+                                            const visible = types.slice(0, max);
+                                            const extra = types.length - visible.length;
+                                            return (
+                                                <div className="d-flex flex-wrap align-items-center gap-1" style={{ maxWidth: 260 }}>
+                                                    {visible.map((t: string) => (
+                                                        <Badge key={t} color="info" isLight className="text-truncate">
+                                                            {ALERT_TYPE_CHOICES.find(c => c.value === t)?.label || t}
+                                                        </Badge>
+                                                    ))}
+                                                    {extra > 0 && (
+                                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                            +{extra} more
+                                                        </small>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
                                     },
                                     {
                                         title: 'Sources',
-                                        render: (row: AlertFilter) => (
-                                            <div className="d-flex flex-wrap gap-1">
-                                                {row.source_types?.map((s: string) => (
-                                                    <Badge key={s} color="secondary" isLight>
-                                                        {ALERT_SOURCE_CHOICES.find(c => c.value === s)?.label || s}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        )
+                                        render: (row: AlertFilter) => {
+                                            const max = 2;
+                                            const sources = row.source_types || [];
+                                            const visible = sources.slice(0, max);
+                                            const extra = sources.length - visible.length;
+                                            return (
+                                                <div className="d-flex flex-wrap align-items-center gap-1">
+                                                    {visible.map((s: string) => (
+                                                        <Badge key={s} color="secondary" isLight>
+                                                            {ALERT_SOURCE_CHOICES.find(c => c.value === s)?.label || s}
+                                                        </Badge>
+                                                    ))}
+                                                    {extra > 0 && (
+                                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                            +{extra} more
+                                                        </small>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
                                     },
                                     {
                                         title: 'Triggers',
@@ -170,15 +167,26 @@ const AlertFilterPage = () => {
                                     },
                                     {
                                         title: 'Alert Actions',
-                                        render: (row: AlertFilter) => (
-                                            <div className="d-flex flex-wrap gap-1">
-                                                {row.actions?.map((a: Action) => (
-                                                    <Badge key={a.id} color="primary" isLight>
-                                                        {a.name}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        )
+                                        render: (row: AlertFilter) => {
+                                            const max = 2;
+                                            const actions = row.actions || [];
+                                            const visible = actions.slice(0, max);
+                                            const extra = actions.length - visible.length;
+                                            return (
+                                                <div className="d-flex flex-wrap align-items-center gap-1">
+                                                    {visible.map((a: Action) => (
+                                                        <Badge key={a.id} color="primary" isLight className="text-truncate">
+                                                            {a.name}
+                                                        </Badge>
+                                                    ))}
+                                                    {extra > 0 && (
+                                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                            +{extra} more
+                                                        </small>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
                                     },
                                     {
                                         title: 'Status',
@@ -222,6 +230,27 @@ const AlertFilterPage = () => {
                                 ]}
                             />
                         </ThemeProvider>
+
+                        <Modal
+                            isOpen={isManagementFormOpen}
+                            setIsOpen={setIsManagementFormOpen}
+                            size="lg"
+                            isCentered
+                            isScrollable
+                        >
+                            <ModalHeader setIsOpen={setIsManagementFormOpen}>
+                                <ModalTitle id="alert-filter-form-modal">
+                                    {editingFilter ? 'Edit Filter' : 'New Smart Rule'}
+                                </ModalTitle>
+                            </ModalHeader>
+                            <ModalBody>
+                                <AlertFilterForm
+                                    filter={editingFilter || undefined}
+                                    onSave={handleSaveFilter}
+                                    onCancel={handleClose}
+                                />
+                            </ModalBody>
+                        </Modal>
 
                     </div>
                 </div>

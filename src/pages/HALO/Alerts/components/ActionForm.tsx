@@ -108,7 +108,16 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                 <FormGroup label="Type">
                     <Select
                         value={formData.type}
-                        onChange={(e: any) => setFormData({ ...formData, type: e.target.value as any })}
+                        onChange={(e: any) => {
+                            const nextType = e.target.value as any;
+                            setFormData(prev => ({
+                                ...prev,
+                                type: nextType,
+                                message_type: nextType === 'email' || nextType === 'sms'
+                                    ? 'custom'
+                                    : prev.message_type || 'custom'
+                            }));
+                        }}
                         list={[
                             { value: 'email', text: 'Email' },
                             { value: 'sms', text: 'SMS' },
@@ -467,7 +476,7 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                 </>
             )}
 
-            {formData.type !== 'device_notification' && (
+            {formData.type !== 'device_notification' && formData.type !== 'email' && formData.type !== 'sms' && (
                 <div className="col-md-6">
                     <FormGroup label="Message Format">
                         <Select
@@ -509,7 +518,7 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
 
             {formData.type !== 'device_notification' && (formData.message_type === 'custom' || formData.message_type === 'custom_template') && (
                 <div className="col-12">
-                    <FormGroup label="Request Body">
+                    <FormGroup label={formData.type === 'email' || formData.type === 'sms' ? 'Message' : 'Request Body'}>
                         <div style={{ position: 'relative' }}>
                             <Textarea
                                 value={formData.message_template}
@@ -517,30 +526,34 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                                 rows={12}
                                 style={{ paddingLeft: '2.7rem', background: 'transparent', position: 'relative', zIndex: 1, height: '100%' }}
                             />
-                            <span style={{
-                                position: 'absolute',
-                                top: '10px',
-                                left: '10px',
-                                color: '#adb5bd',
-                                fontSize: '0.9rem',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                fontFamily: 'monospace'
-                            }}>
-                                {'{'}
-                            </span>
-                            <span style={{
-                                position: 'absolute',
-                                bottom: '10px',
-                                left: '10px',
-                                color: '#adb5bd',
-                                fontSize: '0.9rem',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                fontFamily: 'monospace'
-                            }}>
-                                {'}'}
-                            </span>
+                            {formData.type !== 'email' && formData.type !== 'sms' && (
+                                <>
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: '10px',
+                                        left: '10px',
+                                        color: '#adb5bd',
+                                        fontSize: '0.9rem',
+                                        pointerEvents: 'none',
+                                        zIndex: 0,
+                                        fontFamily: 'monospace'
+                                    }}>
+                                        {'{'}
+                                    </span>
+                                    <span style={{
+                                        position: 'absolute',
+                                        bottom: '10px',
+                                        left: '10px',
+                                        color: '#adb5bd',
+                                        fontSize: '0.9rem',
+                                        pointerEvents: 'none',
+                                        zIndex: 0,
+                                        fontFamily: 'monospace'
+                                    }}>
+                                        {'}'}
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </FormGroup>
                 </div>

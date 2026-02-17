@@ -8,6 +8,10 @@ import FormGroup from '../../components/bootstrap/forms/FormGroup';
 import Button from '../../components/bootstrap/Button';
 import Icon from '../../components/icon/Icon';
 import Spinner from '../../components/bootstrap/Spinner';
+import { ThemeProvider } from '@mui/material';
+import MaterialTable from '@material-table/core';
+import useTablestyle from '../../hooks/useTablestyles';
+import { debounceIntervalForTable, pageSizeOptions } from '../../helpers/constants';
 import { useSoundFiles, useAddSoundFile, useDeleteSoundFile } from '../../api/sensors.api';
 import { SoundFile } from '../../types/sensor';
 
@@ -16,11 +20,15 @@ const HaloSettings = () => {
     const addSoundMutation = useAddSoundFile();
     const deleteSoundMutation = useDeleteSoundFile();
     const [searchTerm, setSearchTerm] = useState('');
+    const [pageSize, setPageSize] = useState(5);
+    const { theme, headerStyles, rowStyles } = useTablestyle();
 
-    const filteredSounds = soundFiles?.filter(s =>
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.file_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredSounds = soundFiles?.filter(s => {
+        const name = (s.name || '').toLowerCase();
+        const fileName = (s.file_name || '').toLowerCase();
+        const term = searchTerm.toLowerCase();
+        return name.includes(term) || fileName.includes(term);
+    });
 
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -105,52 +113,71 @@ const HaloSettings = () => {
                                     </div>
                                 </div>
 
-                                <div className='table-responsive'>
-                                    <table className='table table-modern table-hover mb-0'>
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Size</th>
-                                                <th>Uploaded Date</th>
-                                                <th className='text-end'>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {isLoading ? (
-                                                <tr>
-                                                    <td colSpan={5} className='text-center py-4'>
-                                                        <Spinner color='primary' />
-                                                    </td>
-                                                </tr>
-                                            ) : filteredSounds && filteredSounds.length > 0 ? (
-                                                filteredSounds.map((sound: SoundFile) => (
-                                                    <tr key={sound.id}>
-                                                        <td className='fw-bold'>{sound.name}</td>
-                                                        <td>{sound.file_size !== null ? `${(sound.file_size / 1024).toFixed(2)} KB` : 'N/A'}</td>
-                                                        <td>{new Date(sound.uploaded_at).toLocaleDateString()}</td>
-                                                        <td className='text-end'>
-                                                            {sound.file_size !== null && (
-                                                                <Button
-                                                                    color='danger'
-                                                                    isLight
-                                                                    size='sm'
-                                                                    icon='Delete'
-                                                                    isDisable={deleteSoundMutation.isPending}
-                                                                    onClick={() => handleDelete(sound.id)}
-                                                                />
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={5} className='text-center py-4 text-muted'>
-                                                        No sound files found.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
+                                <div style={{ overflowY: 'auto' }}>
+                                    <ThemeProvider theme={theme}>
+                                        <MaterialTable
+                                            title=''
+                                            columns={[
+                                                {
+                                                    title: 'Name',
+                                                    field: 'name',
+                                                    render: (rowData: SoundFile) => rowData.name,
+                                                },
+                                                {
+                                                    title: 'Size',
+                                                    field: 'file_size',
+                                                    render: (rowData: SoundFile) =>
+                                                        rowData.file_size !== null
+                                                            ? `${(rowData.file_size / 1024).toFixed(2)} KB`
+                                                            : 'N/A',
+                                                },
+                                                {
+                                                    title: 'Uploaded Date',
+                                                    field: 'uploaded_at',
+                                                    render: (rowData: SoundFile) =>
+                                                        new Date(rowData.uploaded_at).toLocaleDateString(),
+                                                },
+                                                {
+                                                    title: 'Actions',
+                                                    field: 'actions',
+                                                    sorting: false,
+                                                    filtering: false,
+                                                    cellStyle: { textAlign: 'right' },
+                                                    headerStyle: { textAlign: 'right' },
+                                                    render: (rowData: SoundFile) =>
+                                                        rowData.file_size !== null ? (
+                                                            <Button
+                                                                color='danger'
+                                                                isLight
+                                                                size='sm'
+                                                                icon='Delete'
+                                                                isDisable={deleteSoundMutation.isPending}
+                                                                onClick={() => handleDelete(rowData.id)}
+                                                            />
+                                                        ) : null,
+                                                },
+                                            ]}
+                                            data={filteredSounds || []}
+                                            isLoading={isLoading}
+                                            localization={{
+                                                pagination: {
+                                                    labelRowsPerPage: '',
+                                                },
+                                            }}
+                                            onRowsPerPageChange={(page) => setPageSize(page)}
+                                            options={{
+                                                actionsColumnIndex: -1,
+                                                filtering: false,
+                                                pageSizeOptions: pageSizeOptions,
+                                                pageSize: pageSize,
+                                                columnsButton: false,
+                                                headerStyle: headerStyles(),
+                                                rowStyle: rowStyles(),
+                                                search: false,
+                                                debounceInterval: debounceIntervalForTable,
+                                            }}
+                                        />
+                                    </ThemeProvider>
                                 </div>
                             </CardBody>
                         </Card>

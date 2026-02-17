@@ -41,7 +41,6 @@ export const AdminRoutes = {
 	users: haloMenu.users,
 	timetravel: haloMenu.timetravel,
 	reports: haloMenu.reports,
-	threed: haloMenu.threed,
 	systemSettings: haloMenu.systemSettings,
 };
 
@@ -60,7 +59,6 @@ export const ViewerRoutes = {
 	reports: haloMenu.reports,
 	haloActions: haloMenu.actions,
 	autocad: haloMenu.autocad,
-	threed: haloMenu.threed,
 };
 
 export const pagesNotInSideBar = {

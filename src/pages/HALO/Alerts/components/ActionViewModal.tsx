@@ -342,25 +342,45 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                         </div>
                     )}
 
-                    {/* ── Request Body ── */}
+                    {/* ── Message / Request Body ── */}
                     {action.type !== 'device_notification' && action.message_template && (
                         <div>
-                            <SectionLabel>Request Body</SectionLabel>
-                            <div className="position-relative rounded-2"
-                                style={{ border: '1px solid #e9ecef', background: '#f8f9fa' }}>
-                                <span className="position-absolute"
-                                    style={{ top: 8, left: 10, color: '#adb5bd', fontFamily: 'monospace', fontSize: '1rem', pointerEvents: 'none', zIndex: 1 }}>
-                                    {'{'}
-                                </span>
-                                <pre className="mb-0 py-2 small"
-                                    style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingLeft: '2rem', paddingRight: '1rem', minHeight: 60, background: 'transparent' }}>
-                                    {action.message_template}
-                                </pre>
-                                <span className="position-absolute"
-                                    style={{ bottom: 8, left: 10, color: '#adb5bd', fontFamily: 'monospace', fontSize: '1rem', pointerEvents: 'none', zIndex: 1 }}>
-                                    {'}'}
-                                </span>
-                            </div>
+                            <SectionLabel>
+                                {action.type === 'email' || action.type === 'sms' ? 'Message' : 'Request Body'}
+                            </SectionLabel>
+
+                            {action.type === 'email' || action.type === 'sms' ? (
+                                <div className="rounded-2"
+                                    style={{ border: '1px solid #dee2e6', background: '#ffffff' }}>
+                                    <pre className="mb-0 py-2 small"
+                                        style={{
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-word',
+                                            paddingLeft: '1rem',
+                                            paddingRight: '1rem',
+                                            minHeight: 60,
+                                            background: 'transparent'
+                                        }}>
+                                        {action.message_template}
+                                    </pre>
+                                </div>
+                            ) : (
+                                <div className="position-relative rounded-2"
+                                    style={{ border: '1px solid #dee2e6', background: '#ffffff' }}>
+                                    <span className="position-absolute"
+                                        style={{ top: 8, left: 10, fontFamily: 'monospace', fontSize: '1rem', pointerEvents: 'none', zIndex: 1 }}>
+                                        {'{'}
+                                    </span>
+                                    <pre className="mb-0 py-2 small"
+                                        style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingLeft: '2rem', paddingRight: '1rem', minHeight: 60, background: 'transparent' }}>
+                                        {action.message_template}
+                                    </pre>
+                                    <span className="position-absolute"
+                                        style={{ bottom: 8, left: 10, fontFamily: 'monospace', fontSize: '1rem', pointerEvents: 'none', zIndex: 1 }}>
+                                        {'}'}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
 

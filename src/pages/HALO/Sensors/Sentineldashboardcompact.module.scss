@@ -1,0 +1,745 @@
+// ========================================
+// COMPACT MINIMAL SENTINEL DASHBOARD STYLES
+// ========================================
+
+.sentinelSensor {
+  width: 100%;
+  padding: 16px;
+  background: var(--background-color, #f5f5f5);
+}
+
+.sentinelContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+// ========================================
+// COMPACT GRID LAYOUT
+// ========================================
+.compactDashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+// ========================================
+// BASE COMPACT CARD
+// ========================================
+.compactCard {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  transition: border-color 0.2s;
+  
+  &:hover {
+    border-color: #d1d5db;
+  }
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+// Card Header
+.compactCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.cardTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+// ========================================
+// STATUS COLORS (Minimal)
+// ========================================
+.statusSafe {
+  border-left: 3px solid #10b981;
+}
+
+.statusWarning {
+  border-left: 3px solid #f59e0b;
+}
+
+.statusCritical {
+  border-left: 3px solid #ef4444;
+}
+
+// ========================================
+// AQI CARD - COMPACT
+// ========================================
+.aqiCompactLayout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aqiCircleCompact {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e5e7eb;
+  
+  .statusWarning & {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #fbbf24;
+  }
+  
+  .statusCritical & {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-color: #f87171;
+  }
+}
+
+.aqiValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+}
+
+.aqiLabel {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.aqiStatus {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// ========================================
+// HEALTH CARD - COMPACT
+// ========================================
+.healthCompactLayout {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.healthMainScore {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  border: 2px solid #e5e7eb;
+}
+
+.healthSubGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.subMetricCompact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subLabel {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.subValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+// ========================================
+// ENVIRONMENT CARD - COMPACT
+// ========================================
+.environmentGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.envMetric {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.envIcon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.envData {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.envValue {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.envLabel {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.envMetricSmall {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.smallLabel {
+  color: #6b7280;
+}
+
+.smallValue {
+  font-weight: 600;
+  color: #111827;
+}
+
+// ========================================
+// GASES CARD - COMPACT
+// ========================================
+.gasesCompactLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mainGas {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.gasLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.gasValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.gasUnit {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.gasSubGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.gasSubMetric {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #f9fafb;
+  border-radius: 4px;
+  font-size: 11px;
+  
+  span:first-child {
+    color: #6b7280;
+    font-weight: 500;
+  }
+  
+  span:last-child {
+    color: #111827;
+    font-weight: 600;
+  }
+}
+
+// ========================================
+// PARTICULATES CARD - COMPACT
+// ========================================
+.particulatesCompact {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pmItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pmHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.pmLabel {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.pmValue {
+  color: #111827;
+  font-weight: 600;
+}
+
+.pmBar {
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pmBarFill {
+  height: 100%;
+  transition: width 0.3s;
+  border-radius: 3px;
+}
+
+.statusSafe {
+  background: #10b981;
+}
+
+.statusWarning {
+  background: #f59e0b;
+}
+
+.statusCritical {
+  background: #ef4444;
+}
+
+// ========================================
+// ACOUSTIC CARD - COMPACT
+// ========================================
+.soundCompactLayout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.soundMain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: #f9fafb;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+}
+
+.soundValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.soundUnit {
+  font-size: 9px;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.soundSpectrum {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 40px;
+}
+
+.spectrumBarCompact {
+  flex: 1;
+  background: #d1d5db;
+  border-radius: 2px;
+  transition: height 0.1s ease;
+  
+  &.gunshotActive {
+    background: #ef4444;
+  }
+}
+
+.soundAlerts {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+}
+
+.alertBadge {
+  padding: 4px 8px;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+// ========================================
+// OCCUPANCY CARD - COMPACT
+// ========================================
+.occupancyCompact {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.radarCompact {
+  position: relative;
+  width: 100%;
+  height: 80px;
+  background: 
+    radial-gradient(circle, transparent 20%, #f9fafb 20%, #f9fafb 40%, transparent 40%, transparent 60%, #f9fafb 60%, #f9fafb 80%, transparent 80%);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.radarDot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.occupancyCount {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.countValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+// ========================================
+// INTELLIGENCE CARD - COMPACT
+// ========================================
+.intelCompact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.intelItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.intelLabel {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.intelValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  
+  &.critical {
+    color: #dc2626;
+  }
+  
+  &.warning {
+    color: #d97706;
+  }
+  
+  &.safe {
+    color: #059669;
+  }
+}
+
+.intelGuidance {
+  font-size: 11px;
+  color: #6b7280;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+  font-style: italic;
+}
+
+// ========================================
+// SYSTEM CARD - COMPACT
+// ========================================
+.systemCompact {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.sysItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #f9fafb;
+  border-radius: 4px;
+  font-size: 10px;
+  
+  span:first-child {
+    color: #9ca3af;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  span:last-child {
+    color: #111827;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+  }
+}
+
+// ========================================
+// TERMINAL CARD - COMPACT
+// ========================================
+.terminalCompact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #1f2937;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+}
+
+.terminalRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.terminalLabel {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.terminalData {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 10px;
+  color: #d1d5db;
+}
+
+.terminalItem {
+  white-space: nowrap;
+  
+  strong {
+    color: #10b981;
+    font-weight: 600;
+  }
+}
+
+.terminalFooter {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #374151;
+  font-size: 9px;
+  color: #6b7280;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+}
+
+// ========================================
+// MINIMAL TOOLTIP
+// ========================================
+.minimalTooltip {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 1000;
+  max-width: 200px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tooltipTitle {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #ffffff;
+}
+
+.tooltipDesc {
+  color: #d1d5db;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.tooltipRange {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #374151;
+  font-size: 9px;
+  color: #10b981;
+  font-weight: 500;
+}
+
+// ========================================
+// RESPONSIVE ADJUSTMENTS
+// ========================================
+@media (max-width: 767px) {
+  .sentinelSensor {
+    padding: 12px;
+  }
+  
+  .compactDashboardGrid {
+    gap: 10px;
+  }
+  
+  .compactCard {
+    padding: 10px;
+  }
+}
+
+// ========================================
+// DARK MODE SUPPORT (Optional)
+// ========================================
+@media (prefers-color-scheme: dark) {
+  .sentinelSensor {
+    background: #111827;
+  }
+  
+  .compactCard {
+    background: #1f2937;
+    border-color: #374151;
+    
+    &:hover {
+      border-color: #4b5563;
+    }
+  }
+  
+  .compactCardHeader {
+    border-bottom-color: #374151;
+  }
+  
+  .cardTitle {
+    color: #9ca3af;
+  }
+  
+  .aqiValue,
+  .envValue,
+  .gasValue,
+  .pmValue,
+  .soundValue,
+  .countValue,
+  .intelValue,
+  .subValue,
+  .smallValue {
+    color: #f9fafb;
+  }
+  
+  .envMetric,
+  .envMetricSmall,
+  .mainGas,
+  .gasSubMetric,
+  .intelItem,
+  .intelGuidance,
+  .sysItem,
+  .occupancyCount,
+  .soundMain {
+    background: #111827;
+  }
+  
+  .pmBar {
+    background: #374151;
+  }
+  
+  .aqiCircleCompact,
+  .healthMainScore {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border-color: #374151;
+  }
+}
+
+// ========================================
+// UTILITY CLASSES
+// ========================================
+.metricUnit {
+  font-size: 0.85em;
+  opacity: 0.7;
+}

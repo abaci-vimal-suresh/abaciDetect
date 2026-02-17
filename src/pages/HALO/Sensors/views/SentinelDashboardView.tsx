@@ -308,17 +308,6 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
                         </div>
                     </div>
 
-                    {/* INSIGHT ORBS (GAPS) */}
-                    <div className={styles.insightOrb} onMouseEnter={(e) => handleMouseMove(e, 'Toxicity Analysis', 'CO2 levels are being monitored for workspace safety.')}>
-                        <div className={styles.orbValue}>{getValue('co2')}</div>
-                        <div className={styles.orbLabel}>ppm co2</div>
-                    </div>
-
-                    <div className={styles.insightOrb}>
-                        <div className={styles.orbValue}>{getValue('humidity')}%</div>
-                        <div className={styles.orbLabel}>Humidity</div>
-                    </div>
-                    {/* INSIGHT ORBS (GAPS) */}
                     <div className={styles.insightOrb} onMouseEnter={(e) => handleMouseMove(e, 'Toxicity Analysis', 'CO2 levels are being monitored for workspace safety.')}>
                         <div className={styles.orbValue}>{getValue('co2')}</div>
                         <div className={styles.orbLabel}>ppm co2</div>
@@ -433,43 +422,7 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
 
 
 
-                    {/* SENTINEL INTELLIGENCE CARD */}
-                    <div
-                        className={classNames(styles.sentinelCard, styles.intelligenceCard)}
-                        onMouseMove={(e) => handleMouseMove(e, 'Operational Intelligence', 'Real-time analysis of sensor environment and status logic.')}
-                        onMouseLeave={hideTooltip}
-                    >
-                        <div className={styles.cardHeader}>
-                            <Icon icon="Psychology" style={{ marginRight: '8px' }} />
-                            Sentinel Intelligence
-                        </div>
-                        <div className={styles.intelligenceGrid}>
-                            <div className={styles.intelSection}>
-                                <div className={styles.intelTitle}>CURRENT DEPLOYMENT</div>
-                                <div className={styles.intelValue}>{sensor.location || 'Unknown Sector'}</div>
-                                <div className={styles.intelGuidance} style={{ marginTop: '5px' }}>
-                                    Standard monitoring active for Area {sensor.area_id || 'Alpha'}.
-                                </div>
-                            </div>
-                            <div className={styles.intelSection}>
-                                <div className={styles.intelTitle}>STATUS GUIDANCE</div>
-                                {sensorStatus === 'critical' ? (
-                                    <div className={styles.intelValue} style={{ color: '#ef4444' }}>IMMEDIATE ACTION</div>
-                                ) : sensorStatus === 'warning' ? (
-                                    <div className={styles.intelValue} style={{ color: '#eab308' }}>CAUTION ADVISED</div>
-                                ) : (
-                                    <div className={styles.intelValue} style={{ color: '#22c55e' }}>NOMINAL OPS</div>
-                                )}
-                                <div className={styles.intelGuidance} style={{ marginTop: '5px' }}>
-                                    {sensorStatus === 'critical'
-                                        ? 'Values exceeded lethal thresholds. Evacuation recommended.'
-                                        : sensorStatus === 'warning'
-                                            ? 'Environmental stress detected. Monitor ventilation.'
-                                            : 'Atmospheric conditions within optimal safety range.'}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    
                     {/* SYSTEM CARD */}
 
                     <div className={classNames(styles.sentinelCard, styles.systemCard, styles.statusSafe)}>
@@ -498,73 +451,7 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
                     </div>
 
                     {/* DIAGNOSTIC TERMINAL (Matches API Response Structure) */}
-                    <div className={classNames(styles.sentinelCard, styles.terminalCard, styles[sensorStatus])}>
-                        <div className={styles.cardHeader}>
-                            <Icon icon="Terminal" style={{ marginRight: '8px' }} />
-                            System Live Diagnostics [Real-time JSON Stream]
-                        </div>
-                        <div className={styles.terminalContainer}>
-                            <div className={styles.terminalSection}>
-                                <div className={styles.terminalHeading}>ENVIRONMENTAL</div>
-                                <div className={styles.terminalGrid}>
-                                    {latestLog ? Object.entries(latestLog.readings_environmental).map(([key, val]) => (
-                                        key !== 'id' && (
-                                            <div key={key} className={styles.terminalItem}>
-                                                <span className={styles.tKey}>{key.toUpperCase()}</span>
-                                                <span className={styles.tVal}>{val !== null ? val : 'NULL'}</span>
-                                            </div>
-                                        )
-                                    )) : <div className={styles.loadingText}>awaiting_stream...</div>}
-                                </div>
-                            </div>
-
-                            <div className={styles.terminalSection}>
-                                <div className={styles.terminalHeading}>AIR_QUALITY</div>
-                                <div className={styles.terminalGrid}>
-                                    {latestLog ? Object.entries(latestLog.readings_air).map(([key, val]) => (
-                                        key !== 'id' && (
-                                            <div key={key} className={styles.terminalItem}>
-                                                <span className={styles.tKey}>{key.toUpperCase()}</span>
-                                                <span className={styles.tVal}>{val !== null ? val : 'NULL'}</span>
-                                            </div>
-                                        )
-                                    )) : <div className={styles.loadingText}>awaiting_stream...</div>}
-                                </div>
-                            </div>
-
-                            <div className={styles.terminalSection}>
-                                <div className={styles.terminalHeading}>DERIVED_METRICS</div>
-                                <div className={styles.terminalGrid}>
-                                    {latestLog ? Object.entries(latestLog.readings_derived).map(([key, val]) => (
-                                        key !== 'id' && (
-                                            <div key={key} className={styles.terminalItem}>
-                                                <span className={styles.tKey}>{key.toUpperCase()}</span>
-                                                <span className={styles.tVal}>{val !== null ? val : 'NULL'}</span>
-                                            </div>
-                                        )
-                                    )) : <div className={styles.loadingText}>awaiting_stream...</div>}
-                                </div>
-                            </div>
-
-                            <div className={styles.terminalSection}>
-                                <div className={styles.terminalHeading}>OTHERS_DIAG</div>
-                                <div className={styles.terminalGrid}>
-                                    {latestLog ? Object.entries(latestLog.others).map(([key, val]) => (
-                                        key !== 'id' && (
-                                            <div key={key} className={styles.terminalItem}>
-                                                <span className={styles.tKey}>{key.toUpperCase()}</span>
-                                                <span className={styles.tVal}>{val !== null ? val : 'NULL'}</span>
-                                            </div>
-                                        )
-                                    )) : <div className={styles.loadingText}>awaiting_stream...</div>}
-                                </div>
-                            </div>
-                        </div>
-                        <div className={styles.terminalFooter}>
-                            <span>LAST_SYNC: {latestLog?.recorded_at || 'NEVER'}</span>
-                            <span className={styles.blinkingCursor}>_</span>
-                        </div>
-                    </div>
+                   
 
                 </div>
             </div>
