@@ -469,9 +469,7 @@ const ThreeDPage = () => {
                     <div
                         className='flex-grow-1 position-relative'
                         style={{
-                            background: darkModeStatus
-                                ? 'linear-gradient(180deg, #333333ff 0%, #656565ff 100%)'
-                                : 'linear-gradient(180deg, #d2cdcdff 0%, #c4c3c3ff 100%)'
+                            background: '#c2c2c2ff'
                         }}
                     >
                         {/* ============================================ */}
@@ -482,7 +480,6 @@ const ThreeDPage = () => {
                             <div
                                 className='position-absolute start-0 p-0 shadow overflow-hidden d-flex flex-column'
                                 style={{
-                                    top: '122px',
                                     left: '0',
                                     background: darkModeStatus ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
                                     backdropFilter: 'blur(12px)',

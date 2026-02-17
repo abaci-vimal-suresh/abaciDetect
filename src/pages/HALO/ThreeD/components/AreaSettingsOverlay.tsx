@@ -339,12 +339,11 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
             <div
                 className='position-absolute end-0 p-0 shadow overflow-hidden d-flex flex-column'
                 style={{
-                    top: '122px',
+                    top: '1px',
                     background: darkModeStatus ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
                     backdropFilter: 'blur(16px)',
                     width: '320px',
                     maxHeight: 'calc(100% - 110px)',
-                    border: darkModeStatus ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
                     zIndex: 101,
                     transition: 'all 0.3s ease'
                 }}
@@ -363,7 +362,6 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
                     </CardHeader>
 
                     <CardBody className="p-3 overflow-auto scrollbar-hidden flex-grow-1">
-                        {/* Action Buttons */}
                         <div className="d-flex gap-2 mb-3">
                             <Button
                                 color={isDrawing ? "warning" : "info"}

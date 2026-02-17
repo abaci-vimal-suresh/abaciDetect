@@ -15,6 +15,7 @@ import {
     formatDiffSummary,
     formatDiffSummaryVerbose
 } from '../utils/wallDiff';
+import { PreviewState, isSensorPositionPreview } from '../utils/previewState';
 
 interface SensorSettingsOverlayProps {
     sensor: Sensor;
@@ -22,6 +23,7 @@ interface SensorSettingsOverlayProps {
     onClose: () => void;
     onPreviewChange?: (values: (Partial<SensorUpdatePayload> & { walls?: Wall[] }) | null) => void;
     onBlinkingWallsChange?: (wallIds: (number | string)[]) => void;
+    previewState?: PreviewState;
 }
 
 const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
@@ -29,7 +31,8 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     originalSensor,
     onClose,
     onPreviewChange,
-    onBlinkingWallsChange
+    onBlinkingWallsChange,
+    previewState
 }) => {
     const { darkModeStatus } = useDarkMode();
     const updateSensorMutation = useUpdateSensor();
@@ -72,6 +75,31 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     const availableAreaWalls = (areaWalls || []).filter(aw =>
         !walls.find(sw => sw.id === aw.id)
     );
+
+    // ============================================
+    // ✨ NEW: SYNC FROM 3D DRAG (previewState)
+    // ============================================
+
+    useEffect(() => {
+        if (isSensorPositionPreview(previewState) && String(previewState.data.sensorId) === String(sensor.id)) {
+            const { x_val, y_val, z_val } = previewState.data;
+
+            // Only update if different to avoid potential loops (though fast updates are needed for drag)
+            if (
+                x_val !== values.x_val ||
+                y_val !== values.y_val ||
+                z_val !== values.z_val
+            ) {
+                setValues(prev => ({
+                    ...prev,
+                    x_val,
+                    y_val,
+                    z_val
+                }));
+                setIsDirty(true);
+            }
+        }
+    }, [previewState, sensor.id]);
 
     // ============================================
     // BLINKING WALLS SYNC

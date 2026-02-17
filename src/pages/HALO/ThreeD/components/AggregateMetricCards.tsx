@@ -1,7 +1,98 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import useDarkMode from '../../../../hooks/useDarkMode';
 import { useAggregatedSensorData } from '../../../../api/sensors.api';
 import Icon from '../../../../components/icon/Icon';
+import Modal, { ModalHeader, ModalBody, ModalTitle } from '../../../../components/bootstrap/Modal';
+
+const METRIC_GROUPS = [
+    {
+        key: 'room_conditions',
+        label: 'Room Conditions',
+        icon: 'Thermostat',
+        accentColor: '#ef4444',
+        representative: 'temperature',
+        representativeLabel: 'Temp',
+        representativeUnit: '°C',
+        metrics: [
+            { key: 'temperature', label: 'Temperature', unit: '°C' },
+            { key: 'humidity', label: 'Humidity', unit: '%' },
+            { key: 'pressure', label: 'Pressure', unit: 'hPa' },
+            { key: 'light', label: 'Light', unit: 'lux' },
+        ],
+    },
+    {
+        key: 'air_particles',
+        label: 'Air Dust & Particles',
+        icon: 'Grain',
+        accentColor: '#f59e0b',
+        representative: 'pm25',
+        representativeLabel: 'PM2.5',
+        representativeUnit: 'µg/m³',
+        metrics: [
+            { key: 'pm1', label: 'PM1', unit: 'µg/m³' },
+            { key: 'pm25', label: 'PM2.5', unit: 'µg/m³' },
+            { key: 'pm10', label: 'PM10', unit: 'µg/m³' },
+        ],
+    },
+    {
+        key: 'air_composition',
+        label: 'Air Composition',
+        icon: 'Science',
+        accentColor: '#06b6d4',
+        representative: 'co2',
+        representativeLabel: 'CO₂',
+        representativeUnit: 'ppm',
+        metrics: [
+            { key: 'co', label: 'CO', unit: 'ppm' },
+            { key: 'co2', label: 'CO₂', unit: 'ppm' },
+            { key: 'tvoc', label: 'TVOC', unit: 'ppb' },
+            { key: 'nh3', label: 'NH₃', unit: 'ppm' },
+            { key: 'no2', label: 'NO₂', unit: 'ppb' },
+        ],
+    },
+    {
+        key: 'air_quality_score',
+        label: 'Air Quality Score',
+        icon: 'Shield',
+        accentColor: '#10b981',
+        representative: 'aqi',
+        representativeLabel: 'AQI',
+        representativeUnit: 'index',
+        metrics: [
+            { key: 'aqi', label: 'AQI', unit: 'index' },
+            { key: 'health', label: 'Health Score', unit: 'score' },
+        ],
+    },
+    {
+        key: 'activity_movement',
+        label: ' Movement',
+        icon: 'DirectionsRun',
+        accentColor: '#6366f1',
+        representative: 'movement',
+        representativeLabel: 'Movement',
+        representativeUnit: 'mm/s',
+        metrics: [
+            { key: 'movement', label: 'Movement', unit: 'mm/s' },
+            { key: 'acc_x', label: 'Accel X', unit: 'mg' },
+            { key: 'acc_y', label: 'Accel Y', unit: 'mg' },
+            { key: 'acc_z', label: 'Accel Z', unit: 'mg' },
+            { key: 'panic', label: 'Panic', unit: '—' },
+        ],
+    },
+    {
+        key: 'sound_noise',
+        label: 'Sound & Noise',
+        icon: 'VolumeUp',
+        accentColor: '#8b5cf6',
+        representative: 'sound',
+        representativeLabel: 'Sound',
+        representativeUnit: 'dB',
+        metrics: [
+            { key: 'sound', label: 'Sound', unit: 'dB' },
+            { key: 'noise', label: 'Noise', unit: 'dB' },
+        ],
+    },
+];
 
 interface AggregateMetricCardsProps {
     areaIds: (number | string)[];
@@ -10,94 +101,268 @@ interface AggregateMetricCardsProps {
 
 const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, sensorGroupIds }) => {
     const { darkModeStatus } = useDarkMode();
+    const [activeMetricGroup, setActiveMetricGroup] = useState<any>(null);
+    const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
     const { data: response, isLoading } = useAggregatedSensorData({
         area_id: areaIds,
-        sensor_group_id: sensorGroupIds
+        sensor_group_id: sensorGroupIds,
     });
 
-    if (isLoading) {
-        return (
-            <div className="position-absolute top-0 start-0 d-flex gap-3 px-4 py-3 shadow-lg border-bottom border-info border-opacity-25"
-                style={{ width: '100%', background: darkModeStatus ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(12px)', zIndex: 1000 }}>
-                <div className="spinner-border spinner-border-sm text-info m-auto" role="status" />
-                <span className="text-info small fw-bold text-uppercase">Aggregating Building Data...</span>
-            </div>
-        );
-    }
+    const metricGroups = useMemo(() => {
+        const data = response?.aggregated_data || {};
+        return METRIC_GROUPS.map(group => ({
+            ...group,
+            metrics: group.metrics.map(m => ({
+                ...m,
+                min: data[`${m.key}_min`] != null ? Number(data[`${m.key}_min`]).toFixed(1) : null,
+                max: data[`${m.key}_max`] != null ? Number(data[`${m.key}_max`]).toFixed(1) : null,
+            })),
+            hasData: group.metrics.some(
+                m => data[`${m.key}_min`] != null || data[`${m.key}_max`] != null
+            ),
+            representativeMin: data[`${group.representative}_min`] != null
+                ? Number(data[`${group.representative}_min`]).toFixed(1) : null,
+            representativeMax: data[`${group.representative}_max`] != null
+                ? Number(data[`${group.representative}_max`]).toFixed(1) : null,
+        }));
+    }, [response]);
 
-    const data = response?.aggregated_data || {};
+    if (isLoading) return null;
 
-    const metrics = [
-        { key: 'temperature', label: 'TEMP', unit: '°C', icon: 'Thermostat' },
-        { key: 'humidity', label: 'HUM', unit: '%', icon: 'WaterDrop' },
-        { key: 'aqi', label: 'AQI', unit: 'Index', icon: 'Air' },
-        { key: 'co2', label: 'CO2', unit: 'PPM', icon: 'Cloud' },
-        { key: 'tvoc', label: 'TVOC', unit: 'PPB', icon: 'Co2' },
-        { key: 'pm25', label: 'PM2.5', unit: 'µg', icon: 'Grain' },
-        { key: 'noise', label: 'NOISE', unit: 'dB', icon: 'GraphicEq' },
-        { key: 'light', label: 'LIGHT', unit: 'Lux', icon: 'LightMode' },
-        { key: 'pressure', label: 'PRESSURE', unit: 'hPa', icon: 'Compress' },
-        { key: 'pm1', label: 'PM1.0', unit: 'µg', icon: 'Grain' },
-        { key: 'pm10', label: 'PM10', unit: 'µg', icon: 'BlurOn' },
-        { key: 'no2', label: 'NO2', unit: 'PPB', icon: 'Science' },
-        { key: 'co', label: 'CO', unit: 'PPM', icon: 'CloudQueue' },
-        { key: 'movement', label: 'MOVEMENT', unit: '%', icon: 'DirectionsRun' },
-        { key: 'health', label: 'HEALTH', unit: '/ 5', icon: 'MonitorHeart' },
-    ];
+    // Neutral gray palette (dark-mode aware)
+    const cardBgDefault = darkModeStatus ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.55)';
+    const cardBgHovered = darkModeStatus ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.75)';
+    const borderDefault = darkModeStatus ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+    const borderHovered = darkModeStatus ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)';
+    const iconBg = darkModeStatus ? 'rgba(255,255,255,0.08)' : '#e5e7eb';
+    const iconColor = darkModeStatus ? 'rgba(255,255,255,0.7)' : '#374151';
+    const labelColor = darkModeStatus ? 'rgba(255,255,255,0.85)' : '#111827';
+    const labelHovered = darkModeStatus ? 'rgba(255,255,255,0.95)' : '#000000';
+    const dividerDefault = darkModeStatus ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    const dividerHovered = darkModeStatus ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)';
+    const mutedColor = darkModeStatus ? 'rgba(255,255,255,0.35)' : '#6b7280';
+    const valueColor = darkModeStatus ? 'rgba(255,255,255,0.85)' : '#374151';
 
     return (
-        <div className="position-absolute start-0 d-flex gap-3 px-4 py-3 shadow-lg overflow-auto no-scrollbar"
-            style={{
-                top: '0',
-                left: '0',
-                right: '0',
-                width: '100%',
-                background: darkModeStatus ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-                backdropFilter: 'blur(12px)',
-                borderBottom: darkModeStatus ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
-                zIndex: 1000,
-                msOverflowStyle: 'none',
-                scrollbarWidth: 'none'
-            }}>
-            {metrics.map(m => {
-                const min = data[`${m.key}_min`] ?? '--';
-                const max = data[`${m.key}_max`] ?? '--';
+        <>
+            <style>{`
+                .dock-card {
+                    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+                }
+                .dock-card:hover {
+                    transform: translateY(-8px) scale(1.08);
+                }
+            `}</style>
 
-                return (
-                    <div key={m.key}
-                        className="flex-shrink-0 d-flex flex-column align-items-center justify-content-center px-3 py-2 rounded-3"
-                        style={{
-                            minWidth: '110px',
-                            height: '95px',
-                            background: darkModeStatus ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.5)',
-                            border: darkModeStatus ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(0, 0, 0, 0.02)'
-                        }}>
-                        <div className="d-flex align-items-center gap-2 mb-1 opacity-75">
-                            <Icon icon={m.icon} size="sm" className="text-info" />
-                            <span className="fw-bold" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>{m.label}</span>
+            {/* ── Dock ── */}
+            <div
+                style={{
+                    position: 'absolute',
+                    bottom: 20,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    gap: 8,
+                    padding: '0 4px',
+                }}
+            >
+                {metricGroups.map(group => {
+                    const isHovered = hoveredKey === group.key;
+
+                    return (
+                        <div
+                            key={group.key}
+                            className='dock-card'
+                            onClick={() => setActiveMetricGroup(group)}
+                            onMouseEnter={() => setHoveredKey(group.key)}
+                            onMouseLeave={() => setHoveredKey(null)}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 112,
+                                padding: '10px 10px 8px',
+                                borderRadius: 14,
+                                background: isHovered ? cardBgHovered : cardBgDefault,
+                                border: `1px solid ${isHovered ? borderHovered : borderDefault}`,
+                                backdropFilter: 'blur(12px)',
+                                WebkitBackdropFilter: 'blur(12px)',
+                                cursor: 'pointer',
+                                boxShadow: isHovered
+                                    ? '0 6px 20px rgba(0,0,0,0.12)'
+                                    : '0 2px 8px rgba(0,0,0,0.06)',
+                            }}
+                        >
+                            {/* Icon bubble */}
+                            <div style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 8,
+                                background: iconBg,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: iconColor,
+                                marginBottom: 5,
+                                transition: 'background 0.3s ease',
+                            }}>
+                                <Icon icon={group.icon as any} size='sm' />
+                            </div>
+
+                            {/* Label */}
+                            <div style={{
+                                fontSize: '0.58rem',
+                                fontWeight: 700,
+                                letterSpacing: '0.03em',
+                                textTransform: 'uppercase',
+                                textAlign: 'center',
+                                color: isHovered ? labelHovered : labelColor,
+                                lineHeight: 1.3,
+                                marginBottom: 6,
+                                transition: 'color 0.3s ease',
+                            }}>
+                                {group.label}
+                            </div>
+
+                            {/* Divider */}
+                            <div style={{
+                                width: '100%',
+                                height: 1,
+                                background: isHovered ? dividerHovered : dividerDefault,
+                                marginBottom: 6,
+                                transition: 'background 0.3s ease',
+                            }} />
+
+                            {/* Values */}
+                            {group.hasData ? (
+                                <div style={{ width: '100%' }}>
+                                    <div style={{
+                                        fontSize: '0.55rem',
+                                        fontWeight: 600,
+                                        textAlign: 'center',
+                                        color: mutedColor,
+                                        marginBottom: 3,
+                                        letterSpacing: '0.03em',
+                                    }}>
+                                        {group.representativeLabel}
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px', marginBottom: 2 }}>
+                                        <span style={{ fontSize: '0.55rem', color: mutedColor, fontWeight: 600 }}>MIN</span>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: valueColor }}>
+                                            {group.representativeMin ?? '—'}
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px' }}>
+                                        <span style={{ fontSize: '0.55rem', color: mutedColor, fontWeight: 600 }}>MAX</span>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: valueColor }}>
+                                            {group.representativeMax ?? '—'}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <span style={{ fontSize: '0.55rem', color: mutedColor, letterSpacing: '0.03em' }}>
+                                    No Data
+                                </span>
+                            )}
                         </div>
+                    );
+                })}
+            </div>
 
-                        <div className="d-flex flex-column align-items-center gap-0 w-100 mt-1">
-                            {/* Min Value */}
-                            <div className="d-flex justify-content-between align-items-center w-100 px-2">
-                                <span className="text-muted" style={{ fontSize: '0.6rem' }}>MIN:</span>
-                                <span className="fw-bold text-info" style={{ fontSize: '0.8rem' }}>{min}</span>
+            {/* ── Detail Modal ── */}
+            <Modal
+                isOpen={!!activeMetricGroup}
+                setIsOpen={(v) => { if (!v) setActiveMetricGroup(null); }}
+                size='lg'
+                isCentered
+                isScrollable
+            >
+                <ModalHeader setIsOpen={(v: boolean) => { if (!v) setActiveMetricGroup(null); }}>
+                    <ModalTitle id='metric-detail-modal'>
+                        {activeMetricGroup && (
+                            <div className='d-flex align-items-center gap-3'>
+                                <div
+                                    className='rounded-2 d-flex align-items-center justify-content-center flex-shrink-0'
+                                    style={{ width: 36, height: 36, background: '#e5e7eb', color: '#374151' }}
+                                >
+                                    <Icon icon={activeMetricGroup.icon as any} />
+                                </div>
+                                <div>
+                                    <div className='fw-bold fs-6'>{activeMetricGroup.label}</div>
+                                    <div className='text-muted' style={{ fontSize: '0.72rem' }}>
+                                        Building Metrics · Min & Max over selected period
+                                    </div>
+                                </div>
                             </div>
+                        )}
+                    </ModalTitle>
+                </ModalHeader>
 
-                            {/* Max Value */}
-                            <div className="d-flex justify-content-between align-items-center w-100 px-2 mt-n1">
-                                <span className="text-muted" style={{ fontSize: '0.6rem' }}>MAX:</span>
-                                <span className="fw-bold text-info" style={{ fontSize: '0.8rem' }}>{max}</span>
+                <ModalBody>
+                    {activeMetricGroup && (
+                        <>
+                            <div style={{ height: 3, background: '#e5e7eb' }} />
+                            <div className='p-4'>
+                                {activeMetricGroup.hasData ? (
+                                    <div className='row g-3'>
+                                        {activeMetricGroup.metrics.map((metric: any) => (
+                                            <div key={metric.key} className='col-6 col-md-4'>
+                                                <div
+                                                    className='p-3 rounded-2 text-center'
+                                                    style={{
+                                                        border: '1px solid #e5e7eb',
+                                                        background: '#f9fafb',
+                                                    }}
+                                                >
+                                                    <div className='fw-bold mb-3' style={{ fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#374151' }}>
+                                                        {metric.label}
+                                                    </div>
+                                                    <div className='d-flex justify-content-between align-items-center mb-2 px-1'>
+                                                        <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MIN</span>
+                                                        <span className='fw-bold' style={{ fontSize: '1.1rem' }}>
+                                                            {metric.min ?? <span className='text-muted fs-6'>—</span>}
+                                                        </span>
+                                                    </div>
+                                                    <div className='d-flex justify-content-between align-items-center px-1'>
+                                                        <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MAX</span>
+                                                        <span className='fw-bold' style={{ fontSize: '1.1rem', color: '#374151' }}>
+                                                            {metric.max ?? <span className='text-muted fs-6'>—</span>}
+                                                        </span>
+                                                    </div>
+                                                    <div className='mt-2'>
+                                                        <span
+                                                            className='rounded-pill px-2 py-1'
+                                                            style={{ fontSize: '0.62rem', fontWeight: 600, background: '#e5e7eb', color: '#374151' }}
+                                                        >
+                                                            {metric.unit}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className='text-center py-5'>
+                                        <div
+                                            className='rounded-circle d-inline-flex align-items-center justify-content-center mb-3'
+                                            style={{ width: 64, height: 64, background: '#f3f4f6' }}
+                                        >
+                                            <Icon icon={activeMetricGroup.icon as any} className='text-muted fs-3' />
+                                        </div>
+                                        <div className='fw-semibold text-muted mb-1'>No data available</div>
+                                        <div className='text-muted small'>No readings recorded for this group in the selected time window.</div>
+                                    </div>
+                                )}
                             </div>
-
-                            <div className="mt-1 opacity-50 text-uppercase fw-bold" style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>
-                                {m.unit}
-                            </div>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
+                        </>
+                    )}
+                </ModalBody>
+            </Modal>
+        </>
     );
 };
 

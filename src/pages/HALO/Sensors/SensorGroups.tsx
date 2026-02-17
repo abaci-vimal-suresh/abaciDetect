@@ -12,7 +12,7 @@ import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../components/bootstrap/Modal';
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
-import { useAreas, useCreateSubArea, useAddSensorToSubArea, useSensors, useUsers, useUpdateSensor, useDeleteArea } from '../../../api/sensors.api';
+import { useAreas, useCreateSubArea, useAddSensorToSubArea, useSensors, useUsers, useUpdateSensor, useDeleteArea, useAggregatedSensorData } from '../../../api/sensors.api';
 import { Area, User } from '../../../types/sensor';
 import Checks from '../../../components/bootstrap/forms/Checks';
 import Label from '../../../components/bootstrap/forms/Label';
@@ -20,6 +20,97 @@ import { useQueryClient } from '@tanstack/react-query';
 import { filterSensors, getSensorsByArea, getAvailableSensors } from '../utils/sensorData.utils';
 import EditAreaModal from './modals/EditAreaModal';
 import Swal from 'sweetalert2';
+
+
+const METRIC_GROUPS = [
+    {
+        key: 'room_conditions',
+        label: 'Room Conditions',
+        icon: 'Thermostat',
+        accentColor: '#1b1a1aff',
+        representative: 'temperature', // shown in the row card
+        representativeLabel: 'Temp',
+        representativeUnit: '°C',
+        metrics: [
+            { key: 'temperature', label: 'Temperature', unit: '°C' },
+            { key: 'humidity', label: 'Humidity', unit: '%' },
+            { key: 'pressure', label: 'Pressure', unit: 'hPa' },
+            { key: 'light', label: 'Light', unit: 'lux' },
+        ],
+    },
+    {
+        key: 'air_particles',
+        label: 'Air Dust & Particles',
+        icon: 'Grain',
+        accentColor: '#f59e0b',
+        representative: 'pm25',
+        representativeLabel: 'PM2.5',
+        representativeUnit: 'µg/m³',
+        metrics: [
+            { key: 'pm1', label: 'PM1', unit: 'µg/m³' },
+            { key: 'pm25', label: 'PM2.5', unit: 'µg/m³' },
+            { key: 'pm10', label: 'PM10', unit: 'µg/m³' },
+        ],
+    },
+    {
+        key: 'air_composition',
+        label: 'Air Composition',
+        icon: 'Science',
+        accentColor: '#06b6d4',
+        representative: 'co2',
+        representativeLabel: 'CO₂',
+        representativeUnit: 'ppm',
+        metrics: [
+            { key: 'co', label: 'CO', unit: 'ppm' },
+            { key: 'co2', label: 'CO₂', unit: 'ppm' },
+            { key: 'tvoc', label: 'TVOC', unit: 'ppb' },
+            { key: 'nh3', label: 'NH₃', unit: 'ppm' },
+            { key: 'no2', label: 'NO₂', unit: 'ppb' },
+        ],
+    },
+    {
+        key: 'air_quality_score',
+        label: 'Air Quality Score',
+        icon: 'Shield',
+        accentColor: '#10b981',
+        representative: 'aqi',
+        representativeLabel: 'AQI',
+        representativeUnit: 'index',
+        metrics: [
+            { key: 'aqi', label: 'AQI', unit: 'index' },
+            { key: 'health', label: 'Health Score', unit: 'score' },
+        ],
+    },
+    {
+        key: 'activity_movement',
+        label: 'Activity & Movement',
+        icon: 'DirectionsRun',
+        accentColor: '#6366f1',
+        representative: 'movement',
+        representativeLabel: 'Movement',
+        representativeUnit: 'mm/s',
+        metrics: [
+            { key: 'movement', label: 'Movement', unit: 'mm/s' },
+            { key: 'acc_x', label: 'Accel X', unit: 'mg' },
+            { key: 'acc_y', label: 'Accel Y', unit: 'mg' },
+            { key: 'acc_z', label: 'Accel Z', unit: 'mg' },
+            { key: 'panic', label: 'Panic', unit: '—' },
+        ],
+    },
+    {
+        key: 'sound_noise',
+        label: 'Sound & Noise',
+        icon: 'VolumeUp',
+        accentColor: '#8b5cf6',
+        representative: 'sound',
+        representativeLabel: 'Sound',
+        representativeUnit: 'dB',
+        metrics: [
+            { key: 'sound', label: 'Sound', unit: 'dB' },
+            { key: 'noise', label: 'Noise', unit: 'dB' },
+        ],
+    },
+];
 
 const SensorGroups = () => {
     const { areaId } = useParams<{ areaId: string }>();
@@ -37,6 +128,10 @@ const SensorGroups = () => {
     const [editingArea, setEditingArea] = useState<Area | null>(null);
     const [isSensorModalOpen, setIsSensorModalOpen] = useState(false);
     const [selectedSensorId, setSelectedSensorId] = useState('');
+    const [selectedTargetAreaId, setSelectedTargetAreaId] = useState('');
+    const [sensorX, setSensorX] = useState(0);
+    const [sensorY, setSensorY] = useState(0);
+    const [sensorZ, setSensorZ] = useState(0);
     const [subAreaName, setSubAreaName] = useState('');
     const [subAreaType, setSubAreaType] = useState('others');
     const [subAreaPlan, setSubAreaPlan] = useState<File | null>(null);
@@ -48,6 +143,7 @@ const SensorGroups = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+    const [activeMetricGroup, setActiveMetricGroup] = useState<any>(null);
 
     // Use server-side filtering for sensors
     // NOTE: When using Real Data, we should fetch ALL sensors because:
@@ -58,6 +154,11 @@ const SensorGroups = () => {
         search: searchTerm || undefined,
         status: filterStatus,
         // areaId: areaId  <-- REMOVED: Fetch all sensors so we get unassigned ones and sub-area ones
+    });
+
+    // Fetch aggregated data for the current area
+    const { data: aggregatedResponse, isLoading: aggregatedLoading } = useAggregatedSensorData({
+        area_id: areaId ? [Number(areaId)] : []
     });
 
     // Find the current area
@@ -96,6 +197,29 @@ const SensorGroups = () => {
 
     // Sensors are already filtered by API, no need for client-side filtering
     const filteredSensors = areaSensors;
+
+    // Memoize aggregated metrics for display
+
+    const metricGroups = useMemo(() => {
+        const data = aggregatedResponse?.aggregated_data || {};
+
+        return METRIC_GROUPS.map(group => ({
+            ...group,
+            metrics: group.metrics.map(m => ({
+                ...m,
+                min: data[`${m.key}_min`] != null ? Number(data[`${m.key}_min`]).toFixed(1) : null,
+                max: data[`${m.key}_max`] != null ? Number(data[`${m.key}_max`]).toFixed(1) : null,
+            })),
+            hasData: group.metrics.some(
+                m => data[`${m.key}_min`] != null || data[`${m.key}_max`] != null
+            ),
+            representativeMin: data[`${group.representative}_min`] != null
+                ? Number(data[`${group.representative}_min`]).toFixed(1) : null,
+            representativeMax: data[`${group.representative}_max`] != null
+                ? Number(data[`${group.representative}_max`]).toFixed(1) : null,
+        }));
+    }, [aggregatedResponse]);
+
 
     const handleCreateSubArea = () => {
         if (!subAreaName.trim()) {
@@ -139,13 +263,30 @@ const SensorGroups = () => {
     };
 
     const handleAddSensor = () => {
-        if (!selectedSensorId || !areaId) return;
-        addSensorMutation.mutate(
-            { sensorId: selectedSensorId, subAreaId: areaId },
+        // Default to current area if no specific target selected
+        const targetAreaId = selectedTargetAreaId || areaId;
+
+        if (!selectedSensorId || !targetAreaId) return;
+
+        // Use updateSensorMutation to patch sensor with area and position
+        updateSensorMutation.mutate(
+            {
+                sensorId: selectedSensorId,
+                data: {
+                    area: Number(targetAreaId),
+                    x_val: sensorX,
+                    y_val: sensorY,
+                    z_val: sensorZ
+                }
+            },
             {
                 onSuccess: () => {
                     setIsSensorModalOpen(false);
                     setSelectedSensorId('');
+                    setSelectedTargetAreaId('');
+                    setSensorX(0);
+                    setSensorY(0);
+                    setSensorZ(0);
                 },
             }
         );
@@ -258,6 +399,150 @@ const SensorGroups = () => {
                 </SubHeaderRight>
             </SubHeader>
             <Page container='fluid'>
+                {/* Aggregated Metrics Section */}
+
+                {/* Metrics Row */}
+                <div className='mb-4'>
+                    <div className='row g-3'>
+                        {metricGroups.map(group => (
+                            <div key={group.key} className='col-6 col-md-4 col-xl-2'>
+                                <div
+                                    onClick={() => setActiveMetricGroup(group)}
+                                    className='rounded-2 p-3 h-100 d-flex flex-column align-items-center text-center'
+                                    style={{
+                                        border: '1px solid #d1d5db',
+                                        background: group.hasData ? '#f9fafb' : '#fafafa',
+                                        cursor: 'pointer',
+                                        transition: 'box-shadow 0.15s',
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px #9ca3af44')}
+                                    onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                                >
+                                    {/* Icon */}
+                                    <div
+                                        className='rounded-2 d-flex align-items-center justify-content-center mb-2'
+                                        style={{ width: 36, height: 36, background: '#e5e7eb', color: '#374151' }}
+                                    >
+                                        <Icon icon={group.icon as any} size='sm' />
+                                    </div>
+
+                                    {/* Label */}
+                                    <div className='fw-semibold mb-1' style={{ fontSize: '0.72rem', lineHeight: 1.3, color: '#111827' }}>
+                                        {group.label}
+                                    </div>
+
+                                    {/* Representative value or No Data */}
+                                    {group.hasData ? (
+                                        <div className='mt-auto'>
+                                            <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: 600 }}>
+                                                {group.representativeLabel}
+                                            </div>
+                                            <div className='d-flex align-items-center justify-content-center gap-2 mt-1'>
+                                                <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                                                    ↓ {group.representativeMin ?? '—'}
+                                                </span>
+                                                <span style={{ fontSize: '0.7rem', color: '#374151', fontWeight: 700 }}>
+                                                    ↑ {group.representativeMax ?? '—'}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{group.representativeUnit}</div>
+                                        </div>
+                                    ) : (
+                                        <div className='mt-auto text-muted' style={{ fontSize: '0.65rem' }}>No Data</div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Detail Modal */}
+                <Modal
+                    isOpen={!!activeMetricGroup}
+                    setIsOpen={(v) => { if (!v) setActiveMetricGroup(null); }}
+                    size='lg'
+                    isCentered
+                    isScrollable
+                >
+                    <ModalHeader setIsOpen={() => setActiveMetricGroup(null)}>
+                        <ModalTitle id='metric-detail-modal'>
+                            {activeMetricGroup && (
+                                <div className='d-flex align-items-center gap-3'>
+                                    <div
+                                        className='rounded-2 d-flex align-items-center justify-content-center flex-shrink-0'
+                                        style={{ width: 36, height: 36, background: '#e5e7eb', color: '#374151' }}
+                                    >
+                                        <Icon icon={activeMetricGroup.icon as any} />
+                                    </div>
+                                    <div>
+                                        <div className='fw-bold fs-6'>{activeMetricGroup.label}</div>
+                                        <div className='text-muted' style={{ fontSize: '0.72rem' }}>
+                                            {currentArea?.name} · Min & Max over selected period
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </ModalTitle>
+                    </ModalHeader>
+
+                    <ModalBody className='p-0'>
+                        {activeMetricGroup && (
+                            <>
+                                <div style={{ height: 3, background: '#e5e7eb' }} />
+                                <div className='p-4'>
+                                    {activeMetricGroup.hasData ? (
+                                        <div className='row g-3'>
+                                            {activeMetricGroup.metrics.map((metric: any) => (
+                                                <div key={metric.key} className='col-6 col-md-4'>
+                                                    <div
+                                                        className='p-3 rounded-2 text-center'
+                                                        style={{
+                                                            border: '1px solid #e5e7eb',
+                                                            background: '#f9fafb',
+                                                        }}
+                                                    >
+                                                        <div className='fw-bold mb-3' style={{ fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#374151' }}>
+                                                            {metric.label}
+                                                        </div>
+                                                        <div className='d-flex justify-content-between align-items-center mb-2 px-1'>
+                                                            <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MIN</span>
+                                                            <span className='fw-bold' style={{ fontSize: '1.1rem' }}>
+                                                                {metric.min ?? <span className='text-muted fs-6'>—</span>}
+                                                            </span>
+                                                        </div>
+                                                        <div className='d-flex justify-content-between align-items-center px-1'>
+                                                            <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MAX</span>
+                                                            <span className='fw-bold' style={{ fontSize: '1.1rem', color: '#374151' }}>
+                                                                {metric.max ?? <span className='text-muted fs-6'>—</span>}
+                                                            </span>
+                                                        </div>
+                                                        <div className='mt-2'>
+                                                            <span
+                                                                className='rounded-pill px-2 py-1'
+                                                                style={{ fontSize: '0.62rem', fontWeight: 600, background: '#e5e7eb', color: '#374151' }}
+                                                            >
+                                                                {metric.unit}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className='text-center py-5'>
+                                            <div className='rounded-circle d-inline-flex align-items-center justify-content-center mb-3'
+                                                style={{ width: 64, height: 64, background: '#f3f4f6' }}>
+                                                <Icon icon={activeMetricGroup.icon as any} className='text-muted fs-3' />
+                                            </div>
+                                            <div className='fw-semibold text-muted mb-1'>No data available</div>
+                                            <div className='text-muted small'>No readings recorded for this group in the selected time window.</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </ModalBody>
+                </Modal>
                 {/* Filter Section */}
                 <div className='row mb-4'>
                     <div className='col-12'>
@@ -526,10 +811,28 @@ const SensorGroups = () => {
             <Modal isOpen={isSensorModalOpen} setIsOpen={setIsSensorModalOpen}>
                 <ModalHeader setIsOpen={setIsSensorModalOpen}>
                     <ModalTitle id='add-sensor-to-area-title'>
-                        Add Sensor to {currentArea?.name}
+                        Add Sensor to Area
                     </ModalTitle>
                 </ModalHeader>
                 <ModalBody>
+                    <div className='mb-3'>
+                        <label className='form-label'>Target Area</label>
+                        <select
+                            className='form-select'
+                            value={selectedTargetAreaId || areaId || ''}
+                            onChange={(e) => setSelectedTargetAreaId(e.target.value)}
+                        >
+                            <option value={areaId}>Main Area ({currentArea?.name})</option>
+                            {subAreas.map(sub => (
+                                <option key={sub.id} value={sub.id}>
+                                    Sub Area: {sub.name}
+                                </option>
+                            ))}
+                        </select>
+                        <div className='text-muted small mt-1'>
+                            Select whether to add the sensor to the main area or one of its sub-areas.
+                        </div>
+                    </div>
                     <div className='mb-3'>
                         <label className='form-label'>Select Available Sensor</label>
                         <select
@@ -550,6 +853,53 @@ const SensorGroups = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Position Coordinates */}
+                    <div className='border-top pt-3 mt-3'>
+                        <label className='form-label fw-bold mb-3'>
+                            <Icon icon='Place' size='sm' className='me-1' />
+                            Sensor Placement Coordinates
+                        </label>
+                        <div className='row g-3'>
+                            <div className='col-md-4'>
+                                <FormGroup label='X Position'>
+                                    <Input
+                                        type='number'
+                                        step={0.1}
+                                        value={sensorX}
+                                        onChange={(e: any) => setSensorX(parseFloat(e.target.value) || 0)}
+                                        placeholder='0.0'
+                                    />
+                                </FormGroup>
+                            </div>
+                            <div className='col-md-4'>
+                                <FormGroup label='Y Position'>
+                                    <Input
+                                        type='number'
+                                        step={0.1}
+                                        value={sensorY}
+                                        onChange={(e: any) => setSensorY(parseFloat(e.target.value) || 0)}
+                                        placeholder='0.0'
+                                    />
+                                </FormGroup>
+                            </div>
+                            <div className='col-md-4'>
+                                <FormGroup label='Z Position (Height)'>
+                                    <Input
+                                        type='number'
+                                        step={0.1}
+                                        value={sensorZ}
+                                        onChange={(e: any) => setSensorZ(parseFloat(e.target.value) || 0)}
+                                        placeholder='0.0'
+                                    />
+                                </FormGroup>
+                            </div>
+                        </div>
+                        <div className='text-muted small mt-2'>
+                            <Icon icon='Info' size='sm' className='me-1' />
+                            Specify the 3D coordinates for sensor placement in the area.
+                        </div>
+                    </div>
                 </ModalBody>
                 <ModalFooter>
                     <Button color='light' onClick={() => setIsSensorModalOpen(false)}>
@@ -558,9 +908,9 @@ const SensorGroups = () => {
                     <Button
                         color='primary'
                         onClick={handleAddSensor}
-                        isDisable={!selectedSensorId || addSensorMutation.isPending}
+                        isDisable={!selectedSensorId || updateSensorMutation.isPending}
                     >
-                        {addSensorMutation.isPending && <Spinner isSmall inButton />}
+                        {updateSensorMutation.isPending && <Spinner isSmall inButton />}
                         Add Sensor
                     </Button>
                 </ModalFooter>

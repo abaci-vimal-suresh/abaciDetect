@@ -466,8 +466,8 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
 
             setIsCreatingNew(true);
             setFormData({
-                sensor_name: firstAvailable,
-                event_id: firstAvailable,
+                sensor_name: "",
+                event_id: "",
                 min_value: defaults.min,
                 max_value: defaults.max,
                 threshold: defaults.threshold,
@@ -609,10 +609,10 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                 threshold: selectedConfig.threshold
             });
         } else {
-            const firstAvailable = filteredChoices[0]?.value || 'temp_c';
+            const firstAvailable = filteredChoices[0]?.value || '';
             const defaults = DEFAULT_SENSOR_VALUES[firstAvailable] || { min: 0, max: 100, threshold: 30 };
             setFormData({
-                sensor_name: firstAvailable,
+                sensor_name: "",
                 min_value: defaults.min,
                 max_value: defaults.max,
                 threshold: defaults.threshold
@@ -791,7 +791,6 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                                 <input
                                     type='text'
                                     className='form-control'
-                                    placeholder='e.g., Aggression_Alert_1, Temp_Warning_Main'
                                     value={formData.event_id || ''}
                                     onChange={(e) => handleFormChange({ event_id: e.target.value })}
                                 />

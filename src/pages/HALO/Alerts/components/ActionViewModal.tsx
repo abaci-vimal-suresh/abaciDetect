@@ -14,266 +14,356 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
     if (!action) return null;
 
     const typeMap: any = {
-        'email': 'Email Notification',
-        'sms': 'SMS Notification',
-        'webhook': 'Webhook/HTTP',
-        'n8n_workflow': 'n8n Workflow',
-        'device_notification': 'Device Command',
-        'push_notification': 'Push Notification',
-        'slack': 'Slack',
-        'teams': 'Microsoft Teams'
+        email: 'Email Notification',
+        sms: 'SMS Notification',
+        webhook: 'Webhook / HTTP',
+        n8n_workflow: 'n8n Workflow',
+        device_notification: 'Device Command',
+        push_notification: 'Push Notification',
+        slack: 'Slack',
+        teams: 'Microsoft Teams',
     };
 
-    const messageTypeMap: any = {
-        'json_data': 'JSON Data',
-        'jsondata': 'JSON Data',
-        'custom_template': 'Custom Template',
-        'custom': 'Custom Message'
+    const typeIconMap: any = {
+        email: 'Email',
+        sms: 'Sms',
+        webhook: 'Webhook',
+        n8n_workflow: 'AccountTree',
+        device_notification: 'Devices',
+        push_notification: 'NotificationsActive',
+        slack: 'Chat',
+        teams: 'Groups',
     };
+
+    const typeColorMap: any = {
+        email: '#0dcaf0',
+        sms: '#20c997',
+        webhook: '#fd7e14',
+        n8n_workflow: '#6f42c1',
+        device_notification: '#dc3545',
+        push_notification: '#6c757d',
+    };
+
+    const methodColorMap: any = {
+        GET: 'success',
+        POST: 'info',
+        PUT: 'warning',
+        PATCH: 'secondary',
+        DELETE: 'danger',
+    };
+
+    const accentColor = typeColorMap[action.type] || '#0d6efd';
+
+    // ── small helpers ─────────────────────────────────────────────────────────
+
+    const Field: React.FC<{ label: string; children: React.ReactNode; full?: boolean }> = ({ label, children, full }) => (
+        <div className={full ? 'col-12' : 'col-md-6'}>
+            <p className="mb-1" style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9ca3af' }}>
+                {label}
+            </p>
+            <div style={{ fontSize: '0.875rem' }}>{children}</div>
+        </div>
+    );
+
+    const UrlBox: React.FC<{ url: string }> = ({ url }) => (
+        <div className="d-flex align-items-center gap-2 rounded px-3 py-2"
+            style={{ background: '#f8f9fa', border: '1px solid #e9ecef', fontFamily: 'monospace', fontSize: '0.78rem', wordBreak: 'break-all' }}>
+            <Icon icon="Link" size="sm" className="text-muted flex-shrink-0" />
+            <span>{url}</span>
+        </div>
+    );
+
+    const EmptyState: React.FC<{ text: string }> = ({ text }) => (
+        <span className="text-muted fst-italic" style={{ fontSize: '0.82rem' }}>{text}</span>
+    );
+
+    const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+        <p className="mb-2 fw-bold text-uppercase text-muted"
+            style={{ letterSpacing: '0.08em', fontSize: '0.68rem' }}>
+            {children}
+        </p>
+    );
+
+    const SectionBox: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+        <div className="p-3 rounded-2" style={{ background: '#fafafa', border: '1px solid #f0f0f0' }}>
+            {children}
+        </div>
+    );
+
+    // ── recipients ────────────────────────────────────────────────────────────
 
     const renderRecipients = () => {
-        const userCount = action.recipients?.length || 0;
-        const groupCount = action.user_groups?.length || 0;
+        const users = action.recipients || [];
+        const groups = action.user_groups || [];
 
-        if (userCount === 0 && groupCount === 0) {
-            return <span className="text-muted">None</span>;
-        }
+        if (!users.length && !groups.length) return <EmptyState text="No recipients assigned" />;
 
         return (
-            <div>
-                {userCount > 0 && (
-                    <div className="mb-2">
-                        <strong className="d-block mb-1"><Icon icon="Person" size="sm" className="me-1" />Users ({userCount})</strong>
-                        <ul className="list-unstyled ms-3">
-                            {action.recipients?.map((user: any) => (
-                                <li key={user.id} className="mb-1">
-                                    <Badge color="info" isLight className="me-2">{user.username}</Badge>
-                                    <small className="text-muted">{user.email}</small>
-                                </li>
+            <div className="d-flex flex-column gap-3">
+                {users.length > 0 && (
+                    <div>
+                        <p className="mb-2" style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9ca3af' }}>
+                            Users ({users.length})
+                        </p>
+                        <div className="d-flex flex-wrap gap-1">
+                            {users.map((u: any) => (
+                                <span key={u.id} className="d-inline-flex align-items-center gap-1 rounded-pill px-2 py-1"
+                                    style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.78rem', fontWeight: 500 }}>
+                                    <Icon icon="Person" size="sm" />
+                                    {u.username}
+                                    {u.email && <span style={{ opacity: 0.65 }}>· {u.email}</span>}
+                                </span>
                             ))}
-                        </ul>
+                        </div>
                     </div>
                 )}
-                {groupCount > 0 && (
+                {groups.length > 0 && (
                     <div>
-                        <strong className="d-block mb-1"><Icon icon="Groups" size="sm" className="me-1" />Groups ({groupCount})</strong>
-                        <ul className="list-unstyled ms-3">
-                            {action.user_groups?.map((group: any) => (
-                                <li key={group.id} className="mb-1">
-                                    <Badge color="success" isLight className="me-2">{group.name}</Badge>
-                                    <small className="text-muted">{group.description}</small>
-                                </li>
+                        <p className="mb-2" style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9ca3af' }}>
+                            Groups ({groups.length})
+                        </p>
+                        <div className="d-flex flex-wrap gap-1">
+                            {groups.map((g: any) => (
+                                <span key={g.id} className="d-inline-flex align-items-center gap-1 rounded-pill px-2 py-1"
+                                    style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.78rem', fontWeight: 500 }}>
+                                    <Icon icon="Group" size="sm" />
+                                    {g.name}
+                                </span>
                             ))}
-                        </ul>
+                        </div>
                     </div>
                 )}
             </div>
         );
     };
 
-    const renderDeviceList = () => {
-        if (!action.device_list || !Array.isArray(action.device_list) || action.device_list.length === 0) {
-            return <span className="text-muted">None</span>;
-        }
+    // ── devices ───────────────────────────────────────────────────────────────
+
+    const renderDevices = () => {
+        const list = action.device_list;
+        if (!list || !Array.isArray(list) || !list.length) return <EmptyState text="No devices assigned" />;
 
         return (
-            <ul className="list-unstyled">
-                {action.device_list.map((device: any, index: number) => (
-                    <li key={index} className="mb-2">
-                        {typeof device === 'object' ? (
-                            <div className="d-flex align-items-center">
-                                <Icon icon="Sensors" size="sm" className="me-2" />
-                                <div>
-                                    <strong>{device.name}</strong>
-                                    <div className="small text-muted">
-                                        Type: {device.sensor_type} | Status: {device.is_online ? 'Online' : 'Offline'}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <Badge color="secondary" isLight>{device}</Badge>
+            <div className="d-flex flex-wrap gap-1">
+                {list.map((d: any, i: number) => (
+                    <span key={i} className="d-inline-flex align-items-center gap-1 rounded px-2 py-1"
+                        style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.78rem', fontWeight: 500 }}>
+                        <Icon icon="Sensors" size="sm" />
+                        {typeof d === 'object' ? d.name : d}
+                        {typeof d === 'object' && (
+                            <span className="ms-1" style={{ fontSize: '0.7rem', color: d.is_online ? '#16a34a' : '#dc2626' }}>
+                                ● {d.is_online ? 'Online' : 'Offline'}
+                            </span>
                         )}
-                    </li>
+                    </span>
                 ))}
-            </ul>
+            </div>
         );
     };
 
+    // ── main ──────────────────────────────────────────────────────────────────
+
     return (
         <Modal isOpen={isOpen} setIsOpen={setIsOpen} size="lg" isCentered isScrollable>
+
             <ModalHeader setIsOpen={setIsOpen}>
                 <ModalTitle id="action-view-modal">
-                    <Icon icon="Visibility" className="me-2" />
-                    Action Details
-                </ModalTitle>
-            </ModalHeader>
-            <ModalBody>
-                <div className="row g-4">
-                    {/* Basic Information */}
-                    <div className="col-12">
-                        <div className="card border-0">
-                            <div className="card-body">
-                                <h5 className="card-title mb-3">
-                                    <Icon icon="Info" className="me-2" />
-                                    Basic Information
-                                </h5>
-                                <div className="row g-3">
-                                    <div className="col-md-6">
-                                        <strong className="d-block text-muted small">Action Name</strong>
-                                        <span className="fs-6">{action.name}</span>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <strong className="d-block text-muted small">Type</strong>
-                                        <Badge color="info">{typeMap[action.type] || action.type.toUpperCase()}</Badge>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <strong className="d-block text-muted small">Status</strong>
-                                        <Badge color={action.is_active ? 'success' : 'warning'}>
-                                            {action.is_active ? 'Active' : 'Inactive'}
-                                        </Badge>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <strong className="d-block text-muted small">Alert on Failure</strong>
-                                        <Badge color={action.alert_on_failure ? 'danger' : 'secondary'}>
-                                            {action.alert_on_failure ? 'Yes' : 'No'}
-                                        </Badge>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <strong className="d-block text-muted small">Created By</strong>
-                                        <span>{(action as any).created_by_username || 'N/A'}</span>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <strong className="d-block text-muted small">Created At</strong>
-                                        <span>{new Date(action.created_at || '').toLocaleString()}</span>
-                                    </div>
-                                </div>
+                    <div className="d-flex align-items-center gap-3">
+                        {/* Icon bubble */}
+                        <div className="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0"
+                            style={{ width: 40, height: 40, background: accentColor + '1a', color: accentColor }}>
+                            <Icon icon={typeIconMap[action.type] || 'Notifications'} />
+                        </div>
+                        <div>
+                            <div className="fw-bold fs-6 lh-1 mb-1">{action.name}</div>
+                            <div className="d-flex align-items-center gap-2">
+                                <span style={{ fontSize: '0.75rem', color: accentColor, fontWeight: 600 }}>
+                                    {typeMap[action.type] || action.type}
+                                </span>
+                                <span className="text-muted" style={{ fontSize: '0.75rem' }}>·</span>
+                                <Badge color={action.is_active ? 'success' : 'warning'} isLight style={{ fontSize: '0.68rem' }}>
+                                    {action.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                                {action.alert_on_failure && (
+                                    <Badge color="danger" isLight style={{ fontSize: '0.68rem' }}>
+                                        <Icon icon="Warning" size="sm" className="me-1" />
+                                        Alert on Failure
+                                    </Badge>
+                                )}
                             </div>
                         </div>
                     </div>
+                </ModalTitle>
+            </ModalHeader>
 
-                    {/* Webhook Specific */}
+            <ModalBody className="p-0">
+                {/* Accent top bar */}
+                <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, ${accentColor}33)` }} />
+
+                <div className="p-4 d-flex flex-column gap-4">
+
+                    {/* ── General ── */}
+                    <div>
+                        <SectionLabel>General</SectionLabel>
+                        <SectionBox>
+                            <div className="row g-3">
+                                <Field label="Created By">
+                                    <span className="fw-semibold">{(action as any).created_by_username || '—'}</span>
+                                </Field>
+                                <Field label="Created At">
+                                    <span>{new Date(action.created_at || '').toLocaleString()}</span>
+                                </Field>
+                                <Field label="Message Format">
+                                    <Badge color="secondary" isLight>
+                                        {action.message_type === 'json_data' ? 'JSON Data' : 'Plain Text / Custom'}
+                                    </Badge>
+                                </Field>
+                                <Field label="Alert on Failure">
+                                    <Badge color={action.alert_on_failure ? 'danger' : 'secondary'} isLight>
+                                        {action.alert_on_failure ? 'Yes' : 'No'}
+                                    </Badge>
+                                </Field>
+                            </div>
+                        </SectionBox>
+                    </div>
+
+                    {/* ── Webhook ── */}
                     {action.type === 'webhook' && (
-                        <div className="col-12">
-                            <div className="card border-0 ">
-                                <div className="card-body">
-                                    <h5 className="card-title mb-3">
-                                        <Icon icon="Webhook" className="me-2" />
-                                        Webhook Configuration
-                                    </h5>
-                                    <div className="row g-3">
-                                        <div className="col-md-4">
-                                            <strong className="d-block text-muted small">HTTP Method</strong>
-                                            <Badge color="warning">{action.http_method || 'N/A'}</Badge>
-                                        </div>
-                                        <div className="col-md-8">
-                                            <strong className="d-block text-muted small">Webhook URL</strong>
-                                            <code className="small">{action.webhook_url || 'N/A'}</code>
+                        <div>
+                            <SectionLabel>Webhook Configuration</SectionLabel>
+                            <SectionBox>
+                                <div className="d-flex flex-column gap-2">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <Badge color={methodColorMap[action.http_method || 'POST'] || 'secondary'}>
+                                            {action.http_method || 'POST'}
+                                        </Badge>
+                                        <div className="flex-grow-1">
+                                            <UrlBox url={action.webhook_url || 'No URL configured'} />
                                         </div>
                                     </div>
+                                    {(action as any).webhook_auth_type && (action as any).webhook_auth_type !== 'none' && (
+                                        <div className="d-flex align-items-center gap-2 mt-1">
+                                            <Icon icon="Lock" size="sm" className="text-muted" />
+                                            <span className="small text-muted">Auth:</span>
+                                            <Badge color="secondary" isLight>{(action as any).webhook_auth_type}</Badge>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            </SectionBox>
                         </div>
                     )}
 
-                    {/* N8N Workflow Specific */}
+                    {/* ── N8N ── */}
                     {action.type === 'n8n_workflow' && (
-                        <div className="col-12">
-                            <div className="card border-0 ">
-                                <div className="card-body">
-                                    <h5 className="card-title mb-3">
-                                        <Icon icon="AccountTree" className="me-2" />
-                                        N8N Workflow Configuration
-                                    </h5>
+                        <div>
+                            <SectionLabel>n8n Workflow Configuration</SectionLabel>
+                            <SectionBox>
+                                <div className="d-flex flex-column gap-3">
                                     <div className="row g-3">
-                                        <div className="col-md-6">
-                                            <strong className="d-block text-muted small">Workflow ID</strong>
-                                            <span>{(action as any).n8n_workflow_id || 'N/A'}</span>
-                                        </div>
-                                        <div className="col-12">
-                                            <strong className="d-block text-muted small">Workflow URL</strong>
-                                            <code className="small">{(action as any).n8n_workflow_url || 'N/A'}</code>
-                                        </div>
+                                        <Field label="Workflow ID">
+                                            <span className="fw-semibold" style={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                                                {(action as any).n8n_workflow_id || <EmptyState text="Not set" />}
+                                            </span>
+                                        </Field>
+                                        <Field label="Timeout">
+                                            <span className="fw-semibold">{(action as any).n8n_timeout || 30}s</span>
+                                        </Field>
+                                    </div>
+                                    <div>
+                                        <p className="mb-1" style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9ca3af' }}>
+                                            Workflow URL
+                                        </p>
+                                        <UrlBox url={(action as any).n8n_workflow_url || 'No URL configured'} />
                                     </div>
                                 </div>
-                            </div>
+                            </SectionBox>
                         </div>
                     )}
 
-                    {/* Device Notification Specific */}
+                    {/* ── Device ── */}
                     {action.type === 'device_notification' && (
-                        <div className="col-12">
-                            <div className="card border-0 ">
-                                <div className="card-body">
-                                    <h5 className="card-title mb-3">
-                                        <Icon icon="Devices" className="me-2" />
-                                        Device Configuration
-                                    </h5>
+                        <div>
+                            <SectionLabel>Device Configuration</SectionLabel>
+                            <SectionBox>
+                                <div className="d-flex flex-column gap-3">
                                     <div className="row g-3">
-                                        <div className="col-md-4">
-                                            <strong className="d-block text-muted small">Device Type</strong>
+                                        <Field label="Device Type">
                                             <Badge color="primary">{action.device_type || 'HALO'}</Badge>
+                                        </Field>
+                                        <Field label="Sound File">
+                                            <div className="d-flex align-items-center gap-1">
+                                                <Icon icon="MusicNote" size="sm" className="text-muted" />
+                                                <span>{(action as any).device_sound || <EmptyState text="No Sound" />}</span>
+                                            </div>
+                                        </Field>
+                                        <Field label="Duration">
+                                            <span className="fw-semibold">{action.action_duration_minutes || 1} min</span>
+                                        </Field>
+                                    </div>
+
+                                    {/* LED strip */}
+                                    <div className="d-flex align-items-center gap-3 rounded px-3 py-2"
+                                        style={{ background: '#fff', border: '1px solid #e9ecef', fontSize: '0.8rem' }}>
+                                        <div className="d-flex align-items-center gap-1">
+                                            <Icon icon="Lightbulb" size="sm" className="text-warning" />
+                                            <span className="text-muted">Color</span>
+                                            <span className="fw-semibold ms-1">{(action as any).device_led_color ?? '—'}</span>
                                         </div>
-                                        <div className="col-md-4">
-                                            <strong className="d-block text-muted small">Sound File</strong>
-                                            <span>{(action as any).device_sound || 'No Sound'}</span>
+                                        <span className="text-muted">·</span>
+                                        <div className="d-flex align-items-center gap-1">
+                                            <Icon icon="Tune" size="sm" className="text-info" />
+                                            <span className="text-muted">Pattern</span>
+                                            <span className="fw-semibold ms-1">{(action as any).device_led_pattern ?? '—'}</span>
                                         </div>
-                                        <div className="col-md-4">
-                                            <strong className="d-block text-muted small">Duration (Minutes)</strong>
-                                            <span>{action.action_duration_minutes || 1}</span>
-                                        </div>
-                                        <div className="col-md-4">
-                                            <strong className="d-block text-muted small">LED Color</strong>
-                                            <span>{(action as any).device_led_color || 'N/A'}</span>
-                                        </div>
-                                        <div className="col-md-4">
-                                            <strong className="d-block text-muted small">LED Pattern</strong>
-                                            <span>{(action as any).device_led_pattern || 'N/A'}</span>
-                                        </div>
-                                        <div className="col-md-4">
-                                            <strong className="d-block text-muted small">LED Priority</strong>
-                                            <span>{(action as any).device_led_priority || 'N/A'}</span>
-                                        </div>
-                                        <div className="col-12">
-                                            <strong className="d-block text-muted small mb-2">Target Devices</strong>
-                                            {renderDeviceList()}
+                                        <span className="text-muted">·</span>
+                                        <div className="d-flex align-items-center gap-1">
+                                            <Icon icon="PriorityHigh" size="sm" className="text-danger" />
+                                            <span className="text-muted">Priority</span>
+                                            <span className="fw-semibold ms-1">{(action as any).device_led_priority ?? '—'}</span>
                                         </div>
                                     </div>
+
+                                    <div>
+                                        <p className="mb-2" style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#9ca3af' }}>
+                                            Target Devices
+                                        </p>
+                                        {renderDevices()}
+                                    </div>
                                 </div>
-                            </div>
+                            </SectionBox>
                         </div>
                     )}
 
-                    {/* Recipients (Email/SMS) */}
+                    {/* ── Recipients ── */}
                     {(action.type === 'email' || action.type === 'sms') && (
-                        <div className="col-12">
-                            <div className="card border-0 ">
-                                <div className="card-body">
-                                    <h5 className="card-title mb-3">
-                                        <Icon icon="People" className="me-2" />
-                                        Recipients
-                                    </h5>
-                                    {renderRecipients()}
-                                </div>
+                        <div>
+                            <SectionLabel>Recipients</SectionLabel>
+                            <SectionBox>{renderRecipients()}</SectionBox>
+                        </div>
+                    )}
+
+                    {/* ── Request Body ── */}
+                    {action.type !== 'device_notification' && action.message_template && (
+                        <div>
+                            <SectionLabel>Request Body</SectionLabel>
+                            <div className="position-relative rounded-2"
+                                style={{ border: '1px solid #e9ecef', background: '#f8f9fa' }}>
+                                <span className="position-absolute"
+                                    style={{ top: 8, left: 10, color: '#adb5bd', fontFamily: 'monospace', fontSize: '1rem', pointerEvents: 'none', zIndex: 1 }}>
+                                    {'{'}
+                                </span>
+                                <pre className="mb-0 py-2 small"
+                                    style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', paddingLeft: '2rem', paddingRight: '1rem', minHeight: 60, background: 'transparent' }}>
+                                    {action.message_template}
+                                </pre>
+                                <span className="position-absolute"
+                                    style={{ bottom: 8, left: 10, color: '#adb5bd', fontFamily: 'monospace', fontSize: '1rem', pointerEvents: 'none', zIndex: 1 }}>
+                                    {'}'}
+                                </span>
                             </div>
                         </div>
                     )}
 
-                    {/* Message Configuration */}
-                    {action.type !== 'device_notification' && action.message_template && (
-                        <div className="col-12">
-                            <div className="card border-0 ">
-                                <div className="card-body">
-                                    <h5 className="card-title mb-3">
-                                        <Icon icon="Message" className="me-2" />
-                                        Message
-                                    </h5>
-                                    <div className="p-3 bg-light rounded">
-                                        <pre className="mb-0 small">{action.message_template}</pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </ModalBody>
         </Modal>
