@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Action, User, SoundFile } from '../../../../types/sensor';
 import Button from '../../../../components/bootstrap/Button';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
@@ -61,6 +61,38 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
     const groupOptions = userGroups?.map((g: any) => ({ value: g.id, label: g.name })) || [];
     const soundOptions = soundFiles?.map((s: SoundFile) => ({ value: s.name, text: s.name })) || [];
 
+    const isValid = useMemo(() => {
+        if (!formData.name?.trim()) return false;
+
+        switch (formData.type) {
+            case 'email':
+            case 'sms':
+                const hasRecipients = (formData.recipients && formData.recipients.length > 0) ||
+                    (formData.user_groups && formData.user_groups.length > 0);
+                const hasMessage = !!formData.message_template?.trim();
+                // For SMS message is mandatory, for Email usually subject/body but here we have one template field
+                if (formData.type === 'sms' && !hasMessage) return false;
+                return hasRecipients;
+
+            case 'device_notification':
+                const hasDeviceList = Array.isArray(formData.device_list) && formData.device_list.length > 0;
+                return hasDeviceList && !!formData.device_type;
+
+            case 'webhook':
+                if (!formData.webhook_url?.trim() || !formData.http_method) return false;
+                if (formData.webhook_auth_type === 'bearer' && !formData.webhook_auth_token?.trim()) return false;
+                if (formData.webhook_auth_type === 'basic' && (!formData.webhook_auth_username?.trim() || !formData.webhook_auth_password?.trim())) return false;
+                if (formData.webhook_auth_type === 'api_key' && (!formData.webhook_auth_username?.trim() || !formData.webhook_auth_token?.trim())) return false;
+                return true;
+
+            case 'n8n_workflow':
+                return !!formData.n8n_workflow_url?.trim();
+
+            default:
+                return true;
+        }
+    }, [formData]);
+
     return (
         <div className="row g-3">
             <div className="col-md-6">
@@ -103,7 +135,6 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                                     { value: 'PUT', text: 'PUT' },
                                     { value: 'PATCH', text: 'PATCH' },
                                     { value: 'DELETE', text: 'DELETE' },
-                                    { value: 'HEAD', text: 'HEAD' },
                                 ]}
                                 ariaLabel="HTTP Method"
                             />
@@ -438,7 +469,7 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
 
             {formData.type !== 'device_notification' && (
                 <div className="col-md-6">
-                    <FormGroup label="Message Type">
+                    <FormGroup label="Message Format">
                         <Select
                             value={formData.message_type || 'custom'}
                             onChange={(e: any) => setFormData({ ...formData, message_type: e.target.value })}
@@ -478,13 +509,39 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
 
             {formData.type !== 'device_notification' && (formData.message_type === 'custom' || formData.message_type === 'custom_template') && (
                 <div className="col-12">
-                    <FormGroup label="Message">
-                        <Textarea
-                            value={formData.message_template}
-                            onChange={(e: any) => setFormData({ ...formData, message_template: e.target.value })}
-                            placeholder=""
-                            rows={4}
-                        />
+                    <FormGroup label="Request Body">
+                        <div style={{ position: 'relative' }}>
+                            <Textarea
+                                value={formData.message_template}
+                                onChange={(e: any) => setFormData({ ...formData, message_template: e.target.value })}
+                                rows={12}
+                                style={{ paddingLeft: '2.7rem', background: 'transparent', position: 'relative', zIndex: 1, height: '100%' }}
+                            />
+                            <span style={{
+                                position: 'absolute',
+                                top: '10px',
+                                left: '10px',
+                                color: '#adb5bd',
+                                fontSize: '0.9rem',
+                                pointerEvents: 'none',
+                                zIndex: 0,
+                                fontFamily: 'monospace'
+                            }}>
+                                {'{'}
+                            </span>
+                            <span style={{
+                                position: 'absolute',
+                                bottom: '10px',
+                                left: '10px',
+                                color: '#adb5bd',
+                                fontSize: '0.9rem',
+                                pointerEvents: 'none',
+                                zIndex: 0,
+                                fontFamily: 'monospace'
+                            }}>
+                                {'}'}
+                            </span>
+                        </div>
                     </FormGroup>
                 </div>
             )}
@@ -493,6 +550,7 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                 <Button
                     color="primary"
                     onClick={() => onSave(formData)}
+                    isDisable={!isValid}
                 >
                     Save Action
                 </Button>

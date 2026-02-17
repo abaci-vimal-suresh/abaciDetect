@@ -4,7 +4,8 @@ import Page from '../../../layout/Page/Page';
 import SubHeader, { SubHeaderLeft } from '../../../layout/SubHeader/SubHeader';
 import Badge from '../../../components/bootstrap/Badge';
 import Icon from '../../../components/icon/Icon';
-import MaterialTable from '@material-table/core';
+import MaterialTable, { MTableAction } from '@material-table/core';
+import Button from '../../../components/bootstrap/Button';
 import { ThemeProvider } from '@mui/material/styles';
 import useTablestyle from '../../../hooks/useTablestyles';
 import {
@@ -225,6 +226,24 @@ const AlertActionPage = () => {
                                         }
                                     }
                                 ]}
+
+                                components={{
+                                    Action: (props: any) => {
+                                        if (props.action.isFreeAction) {
+                                            return (
+                                                <Button
+                                                    color="primary"
+                                                    icon="Add"
+                                                    onClick={(event) => props.action.onClick(event, props.data)}
+                                                    className="ms-2"
+                                                >
+                                                    New Action
+                                                </Button>
+                                            );
+                                        }
+                                        return <MTableAction {...props} />;
+                                    }
+                                }}
                             />
                         </ThemeProvider>
 

@@ -237,102 +237,97 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
                 </PivotControls>
             )}
 
-            {/* ✨ NEW: Interactive Endpoint Handles */}
+
+            {/* ✨ NEW: Interactive Endpoint Handles (Plane Drag) */}
             {!isPreview && isSelected && (
                 <>
                     {/* START POINT HANDLE */}
-                    <PivotControls
-                        anchor={[0, 0, 0]}
-                        depthTest={false}
-                        scale={0.5}
-                        lineWidth={2}
-                        fixed={true}
-                        visible={true}
-                        activeAxes={[true, false, true]}
-                        onDragStart={() => {
-                            console.log('🐞 drag_debug: Start Point Drag Began', { wallId: wall.id });
+                    <mesh
+                        position={startPos}
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            (e.target as Element).setPointerCapture(e.pointerId);
                             dragStartProps.current = { r_x1: wall.r_x1, r_y1: wall.r_y1, r_x2: wall.r_x2, r_y2: wall.r_y2 };
                         }}
-                        onDrag={(local) => {
-                            const pos = new THREE.Vector3();
-                            pos.setFromMatrixPosition(local);
+                        onPointerUp={(e) => {
+                            e.stopPropagation();
+                            (e.target as Element).releasePointerCapture(e.pointerId);
+                            dragStartProps.current = null;
+                        }}
+                        onPointerMove={(e) => {
+                            if (!dragStartProps.current) return;
+                            e.stopPropagation();
 
-                            // Convert delta back to normalized coordinates
-                            const deltaX = calibration.width !== 0 ? pos.x / calibration.width : 0;
-                            const deltaY = calibration.depth !== 0 ? pos.z / calibration.depth : 0;
+                            // Raycast to floor plane
+                            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -floorY);
+                            const interactionVector = new THREE.Vector3();
+                            const intersect = e.ray.intersectPlane(plane, interactionVector);
 
-                            const start = dragStartProps.current || { r_x1: wall.r_x1, r_y1: wall.r_y1 };
+                            if (intersect) {
+                                // Convert to normalized coordinates
+                                const nx = calibration.width !== 0 ? (intersect.x - calibration.minX) / calibration.width : 0;
+                                const ny = calibration.depth !== 0 ? (intersect.z - calibration.minZ) / calibration.depth : 0;
 
-                            const newPoints = {
-                                r_x1: Math.max(0, Math.min(1, start.r_x1 + deltaX)),
-                                r_y1: Math.max(0, Math.min(1, start.r_y1 + deltaY))
-                            };
+                                // Clamp to 0-1
+                                const r_x1 = Math.max(0, Math.min(1, nx));
+                                const r_y1 = Math.max(0, Math.min(1, ny));
 
-                            console.log('🐞 drag_debug: Start Point Moved', {
-                                wallId: wall.id,
-                                deltaX, deltaY,
-                                newPoints
-                            });
-
-                            onUpdateEndpoints?.(newPoints);
+                                onUpdateEndpoints?.({ r_x1, r_y1 });
+                            }
                         }}
                     >
-                        <mesh position={startPos}>
-                            <sphereGeometry args={[0.08, 16, 16]} />
-                            <meshBasicMaterial color="#f1c40f" depthTest={false} transparent opacity={0.8} />
-                            <mesh scale={[1.2, 1.2, 1.2]}>
-                                <sphereGeometry args={[0.08, 16, 16]} />
-                                <meshBasicMaterial color="#f1c40f" wireframe transparent opacity={0.4} />
-                            </mesh>
+                        <sphereGeometry args={[0.2, 16, 16]} />
+                        <meshBasicMaterial color="#f1c40f" depthTest={false} transparent opacity={0.8} />
+                        <mesh scale={[1.5, 1.5, 1.5]}>
+                            <sphereGeometry args={[0.2, 16, 16]} />
+                            <meshBasicMaterial color="#f1c40f" wireframe transparent opacity={0.4} />
                         </mesh>
-                    </PivotControls>
+                    </mesh>
 
                     {/* END POINT HANDLE */}
-                    <PivotControls
-                        anchor={[0, 0, 0]}
-                        depthTest={false}
-                        scale={0.5}
-                        lineWidth={2}
-                        fixed={true}
-                        visible={true}
-                        activeAxes={[true, false, true]}
-                        onDragStart={() => {
-                            console.log('🐞 drag_debug: End Point Drag Began', { wallId: wall.id });
+                    <mesh
+                        position={endPos}
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            (e.target as Element).setPointerCapture(e.pointerId);
                             dragStartProps.current = { r_x1: wall.r_x1, r_y1: wall.r_y1, r_x2: wall.r_x2, r_y2: wall.r_y2 };
                         }}
-                        onDrag={(local) => {
-                            const pos = new THREE.Vector3();
-                            pos.setFromMatrixPosition(local);
+                        onPointerUp={(e) => {
+                            e.stopPropagation();
+                            (e.target as Element).releasePointerCapture(e.pointerId);
+                            dragStartProps.current = null;
+                        }}
+                        onPointerMove={(e) => {
+                            if (!dragStartProps.current) return;
+                            e.stopPropagation();
 
-                            // Convert delta back to normalized coordinates
-                            const deltaX = calibration.width !== 0 ? pos.x / calibration.width : 0;
-                            const deltaY = calibration.depth !== 0 ? pos.z / calibration.depth : 0;
+                            // Raycast to floor plane
+                            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -floorY);
+                            const interactionVector = new THREE.Vector3();
+                            const intersect = e.ray.intersectPlane(plane, interactionVector);
 
-                            const start = dragStartProps.current || { r_x2: wall.r_x2, r_y2: wall.r_y2 };
+                            if (intersect) {
+                                // Convert to normalized coordinates
+                                const nx = calibration.width !== 0 ? (intersect.x - calibration.minX) / calibration.width : 0;
+                                const ny = calibration.depth !== 0 ? (intersect.z - calibration.minZ) / calibration.depth : 0;
 
-                            const newPoints = {
-                                r_x2: Math.max(0, Math.min(1, start.r_x2 + deltaX)),
-                                r_y2: Math.max(0, Math.min(1, start.r_y2 + deltaY))
-                            };
+                                // Clamp to 0-1
+                                const r_x2 = Math.max(0, Math.min(1, nx));
+                                const r_y2 = Math.max(0, Math.min(1, ny));
 
-                            console.log('🐞 drag_debug: End Point Moved', {
-                                wallId: wall.id,
-                                deltaX, deltaY,
-                                newPoints
-                            });
-
-                            onUpdateEndpoints?.(newPoints);
+                                onUpdateEndpoints?.({ r_x2, r_y2 });
+                            }
                         }}
                     >
-                        <mesh position={endPos}>
-                            <sphereGeometry args={[0.08, 16, 16]} />
-                            <meshBasicMaterial color="#f1c40f" depthTest={false} transparent opacity={0.8} />
-                            <mesh scale={[1.2, 1.2, 1.2]}>
-                                <sphereGeometry args={[0.08, 16, 16]} />
-                                <meshBasicMaterial color="#f1c40f" wireframe transparent opacity={0.4} />
-                            </mesh>
+                        <sphereGeometry args={[0.2, 16, 16]} />
+                        <meshBasicMaterial color="#f1c40f" depthTest={false} transparent opacity={0.8} />
+                        <mesh scale={[1.5, 1.5, 1.5]}>
+                            <sphereGeometry args={[0.2, 16, 16]} />
+                            <meshBasicMaterial color="#f1c40f" wireframe transparent opacity={0.4} />
                         </mesh>
-                    </PivotControls>
+                    </mesh>
                 </>
             )}
 

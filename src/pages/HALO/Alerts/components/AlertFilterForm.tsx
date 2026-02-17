@@ -6,8 +6,8 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Checks from '../../../../components/bootstrap/forms/Checks';
 import Tooltips from '../../../../components/bootstrap/Tooltips';
 import Icon from '../../../../components/icon/Icon';
-import { useAreas, useActions, useSensorGroups, useAlertConfigurations } from '../../../../api/sensors.api';
-import ReactSelectWithState from '../../../../components/CustomComponent/Select/ReactSelect';
+import { useAreas, useActions, useSensorGroups } from '../../../../api/sensors.api';
+import { MultiSelectDropdown, Option } from '../../../../components/CustomComponent/Select/MultiSelectDropdown';
 
 interface AlertFilterFormProps {
     filter?: Partial<AlertFilter>;
@@ -37,7 +37,6 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
 
         const initial = { ...filter };
 
-        // Ensure is_active is boolean
         if (typeof initial.is_active === 'undefined') initial.is_active = true;
 
         if (filter.area_list && (!filter.area_ids || filter.area_ids.length === 0)) {
@@ -55,20 +54,17 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
     const { data: areas } = useAreas();
     const { data: actions } = useActions();
     const { data: sensorGroups } = useSensorGroups();
-    const { data: alertConfigs } = useAlertConfigurations();
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
 
     const handleToggle = (field: keyof AlertFilter, value: number) => {
         const currentList = (formData[field] as any[]) || [];
         const index = currentList.findIndex((item: any) =>
             (typeof item === 'object' ? item.id : item) === value
         );
-
         const newList = [...currentList];
-        if (index > -1) {
-            newList.splice(index, 1);
-        } else {
-            newList.push(value);
-        }
+        if (index > -1) newList.splice(index, 1);
+        else newList.push(value);
         setFormData({ ...formData, [field]: newList });
     };
 
@@ -76,11 +72,8 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
         const currentDays = formData.weekdays || [];
         const index = currentDays.indexOf(day);
         let newDays = [...currentDays];
-        if (index > -1) {
-            newDays.splice(index, 1);
-        } else {
-            newDays.push(day);
-        }
+        if (index > -1) newDays.splice(index, 1);
+        else newDays.push(day);
         setFormData({ ...formData, weekdays: newDays });
     };
 
@@ -89,8 +82,33 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
         return list.some((item: any) => (typeof item === 'object' ? item.id : item) === id);
     };
 
+    // ── Derived option lists for MultiSelectDropdown ─────────────────────────
+
+    // ALERT_TYPE_CHOICES already has { value, label } — map value to string
+    const alertTypeOptions: Option[] = ALERT_TYPE_CHOICES.map(c => ({
+        value: String(c.value),
+        label: c.label,
+    }));
+
+    const alertSourceOptions: Option[] = ALERT_SOURCE_CHOICES.map(c => ({
+        value: String(c.value),
+        label: c.label,
+    }));
+
+    const areaOptions: Option[] = (areas ?? []).map((a: Area) => ({
+        value: String(a.id),
+        label: a.name,
+    }));
+
+    const sensorGroupOptions: Option[] = (sensorGroups ?? []).map((g: any) => ({
+        value: String(g.id),
+        label: g.name,
+    }));
+
     return (
         <div className="row g-3">
+
+            {/* ── Name / Description / Status ────────────────────────────── */}
             <div className="col-md-4">
                 <FormGroup label="Filter Name">
                     <Input
@@ -121,24 +139,34 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                 </FormGroup>
             </div>
 
+            {/* ── Logic & Triggers ────────────────────────────────────────── */}
             <div className="col-12">
                 <div className="card border shadow-sm mb-0">
                     <div className="card-header bg-light py-2">
-                        <span className="fw-bold small text-uppercase">Logic & Triggers</span>
+                        <span className="fw-bold small text-uppercase">Logic &amp; Triggers</span>
                     </div>
                     <div className="card-body p-3">
                         <div className="row g-3">
+
+                            {/* Alert Types — MultiSelectDropdown */}
                             <div className="col-md-4">
                                 <FormGroup label="Alert Types">
-                                    <ReactSelectWithState
-                                        isMulti
-                                        options={ALERT_TYPE_CHOICES}
-                                        value={ALERT_TYPE_CHOICES.filter(c => formData.alert_types?.includes(c.value))}
-                                        setValue={(opts: any) => setFormData({ ...formData, alert_types: opts ? opts.map((o: any) => o.value) : [] })}
+                                    <MultiSelectDropdown
+                                        options={alertTypeOptions}
+                                        value={(formData.alert_types ?? []).map(String)}
+                                        onChange={(vals) =>
+                                            setFormData({ ...formData, alert_types: vals })
+                                        }
                                         placeholder="Select Types"
+                                        searchPlaceholder="Filter types…"
+                                        selectAll
+                                        clearable
+                                        className="w-100"
                                     />
                                 </FormGroup>
                             </div>
+
+                            {/* Source Types — MultiSelectDropdown */}
                             <div className="col-md-4">
                                 <FormGroup label={
                                     <div className="d-flex align-items-center gap-1">
@@ -148,40 +176,49 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                                         </Tooltips>
                                     </div>
                                 }>
-                                    <ReactSelectWithState
-                                        isMulti
-                                        options={ALERT_SOURCE_CHOICES}
-                                        value={ALERT_SOURCE_CHOICES.filter(c => formData.source_types?.includes(c.value))}
-                                        setValue={(opts: any) => setFormData({ ...formData, source_types: opts ? opts.map((o: any) => o.value) : [] })}
+                                    <MultiSelectDropdown
+                                        options={alertSourceOptions}
+                                        value={(formData.source_types ?? []).map(String)}
+                                        onChange={(vals) =>
+                                            setFormData({ ...formData, source_types: vals })
+                                        }
                                         placeholder="Select Sources"
+                                        searchPlaceholder="Filter sources…"
+                                        selectAll
+                                        clearable
+                                        className="w-100"
                                     />
                                 </FormGroup>
                             </div>
+
+                            {/* Trigger Conditions — unchanged (checkboxes) */}
                             <div className="col-md-4">
                                 <FormGroup label="Trigger Conditions">
                                     <div className="d-flex gap-3 mt-2">
                                         <Checks
                                             type="checkbox"
-                                            label="Max Over"
+                                            label="Over Max"
                                             checked={formData.action_for_max}
                                             onChange={(e: any) => setFormData({ ...formData, action_for_max: e.target.checked })}
                                         />
                                         <Checks
                                             type="checkbox"
-                                            label="Min Under"
+                                            label="Under Min"
                                             checked={formData.action_for_min}
                                             onChange={(e: any) => setFormData({ ...formData, action_for_min: e.target.checked })}
                                         />
                                     </div>
                                 </FormGroup>
                             </div>
+
                         </div>
                     </div>
                 </div>
             </div>
 
+            {/* ── Active Schedule ─────────────────────────────────────────── */}
             <div className="col-12">
-                <div className="card  border shadow-sm">
+                <div className="card border shadow-sm">
                     <div className="card-header bg-light py-2">
                         <span className="fw-bold small text-uppercase">Active Schedule (Optional)</span>
                     </div>
@@ -227,6 +264,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                 </div>
             </div>
 
+            {/* ── Target Assignment ───────────────────────────────────────── */}
             <div className="col-12">
                 <div className="card border shadow-sm">
                     <div className="card-header bg-light py-2">
@@ -234,34 +272,49 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                     </div>
                     <div className="card-body p-3">
                         <div className="row g-3">
+
+                            {/* Areas — MultiSelectDropdown */}
                             <div className="col-md-6">
                                 <FormGroup label="Apply to Areas">
-                                    <ReactSelectWithState
-                                        isMulti
-                                        options={areas?.map((a: Area) => ({ value: a.id, label: a.name })) || []}
-                                        value={areas?.filter((a: Area) => formData.area_ids?.includes(a.id)).map((a: Area) => ({ value: a.id, label: a.name })) || []}
-                                        setValue={(vals: any) => setFormData({ ...formData, area_ids: vals ? vals.map((v: any) => v.value) : [] })}
+                                    <MultiSelectDropdown
+                                        options={areaOptions}
+                                        value={(formData.area_ids ?? []).map(String)}
+                                        onChange={(vals) =>
+                                            setFormData({ ...formData, area_ids: vals.map(Number) })
+                                        }
                                         placeholder="Select Areas"
+                                        searchPlaceholder="Search areas…"
+                                        selectAll
+                                        clearable
+                                        className="w-100"
                                     />
                                 </FormGroup>
                             </div>
 
+                            {/* Sensor Groups — MultiSelectDropdown */}
                             <div className="col-md-6">
                                 <FormGroup label="Sensor Groups (Optional)">
-                                    <ReactSelectWithState
-                                        isMulti
-                                        options={sensorGroups?.map((g: any) => ({ value: g.id, label: g.name })) || []}
-                                        value={sensorGroups?.filter((g: any) => formData.sensor_group_ids?.includes(g.id)).map((g: any) => ({ value: g.id, label: g.name })) || []}
-                                        setValue={(vals: any) => setFormData({ ...formData, sensor_group_ids: vals ? vals.map((v: any) => v.value) : [] })}
+                                    <MultiSelectDropdown
+                                        options={sensorGroupOptions}
+                                        value={(formData.sensor_group_ids ?? []).map(String)}
+                                        onChange={(vals) =>
+                                            setFormData({ ...formData, sensor_group_ids: vals.map(Number) })
+                                        }
                                         placeholder="Select Sensor Groups"
+                                        searchPlaceholder="Search groups…"
+                                        selectAll
+                                        clearable
+                                        className="w-100"
                                     />
                                 </FormGroup>
                             </div>
+
                         </div>
                     </div>
                 </div>
             </div>
 
+            {/* ── Associated Actions — kept as click-cards (no change) ─────── */}
             <div className="col-12">
                 <div className="card border shadow-sm">
                     <div className="card-header bg-light py-2">
@@ -293,12 +346,14 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                 </div>
             </div>
 
+            {/* ── Footer ─────────────────────────────────────────────────── */}
             <div className="col-12 d-flex justify-content-end gap-2 mt-4">
                 <Button color="light" onClick={onCancel}>Cancel</Button>
                 <Button color="primary" onClick={() => onSave(formData)} isDisable={!formData.name}>
                     Save Filter
                 </Button>
             </div>
+
         </div>
     );
 };

@@ -174,7 +174,7 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
 
                         <div className='col-md-6'>
                             <Card className='border shadow-none mb-0'>
-                                <CardHeader className='p-2 bg-light'><CardTitle className='m-0 fs-6 fw-bold'>Authentication</CardTitle></CardHeader>
+                                <CardHeader className='p-2 bg-primary'><CardTitle className='text-light m-0 fs-6 fw-bold'>Authentication</CardTitle></CardHeader>
                                 <CardBody className='p-3'>
                                     <div className='row g-3'>
                                         <div className='col-12'>

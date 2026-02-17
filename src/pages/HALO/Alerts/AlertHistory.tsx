@@ -26,6 +26,8 @@ import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
 import Select from '../../../components/bootstrap/forms/Select';
 import Textarea from '../../../components/bootstrap/forms/Textarea';
+import Checks from '../../../components/bootstrap/forms/Checks';
+import Label from '../../../components/bootstrap/forms/Label';
 import { Action, Alert, AlertCreateData, AlertFilter, AlertStatus, AlertType } from '../../../types/sensor';
 import Chart, { IChartOptions } from '../../../components/extras/Chart';
 import Breadcrumb from '../../../components/bootstrap/Breadcrumb';
@@ -82,6 +84,7 @@ const AlertHistory = () => {
     const [targetStatus, setTargetStatus] = useState<AlertStatus | null>(null);
     const [remarks, setRemarks] = useState('');
     const [nextTriggerTime, setNextTriggerTime] = useState<string>('');
+    const [isNextTriggerEnabled, setIsNextTriggerEnabled] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [alertToDelete, setAlertToDelete] = useState<AlertHistoryItem | null>(null);
 
@@ -105,8 +108,10 @@ const AlertHistory = () => {
             payload.user_acknowledged = 1;
         }
 
-        if (targetStatus === 'suspended' && nextTriggerTime) {
+        if (targetStatus === 'suspended' && isNextTriggerEnabled && nextTriggerTime) {
             payload.next_trigger_time = nextTriggerTime;
+        } else if (targetStatus === 'suspended') {
+            payload.next_trigger_time = null;
         }
 
         await updateAlertMutation.mutateAsync({
@@ -125,6 +130,7 @@ const AlertHistory = () => {
         setSelectedAlert(alert);
         setTargetStatus(status);
         setNextTriggerTime('');
+        setIsNextTriggerEnabled(false);
         setIsStatusModalOpen(true);
     };
 
@@ -652,13 +658,25 @@ const AlertHistory = () => {
                         </div>
                         {targetStatus === 'suspended' && (
                             <div className="col-12">
-                                <FormGroup label="Next Trigger Time" formText="The alert will be reactivated after this time.">
-                                    <Input
-                                        type="datetime-local"
-                                        value={nextTriggerTime}
-                                        onChange={(e: any) => setNextTriggerTime(e.target.value)}
+                                <div className='d-flex align-items-center justify-content-between mb-3'>
+                                    <Label htmlFor='toggle-next-trigger' className='mb-0 fw-bold'>Set Automatic Reactivation?</Label>
+                                    <Checks
+                                        type='switch'
+                                        id='toggle-next-trigger'
+                                        checked={isNextTriggerEnabled}
+                                        onChange={() => setIsNextTriggerEnabled(!isNextTriggerEnabled)}
+                                        label={isNextTriggerEnabled ? 'Yes' : 'No'}
                                     />
-                                </FormGroup>
+                                </div>
+                                {isNextTriggerEnabled && (
+                                    <FormGroup label="Next Trigger Time" formText="The alert will be reactivated after this time.">
+                                        <Input
+                                            type="datetime-local"
+                                            value={nextTriggerTime}
+                                            onChange={(e: any) => setNextTriggerTime(e.target.value)}
+                                        />
+                                    </FormGroup>
+                                )}
                             </div>
                         )}
                     </div>
@@ -675,7 +693,7 @@ const AlertHistory = () => {
                         }
                         icon="Save"
                         onClick={handleStatusUpdate}
-                        isDisable={updateAlertMutation.isPending || !remarks.trim() || (targetStatus === 'suspended' && !nextTriggerTime)}
+                        isDisable={updateAlertMutation.isPending || !remarks.trim() || (targetStatus === 'suspended' && isNextTriggerEnabled && !nextTriggerTime)}
                     >
                         Confirm Update
                     </Button>
@@ -695,11 +713,11 @@ const AlertHistory = () => {
                                     value={newAlert.type}
                                     onChange={(e: any) => setNewAlert({ ...newAlert, type: e.target.value as AlertType })}
                                     list={[
-                                        { text: 'High Temperature', value: 'high_temperature' },
-                                        { text: 'High CO2', value: 'high_co2' },
-                                        { text: 'Smoke Detected', value: 'smoke_detected' },
-                                        { text: 'Sensor Offline', value: 'sensor_offline' },
-                                        { text: 'Motion Detected', value: 'motion_alert' },
+                                        { text: 'High Temperature', value: 'temperature' },
+                                        { text: 'High CO2', value: 'co2' },
+                                        { text: 'Smoke Detected', value: 'smoke' },
+                                        { text: 'Sensor Offline', value: 'offline' },
+                                        { text: 'Motion Detected', value: 'motion' },
                                     ]}
                                 />
                             </FormGroup>

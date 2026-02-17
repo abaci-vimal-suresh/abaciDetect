@@ -11,20 +11,20 @@ import Input from '../../../components/bootstrap/forms/Input';
 import Badge from '../../../components/bootstrap/Badge';
 import Checks from '../../../components/bootstrap/forms/Checks';
 import Label from '../../../components/bootstrap/forms/Label';
-import { useAlertConfigurations, useSaveAlertConfiguration } from '../../../api/sensors.api';
 import { AlertConfiguration } from '../../../types/sensor';
 import { useUsers, useUserGroups } from '../../../api/sensors.api';
 
 const AlertConfigurationPage = () => {
-    const { data: configs, isLoading: isConfigsLoading } = useAlertConfigurations();
-    const { mutate: saveConfig, isPending: isSaving } = useSaveAlertConfiguration();
+    const configs: AlertConfiguration[] = [];
+    const isConfigsLoading = false;
+    const saveConfig = (data: any) => { };
+    const isSaving = false;
+
     const { data: users } = useUsers();
-    // const { data: userGroups } = useUserGroups(); // Assuming this hook exists or similar
 
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [localConfig, setLocalConfig] = useState<AlertConfiguration | null>(null);
 
-    // Select the first config by default when loaded
     useEffect(() => {
         if (configs && configs.length > 0 && selectedId === null) {
             setSelectedId(configs[0].id);
@@ -32,12 +32,11 @@ const AlertConfigurationPage = () => {
         }
     }, [configs, selectedId]);
 
-    // Update local config when selection changes
     useEffect(() => {
         if (selectedId && configs) {
             const found = configs.find(c => c.id === selectedId);
             if (found) {
-                setLocalConfig(JSON.parse(JSON.stringify(found))); // Deep copy to avoid mutating cache directly
+                setLocalConfig(JSON.parse(JSON.stringify(found)));
             }
         }
     }, [selectedId, configs]);
@@ -66,10 +65,10 @@ const AlertConfigurationPage = () => {
         if (exists) {
             newRecipients = localConfig.recipients.filter(r => !(r.id === id && r.type === type));
         } else {
-            const name = type === 'user' 
-                ? users?.find(u => u.id === id)?.username 
-                : `Group ${id}`; // Placeholder as we don't have groups loaded yet
-            
+            const name = type === 'user'
+                ? users?.find(u => u.id === id)?.username
+                : `Group ${id}`;
+
             newRecipients = [...localConfig.recipients, { id, type, name }];
         }
         setLocalConfig({ ...localConfig, recipients: newRecipients });
@@ -91,7 +90,6 @@ const AlertConfigurationPage = () => {
 
             <Page container='fluid'>
                 <div className="row h-100">
-                    {/* Left Panel: List of Parameters */}
                     <div className="col-lg-4 col-xl-3">
                         <Card stretch>
                             <CardHeader>
@@ -110,7 +108,7 @@ const AlertConfigurationPage = () => {
                                                 key={config.id}
                                                 className={`list-group-item list-group-item-action cursor-pointer ${selectedId === config.id ? 'active-selection' : ''}`}
                                                 onClick={() => setSelectedId(config.id)}
-                                                style={{ 
+                                                style={{
                                                     cursor: 'pointer',
                                                     backgroundColor: selectedId === config.id ? 'var(--bs-primary-bg-subtle)' : 'transparent',
                                                     borderLeft: selectedId === config.id ? '4px solid var(--bs-primary)' : '4px solid transparent'
@@ -170,9 +168,9 @@ const AlertConfigurationPage = () => {
                                                     <Input
                                                         type="number"
                                                         value={localConfig.threshold_min ?? ''}
-                                                        onChange={(e: any) => setLocalConfig({ 
-                                                            ...localConfig, 
-                                                            threshold_min: e.target.value === '' ? null : Number(e.target.value) 
+                                                        onChange={(e: any) => setLocalConfig({
+                                                            ...localConfig,
+                                                            threshold_min: e.target.value === '' ? null : Number(e.target.value)
                                                         })}
                                                         placeholder="No limit"
                                                     />
@@ -183,9 +181,9 @@ const AlertConfigurationPage = () => {
                                                     <Input
                                                         type="number"
                                                         value={localConfig.threshold_max ?? ''}
-                                                        onChange={(e: any) => setLocalConfig({ 
-                                                            ...localConfig, 
-                                                            threshold_max: e.target.value === '' ? null : Number(e.target.value) 
+                                                        onChange={(e: any) => setLocalConfig({
+                                                            ...localConfig,
+                                                            threshold_max: e.target.value === '' ? null : Number(e.target.value)
                                                         })}
                                                         placeholder="No limit"
                                                     />
@@ -258,7 +256,7 @@ const AlertConfigurationPage = () => {
                                                     {users?.map(user => {
                                                         const isSelected = localConfig.recipients.some(r => r.id === user.id && r.type === 'user');
                                                         return (
-                                                            <div 
+                                                            <div
                                                                 key={user.id}
                                                                 onClick={() => handleRecipientToggle(user.id, 'user')}
                                                                 className={`border rounded px-3 py-2 cursor-pointer user-select-none ${isSelected ? 'bg-primary text-white border-primary' : 'bg-light border-light'}`}

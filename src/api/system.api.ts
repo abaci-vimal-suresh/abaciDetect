@@ -99,11 +99,12 @@ export const useGenerateLicenseKey = () => {
             const { data } = await publicAxios.post('/administration/generate-license-key/', { device_id: deviceId });
             return data;
         },
+        retry: 1,
         onSuccess: () => {
-            console.log('✅ License Key Generated Successfully');
+            console.log('License Key Generated Successfully');
         },
         onError: (error: any) => {
-            console.error('❌ License Generation Error:', error);
+            console.error('License Generation Error:', error);
         }
     });
 };
