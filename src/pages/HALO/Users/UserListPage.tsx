@@ -141,14 +141,14 @@ const UserList = () => {
             filtering: false,
             render: (rowData: any) => (
                 <div className="d-flex gap-2">
-                    <Button
+                    {/* <Button
                         color="info"
                         isLight
                         icon="Visibility"
                         title="View"
                         onClick={() => console.log('view', rowData.id)}
                         style={{ width: 36, height: 36, borderRadius: 8 }}
-                    />
+                    /> */}
                     <Button
                         color="primary"
                         isLight

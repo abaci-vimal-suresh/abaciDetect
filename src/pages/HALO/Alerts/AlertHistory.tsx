@@ -44,9 +44,10 @@ interface AlertHistoryItem {
     alert_type: string;
     severity: 'critical' | 'warning' | 'info';
     value: string | number;
-    status: AlertStatus | 'Resolved'; // Supporting AlertStatus type
+    status: AlertStatus | 'Resolved';
     remarks?: string;
     resolved_at?: string;
+    value_reset_time?: string; // NEW
 }
 
 const AlertHistory = () => {
@@ -57,7 +58,6 @@ const AlertHistory = () => {
     const [timelineFilter, setTimelineFilter] = useState<'today' | '24h' | 'all'>('all');
     const [chartTimeRange, setChartTimeRange] = useState<'24h' | '7d'>('7d');
     const [showTableFilters, setShowTableFilters] = useState(false);
-
 
     // Fetch trends and alerts from API
     const { data: trendData, isLoading: isTrendLoading } = useAlertTrends({ period: chartTimeRange });
@@ -86,6 +86,7 @@ const AlertHistory = () => {
     const [remarks, setRemarks] = useState('');
     const [nextTriggerTime, setNextTriggerTime] = useState<string>('');
     const [isNextTriggerEnabled, setIsNextTriggerEnabled] = useState(false);
+    const [isRecheckEnabled, setIsRecheckEnabled] = useState(false); // NEW
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [alertToDelete, setAlertToDelete] = useState<AlertHistoryItem | null>(null);
 
@@ -111,8 +112,10 @@ const AlertHistory = () => {
 
         if (targetStatus === 'suspended' && isNextTriggerEnabled && nextTriggerTime) {
             payload.next_trigger_time = nextTriggerTime;
+            payload.recheck_next_trigger = isRecheckEnabled; // NEW
         } else if (targetStatus === 'suspended') {
             payload.next_trigger_time = null;
+            payload.recheck_next_trigger = false; // NEW
         }
 
         await updateAlertMutation.mutateAsync({
@@ -123,6 +126,7 @@ const AlertHistory = () => {
         setIsStatusModalOpen(false);
         setRemarks('');
         setNextTriggerTime('');
+        setIsRecheckEnabled(false); // NEW
         setSelectedAlert(null);
         setTargetStatus(null);
     };
@@ -132,6 +136,7 @@ const AlertHistory = () => {
         setTargetStatus(status);
         setNextTriggerTime('');
         setIsNextTriggerEnabled(false);
+        setIsRecheckEnabled(false); // NEW
         setIsStatusModalOpen(true);
     };
 
@@ -179,6 +184,7 @@ const AlertHistory = () => {
             status: alert.status,
             remarks: alert.remarks,
             resolved_at: alert.status === 'resolved' ? alert.updated_at : undefined,
+            value_reset_time: alert.value_reset_time || undefined, // NEW
         }));
     }, [alertsData]);
 
@@ -231,10 +237,6 @@ const AlertHistory = () => {
         const data = trendData?.data?.chart_data?.values || [];
         const labels = trendData?.data?.chart_data?.labels || [];
 
-        const maxValue = data.length > 0 ? Math.max(...data) : 0;
-        const minValue = data.length > 0 ? Math.min(...data) : 0;
-        const range = maxValue - minValue;
-
         return {
             series: [{
                 name: 'Alerts',
@@ -264,7 +266,7 @@ const AlertHistory = () => {
                         stops: [0, 100]
                     }
                 },
-                colors: [themeStatus === 'dark' ? '#a87ca1' : '#7a3a6f'], // Subtle purple line
+                colors: [themeStatus === 'dark' ? '#a87ca1' : '#7a3a6f'],
                 labels,
                 tooltip: {
                     theme: themeStatus,
@@ -272,26 +274,17 @@ const AlertHistory = () => {
                         formatter: (value: number) => `${value} alerts`
                     }
                 },
-                grid: {
-                    show: false,
-                },
+                grid: { show: false },
                 xaxis: {
                     labels: { show: false },
                     axisBorder: { show: false },
                     axisTicks: { show: false }
                 },
-                yaxis: {
-                    labels: { show: false }
-                },
-                dataLabels: {
-                    enabled: false
-                },
+                yaxis: { labels: { show: false } },
+                dataLabels: { enabled: false },
                 markers: {
                     size: 0,
-                    hover: {
-                        size: 6,
-                        sizeOffset: 3
-                    }
+                    hover: { size: 6, sizeOffset: 3 }
                 }
             }
         };
@@ -308,7 +301,6 @@ const AlertHistory = () => {
                 </div>
             ),
         },
-       
         { title: 'Type', field: 'alert_type' },
         { title: 'Sensor', field: 'sensor_name', render: (row: any) => <code>{row.sensor_name}</code> },
         { title: 'Area', field: 'area_name' },
@@ -335,7 +327,18 @@ const AlertHistory = () => {
             title: 'Remarks',
             field: 'remarks',
             render: (rowData: AlertHistoryItem) => (
-                <small className="text-muted">{rowData.remarks || '-'}</small>
+                <div>
+                    <small className="text-muted">{rowData.remarks || '-'}</small>
+                    {/* NEW: show value_reset_time if available */}
+                    {rowData.value_reset_time && (
+                        <div className="mt-1">
+                            <small className="text-success">
+                                <Icon icon="CheckCircle" size="sm" className="me-1" />
+                                Condition cleared {format(new Date(rowData.value_reset_time), 'MMM dd, HH:mm')}
+                            </small>
+                        </div>
+                    )}
+                </div>
             )
         },
         {
@@ -420,7 +423,7 @@ const AlertHistory = () => {
                     </Button>
                 </SubHeaderRight>
             </SubHeader>
-            <Page container='fluid' >
+            <Page container='fluid'>
                 <div className="row">
 
                     <div className="col-lg-3 col-md-6 mb-4">
@@ -487,8 +490,6 @@ const AlertHistory = () => {
                         </Card>
                     </div>
 
-
-
                     <div className="col-xl-12 mb-4">
                         <Card stretch className="shadow-sm">
                             <CardHeader borderSize={1}>
@@ -549,7 +550,6 @@ const AlertHistory = () => {
                             </CardBody>
                         </Card>
                     </div>
-
 
                     <div className="col-xl-12 mb-4">
                         <Card stretch className="shadow-sm">
@@ -616,11 +616,11 @@ const AlertHistory = () => {
                                 </Timeline>
                             </CardBody>
                         </Card>
-
                     </div>
                 </div>
             </Page>
 
+            {/* ── Status Update Modal ── */}
             <Modal isOpen={isStatusModalOpen} setIsOpen={setIsStatusModalOpen}>
                 <ModalHeader setIsOpen={setIsStatusModalOpen}>
                     Update Alert Status: {targetStatus?.toUpperCase()}
@@ -654,10 +654,14 @@ const AlertHistory = () => {
                                 />
                             </FormGroup>
                         </div>
+
                         {targetStatus === 'suspended' && (
                             <div className="col-12">
+                                {/* Existing: Auto Reactivation Time Toggle */}
                                 <div className='d-flex align-items-center justify-content-between mb-3'>
-                                    <Label htmlFor='toggle-next-trigger' className='mb-0 fw-bold'>Set Automatic Reactivation?</Label>
+                                    <Label htmlFor='toggle-next-trigger' className='mb-0 fw-bold'>
+                                        Set Automatic Reactivation?
+                                    </Label>
                                     <Checks
                                         type='switch'
                                         id='toggle-next-trigger'
@@ -675,6 +679,25 @@ const AlertHistory = () => {
                                         />
                                     </FormGroup>
                                 )}
+
+                                {/* NEW: Smart Reactivation (recheck_next_trigger) */}
+                                <div className='d-flex align-items-center justify-content-between mt-3 pt-3 border-top'>
+                                    <div>
+                                        <Label htmlFor='toggle-recheck' className='mb-0 fw-bold'>
+                                            Only reactivate if condition persists?
+                                        </Label>
+                                        <div className='text-muted small mt-1'>
+                                            System will check sensor value before reactivating the alert
+                                        </div>
+                                    </div>
+                                    <Checks
+                                        type='switch'
+                                        id='toggle-recheck'
+                                        checked={isRecheckEnabled}
+                                        onChange={() => setIsRecheckEnabled(!isRecheckEnabled)}
+                                        label={isRecheckEnabled ? 'Yes' : 'No'}
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
@@ -691,13 +714,18 @@ const AlertHistory = () => {
                         }
                         icon="Save"
                         onClick={handleStatusUpdate}
-                        isDisable={updateAlertMutation.isPending || !remarks.trim() || (targetStatus === 'suspended' && isNextTriggerEnabled && !nextTriggerTime)}
+                        isDisable={
+                            updateAlertMutation.isPending ||
+                            !remarks.trim() ||
+                            (targetStatus === 'suspended' && isNextTriggerEnabled && !nextTriggerTime)
+                        }
                     >
                         Confirm Update
                     </Button>
                 </ModalFooter>
             </Modal>
 
+            {/* ── Create Alert Modal ── */}
             <Modal isOpen={isCreateModalOpen} setIsOpen={setIsCreateModalOpen} size="lg">
                 <ModalHeader setIsOpen={setIsCreateModalOpen}>
                     Trigger Manual Alert
@@ -787,7 +815,8 @@ const AlertHistory = () => {
                     </Button>
                 </ModalFooter>
             </Modal>
-            {/* Delete Confirmation Modal */}
+
+            {/* ── Delete Confirmation Modal ── */}
             <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} title="Confirm Deletion">
                 <ModalBody>
                     <div className="text-center p-3">
@@ -808,7 +837,7 @@ const AlertHistory = () => {
                 </ModalFooter>
             </Modal>
 
-        </PageWrapper >
+        </PageWrapper>
     );
 };
 

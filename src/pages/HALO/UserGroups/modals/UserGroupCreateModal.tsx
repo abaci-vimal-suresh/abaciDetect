@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useMemo } from 'react';
 import { useFormik } from 'formik';
 import Modal, {
     ModalBody,
@@ -11,9 +11,9 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Textarea from '../../../../components/bootstrap/forms/Textarea';
 import Button from '../../../../components/bootstrap/Button';
 import Spinner from '../../../../components/bootstrap/Spinner';
-import Select from '../../../../components/bootstrap/forms/Select';
-import Option from '../../../../components/bootstrap/Option';
-import Checks from '../../../../components/bootstrap/forms/Checks';
+import MultiSelectDropdown, {
+    Option as MultiSelectOption,
+} from '../../../../components/CustomComponent/Select/MultiSelectDropdown';
 
 import { useCreateUserGroup, useUsers } from '../../../../api/sensors.api';
 
@@ -25,6 +25,15 @@ interface UserGroupCreateModalProps {
 const UserGroupCreateModal: FC<UserGroupCreateModalProps> = ({ isOpen, setIsOpen }) => {
     const createGroupMutation = useCreateUserGroup();
     const { data: users } = useUsers();
+
+    const memberOptions: MultiSelectOption[] = useMemo(
+        () =>
+            (users || []).map(user => ({
+                value: String(user.id),
+                label: `${user.first_name || user.username} ${user.last_name || ''} • ${user.email} • ${user.role}`,
+            })),
+        [users],
+    );
 
     const formik = useFormik({
         initialValues: {
@@ -84,63 +93,28 @@ const UserGroupCreateModal: FC<UserGroupCreateModalProps> = ({ isOpen, setIsOpen
                     </div>
 
                     <div className="col-12">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                            <label className="form-label mb-0">Members (Optional)</label>
-                            {users && users.length > 0 && (
-                                <Checks
-                                    id="select-all-create"
-                                    label="Select All"
-                                    checked={formik.values.member_ids.length === users.length && users.length > 0}
-                                    onChange={(e: any) => {
-                                        if (e.target.checked) {
-                                            formik.setFieldValue('member_ids', users.map(u => u.id));
-                                        } else {
-                                            formik.setFieldValue('member_ids', []);
-                                        }
-                                    }}
+                        <FormGroup label="Members (Optional)">
+                            {memberOptions.length > 0 ? (
+                                <MultiSelectDropdown
+                                    options={memberOptions}
+                                    value={formik.values.member_ids.map(String)}
+                                    onChange={(selected: string[]) =>
+                                        formik.setFieldValue(
+                                            'member_ids',
+                                            selected.map(id => Number(id)),
+                                        )
+                                    }
+                                    placeholder="Select members for this group"
+                                    searchPlaceholder="Search users..."
+                                    selectAll
+                                    clearable
                                 />
-                            )}
-                        </div>
-                        <div
-                            className="border rounded p-2"
-                            style={{ maxHeight: '250px', overflowY: 'auto' }}
-                        >
-                            {users?.map((user) => (
-                                <div
-                                    key={user.id}
-                                    className="d-flex align-items-center gap-3 p-2 border-bottom last-child-border-0 hover-bg-light"
-                                >
-                                    <Checks
-                                        id={`user-check-create-${user.id}`}
-                                        checked={formik.values.member_ids.includes(user.id)}
-                                        onChange={(e: any) => {
-                                            const currentIds = [...formik.values.member_ids];
-                                            if (e.target.checked) {
-                                                formik.setFieldValue('member_ids', [...currentIds, user.id]);
-                                            } else {
-                                                formik.setFieldValue('member_ids', currentIds.filter(id => id !== user.id));
-                                            }
-                                        }}
-                                    />
-                                    <label
-                                        htmlFor={`user-check-create-${user.id}`}
-                                        className="mb-0 cursor-pointer w-100"
-                                    >
-                                        <div className="fw-bold">
-                                            {user.first_name || user.username} {user.last_name || ''}
-                                        </div>
-                                        <div className="small text-muted">
-                                            {user.email} • {user.role}
-                                        </div>
-                                    </label>
-                                </div>
-                            ))}
-                            {(!users || users.length === 0) && (
-                                <div className="text-center p-3 text-muted italic">
+                            ) : (
+                                <div className="text-center p-3 text-muted italic border rounded">
                                     No users available to add
                                 </div>
                             )}
-                        </div>
+                        </FormGroup>
                     </div>
                 </div>
             </ModalBody>

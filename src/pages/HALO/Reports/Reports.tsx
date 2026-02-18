@@ -6,6 +6,7 @@ import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHea
 import Card, { CardBody, CardHeader, CardTitle, CardActions } from '../../../components/bootstrap/Card';
 import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
+import UnderConstructionPage from '../../../components/extras/UnderConstructionPage';
 
 const Reports = () => {
     const [dateRange, setDateRange] = useState('7d');
@@ -71,66 +72,11 @@ const Reports = () => {
     };
 
     return (
-        <PageWrapper title='Analytics & Reports'>
-            <SubHeader>
-                <SubHeaderLeft>
-                    <Icon icon='Analytics' className='me-2 fs-4' />
-                    <span className='h4 mb-0 fw-bold'>Historical Analysis</span>
-                </SubHeaderLeft>
-                <SubHeaderRight>
-                    <div className='d-flex gap-2'>
-                        <div className='btn-group'>
-                            <Button color={dateRange === '24h' ? 'primary' : 'light'} onClick={() => setDateRange('24h')}>24h</Button>
-                            <Button color={dateRange === '7d' ? 'primary' : 'light'} onClick={() => setDateRange('7d')}>7d</Button>
-                            <Button color={dateRange === '30d' ? 'primary' : 'light'} onClick={() => setDateRange('30d')}>30d</Button>
-                        </div>
-                        <Button color='success' icon='Download' onClick={handleExport}>
-                            Export CSV
-                        </Button>
-                    </div>
-                </SubHeaderRight>
-            </SubHeader>
-            <Page container='fluid'>
-                <div className='row g-4'>
-                    <div className='col-12'>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Event Trends</CardTitle>
-                            </CardHeader>
-                            <CardBody>
-                                <ReactApexChart options={options} series={series} type="area" height={350} />
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    {/* Summary Stats */}
-                    <div className='col-md-4'>
-                        <Card stretch>
-                            <CardBody className='text-center'>
-                                <div className='h1 fw-bold text-primary mb-0'>108</div>
-                                <div className='text-muted'>Total Alerts (7d)</div>
-                            </CardBody>
-                        </Card>
-                    </div>
-                    <div className='col-md-4'>
-                        <Card stretch>
-                            <CardBody className='text-center'>
-                                <div className='h1 fw-bold text-danger mb-0'>12</div>
-                                <div className='text-muted'>Critical Incidents</div>
-                            </CardBody>
-                        </Card>
-                    </div>
-                    <div className='col-md-4'>
-                        <Card stretch>
-                            <CardBody className='text-center'>
-                                <div className='h1 fw-bold text-success mb-0'>98%</div>
-                                <div className='text-muted'>Uptime</div>
-                            </CardBody>
-                        </Card>
-                    </div>
-                </div>
-            </Page>
-        </PageWrapper>
+        <UnderConstructionPage
+            title="Analytics"
+            icon="Analytics"
+            description="Comprehensive analytics and reporting features are currently being built."
+        />
     );
 };
 

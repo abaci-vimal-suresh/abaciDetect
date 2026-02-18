@@ -787,7 +787,7 @@ export interface Action {
     recipient_ids?: number[];
     user_groups?: number[] | any[];
     user_group_ids?: number[];
-    device_type?: 'HALO' | 'HALO_SMART' | 'HALO_IOT';
+    device_type?: SensorType | 'HALO';
     device_list?: string | any[];
     device_list_ids?: number[];
     device_led_color?: number;
