@@ -307,7 +307,9 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen, on
                     Cancel
                 </Button>
                 <Button
+                    className='btn-neumorphic'
                     color="primary"
+                    isLight
                     onClick={handleSubmit}
                     isDisable={addUserMutation.isPending}
                     icon={addUserMutation.isPending ? undefined : 'Save'}

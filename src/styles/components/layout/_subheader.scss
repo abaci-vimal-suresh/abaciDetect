@@ -66,7 +66,10 @@ width: 100%;
 color: var(--#{$prefix}subheader-color);
 
 @at-root .header+.content & {
-	top: map.get($header, height);
+	top: calc(map.get($header, height) + 10px); // Offset for header margin correctly
+	margin: 5px;
+	border-radius: 15px 0 0 15px; // Left side alone rounded
+	width: calc(100% - 10px);
 }
 
 @include media-breakpoint-down(map.get($aside, mobile-breakpoint)) {

@@ -14,11 +14,11 @@ const HaloAlertActions = lazy(() => import('../pages/HALO/Alerts/AlertActionPage
 const HaloLiveMonitoring = lazy(() => import('../pages/HALO/Monitoring/LiveMonitoring'));
 const HaloReports = lazy(() => import('../pages/HALO/Reports/Reports'));
 const HaloFirmwareUpdate = lazy(() => import('../pages/HALO/Sensors/FirmwareUpdate'));
-const HaloSensorGroupDetail = lazy(() => import('../pages/HALO/Sensors/SensorGroupDetail'));
+const HaloAreaSubzoneDetail = lazy(() => import('../pages/HALO/Sensors/area/AreaSubzoneDetail'));
 const HaloSensorIndividualDetail = lazy(() => import('../pages/HALO/Sensors/SensorIndividualDetail'));
 const HaloSettings = lazy(() => import('../pages/HALO/Settings/DeviceSettings'));
-const HaloSensorMainArea = lazy(() => import('../pages/HALO/Sensors/SensorMainArea'));
-const HaloSensorGroups = lazy(() => import('../pages/HALO/Sensors/SensorGroups'));
+const HaloAreaMain = lazy(() => import('../pages/HALO/Sensors/area/AreaMain'));
+const HaloAreaSubzones = lazy(() => import('../pages/HALO/Sensors/area/AreaSubzones'));
 const HaloSensorGroupManager = lazy(() => import('../pages/HALO/Sensors/SensorGroupManager'));
 const HaloTimeTravel = lazy(() => import('../pages/HALO/TimeTravel/TimeTravelPlayback'));
 const ThreeDPage = lazy(() => import('../pages/HALO/ThreeD/ThreeDPage'));
@@ -79,19 +79,19 @@ const RouteConfig: CustomRouteConfig[] = [
 	// Main Areas (top level)
 	{
 		path: '/halo/sensors/areas',
-		element: <HaloSensorMainArea />,
+		element: <HaloAreaMain />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
 	// Sub Zones within an area
 	{
 		path: '/halo/sensors/areas/:areaId/subzones',
-		element: <HaloSensorGroups />,
+		element: <HaloAreaSubzones />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
 	// Sensors within a specific sub zone
 	{
 		path: '/halo/sensors/areas/:areaId/subzones/:subzoneId',
-		element: <HaloSensorGroupDetail />,
+		element: <HaloAreaSubzoneDetail />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
 	// Individual sensor detail

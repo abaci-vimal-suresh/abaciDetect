@@ -3,6 +3,7 @@ import { useSystemConfig } from '../api/system.api';
 import AbaciLoader from './AbaciLoader/AbaciLoader';
 import ActivationPage from '../pages/Auth/ActivationPage';
 import SuperAdminPage from '../pages/Auth/SuperAdminPage';
+import ConfigErrorPage from '../pages/Auth/ConfigErrorPage';
 
 interface ProductValidationProps {
     children: ReactNode;
@@ -16,7 +17,7 @@ const ProductValidation: FC<ProductValidationProps> = ({ children }) => {
     }
 
     if (isError || !config) {
-        return <div>Error loading system configuration. Please contact support.</div>;
+        return <ConfigErrorPage />;
     }
 
     // 1. Activation Check
