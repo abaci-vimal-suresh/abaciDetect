@@ -1,4 +1,4 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useMemo, useState } from 'react';
 import Modal, {
     ModalBody,
     ModalFooter,
@@ -7,12 +7,12 @@ import Modal, {
 } from '../../../../components/bootstrap/Modal';
 import Button from '../../../../components/bootstrap/Button';
 import Spinner from '../../../../components/bootstrap/Spinner';
-import Select from '../../../../components/bootstrap/forms/Select';
-import Option from '../../../../components/bootstrap/Option';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Icon from '../../../../components/icon/Icon';
 import Badge from '../../../../components/bootstrap/Badge';
-import Checks from '../../../../components/bootstrap/forms/Checks';
+import MultiSelectDropdown, {
+    Option as MultiSelectOption,
+} from '../../../../components/CustomComponent/Select/MultiSelectDropdown';
 
 import {
     useUserGroup,
@@ -37,17 +37,27 @@ const ManageGroupMembersModal: FC<ManageGroupMembersModalProps> = ({
     const addMembersMutation = useAddGroupMembers();
     const removeMembersMutation = useRemoveGroupMembers();
 
-    const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
     // Get users that are not already in the group
     const availableUsers = allUsers?.filter(
         (u) => !(group?.members || []).some((m) => m.id === u.id)
     );
 
+    const availableUserOptions: MultiSelectOption[] = useMemo(
+        () =>
+            (availableUsers || []).map((user) => ({
+                value: String(user.id),
+                label: `${user.first_name || user.username} ${user.last_name || ''} • ${user.email} • ${user.role}`,
+            })),
+        [availableUsers],
+    );
+
     const handleAddMembers = () => {
         if (!groupId || selectedUserIds.length === 0) return;
+        const memberIds = selectedUserIds.map((id) => Number(id));
         addMembersMutation.mutate(
-            { groupId, member_ids: selectedUserIds },
+            { groupId, member_ids: memberIds },
             {
                 onSuccess: () => {
                     setSelectedUserIds([]);
@@ -137,58 +147,19 @@ const ManageGroupMembersModal: FC<ManageGroupMembersModalProps> = ({
                         <hr />
                         <h6 className="mb-3">Add New Members</h6>
 
-                        {availableUsers && availableUsers.length > 0 ? (
+                        {availableUserOptions && availableUserOptions.length > 0 ? (
                             <>
-                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 className="mb-0">Available Users</h6>
-                                    <Checks
-                                        id="select-all"
-                                        label="Select All"
-                                        checked={selectedUserIds.length === availableUsers.length && availableUsers.length > 0}
-                                        onChange={(e: any) => {
-                                            if (e.target.checked) {
-                                                setSelectedUserIds(availableUsers.map(u => u.id));
-                                            } else {
-                                                setSelectedUserIds([]);
-                                            }
-                                        }}
+                                <FormGroup label="Select Members">
+                                    <MultiSelectDropdown
+                                        options={availableUserOptions}
+                                        value={selectedUserIds}
+                                        onChange={setSelectedUserIds}
+                                        placeholder="Select users to add"
+                                        searchPlaceholder="Search users..."
+                                        selectAll
+                                        clearable
                                     />
-                                </div>
-
-                                <div
-                                    className="border rounded p-2 mb-3"
-                                    style={{ maxHeight: '300px', overflowY: 'auto' }}
-                                >
-                                    {availableUsers.map((user) => (
-                                        <div
-                                            key={user.id}
-                                            className="d-flex align-items-center gap-3 p-2 border-bottom hover-bg-light last-child-border-0"
-                                        >
-                                            <Checks
-                                                id={`user-check-${user.id}`}
-                                                checked={selectedUserIds.includes(user.id)}
-                                                onChange={(e: any) => {
-                                                    if (e.target.checked) {
-                                                        setSelectedUserIds(prev => [...prev, user.id]);
-                                                    } else {
-                                                        setSelectedUserIds(prev => prev.filter(id => id !== user.id));
-                                                    }
-                                                }}
-                                            />
-                                            <label
-                                                htmlFor={`user-check-${user.id}`}
-                                                className="mb-0 cursor-pointer w-100"
-                                            >
-                                                <div className="fw-bold">
-                                                    {user.first_name || user.username} {user.last_name || ''}
-                                                </div>
-                                                <div className="small text-muted">
-                                                    {user.email} • {user.role}
-                                                </div>
-                                            </label>
-                                        </div>
-                                    ))}
-                                </div>
+                                </FormGroup>
 
                                 <Button
                                     color="primary"
@@ -206,8 +177,7 @@ const ManageGroupMembersModal: FC<ManageGroupMembersModalProps> = ({
                                             Adding...
                                         </>
                                     ) : (
-                                        `Add ${selectedUserIds.length} ${selectedUserIds.length === 1 ? 'Member' : 'Members'
-                                        }`
+                                        `Add ${selectedUserIds.length} ${selectedUserIds.length === 1 ? 'Member' : 'Members'}`
                                     )}
                                 </Button>
                             </>

@@ -37,6 +37,8 @@ const UserGroupsPage = () => {
     const [manageGroupId, setManageGroupId] = useState<number | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [groupToDelete, setGroupToDelete] = useState<any>(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewGroup, setViewGroup] = useState<any | null>(null);
 
     const staticColumns = [
         {
@@ -112,9 +114,12 @@ const UserGroupsPage = () => {
                     <Button
                         color="info"
                         isLight
-                        icon="Group"
-                        title="Manage Members"
-                        onClick={() => setManageGroupId(rowData.id)}
+                        icon="Visibility"
+                        title="View"
+                        onClick={() => {
+                            setViewGroup(rowData);
+                            setIsViewModalOpen(true);
+                        }}
                         style={{ width: 36, height: 36, borderRadius: 8 }}
                     />
                     <Button
@@ -204,6 +209,126 @@ const UserGroupsPage = () => {
                 setIsOpen={() => setManageGroupId(null)}
                 groupId={manageGroupId}
             />
+
+            <Modal isOpen={isViewModalOpen} setIsOpen={setIsViewModalOpen} isCentered>
+                <ModalHeader setIsOpen={setIsViewModalOpen}>
+                    <ModalTitle id='viewUserGroupModal'>User Group Details</ModalTitle>
+                </ModalHeader>
+                <ModalBody>
+                    <h5 className='mb-1'>{viewGroup?.name}</h5>
+                    {viewGroup?.description && (
+                        <p className='text-muted mb-3'>{viewGroup.description}</p>
+                    )}
+                    <div className='d-flex flex-wrap gap-3 mb-3'>
+                        <div className='small text-muted'>
+                            <strong>Members:</strong>{' '}
+                            {viewGroup?.member_count ?? 0}
+                        </div>
+                        {viewGroup?.created_at && (
+                            <div className='small text-muted'>
+                                <strong>Created:</strong>{' '}
+                                {new Date(viewGroup.created_at).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                })}
+                            </div>
+                        )}
+                    </div>
+                    {viewGroup?.members && viewGroup.members.length > 0 && (
+                        <div
+                            className='border rounded'
+                            style={{ maxHeight: 260, overflowY: 'auto' }}
+                        >
+                            {viewGroup.members.map((member: any) => (
+                                <div
+                                    key={member.id}
+                                    className='d-flex align-items-center justify-content-between px-3 py-2 border-bottom'
+                                >
+                                    <div className='d-flex align-items-center gap-2'>
+                                        <div
+                                            className='rounded-circle d-flex align-items-center justify-content-center'
+                                            style={{
+                                                width: 32,
+                                                height: 32,
+                                                background: darkModeStatus
+                                                    ? 'rgba(77,105,250,0.25)'
+                                                    : 'rgba(77,105,250,0.15)',
+                                                fontSize: 14,
+                                                fontWeight: 600
+                                            }}
+                                        >
+                                            {(member.first_name || member.username || '?')
+                                                .charAt(0)
+                                                .toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div className='fw-semibold small'>
+                                                {member.first_name} {member.last_name}
+                                            </div>
+                                            <div className='text-muted small'>
+                                                @{member.username} · {member.email}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className='d-flex flex-column align-items-end gap-1'>
+                                        <span
+                                            className='px-2 py-1 rounded-pill small'
+                                            style={{
+                                                fontWeight: 500,
+                                                background: darkModeStatus
+                                                    ? 'rgba(122,58,111,0.25)'
+                                                    : 'rgba(122,58,111,0.15)',
+                                                color: '#7a3a6f'
+                                            }}
+                                        >
+                                            {member.role}
+                                        </span>
+                                        <span
+                                            className='px-2 py-0 rounded-pill small'
+                                            style={{
+                                                background: member.is_active
+                                                    ? 'rgba(70,188,170,0.15)'
+                                                    : 'rgba(243,84,33,0.15)',
+                                                color: member.is_active ? '#2d8478' : '#f35421'
+                                            }}
+                                        >
+                                            {member.is_active ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {(!viewGroup?.members || viewGroup.members.length === 0) && (
+                        <div className='text-muted small'>
+                            No members in this group yet.
+                        </div>
+                    )}
+                </ModalBody>
+                <ModalFooter>
+                    <Button
+                        color='light'
+                        onClick={() => {
+                            setIsViewModalOpen(false);
+                            setViewGroup(null);
+                        }}
+                    >
+                        Close
+                    </Button>
+                    <Button
+                        color='primary'
+                        onClick={() => {
+                            if (viewGroup) {
+                                setIsViewModalOpen(false);
+                                setManageGroupId(viewGroup.id);
+                            }
+                        }}
+                    >
+                        Manage Members
+                    </Button>
+                </ModalFooter>
+            </Modal>
 
             <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} isCentered>
                 <ModalHeader setIsOpen={setIsDeleteModalOpen}>

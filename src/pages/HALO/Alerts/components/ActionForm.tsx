@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Action, User, SoundFile } from '../../../../types/sensor';
+import { Action, User, SoundFile, SensorType, Sensor } from '../../../../types/sensor';
 import Button from '../../../../components/bootstrap/Button';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../../components/bootstrap/forms/Input';
 import Select from '../../../../components/bootstrap/forms/Select';
 import Textarea from '../../../../components/bootstrap/forms/Textarea';
 import Icon from '../../../../components/icon/Icon';
-import { useUsers, useUserGroups, useSoundFiles, useAddSoundFile } from '../../../../api/sensors.api';
+import { useUsers, useUserGroups, useSoundFiles, useAddSoundFile, useSensors } from '../../../../api/sensors.api';
 import ReactSelectWithState from '../../../../components/CustomComponent/Select/ReactSelect';
 import Checks from '../../../../components/bootstrap/forms/Checks';
 import {
@@ -60,6 +60,31 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
     const userOptions = users?.map((u: User) => ({ value: u.id, label: u.username })) || [];
     const groupOptions = userGroups?.map((g: any) => ({ value: g.id, label: g.name })) || [];
     const soundOptions = soundFiles?.map((s: SoundFile) => ({ value: s.name, text: s.name })) || [];
+
+    const { data: deviceTypeSensors = [] } = useSensors({
+        sensor_type: formData.type === 'device_notification' && formData.device_type
+            ? String(formData.device_type)
+            : undefined,
+    });
+
+    const deviceSensorOptions =
+        (deviceTypeSensors as Sensor[]).map(sensor => ({
+            value: sensor.name,
+            label: sensor.sensor_type ? `${sensor.name} (${sensor.sensor_type})` : sensor.name,
+        })) || [];
+
+    const normalizedDeviceList: string[] = useMemo(() => {
+        if (Array.isArray(formData.device_list)) {
+            return formData.device_list.map(String);
+        }
+        if (typeof formData.device_list === 'string') {
+            return formData.device_list
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean);
+        }
+        return [];
+    }, [formData.device_list]);
 
     const isValid = useMemo(() => {
         if (!formData.name?.trim()) return false;
@@ -246,10 +271,18 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                     <div className="col-md-6">
                         <FormGroup label="Device Type">
                             <Select
-                                value={formData.device_type || 'HALO'}
-                                onChange={(e: any) => setFormData({ ...formData, device_type: e.target.value as any })}
+                                value={formData.device_type || ''}
+                                onChange={(e: any) => setFormData({
+                                    ...formData,
+                                    device_type: e.target.value as SensorType,
+                                    device_list: [],
+                                })}
                                 list={[
-                                    { value: 'HALO', text: 'HALO' },
+                                    { value: '', text: 'Select Device Type' },
+                                    { value: 'HALO_3C', text: 'HALO 3C' },
+                                    { value: 'HALO_IOT', text: 'HALO IOT' },
+                                    { value: 'HALO_SMART', text: 'HALO Smart' },
+                                    { value: 'HALO_CUSTOM', text: 'HALO Custom' },
                                 ]}
                                 ariaLabel="Device Type"
                             />
@@ -309,14 +342,19 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                         </FormGroup>
                     </div>
                     <div className="col-md-12">
-                        <FormGroup label="Target Device List (Comma Separation)">
-                            <Input
-                                value={Array.isArray(formData.device_list) ? formData.device_list.join(', ') : formData.device_list || ''}
-                                onChange={(e: any) => {
-                                    const val = e.target.value;
-                                    setFormData({ ...formData, device_list: val.split(',').map((s: string) => s.trim()).filter(Boolean) });
-                                }}
-                                placeholder="device_001, device_002"
+                        <FormGroup label="Target Devices">
+                            <ReactSelectWithState
+                                isMulti
+                                options={deviceSensorOptions}
+                                value={deviceSensorOptions.filter(o => normalizedDeviceList.includes(o.value))}
+                                setValue={(vals: any[]) =>
+                                    setFormData({
+                                        ...formData,
+                                        device_list: vals.map(v => v.value),
+                                    })
+                                }
+                                placeholder={formData.device_type ? 'Select devices...' : 'Select device type first'}
+                                isDisabled={!formData.device_type}
                             />
                         </FormGroup>
                     </div>

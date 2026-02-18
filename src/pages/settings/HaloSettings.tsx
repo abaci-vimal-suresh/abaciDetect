@@ -38,10 +38,10 @@ const HaloSettings = () => {
                 e.target.value = '';
                 return;
             }
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('name', file.name);
-
             addSoundMutation.mutate(formData, {
                 onSuccess: () => {
                     e.target.value = '';
@@ -117,46 +117,50 @@ const HaloSettings = () => {
                                     <ThemeProvider theme={theme}>
                                         <MaterialTable
                                             title=''
-                                            columns={[
-                                                {
-                                                    title: 'Name',
-                                                    field: 'name',
-                                                    render: (rowData: SoundFile) => rowData.name,
-                                                },
-                                                {
-                                                    title: 'Size',
-                                                    field: 'file_size',
-                                                    render: (rowData: SoundFile) =>
-                                                        rowData.file_size !== null
-                                                            ? `${(rowData.file_size / 1024).toFixed(2)} KB`
-                                                            : 'N/A',
-                                                },
-                                                {
-                                                    title: 'Uploaded Date',
-                                                    field: 'uploaded_at',
-                                                    render: (rowData: SoundFile) =>
-                                                        new Date(rowData.uploaded_at).toLocaleDateString(),
-                                                },
-                                                {
-                                                    title: 'Actions',
-                                                    field: 'actions',
-                                                    sorting: false,
-                                                    filtering: false,
-                                                    cellStyle: { textAlign: 'right' },
-                                                    headerStyle: { textAlign: 'right' },
-                                                    render: (rowData: SoundFile) =>
-                                                        rowData.file_size !== null ? (
-                                                            <Button
-                                                                color='danger'
-                                                                isLight
-                                                                size='sm'
-                                                                icon='Delete'
-                                                                isDisable={deleteSoundMutation.isPending}
-                                                                onClick={() => handleDelete(rowData.id)}
-                                                            />
-                                                        ) : null,
-                                                },
-                                            ]}
+                                          columns={[
+    {
+        title: 'Name',
+        field: 'name',
+        width: '35%',
+        render: (rowData: SoundFile) => rowData.name,
+    },
+    {
+        title: 'Size',
+        field: 'file_size',
+        width: '20%',
+        render: (rowData: SoundFile) =>
+            rowData.file_size !== null
+                ? `${(rowData.file_size / 1024).toFixed(2)} KB`
+                : 'N/A',
+    },
+    {
+        title: 'Uploaded Date',
+        field: 'uploaded_at',
+        width: '30%',
+        render: (rowData: SoundFile) =>
+            new Date(rowData.uploaded_at).toLocaleDateString(),
+    },
+    {
+        title: 'Actions',
+        field: 'actions',
+        sorting: false,
+        filtering: false,
+        width: '2%',
+        cellStyle: { textAlign: 'right', paddingRight: '16px' },
+        headerStyle: { textAlign: 'right', paddingRight: '16px' },
+        render: (rowData: SoundFile) =>
+            rowData.file_size !== null ? (
+                <Button
+                    color='danger'
+                    isLight
+                    size='sm'
+                    icon='Delete'
+                    isDisable={deleteSoundMutation.isPending}
+                    onClick={() => handleDelete(rowData.id)}
+                />
+            ) : null,
+    },
+]}
                                             data={filteredSounds || []}
                                             isLoading={isLoading}
                                             localization={{
