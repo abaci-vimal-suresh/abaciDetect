@@ -111,7 +111,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
     };
 
     return (
-        <Modal isOpen={isOpen} setIsOpen={setIsOpen} size="xl" titleId="edit-user-modal">
+        <Modal isScrollable isOpen={isOpen} setIsOpen={setIsOpen} size="xl" titleId="edit-user-modal" >
             <ModalHeader setIsOpen={setIsOpen} className="p-4">
                 <ModalTitle id="edit-user-modal">
                     {isUserLoading ? 'Loading User...' : `Edit User: ${user?.username}`}
@@ -274,7 +274,9 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ isOpen, setIsOpen, userId
                     Cancel
                 </Button>
                 <Button
+                    className='btn-neumorphic'
                     color="primary"
+                    isLight
                     onClick={handleSubmit}
                     isDisable={updateUserMutation.isPending || isUserLoading}
                     icon={updateUserMutation.isPending ? undefined : 'Save'}

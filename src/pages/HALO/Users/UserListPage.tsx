@@ -21,6 +21,7 @@ import { updateHiddenColumnsInLocalStorage } from '../../../helpers/functions';
 import { useUsers } from '../../../api/sensors.api';
 import UserCreateModal from './modals/UserCreateModal';
 import UserEditModal from './modals/UserEditModal';
+import UserViewModal from './modals/UserViewModal';
 
 const UserList = () => {
     const { data: users, isLoading } = useUsers();
@@ -29,6 +30,7 @@ const UserList = () => {
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editUserId, setEditUserId] = useState<number | null>(null);
+    const [viewUserId, setViewUserId] = useState<number | null>(null);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
     const location = useLocation();
@@ -56,7 +58,9 @@ const UserList = () => {
                             background: darkModeStatus
                                 ? 'rgba(77,105,250,0.2)'
                                 : 'rgba(77,105,250,0.15)',
-                            fontWeight: 600
+                            color: '#4d69fa',
+                            fontWeight: 600,
+                            fontSize: '1rem'
                         }}
                     >
                         {rowData.username?.charAt(0)?.toUpperCase()}
@@ -65,14 +69,17 @@ const UserList = () => {
                         <div className="fw-bold">
                             {rowData.first_name} {rowData.last_name}
                         </div>
-                        <div className="small text-muted">@{rowData.username}</div>
+                        <div className="small text-muted" style={{ fontSize: '0.75rem' }}>@{rowData.username}</div>
                     </div>
                 </div>
             )
         },
         {
             title: 'Email',
-            field: 'email'
+            field: 'email',
+            render: (rowData: any) => (
+                <div className="small text-muted" style={{ fontSize: '0.75rem' }}>{rowData.email}</div>
+            )
         },
         {
             title: 'Role',
@@ -82,7 +89,8 @@ const UserList = () => {
                     className="px-3 py-1 rounded-pill"
                     style={{
                         fontSize: '0.75rem',
-                        fontWeight: 500,
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
                         background:
                             rowData.role?.toLowerCase() === 'admin'
                                 ? darkModeStatus
@@ -109,8 +117,8 @@ const UserList = () => {
                     className="d-flex align-items-center gap-2 px-2 py-1"
                     style={{
                         background: rowData.is_active
-                            ? 'rgba(70,188,170,0.15)'
-                            : 'rgba(243,84,33,0.15)',
+                            ? 'rgba(70,188,170,0.12)'
+                            : 'rgba(243,84,33,0.12)',
                         borderRadius: 6,
                         width: 100,
                         justifyContent: 'center'
@@ -124,7 +132,7 @@ const UserList = () => {
                             background: rowData.is_active ? '#46bcaa' : '#f35421'
                         }}
                     />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
                         {rowData.is_active ? 'Active' : 'Inactive'}
                     </span>
                 </div>
@@ -142,20 +150,58 @@ const UserList = () => {
             render: (rowData: any) => (
                 <div className="d-flex gap-2">
                     {/* <Button
-                        color="info"
-                        isLight
-                        icon="Visibility"
-                        title="View"
-                        onClick={() => console.log('view', rowData.id)}
-                        style={{ width: 36, height: 36, borderRadius: 8 }}
-                    /> */}
-                    <Button
                         color="primary"
                         isLight
+                        icon="Visibility"
+                        title="View Details"
+                        onClick={() => setViewUserId(rowData.id)}
+                        style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: darkModeStatus ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)',
+                            border: darkModeStatus ? 'none' : '1px solid rgba(77, 105, 250, 0.3)',
+                            color: darkModeStatus ? '#4d69fa' : '#3650d4',
+                            transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e: any) => {
+                            e.currentTarget.style.background = darkModeStatus ? 'rgba(77, 105, 250, 0.25)' : 'rgba(77, 105, 250, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e: any) => {
+                            e.currentTarget.style.background = darkModeStatus ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                    /> */}
+                    <Button
+                        color="info"
+                        isLight
                         icon="Edit"
-                        title="Edit"
+                        title="Edit User"
                         onClick={() => setEditUserId(rowData.id)}
-                        style={{ width: 36, height: 36, borderRadius: 8 }}
+                        style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: darkModeStatus ? 'rgba(13, 202, 240, 0.15)' : 'rgba(13, 202, 240, 0.12)',
+                            border: darkModeStatus ? 'none' : '1px solid rgba(13, 202, 240, 0.3)',
+                            color: darkModeStatus ? '#0dcaf0' : '#0aa2c0',
+                            transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e: any) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e: any) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
                     />
                 </div>
             )
@@ -177,10 +223,13 @@ const UserList = () => {
                 </SubHeaderLeft>
                 <SubHeaderRight>
                     <Button
+                        className='btn-neumorphic d-flex align-items-center'
                         color="primary"
+                        isLight
                         icon="Add"
                         onClick={() => setIsCreateOpen(true)}
                         data-tour="create-user-btn"
+                        style={{ padding: '8px 16px', borderRadius: '10px' }}
                     >
                         Create User
                     </Button>
@@ -222,6 +271,12 @@ const UserList = () => {
                 isOpen={!!editUserId}
                 setIsOpen={() => setEditUserId(null)}
                 userId={editUserId}
+            />
+
+            <UserViewModal
+                userId={viewUserId}
+                isOpen={!!viewUserId}
+                setIsOpen={() => setViewUserId(null)}
             />
 
             {/* User Creation Success Modal (Tour only) */}

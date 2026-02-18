@@ -32,9 +32,9 @@
 	// Neumorphic Background & Shadow
 	background-color: rgba($body-bg, 0.95); // More opaque for better contrast
 	box-shadow: $box-shadow-sm; // Subtle shadow for depth
-	border-radius: 0; // Full width docked
-	margin: 0; // No side margins
-	width: 100%; // specific width calculation
+	border-radius: 15px 0 0 15px; // Left side alone rounded
+	margin: 5px; // No side margins
+	width: calc(100% - 10px); // specific width calculation considering margin
 
 	@include dark-mode {
 		background-color: rgba($dark-body-bg, 0.95); // More opaque dark mode

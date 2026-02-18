@@ -89,6 +89,8 @@ const AlertHistory = () => {
     const [isRecheckEnabled, setIsRecheckEnabled] = useState(false); // NEW
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [alertToDelete, setAlertToDelete] = useState<AlertHistoryItem | null>(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [selectedDetailAlert, setSelectedDetailAlert] = useState<AlertHistoryItem | null>(null);
 
     // Alert Filters State
     const deleteFilterMutation = useDeleteAlertFilter();
@@ -292,19 +294,47 @@ const AlertHistory = () => {
 
     const columns = [
         {
+            title: 'Alert Info',
+            field: 'alert_type',
+            render: (rowData: AlertHistoryItem) => (
+                <div>
+                    <div className='fw-bold'>{rowData.alert_type}</div>
+                    <div className='small text-muted' style={{ fontSize: '0.75rem' }}>{rowData.id}</div>
+                </div>
+            )
+        },
+        {
             title: 'Timestamp',
             field: 'timestamp',
             render: (rowData: AlertHistoryItem) => (
-                <div className="d-flex align-items-center">
-                    <Icon icon="Schedule" className="me-2 text-muted" />
-                    {format(new Date(rowData.timestamp), 'MMM dd, HH:mm')}
+                <div className='d-flex align-items-center' style={{ fontSize: '0.75rem' }}>
+                    <Icon icon='Schedule' className='me-2 text-muted' />
+                    <div>
+                        <div className='fw-bold'>{format(new Date(rowData.timestamp), 'MMM dd, yyyy')}</div>
+                        <div className='small text-muted'>{format(new Date(rowData.timestamp), 'HH:mm')}</div>
+                    </div>
                 </div>
             ),
         },
-        { title: 'Type', field: 'alert_type' },
-        { title: 'Sensor', field: 'sensor_name', render: (row: any) => <code>{row.sensor_name}</code> },
-        { title: 'Area', field: 'area_name' },
-        { title: 'Value', field: 'value' },
+        {
+            title: 'Source',
+            field: 'sensor_name',
+            render: (rowData: AlertHistoryItem) => (
+                <div style={{ fontSize: '0.75rem' }}>
+                    <div className='fw-bold'>{rowData.sensor_name}</div>
+                    <div className='small text-muted'>{rowData.area_name}</div>
+                </div>
+            )
+        },
+        {
+            title: 'Value',
+            field: 'value',
+            render: (rowData: AlertHistoryItem) => (
+                <div className='fw-bold text-info' style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    {rowData.value}
+                </div>
+            )
+        },
         {
             title: 'Status',
             field: 'status',
@@ -317,29 +347,11 @@ const AlertHistory = () => {
                     'suspended': 'dark'
                 };
                 return (
-                    <Badge color={colors[rowData.status.toLowerCase()] as any || 'primary'} isLight>
+                    <Badge color={colors[rowData.status.toLowerCase()] as any || 'primary'} isLight style={{ fontSize: '0.75rem' }}>
                         {rowData.status.toUpperCase()}
                     </Badge>
                 );
             },
-        },
-        {
-            title: 'Remarks',
-            field: 'remarks',
-            render: (rowData: AlertHistoryItem) => (
-                <div>
-                    <small className="text-muted">{rowData.remarks || '-'}</small>
-                    {/* NEW: show value_reset_time if available */}
-                    {rowData.value_reset_time && (
-                        <div className="mt-1">
-                            <small className="text-success">
-                                <Icon icon="CheckCircle" size="sm" className="me-1" />
-                                Condition cleared {format(new Date(rowData.value_reset_time), 'MMM dd, HH:mm')}
-                            </small>
-                        </div>
-                    )}
-                </div>
-            )
         },
         {
             title: 'Actions',
@@ -347,56 +359,179 @@ const AlertHistory = () => {
             sorting: false,
             filtering: false,
             render: (rowData: AlertHistoryItem) => (
-                <div className="d-flex gap-2">
+                <div className='d-flex gap-2 justify-content-start align-items-center'>
+                    <Button
+                        color='primary'
+                        isLight
+                        icon='Visibility'
+                        onClick={() => {
+                            setSelectedDetailAlert(rowData);
+                            setIsDetailModalOpen(true);
+                        }}
+                        title='View Details'
+                        style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)',
+                            border: themeStatus === 'dark' ? 'none' : '1px solid rgba(77, 105, 250, 0.3)',
+                            color: themeStatus === 'dark' ? '#4d69fa' : '#3650d4',
+                            transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e: any) => {
+                            e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.25)' : 'rgba(77, 105, 250, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = themeStatus === 'dark'
+                                ? '0 4px 8px rgba(0, 0, 0, 0.3)'
+                                : '0 4px 8px rgba(77, 105, 250, 0.2)';
+                        }}
+                        onMouseLeave={(e: any) => {
+                            e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                        }}
+                    />
+
                     {rowData.status === 'active' && (
                         <Button
-                            color="success"
+                            color='success'
                             isLight
-                            icon="CheckCircle"
-                            size="sm"
-                            title="Acknowledge Alert"
+                            icon='CheckCircle'
+                            title='Acknowledge Alert'
                             onClick={() => openStatusModal(rowData, 'acknowledged')}
+                            style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '8px',
+                                padding: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: themeStatus === 'dark' ? 'rgba(25, 135, 84, 0.15)' : 'rgba(25, 135, 84, 0.12)',
+                                border: themeStatus === 'dark' ? 'none' : '1px solid rgba(25, 135, 84, 0.3)',
+                                color: themeStatus === 'dark' ? '#198754' : '#146c43',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e: any) => {
+                                e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(25, 135, 84, 0.25)' : 'rgba(25, 135, 84, 0.2)';
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = themeStatus === 'dark'
+                                    ? '0 4px 8px rgba(0, 0, 0, 0.3)'
+                                    : '0 4px 8px rgba(25, 135, 84, 0.2)';
+                            }}
+                            onMouseLeave={(e: any) => {
+                                e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(25, 135, 84, 0.15)' : 'rgba(25, 135, 84, 0.12)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
                         />
                     )}
+
                     {rowData.status === 'acknowledged' && (
                         <Button
-                            color="success"
+                            color='success'
                             isLight
-                            icon="TaskAlt"
-                            size="sm"
-                            title="Resolve Alert"
+                            icon='TaskAlt'
+                            title='Resolve Alert'
                             onClick={() => openStatusModal(rowData, 'resolved')}
+                            style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '8px',
+                                padding: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: themeStatus === 'dark' ? 'rgba(25, 135, 84, 0.15)' : 'rgba(25, 135, 84, 0.12)',
+                                border: themeStatus === 'dark' ? 'none' : '1px solid rgba(25, 135, 84, 0.3)',
+                                color: themeStatus === 'dark' ? '#198754' : '#146c43',
+                                transition: 'all 0.2s ease'
+                            }}
                         />
                     )}
+
                     {(rowData.status === 'active' || rowData.status === 'suspended') && (
                         <>
                             <Button
-                                color="secondary"
+                                color='secondary'
                                 isLight
-                                icon="Block"
-                                size="sm"
-                                title="Dismiss Alert"
+                                icon='Block'
+                                title='Dismiss Alert'
                                 onClick={() => openStatusModal(rowData, 'dismissed')}
+                                style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '8px',
+                                    padding: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: themeStatus === 'dark' ? 'rgba(108, 117, 125, 0.15)' : 'rgba(108, 117, 125, 0.12)',
+                                    border: themeStatus === 'dark' ? 'none' : '1px solid rgba(108, 117, 125, 0.3)',
+                                    color: themeStatus === 'dark' ? '#6c757d' : '#495057',
+                                    transition: 'all 0.2s ease'
+                                }}
                             />
                             {rowData.status === 'active' && (
                                 <Button
-                                    color="dark"
+                                    color='dark'
                                     isLight
-                                    icon="PauseCircle"
-                                    size="sm"
-                                    title="Suspend Alert"
+                                    icon='PauseCircle'
+                                    title='Suspend Alert'
                                     onClick={() => openStatusModal(rowData, 'suspended')}
+                                    style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '8px',
+                                        padding: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: themeStatus === 'dark' ? 'rgba(33, 37, 41, 0.15)' : 'rgba(33, 37, 41, 0.12)',
+                                        border: themeStatus === 'dark' ? 'none' : '1px solid rgba(33, 37, 41, 0.3)',
+                                        color: themeStatus === 'dark' ? '#adb5bd' : '#212529',
+                                        transition: 'all 0.2s ease'
+                                    }}
                                 />
                             )}
                         </>
                     )}
+
                     <Button
-                        color="danger"
+                        color='danger'
                         isLight
-                        icon="Delete"
-                        size="sm"
-                        title="Delete Log"
+                        icon='Delete'
                         onClick={() => handleDeleteClick(rowData)}
+                        title='Delete Log'
+                        style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: themeStatus === 'dark' ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)',
+                            border: themeStatus === 'dark' ? 'none' : '1px solid rgba(239, 79, 79, 0.3)',
+                            color: themeStatus === 'dark' ? '#ef4f4f' : '#cf3b3b',
+                            transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e: any) => {
+                            e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(239, 79, 79, 0.25)' : 'rgba(239, 79, 79, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = themeStatus === 'dark'
+                                ? '0 4px 8px rgba(0, 0, 0, 0.3)'
+                                : '0 4px 8px rgba(239, 79, 79, 0.2)';
+                        }}
+                        onMouseLeave={(e: any) => {
+                            e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                        }}
                     />
                 </div>
             )
@@ -525,23 +660,31 @@ const AlertHistory = () => {
                                 <div className="mt-4">
                                     <ThemeProvider theme={theme}>
                                         <MaterialTable
-                                            title="Historical Logs"
+                                            title={
+                                                <div className='d-flex align-items-center'>
+                                                    <Icon icon='History' className='me-2 text-primary fs-4' />
+                                                    <span className='fw-bold h5 mb-0'>Historical Logs</span>
+                                                </div>
+                                            }
                                             columns={columns}
                                             data={filteredData as any}
                                             options={{
-                                                headerStyle: headerStyle(),
+                                                headerStyle: {
+                                                    ...headerStyle(),
+                                                    fontWeight: 'bold',
+                                                },
                                                 rowStyle: rowStyle(),
-                                                pageSize: 5,
+                                                pageSize: 10,
                                                 search: true,
                                                 filtering: showTableFilters,
                                                 actionsColumnIndex: -1,
                                             }}
                                             actions={[
                                                 {
-                                                    icon: () => <Icon icon="FilterAlt" />,
+                                                    icon: () => <Icon icon='FilterAlt' />,
                                                     tooltip: showTableFilters ? 'Hide filters' : 'Show filters',
                                                     isFreeAction: true,
-                                                    onClick: () => setShowTableFilters(prev => !prev),
+                                                    onClick: () => setShowTableFilters((prev) => !prev),
                                                 },
                                             ]}
                                         />
@@ -833,6 +976,120 @@ const AlertHistory = () => {
                     </Button>
                     <Button color="danger" onClick={confirmDelete}>
                         Delete Log
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+
+            {/* ── Alert Detail Modal ── */}
+            <Modal isOpen={isDetailModalOpen} setIsOpen={setIsDetailModalOpen} size='lg' isCentered>
+                <ModalHeader setIsOpen={setIsDetailModalOpen}>
+                    Alert Details: {selectedDetailAlert?.id}
+                </ModalHeader>
+                <ModalBody>
+                    {selectedDetailAlert && (
+                        <div className='row g-3'>
+                            <div className='col-12 text-center mb-4'>
+                                <div
+                                    className='neumorphic-icon-container mx-auto mb-3'
+                                    style={{
+                                        width: '80px',
+                                        height: '80px',
+                                        background: '#e0e5ec',
+                                        borderRadius: '50%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: '6px 6px 12px #b8b9be, -6px -6px 12px #ffffff'
+                                    }}
+                                >
+                                    <Icon
+                                        icon={
+                                            selectedDetailAlert.severity === 'critical' ? 'ReportProblem' :
+                                                selectedDetailAlert.severity === 'warning' ? 'Warning' : 'Info'
+                                        }
+                                        size='3x'
+                                        className={`text-${selectedDetailAlert.severity === 'critical' ? 'danger' :
+                                            selectedDetailAlert.severity === 'warning' ? 'warning' : 'primary'
+                                            }`}
+                                    />
+                                </div>
+                                <div className='h4 fw-bold mb-1'>
+                                    {selectedDetailAlert.alert_type}
+                                </div>
+                                <div className='text-muted small'>
+                                    ID: {selectedDetailAlert.id} • {format(new Date(selectedDetailAlert.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+                                </div>
+                            </div>
+
+                            <div className='col-12'>
+                                <div className='border-top pt-3 mb-3'>
+                                    <div className='row g-3'>
+                                        <div className='col-md-6'>
+                                            <Label className='fw-bold text-secondary small text-uppercase mb-1'>Sensor Source</Label>
+                                            <div className='d-flex align-items-center p-3 rounded' >
+                                                <Icon icon='Sensors' className='me-2 text-primary' />
+                                                <span className='fw-bold'>{selectedDetailAlert.sensor_name}</span>
+                                            </div>
+                                        </div>
+                                        <div className='col-md-6'>
+                                            <Label className='fw-bold text-secondary small text-uppercase mb-1'>Location Area</Label>
+                                            <div className='d-flex align-items-center p-3 rounded' >
+                                                <Icon icon='Place' className='me-2 text-info' />
+                                                <span className='fw-bold'>{selectedDetailAlert.area_name}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className='border-top pt-3 mb-3'>
+                                    <Label className='fw-bold text-secondary small text-uppercase mb-1'>Value / Description</Label>
+                                    <div className='p-3 rounded font-monospace' >
+                                        {selectedDetailAlert.value}
+                                    </div>
+                                </div>
+
+                                <div className='border-top pt-3 mb-3'>
+                                    <Label className='fw-bold text-secondary small text-uppercase mb-1'>Remarks / Notes</Label>
+                                    <div className='p-3 rounded' >
+                                        {selectedDetailAlert.remarks || <span className='text-muted fst-italic'>No remarks available</span>}
+                                    </div>
+                                </div>
+
+                                {(selectedDetailAlert.resolved_at || selectedDetailAlert.value_reset_time) && (
+                                    <div className='border-top pt-3'>
+                                        <div className='row g-3'>
+                                            {selectedDetailAlert.resolved_at && (
+                                                <div className='col-md-6'>
+                                                    <Label className='fw-bold text-secondary small text-uppercase mb-1'>Resolved At</Label>
+                                                    <div className='text-success fw-bold p-2'>
+                                                        <Icon icon='CheckCircle' className='me-1' />
+                                                        {format(new Date(selectedDetailAlert.resolved_at), 'MMM dd, HH:mm')}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {selectedDetailAlert.value_reset_time && (
+                                                <div className='col-md-6'>
+                                                    <Label className='fw-bold text-secondary small text-uppercase mb-1'>Condition Cleared</Label>
+                                                    <div className='text-success fw-bold p-2'>
+                                                        <Icon icon='AutoMode' className='me-1' />
+                                                        {format(new Date(selectedDetailAlert.value_reset_time), 'MMM dd, HH:mm')}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </ModalBody>
+                <ModalFooter className='justify-content-center border-0 pb-4'>
+                    <Button
+                        className='btn-neumorphic px-5 py-2'
+                        onClick={() => setIsDetailModalOpen(false)}
+                    >
+                        Close Details
                     </Button>
                 </ModalFooter>
             </Modal>

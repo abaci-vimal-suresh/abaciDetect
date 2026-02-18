@@ -1,26 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTour } from '@reactour/tour';
-import Page from '../../../layout/Page/Page';
-import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
-import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
-import Card, { CardBody, CardHeader, CardTitle, CardActions } from '../../../components/bootstrap/Card';
-import Button from '../../../components/bootstrap/Button';
-import Icon from '../../../components/icon/Icon';
-import Badge from '../../../components/bootstrap/Badge';
-import Spinner from '../../../components/bootstrap/Spinner';
-import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../components/bootstrap/Modal';
-import FormGroup from '../../../components/bootstrap/forms/FormGroup';
-import Input from '../../../components/bootstrap/forms/Input';
-import { useAreas, useCreateArea, useAddSensorToSubArea, useSensors, useUsers, useDeleteArea, useUpdateArea } from '../../../api/sensors.api';
-import { Area, User } from '../../../types/sensor';
-import TreeCard from './components/TreeCard';
+import Page from '../../../../layout/Page/Page';
+import PageWrapper from '../../../../layout/PageWrapper/PageWrapper';
+import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../../layout/SubHeader/SubHeader';
+import Card, { CardBody, CardHeader, CardTitle, CardActions } from '../../../../components/bootstrap/Card';
+import Button from '../../../../components/bootstrap/Button';
+import Icon from '../../../../components/icon/Icon';
+import Badge from '../../../../components/bootstrap/Badge';
+import Spinner from '../../../../components/bootstrap/Spinner';
+import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../../components/bootstrap/Modal';
+import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
+import Input from '../../../../components/bootstrap/forms/Input';
+import { useAreas, useCreateArea, useAddSensorToSubArea, useSensors, useUsers, useDeleteArea, useUpdateArea } from '../../../../api/sensors.api';
+import { Area, User } from '../../../../types/sensor';
+import TreeCard from '../components/TreeCard';
 import Swal from 'sweetalert2';
-import Checks from '../../../components/bootstrap/forms/Checks';
-import Label from '../../../components/bootstrap/forms/Label';
-import EditAreaModal from './modals/EditAreaModal';
+import Checks from '../../../../components/bootstrap/forms/Checks';
+import Label from '../../../../components/bootstrap/forms/Label';
+import EditAreaModal from '../modals/EditAreaModal';
 
-const SensorMainArea = () => {
+const AreaMain = () => {
 
     const navigate = useNavigate();
     const { setCurrentStep } = useTour();
@@ -676,4 +676,4 @@ const SensorMainArea = () => {
     );
 };
 
-export default SensorMainArea;
+export default AreaMain;

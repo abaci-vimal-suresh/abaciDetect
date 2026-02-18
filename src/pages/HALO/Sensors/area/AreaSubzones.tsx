@@ -1,24 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Page from '../../../layout/Page/Page';
-import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
-import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
-import Breadcrumb, { BreadcrumbItem } from '../../../components/bootstrap/Breadcrumb';
-import Card, { CardBody, CardHeader, CardTitle, CardActions } from '../../../components/bootstrap/Card';
-import Button from '../../../components/bootstrap/Button';
-import Icon from '../../../components/icon/Icon';
-import Badge from '../../../components/bootstrap/Badge';
-import Spinner from '../../../components/bootstrap/Spinner';
-import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../components/bootstrap/Modal';
-import FormGroup from '../../../components/bootstrap/forms/FormGroup';
-import Input from '../../../components/bootstrap/forms/Input';
-import { useAreas, useCreateSubArea, useAddSensorToSubArea, useSensors, useUsers, useUpdateSensor, useDeleteArea, useAggregatedSensorData } from '../../../api/sensors.api';
-import { Area, User } from '../../../types/sensor';
-import Checks from '../../../components/bootstrap/forms/Checks';
-import Label from '../../../components/bootstrap/forms/Label';
+import Page from '../../../../layout/Page/Page';
+import PageWrapper from '../../../../layout/PageWrapper/PageWrapper';
+import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../../layout/SubHeader/SubHeader';
+import Breadcrumb from '../../../../components/bootstrap/Breadcrumb';
+import Card, { CardBody, CardHeader, CardTitle, CardActions } from '../../../../components/bootstrap/Card';
+import Button from '../../../../components/bootstrap/Button';
+import Icon from '../../../../components/icon/Icon';
+import Badge from '../../../../components/bootstrap/Badge';
+import Spinner from '../../../../components/bootstrap/Spinner';
+import Modal, { ModalHeader, ModalBody, ModalFooter, ModalTitle } from '../../../../components/bootstrap/Modal';
+import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
+import Input from '../../../../components/bootstrap/forms/Input';
+import { useAreas, useCreateSubArea, useAddSensorToSubArea, useSensors, useUsers, useUpdateSensor, useDeleteArea, useAggregatedSensorData } from '../../../../api/sensors.api';
+import { Area, User } from '../../../../types/sensor';
+import Checks from '../../../../components/bootstrap/forms/Checks';
+import Label from '../../../../components/bootstrap/forms/Label';
 import { useQueryClient } from '@tanstack/react-query';
-import { filterSensors, getSensorsByArea, getAvailableSensors } from '../utils/sensorData.utils';
-import EditAreaModal from './modals/EditAreaModal';
+import { filterSensors, getSensorsByArea, getAvailableSensors, calculateRadarSeries, calculateGroupRadarSeries } from '../../utils/sensorData.utils';
+import EditAreaModal from '../modals/EditAreaModal';
+import Chart from '../../../../components/extras/Chart';
 import Swal from 'sweetalert2';
 
 
@@ -112,7 +113,7 @@ const METRIC_GROUPS = [
     },
 ];
 
-const SensorGroups = () => {
+const AreaSubzones = () => {
     const { areaId } = useParams<{ areaId: string }>();
     const navigate = useNavigate();
     const { data: areas, isLoading } = useAreas();
@@ -219,6 +220,54 @@ const SensorGroups = () => {
                 ? Number(data[`${group.representative}_max`]).toFixed(1) : null,
         }));
     }, [aggregatedResponse]);
+
+    const radarData = useMemo(() => {
+        if (activeMetricGroup) {
+            return calculateGroupRadarSeries(aggregatedResponse?.aggregated_data, activeMetricGroup.metrics);
+        }
+        return {
+            categories: ['Temp', 'CO2', 'PM2.5', 'Sound', 'Light', 'AQI'],
+            series: [{ name: 'Environment Score', data: calculateRadarSeries(aggregatedResponse?.aggregated_data) }]
+        };
+    }, [aggregatedResponse, activeMetricGroup]);
+
+    const radarOptions: any = {
+        chart: {
+            type: 'radar',
+            toolbar: { show: false },
+        },
+        xaxis: {
+            categories: radarData.categories,
+            labels: {
+                style: {
+                    colors: Array(radarData.categories.length).fill(document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#adb5bd' : '#495057'),
+                    fontSize: '11px',
+                }
+            }
+        },
+        yaxis: {
+            show: false,
+            min: 0,
+            max: 100,
+        },
+        fill: {
+            opacity: activeMetricGroup ? 0.2 : 0.3,
+        },
+        markers: {
+            size: activeMetricGroup ? 3 : 4,
+        },
+        stroke: {
+            width: 2,
+        },
+        colors: activeMetricGroup
+            ? [import.meta.env.VITE_INFO_COLOR || '#4d69fa', import.meta.env.VITE_PRIMARY_COLOR || '#7a3a6f']
+            : [import.meta.env.VITE_PRIMARY_COLOR || '#7a3a6f'],
+        legend: {
+            show: !!activeMetricGroup,
+            position: 'bottom',
+        }
+    };
+
 
 
     const handleCreateSubArea = () => {
@@ -364,9 +413,12 @@ const SensorGroups = () => {
         <PageWrapper title='Sensor Sub Areas'>
             <SubHeader>
                 <SubHeaderLeft>
-                    <Breadcrumb>
-                        <BreadcrumbItem to='/halo/sensors/areas'>Main Areas</BreadcrumbItem>
-                    </Breadcrumb>
+                    <Breadcrumb
+                        list={[
+                            { title: 'Areas', to: '/halo/sensors/areas' },
+                            { title: currentArea?.name || 'Area', to: `/halo/sensors/areas/${areaId}/subzones` }
+                        ]}
+                    />
                 </SubHeaderLeft>
                 <SubHeaderRight>
                     <div className='d-flex gap-3'>
@@ -399,7 +451,117 @@ const SensorGroups = () => {
                 </SubHeaderRight>
             </SubHeader>
             <Page container='fluid'>
-                {/* Aggregated Metrics Section */}
+                {/* Environmental Overview Section */}
+                <div className='row mb-4'>
+                    <div className='col-lg-12'>
+                        <Card stretch className='shadow-none border border-light'>
+                            <CardHeader className='bg-transparent'>
+                                <CardTitle>
+                                    <Icon icon='Analytics' className='me-2 text-primary' />
+                                    Environmental Overview
+                                </CardTitle>
+                                <CardActions>
+                                    <Badge color='info' isLight className='px-3 py-2'>
+                                        Real-time Analysis
+                                    </Badge>
+                                </CardActions>
+                            </CardHeader>
+                            <CardBody>
+                                <div className='row align-items-center'>
+                                    <div className='col-md-5 text-center'>
+                                        <Chart
+                                            type='radar'
+                                            series={radarData.series}
+                                            options={radarOptions}
+                                            height={300}
+                                        />
+                                    </div>
+                                    <div className='col-md-7 border-start border-light ps-4'>
+                                        <div className='d-flex justify-content-between align-items-start mb-3'>
+                                            <div>
+                                                <h5 className='mb-1 fw-bold'>
+                                                    {activeMetricGroup ? `${activeMetricGroup.label} Detail` : 'Area Health Score'}
+                                                </h5>
+                                                <p className='text-muted small mb-0'>
+                                                    {activeMetricGroup
+                                                        ? `Showing Min/Max ranges for ${activeMetricGroup.label.toLowerCase()} sensors.`
+                                                        : 'Overall environmental balance based on all sensor categories.'
+                                                    }
+                                                </p>
+                                            </div>
+                                            {activeMetricGroup && (
+                                                <Button
+                                                    size='sm'
+                                                    color='primary'
+                                                    isLight
+                                                    onClick={() => setActiveMetricGroup(null)}
+                                                    icon='RestartAlt'
+                                                >
+                                                    Back to Overview
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {!activeMetricGroup ? (
+                                            <div className='row g-3 mt-2'>
+                                                <div className='col-6'>
+                                                    <div className='d-flex align-items-center mb-2'>
+                                                        <div className='rounded-circle bg-primary bg-opacity-10 p-2 me-2'>
+                                                            <Icon icon='Thermostat' className='text-primary' size='sm' />
+                                                        </div>
+                                                        <span className='small fw-bold'>Comfort: {Math.round(radarData.series[0].data[0])}%</span>
+                                                    </div>
+                                                    <div className='d-flex align-items-center'>
+                                                        <div className='rounded-circle bg-info bg-opacity-10 p-2 me-2'>
+                                                            <Icon icon='Science' className='text-info' size='sm' />
+                                                        </div>
+                                                        <span className='small fw-bold'>Air Purity: {Math.round(radarData.series[0].data[1])}%</span>
+                                                    </div>
+                                                </div>
+                                                <div className='col-6'>
+                                                    <div className='d-flex align-items-center mb-2'>
+                                                        <div className='rounded-circle bg-success bg-opacity-10 p-2 me-2'>
+                                                            <Icon icon='Shield' className='text-success' size='sm' />
+                                                        </div>
+                                                        <span className='small fw-bold'>Safety: {Math.round(radarData.series[0].data[5])}%</span>
+                                                    </div>
+                                                    <div className='d-flex align-items-center'>
+                                                        <div className='rounded-circle bg-warning bg-opacity-10 p-2 me-2'>
+                                                            <Icon icon='VolumeUp' className='text-warning' size='sm' />
+                                                        </div>
+                                                        <span className='small fw-bold'>Acoustics: {Math.round(radarData.series[0].data[3])}%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className='row g-2 mt-2'>
+                                                {activeMetricGroup.metrics.map((m: any, idx: number) => (
+                                                    <div key={m.key} className='col-6'>
+                                                        <div className='p-2 border border-light rounded bg-light bg-opacity-25'>
+                                                            <div className='small text-muted mb-1'>{m.label}</div>
+                                                            <div className='d-flex justify-content-between align-items-baseline'>
+                                                                <span className='fw-bold text-dark'>{Math.round(radarData.series[1].data[idx])}%</span>
+                                                                <span className='small text-muted'>{m.unit}</span>
+                                                            </div>
+                                                            <div className='progress mt-1' style={{ height: 4 }}>
+                                                                <div
+                                                                    className='progress-bar bg-primary'
+                                                                    style={{ width: `${radarData.series[1].data[idx]}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardBody>
+                        </Card>
+                    </div>
+                </div>
+
+                {/* Aggregated Metrics Row */}
 
                 {/* Metrics Row */}
                 <div className='mb-4'>
@@ -456,93 +618,7 @@ const SensorGroups = () => {
                     </div>
                 </div>
 
-                {/* Detail Modal */}
-                <Modal
-                    isOpen={!!activeMetricGroup}
-                    setIsOpen={(v) => { if (!v) setActiveMetricGroup(null); }}
-                    size='lg'
-                    isCentered
-                    isScrollable
-                >
-                    <ModalHeader setIsOpen={() => setActiveMetricGroup(null)}>
-                        <ModalTitle id='metric-detail-modal'>
-                            {activeMetricGroup && (
-                                <div className='d-flex align-items-center gap-3'>
-                                    <div
-                                        className='rounded-2 d-flex align-items-center justify-content-center flex-shrink-0'
-                                        style={{ width: 36, height: 36, background: '#e5e7eb', color: '#374151' }}
-                                    >
-                                        <Icon icon={activeMetricGroup.icon as any} />
-                                    </div>
-                                    <div>
-                                        <div className='fw-bold fs-6'>{activeMetricGroup.label}</div>
-                                        <div className='text-muted' style={{ fontSize: '0.72rem' }}>
-                                            {currentArea?.name} · Min & Max over selected period
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </ModalTitle>
-                    </ModalHeader>
 
-                    <ModalBody className='p-0'>
-                        {activeMetricGroup && (
-                            <>
-                                <div style={{ height: 3, background: '#e5e7eb' }} />
-                                <div className='p-4'>
-                                    {activeMetricGroup.hasData ? (
-                                        <div className='row g-3'>
-                                            {activeMetricGroup.metrics.map((metric: any) => (
-                                                <div key={metric.key} className='col-6 col-md-4'>
-                                                    <div
-                                                        className='p-3 rounded-2 text-center'
-                                                        style={{
-                                                            border: '1px solid #e5e7eb',
-                                                            background: '#f9fafb',
-                                                        }}
-                                                    >
-                                                        <div className='fw-bold mb-3' style={{ fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#374151' }}>
-                                                            {metric.label}
-                                                        </div>
-                                                        <div className='d-flex justify-content-between align-items-center mb-2 px-1'>
-                                                            <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MIN</span>
-                                                            <span className='fw-bold' style={{ fontSize: '1.1rem' }}>
-                                                                {metric.min ?? <span className='text-muted fs-6'>—</span>}
-                                                            </span>
-                                                        </div>
-                                                        <div className='d-flex justify-content-between align-items-center px-1'>
-                                                            <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MAX</span>
-                                                            <span className='fw-bold' style={{ fontSize: '1.1rem', color: '#374151' }}>
-                                                                {metric.max ?? <span className='text-muted fs-6'>—</span>}
-                                                            </span>
-                                                        </div>
-                                                        <div className='mt-2'>
-                                                            <span
-                                                                className='rounded-pill px-2 py-1'
-                                                                style={{ fontSize: '0.62rem', fontWeight: 600, background: '#e5e7eb', color: '#374151' }}
-                                                            >
-                                                                {metric.unit}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className='text-center py-5'>
-                                            <div className='rounded-circle d-inline-flex align-items-center justify-content-center mb-3'
-                                                style={{ width: 64, height: 64, background: '#f3f4f6' }}>
-                                                <Icon icon={activeMetricGroup.icon as any} className='text-muted fs-3' />
-                                            </div>
-                                            <div className='fw-semibold text-muted mb-1'>No data available</div>
-                                            <div className='text-muted small'>No readings recorded for this group in the selected time window.</div>
-                                        </div>
-                                    )}
-                                </div>
-                            </>
-                        )}
-                    </ModalBody>
-                </Modal>
                 {/* Filter Section */}
                 <div className='row mb-4'>
                     <div className='col-12'>
@@ -595,107 +671,109 @@ const SensorGroups = () => {
                 </div>
 
                 {/* Sub Areas Section */}
-                {subAreas.length > 0 && (
-                    <div className='mb-4'>
-                        <div className='d-flex align-items-center justify-content-between mb-3'>
-                            <div className='d-flex align-items-center'>
-                                <Icon icon='GroupWork' className='me-2 fs-4' />
-                                <span className='h5 mb-0 fw-bold'>Sub Areas</span>
+                {
+                    subAreas.length > 0 && (
+                        <div className='mb-4'>
+                            <div className='d-flex align-items-center justify-content-between mb-3'>
+                                <div className='d-flex align-items-center'>
+                                    <Icon icon='GroupWork' className='me-2 fs-4' />
+                                    <span className='h5 mb-0 fw-bold'>Sub Areas</span>
+                                </div>
+                                <Badge color='info' isLight className='fs-6'>
+                                    {filteredSubAreas.length} of {subAreas.length}
+                                </Badge>
                             </div>
-                            <Badge color='info' isLight className='fs-6'>
-                                {filteredSubAreas.length} of {subAreas.length}
-                            </Badge>
-                        </div>
-                        <div className='row g-4 mb-4'>
-                            {filteredSubAreas.map(subArea => (
-                                <div key={subArea.id} className='col-md-6 col-xl-4'>
-                                    <Card
-                                        stretch
-                                        className='cursor-pointer transition-shadow'
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => handleCardClick(subArea.id)}
-                                    >
-                                        <CardHeader>
-                                            <CardTitle>{subArea.name}</CardTitle>
-                                            <CardActions>
-                                                <Button
-                                                    color='info'
-                                                    isLight
-                                                    icon='Edit'
-                                                    size='sm'
-                                                    onClick={(e: any) => handleEditClick(e, subArea)}
-                                                    className='me-1'
-                                                    title='Edit Sub Area'
-                                                />
-                                                <Button
-                                                    color='danger'
-                                                    isLight
-                                                    icon='Delete'
-                                                    size='sm'
-                                                    onClick={(e: any) => handleDeleteArea(e, subArea)}
-                                                    className='me-1'
-                                                    title='Delete Sub Area'
-                                                />
-                                                <Badge color='success' isLight>
-                                                    Active
-                                                </Badge>
-                                            </CardActions>
-                                        </CardHeader>
-                                        <CardBody>
-                                            <div className='d-flex justify-content-between align-items-center mb-2'>
-                                                <div className='text-muted'>
-                                                    <Icon icon='Sensors' size='sm' className='me-1' />
-                                                    Sensors
+                            <div className='row g-4 mb-4'>
+                                {filteredSubAreas.map(subArea => (
+                                    <div key={subArea.id} className='col-md-6 col-xl-4'>
+                                        <Card
+                                            stretch
+                                            className='cursor-pointer transition-shadow'
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => handleCardClick(subArea.id)}
+                                        >
+                                            <CardHeader>
+                                                <CardTitle>{subArea.name}</CardTitle>
+                                                <CardActions>
+                                                    <Button
+                                                        color='info'
+                                                        isLight
+                                                        icon='Edit'
+                                                        size='sm'
+                                                        onClick={(e: any) => handleEditClick(e, subArea)}
+                                                        className='me-1'
+                                                        title='Edit Sub Area'
+                                                    />
+                                                    <Button
+                                                        color='danger'
+                                                        isLight
+                                                        icon='Delete'
+                                                        size='sm'
+                                                        onClick={(e: any) => handleDeleteArea(e, subArea)}
+                                                        className='me-1'
+                                                        title='Delete Sub Area'
+                                                    />
+                                                    <Badge color='success' isLight>
+                                                        Active
+                                                    </Badge>
+                                                </CardActions>
+                                            </CardHeader>
+                                            <CardBody>
+                                                <div className='d-flex justify-content-between align-items-center mb-2'>
+                                                    <div className='text-muted'>
+                                                        <Icon icon='Sensors' size='sm' className='me-1' />
+                                                        Sensors
+                                                    </div>
+                                                    <div className='fw-bold fs-5'>{subArea.sensor_count || 0}</div>
                                                 </div>
-                                                <div className='fw-bold fs-5'>{subArea.sensor_count || 0}</div>
-                                            </div>
-                                            <div className='border-top border-light pt-3 mt-3'>
-                                                <div className='text-muted small mb-2'>
-                                                    <Icon icon='AssignmentInd' size='sm' className='me-1' />
-                                                    Persons in Charge
-                                                </div>
-                                                <div className='d-flex flex-wrap gap-1'>
-                                                    {((subArea.person_in_charge && subArea.person_in_charge.length > 0) || (subArea.person_in_charge_ids && subArea.person_in_charge_ids.length > 0)) ? (
-                                                        <>
-                                                            {subArea.person_in_charge && subArea.person_in_charge.length > 0 ? (
-                                                                subArea.person_in_charge.map(person => (
-                                                                    <Badge key={person.id} color='primary' isLight className='rounded-pill'>
-                                                                        {person.first_name} {person.last_name}
-                                                                    </Badge>
-                                                                ))
-                                                            ) : (
-                                                                subArea.person_in_charge_ids?.map(userId => {
-                                                                    const user = users?.find(u => u.id === userId);
-                                                                    return user ? (
-                                                                        <Badge key={userId} color='primary' isLight className='rounded-pill'>
-                                                                            {user.first_name} {user.last_name}
+                                                <div className='border-top border-light pt-3 mt-3'>
+                                                    <div className='text-muted small mb-2'>
+                                                        <Icon icon='AssignmentInd' size='sm' className='me-1' />
+                                                        Persons in Charge
+                                                    </div>
+                                                    <div className='d-flex flex-wrap gap-1'>
+                                                        {((subArea.person_in_charge && subArea.person_in_charge.length > 0) || (subArea.person_in_charge_ids && subArea.person_in_charge_ids.length > 0)) ? (
+                                                            <>
+                                                                {subArea.person_in_charge && subArea.person_in_charge.length > 0 ? (
+                                                                    subArea.person_in_charge.map(person => (
+                                                                        <Badge key={person.id} color='primary' isLight className='rounded-pill'>
+                                                                            {person.first_name} {person.last_name}
                                                                         </Badge>
-                                                                    ) : null;
-                                                                })
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <span className='text-muted small italic text-opacity-50'>Unassigned</span>
-                                                    )}
+                                                                    ))
+                                                                ) : (
+                                                                    subArea.person_in_charge_ids?.map(userId => {
+                                                                        const user = users?.find(u => u.id === userId);
+                                                                        return user ? (
+                                                                            <Badge key={userId} color='primary' isLight className='rounded-pill'>
+                                                                                {user.first_name} {user.last_name}
+                                                                            </Badge>
+                                                                        ) : null;
+                                                                    })
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className='text-muted small italic text-opacity-50'>Unassigned</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </CardBody>
-                                    </Card>
-                                </div>
-                            ))}
-                            {filteredSubAreas.length === 0 && searchTerm && (
-                                <div className='col-12'>
-                                    <Card>
-                                        <CardBody className='text-center py-4'>
-                                            <Icon icon='SearchOff' className='fs-1 text-muted mb-2' />
-                                            <p className='text-muted mb-0'>No sub areas match your search</p>
-                                        </CardBody>
-                                    </Card>
-                                </div>
-                            )}
+                                            </CardBody>
+                                        </Card>
+                                    </div>
+                                ))}
+                                {filteredSubAreas.length === 0 && searchTerm && (
+                                    <div className='col-12'>
+                                        <Card>
+                                            <CardBody className='text-center py-4'>
+                                                <Icon icon='SearchOff' className='fs-1 text-muted mb-2' />
+                                                <p className='text-muted mb-0'>No sub areas match your search</p>
+                                            </CardBody>
+                                        </Card>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* Direct Sensors Section */}
                 <div>
@@ -805,10 +883,10 @@ const SensorGroups = () => {
                         )}
                     </div>
                 </div>
-            </Page>
+            </Page >
 
             {/* Add Sensor Modal */}
-            <Modal isOpen={isSensorModalOpen} setIsOpen={setIsSensorModalOpen}>
+            < Modal isOpen={isSensorModalOpen} setIsOpen={setIsSensorModalOpen} >
                 <ModalHeader setIsOpen={setIsSensorModalOpen}>
                     <ModalTitle id='add-sensor-to-area-title'>
                         Add Sensor to Area
@@ -1077,4 +1155,4 @@ const SensorGroups = () => {
     );
 };
 
-export default SensorGroups;
+export default AreaSubzones;

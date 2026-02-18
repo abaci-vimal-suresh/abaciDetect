@@ -40,8 +40,9 @@ const UserDetailPage = () => {
                 if (user.assigned_area_ids.includes(area.id)) {
                     found.push(area);
                 }
-                if (area.subareas && area.subareas.length > 0) {
-                    found = [...found, ...findAssigned(area.subareas)];
+                const subareas = (area as any).subareas;
+                if (subareas && subareas.length > 0 && typeof subareas[0] === 'object') {
+                    found = [...found, ...findAssigned(subareas)];
                 }
             }
             return found;
