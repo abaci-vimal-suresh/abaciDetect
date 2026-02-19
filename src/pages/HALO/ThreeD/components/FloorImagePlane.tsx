@@ -1,6 +1,5 @@
-import React, { useRef, useMemo } from 'react';
-import { useFrame, useLoader } from '@react-three/fiber';
-import { MeshTransmissionMaterial } from '@react-three/drei';
+import React, { useRef, useMemo, useEffect } from 'react';
+import { useThree, useLoader } from '@react-three/fiber';
 import { TextureLoader } from 'three';
 import * as THREE from 'three';
 
@@ -8,7 +7,7 @@ interface FloorImagePlaneProps {
     // Required props
     imageUrl: string;
     floorLevel: number;
-    areaId?: number; // Area ID for raycasting identification
+    areaId?: number;
 
     // Positioning & sizing
     floorSpacing?: number;
@@ -18,42 +17,23 @@ interface FloorImagePlaneProps {
     visible?: boolean;
     opacity?: number;
 
-    // Glass effect controls
-    glassThickness?: number;
-    glassTransmission?: number;
-    glassClearcoat?: number;
-    glassRoughness?: number;
-    glassIor?: number; // Index of refraction
+    // Image quality
+    brightness?: number; // 0.5 = darker, 1.0 = normal, 1.2 = brighter
+    contrast?: number;   // 1.0 = normal, 1.2 = more contrast (via material tonemap)
 
-    // Glow & edge effects
+    // Glass/panel thickness
+    glassThickness?: number;
+
+    // Edge glow (static, subtle)
     enableEdgeGlow?: boolean;
     edgeGlowColor?: string;
     edgeGlowIntensity?: number;
     edgeGlowSize?: number;
 
-    // Corner pins/anchors
+    // Corner pins (static)
     enableCornerPins?: boolean;
     cornerPinColor?: string;
     cornerPinSize?: number;
-    cornerPinGlow?: boolean;
-
-    // Animation
-    enablePulseAnimation?: boolean;
-    pulseSpeed?: number;
-    pulseIntensity?: number;
-
-    // Lighting
-    enableAmbientLight?: boolean;
-    ambientLightIntensity?: number;
-    ambientLightColor?: string;
-
-    // Multi-layer effects
-    enableReflectionLayer?: boolean;
-    reflectionOpacity?: number;
-    reflectionMetalness?: number;
-
-    enableBottomLayer?: boolean;
-    bottomLayerOpacity?: number;
 
     // Shadow & depth
     castShadow?: boolean;
@@ -66,135 +46,99 @@ interface FloorImagePlaneProps {
 }
 
 export function FloorImagePlane({
-    // Required
     imageUrl,
     floorLevel,
     areaId,
 
-    // Positioning
     floorSpacing = 4.0,
     centerModel = true,
 
-    // Visibility
     visible = true,
-    opacity = 1,
+    opacity = 0.92,
 
-    // Glass effects
-    glassThickness = 0.5,
-    glassTransmission = 0.3,
-    glassClearcoat = 1,
-    glassRoughness = 0.1,
-    glassIor = 1.5,
+    brightness = 0.82,  // Slightly darker than raw — prevents washed-out look
+    contrast = 1.1,     // Very subtle contrast lift
 
-    // Edge glow
+    glassThickness = 0.05, // Much thinner — architectural, not chunky
+
     enableEdgeGlow = true,
-    edgeGlowColor = '#4a90e2',
-    edgeGlowIntensity = 0.03,
-    edgeGlowSize = 0.2,
+    edgeGlowColor = '#7aaacc',
+    edgeGlowIntensity = 0.018,
+    edgeGlowSize = 0.15,
 
-    // Corner pins
     enableCornerPins = true,
-    cornerPinColor = '#4a90e2',
-    cornerPinSize = 0.1,
-    cornerPinGlow = true,
+    cornerPinColor = '#5588aa',
+    cornerPinSize = 0.08,
 
-    // Animation
-    enablePulseAnimation = true,
-    pulseSpeed = 0.5,
-    pulseIntensity = 0.1,
-
-    // Lighting
-    enableAmbientLight = true,
-    ambientLightIntensity = 0.3,
-    ambientLightColor = '#ffffff',
-
-    // Layers
-    enableReflectionLayer = true,
-    reflectionOpacity = 0.05,
-    reflectionMetalness = 0.9,
-
-    enableBottomLayer = true,
-    bottomLayerOpacity = 0.1,
-
-    // Shadows
     castShadow = false,
     receiveShadow = true,
 
-    // Callbacks
     onLoad,
     onClick,
-    onPointerMove
+    onPointerMove,
 }: FloorImagePlaneProps) {
     const groupRef = useRef<THREE.Group>(null);
-    const glassPanelRef = useRef<THREE.Mesh>(null);
-    const edgeGlowRef = useRef<THREE.Mesh>(null);
-    const cornerPinsRef = useRef<THREE.Group[]>([]);
+    const meshRef = useRef<THREE.Mesh>(null);
+
+    // Access renderer to set max anisotropy
+    const { gl } = useThree();
 
     // Load texture
     const texture = useLoader(TextureLoader, imageUrl);
 
-    // Calculate Y position
+    // Apply sharp texture settings after load
+    useEffect(() => {
+        if (!texture) return;
+
+        // Correct color space — prevents washed-out / gamma-doubled look
+        texture.colorSpace = THREE.SRGBColorSpace;
+
+        // Sharpest filtering: trilinear for minification, linear for magnification
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+
+        // Max anisotropy from the actual renderer — typically 16x on modern GPUs
+        // This is the single biggest sharpness win at oblique viewing angles
+        texture.anisotropy = gl.capabilities.getMaxAnisotropy();
+
+        // Generate mipmaps for the LinearMipmapLinearFilter to work
+        texture.generateMipmaps = true;
+
+        texture.needsUpdate = true;
+    }, [texture, gl]);
+
     const yPosition = floorLevel * floorSpacing;
 
-    // Calculate dimensions based on texture
     const { width, height } = useMemo(() => {
-        if (texture.image) {
+        if (texture?.image) {
             const aspect = texture.image.width / texture.image.height;
-            // The original code used 800x800 for images
-            // We'll use 30 as the base width and maintain aspect ratio (e.g. 30 meters)
             const baseWidth = 30;
-            return {
-                width: baseWidth,
-                height: baseWidth / aspect
-            };
+            return { width: baseWidth, height: baseWidth / aspect };
         }
         return { width: 30, height: 30 };
     }, [texture]);
 
-    // Call onLoad with calibration
-    React.useEffect(() => {
-        if (onLoad && texture.image) {
+    useEffect(() => {
+        if (onLoad && texture?.image) {
             onLoad({
-                width: width,
+                width,
                 depth: height,
                 height: 2.4,
                 minX: centerModel ? -width / 2 : 0,
                 minZ: centerModel ? -height / 2 : 0,
                 minY: 0,
                 centerX: centerModel ? 0 : width / 2,
-                centerZ: centerModel ? 0 : height / 2
+                centerZ: centerModel ? 0 : height / 2,
             });
         }
     }, [texture, width, height, onLoad, centerModel]);
 
-    // Pulse animation
-    useFrame(({ clock }) => {
-        if (!enablePulseAnimation) return;
-
-        const t = clock.getElapsedTime();
-        const pulse = (Math.sin(t * pulseSpeed) + 1) / 2;
-
-        if (glassPanelRef.current) {
-            const material = glassPanelRef.current.material as any;
-            if (material.thickness !== undefined) {
-                material.thickness = glassThickness + pulse * pulseIntensity;
-            }
-        }
-
-        if (edgeGlowRef.current && enableEdgeGlow) {
-            const material = edgeGlowRef.current.material as THREE.MeshBasicMaterial;
-            material.opacity = edgeGlowIntensity + pulse * 0.02;
-        }
-
-        if (enableCornerPins && cornerPinGlow) {
-            cornerPinsRef.current.forEach((pinGroup, i) => {
-                if (pinGroup) {
-                    const offset = i * 0.2;
-                    pinGroup.position.y = 0.3 + Math.sin(t * pulseSpeed + offset) * 0.05;
-                }
-            });
-        }
-    });
+    // Brightness is applied via a color tint on the material.
+    // THREE.Color(b, b, b) on a white-neutral image darkens proportionally.
+    const brightnessColor = useMemo(
+        () => new THREE.Color(brightness, brightness, brightness),
+        [brightness]
+    );
 
     return (
         <group
@@ -202,49 +146,49 @@ export function FloorImagePlane({
             position={[
                 centerModel ? 0 : width / 2,
                 yPosition,
-                centerModel ? 0 : height / 2
+                centerModel ? 0 : height / 2,
             ]}
             visible={visible}
         >
-            {/* Main frosted glass panel with image */}
+            {/* ── Main floor image plane ── */}
             <mesh
-                ref={glassPanelRef}
+                ref={meshRef}
                 position={[0, 0, 0]}
                 castShadow={castShadow}
                 receiveShadow={receiveShadow}
-                userData={{ isFloor: true, areaId: areaId || floorLevel }}
+                userData={{ isFloor: true, areaId: areaId ?? floorLevel }}
                 onClick={onClick}
                 onPointerMove={onPointerMove}
             >
-                {/* We use a thin BoxGeometry to give it real 3D thickness */}
+                {/*
+                    Thin box instead of plane gives it just enough depth
+                    to catch edge lighting without looking chunky.
+                    glassThickness is now 0.05 by default.
+                */}
                 <boxGeometry args={[width, glassThickness, height]} />
-                <meshPhysicalMaterial
-                    /* The texture is applied as the main map */
+                <meshStandardMaterial
                     map={texture}
-                    transparent={true}
+                    // Tint the material color to control brightness without
+                    // touching the texture itself — clean and non-destructive
+                    color={brightnessColor}
+                    transparent={opacity < 1}
                     opacity={opacity}
-
-                    /* Glass properties - Using standard MeshPhysicalMaterial for maximum stability */
-                    thickness={glassThickness}
-                    transmission={0.9}
-                    roughness={glassRoughness}
-                    clearcoat={glassClearcoat}
-                    clearcoatRoughness={0.1}
-                    ior={glassIor}
-                    reflectivity={0.5}
-
-                    /* Performance and quality */
+                    // Matte surface — architectural drawings aren't shiny
+                    roughness={0.85}
+                    metalness={0.0}
+                    // Keep tone mapping OFF so the texture colors render
+                    // exactly as stored — no engine "enhancement" washing it out
                     toneMapped={false}
-                    side={THREE.DoubleSide}
+                    side={THREE.FrontSide} // Front-only — slight perf win, no z-fighting
+                    // envMapIntensity at 0 means no IBL contribution — flat, readable
+                    envMapIntensity={0}
                 />
             </mesh>
 
-
-            {/* Edge glow */}
+            {/* ── Static edge glow ── */}
             {enableEdgeGlow && (
                 <mesh
-                    ref={edgeGlowRef}
-                    position={[0, 0.15, 0]}
+                    position={[0, glassThickness / 2 + 0.01, 0]}
                     rotation={[-Math.PI / 2, 0, 0]}
                 >
                     <planeGeometry args={[width + edgeGlowSize, height + edgeGlowSize]} />
@@ -255,63 +199,42 @@ export function FloorImagePlane({
                         side={THREE.DoubleSide}
                         blending={THREE.AdditiveBlending}
                         toneMapped={false}
+                        depthWrite={false}
                     />
                 </mesh>
             )}
 
-            {/* Corner pins */}
-            {enableCornerPins && [
-                [-width / 2, -height / 2],
-                [width / 2, -height / 2],
-                [-width / 2, height / 2],
-                [width / 2, height / 2]
-            ].map(([x, z], i) => (
-                <group
-                    key={i}
-                    position={[x, 0.3, z]}
-                    ref={(el) => {
-                        if (el) cornerPinsRef.current[i] = el;
-                    }}
-                >
-                    {/* Pin cylinder */}
-                    <mesh position={[0, 0.2, 0]} castShadow>
-                        <cylinderGeometry args={[cornerPinSize, cornerPinSize * 1.5, 0.4, 8]} />
+            {/* ── Static corner pins ── */}
+            {enableCornerPins &&
+                (
+                    [
+                        [-width / 2, -height / 2],
+                        [width / 2, -height / 2],
+                        [-width / 2, height / 2],
+                        [width / 2, height / 2],
+                    ] as [number, number][]
+                ).map(([x, z], i) => (
+                    <mesh
+                        key={i}
+                        position={[x, glassThickness / 2 + 0.2, z]}
+                        castShadow={false}
+                    >
+                        <cylinderGeometry args={[cornerPinSize, cornerPinSize * 1.4, 0.35, 8]} />
                         <meshStandardMaterial
                             color={cornerPinColor}
-                            metalness={0.8}
-                            roughness={0.2}
-                            emissive={cornerPinGlow ? cornerPinColor : '#000000'}
-                            emissiveIntensity={cornerPinGlow ? 0.3 : 0}
+                            metalness={0.6}
+                            roughness={0.35}
+                            // Faint emissive so they're visible without a point light
+                            emissive={cornerPinColor}
+                            emissiveIntensity={0.15}
                             toneMapped={false}
                         />
                     </mesh>
-
-                    {/* Pin light */}
-                    {cornerPinGlow && (
-                        <pointLight
-                            color={cornerPinColor}
-                            intensity={0.5}
-                            distance={2}
-                            decay={2}
-                        />
-                    )}
-                </group>
-            ))}
-
-            {/* Ambient lighting for the glass */}
-            {enableAmbientLight && (
-                <pointLight
-                    position={[0, 5, 0]}
-                    intensity={ambientLightIntensity}
-                    color={ambientLightColor}
-                    distance={width * 2}
-                />
-            )}
+                ))}
         </group>
     );
 }
 
-// Preload hook for better performance
 export function preloadFloorImage(imageUrl: string) {
     useLoader.preload(TextureLoader, imageUrl);
 }

@@ -73,6 +73,7 @@ const ThreeDPage = () => {
     const [editingAreaForWalls, setEditingAreaForWalls] = useState<any>(null);
     const [wallDrawMode, setWallDrawMode] = useState(false);
     const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
+    const [isWallEndpointDragging, setIsWallEndpointDragging] = useState(false);
 
     // ✨ NEW: Unified Preview State (Fixes Issue #3)
     const [previewState, setPreviewState] = useState<PreviewState>(null);
@@ -420,13 +421,13 @@ const ThreeDPage = () => {
     return (
         <PageWrapper title='3D Sensor Visualization'>
             <Page container='fluid' className='p-0 h-100'>
-                <div className='d-flex flex-column h-100' style={{ height: '100vh' }}>
+                <div className='threed-page-container d-flex flex-column'>
                     {/* ============================================ */}
                     {/* HEADER CONTROLS                              */}
                     {/* ============================================ */}
 
                     <Card className='mb-0 rounded-0 border-0 border-bottom'>
-                        <CardHeader className='bg-transparent'>
+                        <CardHeader className='bg-transparent border-0'>
                             <div className='d-flex justify-content-between align-items-center'>
                                 <CardTitle className='mb-0'>
                                     <Icon icon='ViewInAr' className='me-2' />
@@ -467,10 +468,7 @@ const ThreeDPage = () => {
                     {/* ============================================ */}
 
                     <div
-                        className='flex-grow-1 position-relative'
-                        style={{
-                            background: '#c2c2c2ff'
-                        }}
+                        className='flex-grow-1 position-relative d-flex overflow-hidden'
                     >
                         {/* ============================================ */}
                         {/* SENSORS SIDEBAR                              */}
@@ -594,6 +592,7 @@ const ThreeDPage = () => {
                                 <PerspectiveCamera makeDefault position={[50, 40, 50]} fov={40} />
                                 <CameraControls
                                     makeDefault
+                                    enabled={!isWallEndpointDragging}
                                     minDistance={1}
                                     maxDistance={500}
                                 />
@@ -634,28 +633,39 @@ const ThreeDPage = () => {
                                         setEditingAreaForWalls(null);
                                     }}
                                     onSensorDrag={handleSensorDrag}
-                                    previewState={previewState} // ✨ NEW: Unified preview
+                                    previewState={previewState}
                                     blinkingWallIds={blinkingWallIds}
                                     wallDrawMode={wallDrawMode}
                                     onWallCreated={handleWallCreated}
                                     selectedWallId={selectedWallId}
                                     onWallClick={(wall) => {
                                         setSelectedWallId(wall.id);
+                                        // Find which area this wall belongs to
+                                        if (wallsData) {
+                                            for (const [areaId, walls] of Object.entries(wallsData)) {
+                                                if (walls.some(w => String(w.id) === String(wall.id))) {
+                                                    const area = filteredAreas.find(a => String(a.id) === String(areaId));
+                                                    if (area) {
+                                                        setEditingAreaForWalls(area);
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                        }
                                     }}
                                     onWallDrag={(wall, delta) => {
-                                        // Wall drag logic handled in BuildingScene
                                     }}
                                     onWallEndpointsUpdate={handleWallPointsUpdate}
+                                    onWallEndpointDragStart={() => setIsWallEndpointDragging(true)}
+                                    onWallEndpointDragEnd={() => setIsWallEndpointDragging(false)}
                                     onLoad={(cal) => setCalibration(cal)}
-                                    wallsByArea={wallsData || {}} // ✨ NEW: Centralized walls
+                                    wallsByArea={wallsData || {}}
                                 />
                             </Suspense>
                         </Canvas>
                         <Loader />
 
-                        {/* ============================================ */}
-                        {/* METRIC CARDS                                 */}
-                        {/* ============================================ */}
+
 
                         {selectedSensor ? (
                             <SensorConfigCards sensorId={selectedSensor.id} />
@@ -666,11 +676,8 @@ const ThreeDPage = () => {
                             />
                         )}
 
-                        {/* ============================================ */}
-                        {/* OVERLAYS                                     */}
-                        {/* ============================================ */}
 
-                        {/* Sensor Settings Overlay */}
+
                         {showSettingsOverlay && selectedSensor && (
                             <SensorSettingsOverlay
                                 sensor={selectedSensor}
@@ -683,10 +690,10 @@ const ThreeDPage = () => {
                                     handleSensorPreviewChange(selectedSensor.id, changes);
                                 }}
                                 onBlinkingWallsChange={setBlinkingWallIds}
+                                previewState={previewState} // ✨ NEW: Sync from 3D drag
                             />
                         )}
 
-                        {/* Sensor Live Data Overlay */}
                         {!showSettingsOverlay && selectedSensor && (
                             <SensorDataOverlay
                                 sensor={selectedSensor}
@@ -698,7 +705,6 @@ const ThreeDPage = () => {
                             />
                         )}
 
-                        {/* Area Walls Overlay */}
                         {editingAreaForWalls && (
                             <AreaSettingsOverlay
                                 area={editingAreaForWalls}
