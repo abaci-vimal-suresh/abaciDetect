@@ -9,13 +9,7 @@ import { USE_MOCK_DATA } from '../config';
 // CONFIGURATION
 // ============================================
 
-/**
- * Authentication Strategy:
- * - 'httponly': Uses HTTP-only cookies (recommended for production)
- *   Backend sets HttpOnly cookie, frontend uses withCredentials: true
- * - 'js-cookie': Uses JavaScript-accessible cookies
- *   Backend returns token, frontend stores in cookie and adds to Authorization header
- */
+
 type AuthStrategy = 'httponly' | 'js-cookie';
 
 const AUTH_STRATEGY: AuthStrategy =
@@ -63,12 +57,6 @@ export interface ProfileResponse {
 // HELPER FUNCTIONS
 // ============================================
 
-/**
- * Store authentication token (only for js-cookie strategy)
- */
-/**
- * Store authentication tokens in cookies
- */
 const storeToken = (name: 'token' | 'refresh_token', value: string): void => {
     if (AUTH_STRATEGY === 'js-cookie' || true) { // Always store as fallback if returned in body
         Cookies.set(name, value, {
@@ -137,7 +125,7 @@ export const useRegisterSuperAdmin = () => {
         mutationFn: async (credentials: RegisterCredentials): Promise<void> => {
             if (USE_MOCK_AUTH) {
                 // Mock behavior: simulate successful registration
-                console.log('🚀 Mock Registering Super Admin:', credentials);
+                console.log(' Mock Registering Super Admin:', credentials);
                 setMockHasUsers(true); // Simulate account creation
                 return new Promise((resolve) => setTimeout(resolve, 800));
             }
@@ -146,13 +134,13 @@ export const useRegisterSuperAdmin = () => {
             await publicAxios.post('/users/register-super-admin/', credentials);
         },
         onSuccess: () => {
-            console.log('✅ Super Admin Registered Successfully');
+            console.log(' Super Admin Registered Successfully');
             showSuccessNotification('Super Admin account created successfully');
             // Invalidate system status to trigger ProductValidation re-check
             queryClient.invalidateQueries({ queryKey: ['systemStatus'] });
         },
         onError: (error: any) => {
-            console.error('❌ Registration Error:', error);
+            console.error(' Registration Error:', error);
             const errorMessage = error.response?.data?.message || 'Failed to create Super Admin account';
             showErrorNotification(errorMessage);
         },
@@ -169,15 +157,12 @@ export const useLogin = () => {
     return useMutation({
         mutationFn: async (credentials: LoginCredentials): Promise<LoginResponse> => {
             if (USE_MOCK_AUTH) {
-                // Use mock service
                 const response = await mockAuthService.login(credentials);
                 return response;
             }
 
-            // Real API call
             const { data } = await publicAxios.post<LoginResponse>('/users/login/', credentials);
 
-            // Capture tokens if returned in the response body
             const accessToken = data.access || data.token;
             const refreshToken = data.refresh || data.refresh_token;
 
@@ -191,11 +176,11 @@ export const useLogin = () => {
             return data;
         },
         onSuccess: (response) => {
-            console.log('✅ Login Success:', response);
+            console.log(' Login Success:', response);
             showSuccessNotification('Login successful');
         },
         onError: (error: any) => {
-            console.error('❌ Login Error:', error);
+            console.error(' Login Error:', error);
 
             let errorMessage = 'Error occurred, please check your connection and try again!';
             const status = error.response?.status;
@@ -212,10 +197,7 @@ export const useLogin = () => {
     });
 };
 
-/**
- * Logout Hook
- * Handles user logout with cleanup
- */
+
 export const useLogout = () => {
     const queryClient = useQueryClient();
     const { showSuccessNotification, showErrorNotification } = useToasterNotification();
@@ -227,16 +209,12 @@ export const useLogout = () => {
                 return;
             }
 
-            // Real API call
             await authAxios.post('/users/logout/');
 
-            // Clear token if using js-cookie strategy
             clearToken();
         },
         onSuccess: () => {
-            console.log('✅ Logout Success');
-
-            // Clear all cached queries
+            console.log(' Logout Success');
             queryClient.clear();
 
             showSuccessNotification('Logged out successfully');

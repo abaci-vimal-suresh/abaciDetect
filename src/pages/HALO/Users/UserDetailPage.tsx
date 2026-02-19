@@ -71,7 +71,6 @@ const UserDetailPage = () => {
             <Page>
                 <div className="row justify-content-center h-100">
                     <div className="col-lg-10">
-                        {/* Header */}
                         <div className="d-flex justify-content-between align-items-center mb-4 text-dark">
                             <div className="d-flex align-items-center">
                                 <Button
@@ -100,7 +99,6 @@ const UserDetailPage = () => {
                         </div>
 
                         <div className="row g-4 mb-5">
-                            {/* Left Column: Profile Card */}
                             <div className="col-md-4">
                                 <Card className="shadow-3d border-0 h-100" style={{ background: darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
                                     <CardBody className="p-4 text-center">
@@ -139,9 +137,7 @@ const UserDetailPage = () => {
                                 </Card>
                             </div>
 
-                            {/* Right Column: Assigned Areas & Activity */}
                             <div className="col-md-8">
-                                {/* Assigned Areas */}
                                 <Card className="shadow-3d border-0 mb-4" style={{ background: darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
                                     <CardHeader className="bg-transparent border-bottom border-light py-3">
                                         <CardTitle className="mb-0 d-flex align-items-center justify-content-between w-100">
@@ -177,7 +173,6 @@ const UserDetailPage = () => {
                                     </CardBody>
                                 </Card>
 
-                                {/* Recent Activity */}
                                 <Card className="shadow-3d border-0 mb-4" style={{ background: darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
                                     <CardHeader className="bg-transparent border-bottom border-light py-3">
                                         <CardTitle className="mb-0 d-flex align-items-center">
@@ -213,7 +208,6 @@ const UserDetailPage = () => {
                                     </CardBody>
                                 </Card>
 
-                                {/* Danger Zone */}
                                 <Card className="shadow-3d border-danger border-opacity-25 border-1 bg-danger bg-opacity-10" style={{ background: darkModeStatus ? 'rgba(239, 68, 68, 0.05)' : '' }}>
                                     <CardBody className="p-4 text-center">
                                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 text-start">

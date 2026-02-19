@@ -10,7 +10,6 @@ import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHea
 import Card, { CardBody } from '../../../components/bootstrap/Card';
 import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
-import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalBody, ModalTitle, ModalFooter } from '../../../components/bootstrap/Modal';
 
 import ThemeContext from '../../../contexts/themeContext';
@@ -140,7 +139,6 @@ const UserList = () => {
         }
     ];
 
-    /* ---------------- Actions ---------------- */
     const actionButtons = [
         {
             title: 'Actions',
@@ -149,34 +147,7 @@ const UserList = () => {
             filtering: false,
             render: (rowData: any) => (
                 <div className="d-flex gap-2">
-                    {/* <Button
-                        color="primary"
-                        isLight
-                        icon="Visibility"
-                        title="View Details"
-                        onClick={() => setViewUserId(rowData.id)}
-                        style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            padding: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: darkModeStatus ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)',
-                            border: darkModeStatus ? 'none' : '1px solid rgba(77, 105, 250, 0.3)',
-                            color: darkModeStatus ? '#4d69fa' : '#3650d4',
-                            transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e: any) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(77, 105, 250, 0.25)' : 'rgba(77, 105, 250, 0.2)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e: any) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                        }}
-                    /> */}
+
                     <Button
                         color="info"
                         isLight
@@ -279,7 +250,6 @@ const UserList = () => {
                 setIsOpen={() => setViewUserId(null)}
             />
 
-            {/* User Creation Success Modal (Tour only) */}
             <UserCreateModal
                 isOpen={isCreateOpen}
                 setIsOpen={setIsCreateOpen}
@@ -309,7 +279,7 @@ const UserList = () => {
                         className='w-100 mb-2 py-2'
                         onClick={() => {
                             setIsSuccessModalOpen(false);
-                            setCurrentStep(1); // Move to Area creation step
+                            setCurrentStep(1);
                             navigate('/halo/sensors/areas?startTour=true');
                         }}
                     >

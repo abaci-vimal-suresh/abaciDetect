@@ -1,24 +1,7 @@
-/**
- * Wall Difference Calculation Utilities
- * 
- * Purpose: Fixes Issue #14 (Save button shows no summary of changes)
- * 
- * Problem:
- * - User clicks "Save Changes" but has no idea what will happen
- * - Could accidentally delete walls or create duplicates
- * - No way to review changes before committing
- * 
- * Solution:
- * - Calculate diff between original and current wall states
- * - Show clear summary: "Create 2, Update 1, Delete 3"
- * - Allow user to review before saving
- */
+
 
 import { Wall } from '../../../../types/sensor';
 
-// ============================================
-// DIFF TYPES
-// ============================================
 
 export interface WallDiff {
     created: Wall[];
@@ -36,49 +19,28 @@ export interface WallDiffSummary {
     hasChanges: boolean;
 }
 
-// ============================================
-// DIFF CALCULATION
-// ============================================
 
-/**
- * Calculate the difference between original and current wall states
- * 
- * Categorizes walls into:
- * - Created: New walls (ID starts with "new-")
- * - Updated: Existing walls with modified properties
- * - Deleted: Original walls not present in current state
- * - Unchanged: Walls that haven't been modified
- * 
- * @param originalWalls - Initial wall state (from API)
- * @param currentWalls - Current wall state (after edits)
- * @returns Detailed diff object
- */
 export function calculateWallDiff(
     originalWalls: Wall[],
     currentWalls: Wall[]
 ): WallDiff {
-    // Identify created walls (new IDs)
     const created = currentWalls.filter(wall =>
         String(wall.id).startsWith('new-')
     );
 
-    // Identify deleted walls (in original but not in current)
     const deleted = originalWalls.filter(originalWall =>
         !currentWalls.find(currentWall => currentWall.id === originalWall.id)
     );
 
-    // Identify updated walls (in both, but with different properties)
     const updated = currentWalls
-        .filter(wall => !String(wall.id).startsWith('new-')) // Only existing walls
+        .filter(wall => !String(wall.id).startsWith('new-'))
         .filter(currentWall => {
             const originalWall = originalWalls.find(ow => ow.id === currentWall.id);
             if (!originalWall) return false;
 
-            // Compare wall properties to detect changes
             return !areWallsEqual(originalWall, currentWall);
         });
 
-    // Identify unchanged walls (in both, with same properties)
     const unchanged = currentWalls
         .filter(wall => !String(wall.id).startsWith('new-'))
         .filter(currentWall => {
@@ -96,12 +58,7 @@ export function calculateWallDiff(
     };
 }
 
-/**
- * Get summary statistics from a wall diff
- * 
- * @param diff - Wall diff object
- * @returns Summary with counts and flags
- */
+
 export function getWallDiffSummary(diff: WallDiff): WallDiffSummary {
     const createdCount = diff.created.length;
     const updatedCount = diff.updated.length;
@@ -120,22 +77,7 @@ export function getWallDiffSummary(diff: WallDiff): WallDiffSummary {
     };
 }
 
-// ============================================
-// FORMATTING
-// ============================================
 
-/**
- * Format diff summary as human-readable text
- * 
- * Examples:
- * - "Create 2, Update 1, Delete 3"
- * - "Create 1 wall"
- * - "Update 2 walls"
- * - "No changes"
- * 
- * @param diff - Wall diff object
- * @returns Formatted string
- */
 export function formatDiffSummary(diff: WallDiff): string {
     const summary = getWallDiffSummary(diff);
 
@@ -160,16 +102,7 @@ export function formatDiffSummary(diff: WallDiff): string {
     return parts.join(', ');
 }
 
-/**
- * Format diff summary with wall/walls pluralization
- * 
- * Examples:
- * - "Create 1 wall, Update 2 walls"
- * - "Delete 3 walls"
- * 
- * @param diff - Wall diff object
- * @returns Formatted string with proper pluralization
- */
+
 export function formatDiffSummaryVerbose(diff: WallDiff): string {
     const summary = getWallDiffSummary(diff);
 
@@ -197,20 +130,7 @@ export function formatDiffSummaryVerbose(diff: WallDiff): string {
     return parts.join(', ');
 }
 
-/**
- * Format diff as detailed multi-line description
- * 
- * Example:
- * ```
- * Changes to be saved:
- * • 2 walls will be created
- * • 1 wall will be updated
- * • 3 walls will be deleted
- * ```
- * 
- * @param diff - Wall diff object
- * @returns Multi-line formatted string
- */
+
 export function formatDiffDetailed(diff: WallDiff): string {
     const summary = getWallDiffSummary(diff);
 
@@ -238,19 +158,7 @@ export function formatDiffDetailed(diff: WallDiff): string {
     return lines.join('\n');
 }
 
-// ============================================
-// COMPARISON UTILITIES
-// ============================================
 
-/**
- * Compare two walls for equality
- * 
- * Compares all relevant properties except timestamps
- * 
- * @param wall1 - First wall
- * @param wall2 - Second wall
- * @returns True if walls are equal
- */
 export function areWallsEqual(wall1: Wall, wall2: Wall): boolean {
     // Compare coordinates
     if (wall1.r_x1 !== wall2.r_x1) return false;
@@ -285,13 +193,7 @@ export function areWallsEqual(wall1: Wall, wall2: Wall): boolean {
     return true;
 }
 
-/**
- * Get list of changed properties between two walls
- * 
- * @param originalWall - Original wall
- * @param currentWall - Current wall
- * @returns Array of property names that changed
- */
+
 export function getChangedProperties(originalWall: Wall, currentWall: Wall): string[] {
     const changes: string[] = [];
 
@@ -333,14 +235,7 @@ export function getChangedProperties(originalWall: Wall, currentWall: Wall): str
     return changes;
 }
 
-/**
- * Format changed properties as human-readable text
- * 
- * Example: "Position, Height, Color"
- * 
- * @param changes - Array of changed property names
- * @returns Formatted string
- */
+
 export function formatChangedProperties(changes: string[]): string {
     const labels: Record<string, string> = {
         r_x1: 'Start X',
@@ -372,44 +267,21 @@ export function formatChangedProperties(changes: string[]): string {
     return result.join(', ');
 }
 
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
 
-/**
- * Check if any changes exist in current state
- * 
- * @param originalWalls - Original walls
- * @param currentWalls - Current walls
- * @returns True if any changes exist
- */
 export function hasAnyChanges(originalWalls: Wall[], currentWalls: Wall[]): boolean {
     const diff = calculateWallDiff(originalWalls, currentWalls);
     const summary = getWallDiffSummary(diff);
     return summary.hasChanges;
 }
 
-/**
- * Get IDs of walls that will be deleted
- * 
- * @param originalWalls - Original walls
- * @param currentWalls - Current walls
- * @returns Array of wall IDs to delete
- */
+
 export function getDeletedWallIds(originalWalls: Wall[], currentWalls: Wall[]): (number | string)[] {
     return originalWalls
         .filter(ow => !currentWalls.find(cw => cw.id === ow.id))
         .map(ow => ow.id);
 }
 
-/**
- * Get walls that need to be created (API payload)
- * 
- * Strips temporary IDs and returns payload-ready objects
- * 
- * @param diff - Wall diff object
- * @returns Array of wall objects ready for POST
- */
+
 export function getWallsToCreate(diff: WallDiff): Partial<Wall>[] {
     return diff.created.map(wall => {
         const { id, created_at, updated_at, ...payload } = wall;
@@ -417,22 +289,12 @@ export function getWallsToCreate(diff: WallDiff): Partial<Wall>[] {
     });
 }
 
-/**
- * Get walls that need to be updated (API payload)
- * 
- * @param diff - Wall diff object
- * @returns Array of wall objects ready for PATCH
- */
+
 export function getWallsToUpdate(diff: WallDiff): Wall[] {
     return diff.updated;
 }
 
-/**
- * Get IDs of walls to delete (API payload)
- * 
- * @param diff - Wall diff object
- * @returns Array of wall IDs ready for DELETE
- */
+
 export function getWallIdsToDelete(diff: WallDiff): (number | string)[] {
     return diff.deleted.map(w => w.id);
 }

@@ -27,7 +27,6 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ userId, isOpen, setIsOpen
 
     if (!isOpen) return null;
 
-    // Helper to find assigned areas recursively (from UserDetailPage.tsx)
     const assignedAreas = (() => {
         if (!user || !areas) return [];
         const findAssigned = (areaList: Area[]): Area[] => {
@@ -60,7 +59,6 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ userId, isOpen, setIsOpen
                     </div>
                 ) : (
                     <div className='row g-4'>
-                        {/* Centered Profile Header */}
                         <div className='col-12 text-center mb-2'>
                             <div
                                 className='mx-auto mb-3 d-flex align-items-center justify-content-center shadow-3d'
@@ -89,7 +87,6 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ userId, isOpen, setIsOpen
                         </div>
 
                         <div className='col-12'>
-                            {/* Status & Account Info */}
                             <div className='border-top pt-4 mb-4' style={{ borderColor: darkModeStatus ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
                                 <div className='row g-3'>
                                     <div className='col-md-6'>
@@ -110,7 +107,6 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ userId, isOpen, setIsOpen
                                 </div>
                             </div>
 
-                            {/* Assigned Areas */}
                             <div className='border-top pt-4 mb-4' style={{ borderColor: darkModeStatus ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
                                 <Label className='fw-bold text-muted small text-uppercase mb-3 d-flex align-items-center'>
                                     <Icon icon="Map" size="sm" className="me-2 text-warning" />
@@ -134,7 +130,6 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ userId, isOpen, setIsOpen
                                 )}
                             </div>
 
-                            {/* Recent Activity */}
                             <div className='border-top pt-4' style={{ borderColor: darkModeStatus ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
                                 <Label className='fw-bold text-muted small text-uppercase mb-3 d-flex align-items-center'>
                                     <Icon icon="Timeline" size="sm" className="me-2 text-info" />

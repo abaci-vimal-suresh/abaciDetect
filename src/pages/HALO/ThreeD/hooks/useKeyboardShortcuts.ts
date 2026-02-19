@@ -245,16 +245,8 @@ export function useKeyboardShortcuts(
     }, [enabled, handleKeyDown]);
 }
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 
-/**
- * Check if user is currently typing in an input field
- * 
- * @param event - Keyboard event
- * @returns True if typing in input/textarea/contenteditable
- */
+
 function isTypingInInput(event: KeyboardEvent): boolean {
     const target = event.target as HTMLElement;
 
@@ -267,36 +259,18 @@ function isTypingInInput(event: KeyboardEvent): boolean {
     return isInput || isContentEditable;
 }
 
-/**
- * Get platform-specific modifier key label
- * 
- * @returns "Cmd" on Mac, "Ctrl" on others
- */
+
 export function getModKeyLabel(): string {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     return isMac ? 'Cmd' : 'Ctrl';
 }
 
-/**
- * Format keyboard shortcut for display
- * 
- * Example: "Ctrl+S" or "Cmd+Z"
- * 
- * @param keys - Array of key labels
- * @returns Formatted shortcut string
- */
 export function formatShortcut(keys: string[]): string {
     const modKey = getModKeyLabel();
     return keys.map(k => k === 'Mod' ? modKey : k).join('+');
 }
 
-// ============================================
-// SHORTCUT REFERENCE
-// ============================================
 
-/**
- * Complete list of available shortcuts for documentation/help
- */
 export const AVAILABLE_SHORTCUTS = [
     { keys: ['Mod', 'S'], description: 'Save changes', handler: 'onSave' },
     { keys: ['Mod', 'Z'], description: 'Undo', handler: 'onUndo' },
@@ -314,11 +288,7 @@ export const AVAILABLE_SHORTCUTS = [
     { keys: ['F1'], description: 'Show help (alternative)', handler: 'onHelp' },
 ];
 
-/**
- * Get formatted shortcut reference for UI display
- * 
- * @returns Array of formatted shortcuts
- */
+
 export function getShortcutReference() {
     return AVAILABLE_SHORTCUTS.map(shortcut => ({
         shortcut: formatShortcut(shortcut.keys),

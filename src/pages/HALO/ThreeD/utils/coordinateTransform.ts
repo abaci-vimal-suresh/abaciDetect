@@ -1,9 +1,6 @@
-import { Box3, Vector3 } from 'three';
 import { Sensor, Area } from '../../../../types/sensor';
 
-/**
- * Floor calibration data extracted from .glb model
- */
+
 export interface FloorCalibration {
     width: number;
     depth: number;
@@ -15,10 +12,7 @@ export interface FloorCalibration {
     centerZ: number;
 }
 
-/**
- * Default calibration for the level-react-draco.glb model
- * These values are approximate and should be auto-calibrated when possible
- */
+
 export const DEFAULT_FLOOR_CALIBRATION: FloorCalibration = {
     width: 30,
     depth: 30,
@@ -30,9 +24,7 @@ export const DEFAULT_FLOOR_CALIBRATION: FloorCalibration = {
     centerZ: 0
 };
 
-/**
- * Transform normalized sensor coordinates (0-1) to 3D world space
- */
+
 export function transformSensorTo3D(
     sensor: Sensor,
     calibration: FloorCalibration,
@@ -42,18 +34,13 @@ export function transformSensorTo3D(
     const x_val = sensor.x_val ?? 0.5;
     const y_val = sensor.y_val ?? 0.5;
 
-    // Floor level determines the major vertical jump
     const floorY = baseLevel * floorSpacing;
 
-    // verticalHeight determines the height WITHIN the floor context
-    // In backend data, z_val (e.g. 0.9) is height within floor
     const z_max = sensor.z_max ?? sensor.boundary?.z_max ?? 1;
     const verticalOffset = (sensor.z_val !== undefined)
         ? sensor.z_val
         : z_max;
 
-    // Map normalized coordinates to 3D space
-    // No lift - sit exactly on image if verticalOffset is 0
     const BASE_LIFT = 0;
     const x = calibration.minX + (x_val * calibration.width);
     const z = calibration.minZ + (y_val * calibration.depth);
@@ -62,16 +49,12 @@ export function transformSensorTo3D(
     return { x, y, z };
 }
 
-/**
- * Transform normalized boundary to 3D box dimensions
- */
 export function transformBoundaryTo3D(
     sensor: Sensor,
     calibration: FloorCalibration,
     baseLevel: number = 0,
     floorSpacing: number = 4
 ): { position: [number, number, number]; size: [number, number, number] } | null {
-    // Check if sensor has boundary data
     const hasDirectBoundary = sensor.x_min !== undefined && sensor.x_max !== undefined;
     const hasNestedBoundary = sensor.boundary !== undefined;
 
@@ -85,25 +68,21 @@ export function transformBoundaryTo3D(
     const z_max = sensor.z_max ?? sensor.boundary?.z_max ?? 1;
 
     const floorY = baseLevel * floorSpacing;
-    const BASE_LIFT = 0; // Sit exactly on floor for accurate placement
-    const MIN_HEIGHT_PELS = 25; // Guaranteed 3D volume even if data is thin
+    const BASE_LIFT = 0;
+    const MIN_HEIGHT_PELS = 25;
 
-    // Calculate 3D coordinates
     const x3D_min = calibration.minX + (x_min * calibration.width);
     const x3D_max = calibration.minX + (x_max * calibration.width);
     const z3D_min = calibration.minZ + (y_min * calibration.depth);
     const z3D_max = calibration.minZ + (y_max * calibration.depth);
 
-    // Vertical scaling
     let y3D_min = floorY + (z_min * calibration.height) + BASE_LIFT;
     let y3D_max = floorY + (z_max * calibration.height) + BASE_LIFT;
 
-    // Ensure 3D volume
     if (Math.abs(y3D_max - y3D_min) < MIN_HEIGHT_PELS) {
         y3D_max = y3D_min + MIN_HEIGHT_PELS;
     }
 
-    // Calculate center position and size
     const position: [number, number, number] = [
         (x3D_min + x3D_max) / 2,
         (y3D_min + y3D_max) / 2,
@@ -119,9 +98,7 @@ export function transformBoundaryTo3D(
     return { position, size };
 }
 
-/**
- * Get sensor status color
- */
+
 export function getSensorStatusColor(sensor: Sensor): string {
     const status = sensor.status?.toLowerCase();
 
@@ -136,9 +113,7 @@ export function getSensorStatusColor(sensor: Sensor): string {
     }
 }
 
-/**
- * Determine sensor status from sensor data
- */
+
 export function calculateSensorStatus(sensor: Sensor): 'safe' | 'warning' | 'critical' {
     if (sensor.status) {
         const status = sensor.status.toLowerCase();
@@ -147,7 +122,6 @@ export function calculateSensorStatus(sensor: Sensor): 'safe' | 'warning' | 'cri
         return 'safe';
     }
 
-    // Fallback: calculate from sensor data
     const val = sensor.sensor_data?.val || 0;
     const threshold = sensor.sensor_data?.threshold || 100;
 
@@ -156,9 +130,7 @@ export function calculateSensorStatus(sensor: Sensor): 'safe' | 'warning' | 'cri
     return 'safe';
 }
 
-/**
- * Transform 3D world coordinates back to normalized sensor coordinates (0-1)
- */
+
 export function transform3DToSensor(
     position: { x: number; y: number; z: number },
     calibration: FloorCalibration,
@@ -189,11 +161,8 @@ export function transform3DToSensor(
     };
 }
 
-/**
- * Transform normalized wall coordinates to 3D position, rotation and size
- */
 export function transformWallTo3D(
-    wall: any, // Can be Wall or plain object from API
+    wall: any,
     calibration: FloorCalibration,
     baseLevelY: number = 0
 ): { position: [number, number, number]; rotation: [number, number, number]; size: [number, number, number] } {
@@ -227,19 +196,14 @@ export function transformWallTo3D(
     };
 }
 
-/**
- * Transform 3D world translation back to normalized wall coordinates
- */
 export function transform3DToWall(
     currentWall: any,
     translation3D: { x: number; y: number; z: number },
     calibration: FloorCalibration
 ): { r_x1: number; r_y1: number; r_x2: number; r_y2: number; r_z_offset: number } {
-    // Calculate normalized deltas
     const deltaX = calibration.width !== 0 ? translation3D.x / calibration.width : 0;
     const deltaY = calibration.depth !== 0 ? translation3D.z / calibration.depth : 0;
-    const deltaZ = translation3D.y; // Keep vertical in meters as per API expectation for z_offset if applicable
-
+    const deltaZ = translation3D.y;
     return {
         r_x1: Math.max(0, Math.min(1, currentWall.r_x1 + deltaX)),
         r_y1: Math.max(0, Math.min(1, currentWall.r_y1 + deltaY)),
@@ -249,36 +213,24 @@ export function transform3DToWall(
     };
 }
 
-/**
- * Transform 3D world coordinates to normalized 0-1 coordinates
- * This is the INVERSE of the transformation used in transformWallTo3D
- * Used for converting raycasting click positions to wall coordinates
- * 
- * ✨ ENHANCED: Now includes validation and clamping (Fixes Issue #7)
- */
+
 export function transform3DToNormalized(
     position: { x: number; y: number; z: number },
     calibration: FloorCalibration,
     baseLevelY: number = 0
 ): { x: number; y: number } {
-    // Reverse the transformation from transformWallTo3D
-    // Account for centering offset
     const adjustedX = position.x - calibration.minX;
     const adjustedZ = position.z - calibration.minZ;
 
-    // Convert to normalized 0-1 coordinates
     const normalizedX = calibration.width !== 0 ? adjustedX / calibration.width : 0.5;
     const normalizedY = calibration.depth !== 0 ? adjustedZ / calibration.depth : 0.5;
 
-    // ✨ NEW: Track if clamping occurred
     const wasClampedX = normalizedX < 0 || normalizedX > 1;
     const wasClampedY = normalizedY < 0 || normalizedY > 1;
 
-    // ✨ NEW: Clamp to 0-1 range to ensure valid coordinates (Fixes Issue #7)
     const clampedX = Math.max(0, Math.min(1, normalizedX));
     const clampedY = Math.max(0, Math.min(1, normalizedY));
 
-    // ✨ NEW: Warn if clamping occurred (helps with debugging)
     if (wasClampedX || wasClampedY) {
         console.warn('⚠️ Wall coordinates were outside bounds and have been clamped:', {
             original: {
@@ -309,15 +261,7 @@ export function transform3DToNormalized(
     };
 }
 
-/**
- * ✨ NEW: Validate if 3D coordinates are within calibration bounds
- * 
- * Purpose: Pre-validate coordinates before transformation
- * 
- * @param position - 3D world position
- * @param calibration - Floor calibration
- * @returns Validation result with details
- */
+
 export function validate3DCoordinates(
     position: { x: number; y: number; z: number },
     calibration: FloorCalibration

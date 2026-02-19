@@ -741,7 +741,6 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                 warningMessage="This will unlink the wall from this sensor. The wall will remain in the area."
             />
 
-            {/* ✨ NEW: Slide down animation */}
             <style>{`
                 @keyframes slideDown {
                     from {
