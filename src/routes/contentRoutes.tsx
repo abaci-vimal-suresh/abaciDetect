@@ -2,38 +2,30 @@ import React, { lazy, useContext } from 'react';
 import { Navigate } from 'react-router-dom';
 import AuthContext from '../contexts/authContext';
 import DeviceSettings from '../pages/HALO/Settings/DeviceSettings';
-
 // HALO IoT Pages
 const HaloDashboard = lazy(() => import('../pages/HALO/Dashboard/Dashboard'));
 const HaloSensorList = lazy(() => import('../pages/HALO/Sensors/SensorList'));
 const HaloPrivacySettings = lazy(() => import('../pages/HALO/Privacy/PrivacySettings'));
 const HaloAlertHistory = lazy(() => import('../pages/HALO/Alerts/AlertHistory'));
-const HaloAlertConfiguration = lazy(() => import('../pages/HALO/Alerts/AlertConfiguration'));
 const HaloAlertFilter = lazy(() => import('../pages/HALO/Alerts/AlertFilterPage'));
 const HaloAlertActions = lazy(() => import('../pages/HALO/Alerts/AlertActionPage'));
-const HaloLiveMonitoring = lazy(() => import('../pages/HALO/Monitoring/LiveMonitoring'));
 const HaloReports = lazy(() => import('../pages/HALO/Reports/Reports'));
 const HaloFirmwareUpdate = lazy(() => import('../pages/HALO/Sensors/FirmwareUpdate'));
-const HaloAreaSubzoneDetail = lazy(() => import('../pages/HALO/Sensors/area/AreaSubzoneDetail'));
 const HaloSensorIndividualDetail = lazy(() => import('../pages/HALO/Sensors/SensorIndividualDetail'));
 const HaloSettings = lazy(() => import('../pages/HALO/Settings/DeviceSettings'));
 const HaloAreaMain = lazy(() => import('../pages/HALO/Sensors/area/AreaMain'));
-const HaloAreaSubzones = lazy(() => import('../pages/HALO/Sensors/area/AreaSubzones'));
+const HaloAreaZoneView = lazy(() => import('../pages/HALO/Sensors/area/AreaZoneView'));
 const HaloSensorGroupManager = lazy(() => import('../pages/HALO/Sensors/SensorGroupManager'));
 const HaloTimeTravel = lazy(() => import('../pages/HALO/TimeTravel/TimeTravelPlayback'));
 const ThreeDPage = lazy(() => import('../pages/HALO/ThreeD/ThreeDPage'));
 const N8NIntegrationTutorial = lazy(() => import('../pages/HALO/Integrations/N8NIntegrationTutorial'));
 const HaloSystemSettings = lazy(() => import('../pages/settings/HaloSettings'));
-
-
 const HaloSensorMonitoringDashboard = lazy(() => import('../pages/HALO/Sensors/SensorMonitoringDashboard'));
-
 // User Pages
 const Profile = lazy(() => import('../pages/Profile/Index'));
 const UserListPage = lazy(() => import('../pages/HALO/Users/UserListPage'));
 const UserDetailPage = lazy(() => import('../pages/HALO/Users/UserDetailPage'));
 const UserGroupsPage = lazy(() => import('../pages/HALO/UserGroups/UserGroupsPage'));
-
 
 const RootRedirect = () => {
 	const { userData } = useContext(AuthContext);
@@ -82,19 +74,16 @@ const RouteConfig: CustomRouteConfig[] = [
 		element: <HaloAreaMain />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
-	// Sub Zones within an area
 	{
 		path: '/halo/sensors/areas/:areaId/subzones',
-		element: <HaloAreaSubzones />,
+		element: <HaloAreaZoneView />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
-	// Sensors within a specific sub zone
 	{
 		path: '/halo/sensors/areas/:areaId/subzones/:subzoneId',
-		element: <HaloAreaSubzoneDetail />,
+		element: <HaloAreaZoneView />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
-	// Individual sensor detail
 	{
 		path: '/halo/sensors/detail/:id',
 		element: <HaloSensorIndividualDetail />,

@@ -801,27 +801,14 @@ const AlertHistory = () => {
                         {targetStatus === 'suspended' && (
                             <div className="col-12">
                                 {/* Existing: Auto Reactivation Time Toggle */}
-                                <div className='d-flex align-items-center justify-content-between mb-3'>
-                                    <Label htmlFor='toggle-next-trigger' className='mb-0 fw-bold'>
-                                        Set Automatic Reactivation?
-                                    </Label>
-                                    <Checks
-                                        type='switch'
-                                        id='toggle-next-trigger'
-                                        checked={isNextTriggerEnabled}
-                                        onChange={() => setIsNextTriggerEnabled(!isNextTriggerEnabled)}
-                                        label={isNextTriggerEnabled ? 'Yes' : 'No'}
+
+                                <FormGroup label="Next Trigger Time" formText="The alert will be reactivated after this time.">
+                                    <Input
+                                        type="datetime-local"
+                                        value={nextTriggerTime}
+                                        onChange={(e: any) => setNextTriggerTime(e.target.value)}
                                     />
-                                </div>
-                                {isNextTriggerEnabled && (
-                                    <FormGroup label="Next Trigger Time" formText="The alert will be reactivated after this time.">
-                                        <Input
-                                            type="datetime-local"
-                                            value={nextTriggerTime}
-                                            onChange={(e: any) => setNextTriggerTime(e.target.value)}
-                                        />
-                                    </FormGroup>
-                                )}
+                                </FormGroup>
 
                                 {/* NEW: Smart Reactivation (recheck_next_trigger) */}
                                 <div className='d-flex align-items-center justify-content-between mt-3 pt-3 border-top'>

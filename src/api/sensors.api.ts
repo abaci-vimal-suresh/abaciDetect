@@ -117,7 +117,10 @@ export const useAreas = () => {
     return useQuery({
         queryKey: ['areas'],
         queryFn: async () => {
-            const { data } = await axiosInstance.get('/administration/areas/?include_subareas=true');
+            const { data } = await axiosInstance.get(
+                '/administration/areas/?include_subareas=true&include_config_data=true'
+            );
+            console.log('Areas with config:', data); // 👈 check shape here
             return data as Area[];
         },
     });
@@ -638,6 +641,38 @@ export const useDeleteSensorConfiguration = () => {
                 error?.response?.data?.detail ||
                 error?.response?.data?.message ||
                 'Failed to delete configuration'
+            );
+        },
+    });
+};
+
+export const useBulkAddSensorConfiguration = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (payload: { sensor_id: (number | string)[]; config_ids: number[] }) => {
+            const { sensor_id, config_ids } = payload;
+
+            // Backend expects single sensor_id per request, so we loop on client side
+            const requests = sensor_id.map(id =>
+                axiosInstance.post(`/devices/sensor-configurations/bulk_create/`, {
+                    sensor_id: typeof id === 'string' ? parseInt(id) : id,
+                    config_ids: config_ids
+                })
+            );
+
+            return Promise.all(requests);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['sensorConfigurations'] });
+            showSuccessNotification('Bulk configurations applied successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(
+                error?.response?.data?.detail ||
+                error?.response?.data?.message ||
+                'Failed to apply bulk configurations'
             );
         },
     });
@@ -1740,68 +1775,11 @@ export const useSyncHaloConfigs = () => {
 
 
 
-export interface WaveFilesResponse {
-    success: boolean;
-    sensor_ip: string;
-    wavefiles: string[];
-    count: number;
-}
 
 
 
 
 
-export const useWaveFiles = (ip_address?: string, username?: string, password?: string) => {
-    return useQuery({
-        queryKey: ['wavefiles', ip_address, username, password],
-        queryFn: async () => {
-            const { data } = await axiosInstance.get('devices/wavefiles/list/', {
-                params: {
-                    ip_address,
-                    username,
-                    password
-                }
-            });
-            return data as WaveFilesResponse;
-        },
-        enabled: !!ip_address && !!username && !!password
-    });
-};
-
-
-
-
-
-
-export const useUploadWaveFile = () => {
-    const queryClient = useQueryClient();
-    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
-
-    return useMutation({
-        mutationFn: async ({ ip_address, username, password, file }: { ip_address: string; username: string; password: string; file: File }) => {
-            const url = `devices/wavefiles/add/${file.name}/?ip_address=${encodeURIComponent(ip_address)}&username=${encodeURIComponent(username || 'admin')}&password=${encodeURIComponent(password || 'Abcd@123')}`;
-
-            const { data } = await axiosInstance.post(url, file, {
-                headers: {
-                    'Content-Type': 'application/octet-stream'
-                }
-            });
-            return data;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['wavefiles'] });
-            showSuccessNotification('Sound file uploaded successfully!');
-        },
-        onError: (error: any) => {
-            showErrorNotification(
-                error?.response?.data?.message ||
-                error?.response?.data?.detail ||
-                error?.response?.data?.error ||
-                'Failed to upload sound file'
-            );
-        }
-    });
-};
 
 export const useWalls = (areaId: string | number) => {
     return useQuery({
