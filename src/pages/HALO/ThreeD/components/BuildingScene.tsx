@@ -55,6 +55,8 @@ interface BuildingSceneProps {
     onWallClick?: (wall: Wall) => void;
     onWallDrag?: (wall: Wall, delta: { x: number, y: number, z: number }) => void;
     onWallEndpointsUpdate?: (wall: Wall, points: { r_x1?: number, r_y1?: number, r_x2?: number, r_y2?: number }) => void;
+    onWallEndpointDragStart?: () => void;
+    onWallEndpointDragEnd?: () => void;
     calibration?: FloorCalibration;
     onLoad?: (calibration: FloorCalibration) => void;
     selectedSensorId?: string | number | null;
@@ -82,6 +84,8 @@ const FloorWallManager = ({
     onWallClick,
     onWallDrag,
     onWallEndpointsUpdate,
+    onWallEndpointDragStart,
+    onWallEndpointDragEnd,
     previewState, // ✨ NEW: Unified preview state
     blinkingWallIds = [],
     focusedWallId // ✨ NEW: For real-time editing feedback
@@ -94,6 +98,8 @@ const FloorWallManager = ({
     onWallClick?: (wall: Wall) => void;
     onWallDrag?: (wall: Wall, delta: { x: number, y: number, z: number }) => void;
     onWallEndpointsUpdate?: (wall: Wall, points: { r_x1?: number, r_y1?: number, r_x2?: number, r_y2?: number }) => void;
+    onWallEndpointDragStart?: () => void;
+    onWallEndpointDragEnd?: () => void;
     previewState?: PreviewState; // ✨ NEW
     blinkingWallIds?: (number | string)[];
     focusedWallId?: string | number | null; // ✨ NEW
@@ -127,6 +133,8 @@ const FloorWallManager = ({
                     onHover={(hovered) => setHoveredWallId(hovered ? wall.id : null)}
                     onDrag={(delta) => onWallDrag?.(wall, delta)}
                     onUpdateEndpoints={(points) => onWallEndpointsUpdate?.(wall, points)}
+                    onEndpointDragStart={onWallEndpointDragStart}
+                    onEndpointDragEnd={onWallEndpointDragEnd}
                 />
             ))}
         </>
@@ -145,6 +153,8 @@ export function BuildingScene({
     onWallClick,
     onWallDrag,
     onWallEndpointsUpdate,
+    onWallEndpointDragStart,
+    onWallEndpointDragEnd,
     calibration = DEFAULT_FLOOR_CALIBRATION,
     onLoad,
     selectedSensorId,
@@ -487,25 +497,27 @@ export function BuildingScene({
                 const floorLevel = floor.floor_level ?? floor.offset_z ?? index;
                 const isVisible = visibleAreaIds.length === 0 || visibleAreaIds.includes(Number(floor.id));
                 const yPosition = floor.offset_z !== undefined ? floor.offset_z * 4.0 : floorLevel * floorSpacing;
-                const modelUrl = floor.area_plan || floor.floor_plan_url || '/floor_tiles.glb';
+                const modelUrl = floor.area_plan || floor.floor_plan_url;
                 const floorSensors = sensorsByArea[floor.id] || [];
 
                 return (
                     <group key={`floor-group-${floor.id}`}>
-                        <FloorModel
-                            key={`floor-${floor.id}`}
-                            floorLevel={floorLevel}
-                            areaId={floor.id}
-                            yPosition={yPosition}
-                            floorSpacing={floorSpacing}
-                            visible={isVisible}
-                            opacity={floorOpacity}
-                            onLoad={floorLevel === 0 ? handleFloorLoad : undefined}
-                            centerModel={true}
-                            modelUrl={modelUrl}
-                            onClick={wallDrawMode ? handleFloorClick : undefined}
-                            onPointerMove={wallDrawMode ? handleFloorPointerMove : undefined}
-                        />
+                        {modelUrl && (
+                            <FloorModel
+                                key={`floor-${floor.id}`}
+                                floorLevel={floorLevel}
+                                areaId={floor.id}
+                                yPosition={yPosition}
+                                floorSpacing={floorSpacing}
+                                visible={isVisible}
+                                opacity={floorOpacity}
+                                onLoad={floorLevel === 0 ? handleFloorLoad : undefined}
+                                centerModel={true}
+                                modelUrl={modelUrl}
+                                onClick={wallDrawMode ? handleFloorClick : undefined}
+                                onPointerMove={wallDrawMode ? handleFloorPointerMove : undefined}
+                            />
+                        )}
 
                         {/* ✨ MODIFIED: Walls from centralized data */}
                         {isVisible && (
@@ -518,6 +530,8 @@ export function BuildingScene({
                                 onWallClick={onWallClick}
                                 onWallDrag={onWallDrag}
                                 onWallEndpointsUpdate={onWallEndpointsUpdate}
+                                onWallEndpointDragStart={onWallEndpointDragStart}
+                                onWallEndpointDragEnd={onWallEndpointDragEnd}
                                 previewState={previewState}
                                 blinkingWallIds={blinkingWallIds}
                                 focusedWallId={selectedWallId}

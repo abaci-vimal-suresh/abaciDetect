@@ -123,11 +123,6 @@ export function FloorModel({
                     centerModel={centerModel}
                     visible={visible}
                     opacity={opacity}
-                    glassThickness={0.1} // 10cm glass thickness
-                    glassTransmission={0.6}
-                    glassRoughness={0.15}
-                    enableEdgeGlow={true}
-                    edgeGlowColor="#4a90e2"
                     edgeGlowIntensity={0.05}
                     onClick={onClick}
                     onPointerMove={onPointerMove}
@@ -136,8 +131,7 @@ export function FloorModel({
                 <primitive
                     object={gltf.scene.clone()}
                     position={centerModel ? [offset.x, offset.y, offset.z] : [0, 0, 0]}
-                >
-                </primitive>
+                />
             )}
         </group>
     );
@@ -275,18 +269,6 @@ export function SensorMarker({
                     target-position={[0, -20, 0]} // Points downward toward boundary
                 />
 
-                {/* Visual Light Beam (Cone) - Only if NO boundary */}
-                {!hasBoundary && (
-                    <mesh ref={beamRef} position={[0, -5, 0]} rotation={[0, 0, 0]}>
-                        <coneGeometry args={[2, 10, 32, 1, true]} />
-                        <meshBasicMaterial
-                            color={color}
-                            transparent
-                            opacity={0.15}
-                            side={THREE.DoubleSide}
-                        />
-                    </mesh>
-                )}
 
                 {tintedScene ? (
                     <primitive

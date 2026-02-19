@@ -1,15 +1,6 @@
-/**
- * 3D Page Styles
- * 
- * ✨ ENHANCEMENTS:
- * - Added styles for new components (modals, instructions, legends)
- * - Improved visual feedback for drawing mode
- * - Added keyboard shortcuts overlay styles
- */
-
 .threed-page-container {
-    height: calc(100vh - 120px) !important;
-    background: #000;
+    height: calc(100vh - 85px) !important;
+    overflow: hidden;
 
     .threed-canvas {
         opacity: 0;
@@ -50,7 +41,6 @@
     }
 }
 
-// Global filter as seen in README.md snippet but scoped to our canvas
 .threed-canvas {
     filter: saturate(1.15) hue-rotate(345deg);
 }

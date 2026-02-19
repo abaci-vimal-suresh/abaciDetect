@@ -12,7 +12,6 @@
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { PivotControls } from '@react-three/drei';
 import { Wall } from '../../../../types/sensor';
 import { transformWallTo3D, FloorCalibration } from '../utils/coordinateTransform';
 import {
@@ -21,8 +20,6 @@ import {
     BLINKING_ANIMATION_SPEED,
     WALL_WIREFRAME_OPACITY,
     WALL_WIREFRAME_OPACITY_HOVER,
-    WALL_PIVOT_SCALE,
-    WALL_PIVOT_LINE_WIDTH,
     PREVIEW_WALL_OPACITY,
     PREVIEW_WALL_COLOR
 } from '../../../../constants/wallDefaults';
@@ -40,6 +37,8 @@ interface WallSegmentProps {
     onHover?: (hovered: boolean) => void;
     onDrag?: (delta: { x: number, y: number, z: number }) => void;
     onUpdateEndpoints?: (points: { r_x1?: number, r_y1?: number, r_x2?: number, r_y2?: number }) => void;
+    onEndpointDragStart?: () => void;
+    onEndpointDragEnd?: () => void;
 }
 
 export const WallSegment: React.FC<WallSegmentProps> = ({
@@ -54,7 +53,9 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
     onClick,
     onHover,
     onDrag,
-    onUpdateEndpoints
+    onUpdateEndpoints,
+    onEndpointDragStart,
+    onEndpointDragEnd
 }) => {
     const materialRef = useRef<THREE.MeshPhysicalMaterial>(null);
     const dragStartProps = useRef<{ r_x1: number, r_y1: number, r_x2: number, r_y2: number } | null>(null);
@@ -150,91 +151,59 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
 
     return (
         <group>
-            {/* ✨ MODIFIED: Hide pivot controls for preview walls */}
+            {/* Wall mesh - no PivotControls */}
             {!isPreview && (
-                <PivotControls
-                    anchor={[0, 0, 0]}
-                    depthTest={false}
-                    scale={WALL_PIVOT_SCALE}
-                    lineWidth={WALL_PIVOT_LINE_WIDTH}
-                    fixed={true}
-                    visible={isSelected}
-                    activeAxes={[true, true, true]} // Allow all horizontal movements
-                    onDrag={(local) => {
-                        const pos = new THREE.Vector3();
-                        pos.setFromMatrixPosition(local);
-                        // Pass the delta movement
-                        onDrag?.({ x: pos.x, y: pos.y, z: pos.z });
+                <mesh
+                    position={position}
+                    rotation={rotation}
+                    castShadow
+                    receiveShadow
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClick?.(wall);
+                    }}
+                    onPointerOver={(e) => {
+                        e.stopPropagation();
+                        onHover?.(true);
+                    }}
+                    onPointerOut={() => {
+                        onHover?.(false);
                     }}
                 >
-                    <mesh
-                        position={position}
-                        rotation={rotation}
-                        castShadow
-                        receiveShadow
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onClick?.(wall);
-                        }}
-                        onPointerOver={(e) => {
-                            e.stopPropagation();
-                            onHover?.(true);
-                        }}
-                        onPointerOut={() => {
-                            onHover?.(false);
-                        }}
-                    >
-                        <boxGeometry args={size} />
-                        <meshPhysicalMaterial
-                            ref={materialRef}
-                            color={baseColor}
-                            transparent={true}
-                            opacity={opacity}
-                            metalness={isGlass ? 0.1 : 0}
-                            roughness={isGlass ? 0.15 : 0.5}
-                            transmission={isGlass ? 0.6 : 0}
-                            thickness={wall.thickness ?? 0.15}
-                            ior={1.5}
-                            clearcoat={1.0}
-                            envMapIntensity={1.0}
-                        />
+                    <boxGeometry args={size} />
+                    <meshPhysicalMaterial
+                        ref={materialRef}
+                        color={baseColor}
+                        transparent={true}
+                        opacity={opacity}
+                        metalness={isGlass ? 0.1 : 0}
+                        roughness={isGlass ? 0.15 : 0.5}
+                        transmission={isGlass ? 0.6 : 0}
+                        thickness={wall.thickness ?? 0.15}
+                        ior={1.5}
+                        clearcoat={1.0}
+                        envMapIntensity={1.0}
+                    />
 
-                        {/* ✨ MODIFIED: Edge Glow - Different styles for different states */}
-                        {(isSelected || isHovered || isBlinking || isFocused || isPreview) && (
-                            <mesh scale={[1.002, 1.002, 1.05]}>
-                                <boxGeometry args={size} />
-                                <meshBasicMaterial
-                                    color={
-                                        isFocused ? '#4a90e2' : // Blue for focused
-                                            isPreview ? PREVIEW_WALL_COLOR : // Gold for preview
-                                                baseColor // Original color for others
-                                    }
-                                    wireframe
-                                    transparent
-                                    opacity={
-                                        isBlinking || isSelected ? WALL_WIREFRAME_OPACITY :
-                                            isFocused ? 0.6 :
-                                                isPreview ? 0.5 :
-                                                    WALL_WIREFRAME_OPACITY_HOVER
-                                    }
-                                />
-                            </mesh>
-                        )}
-
-                        {/* ✨ NEW: Dotted outline for preview walls */}
-                        {isPreview && (
-                            <mesh scale={[1.01, 1.01, 1.1]}>
-                                <boxGeometry args={size} />
-                                <meshBasicMaterial
-                                    color={PREVIEW_WALL_COLOR}
-                                    wireframe
-                                    transparent
-                                    opacity={0.8}
-                                />
-                            </mesh>
-                        )}
-                    </mesh>
-                </PivotControls>
+                    {/* Edge Glow */}
+                    {(isSelected || isHovered || isBlinking || isFocused) && (
+                        <mesh scale={[1.002, 1.002, 1.05]}>
+                            <boxGeometry args={size} />
+                            <meshBasicMaterial
+                                color={
+                                    isFocused ? '#4a90e2' : baseColor
+                                }
+                                wireframe
+                                transparent
+                                opacity={
+                                    isBlinking || isSelected ? WALL_WIREFRAME_OPACITY :
+                                        isFocused ? 0.6 :
+                                            WALL_WIREFRAME_OPACITY_HOVER
+                                }
+                            />
+                        </mesh>
+                    )}
+                </mesh>
             )}
 
 
@@ -249,11 +218,13 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
                             e.stopPropagation();
                             (e.target as Element).setPointerCapture(e.pointerId);
                             dragStartProps.current = { r_x1: wall.r_x1, r_y1: wall.r_y1, r_x2: wall.r_x2, r_y2: wall.r_y2 };
+                            onEndpointDragStart?.();
                         }}
                         onPointerUp={(e) => {
                             e.stopPropagation();
                             (e.target as Element).releasePointerCapture(e.pointerId);
                             dragStartProps.current = null;
+                            onEndpointDragEnd?.();
                         }}
                         onPointerMove={(e) => {
                             if (!dragStartProps.current) return;
@@ -293,11 +264,13 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
                             e.stopPropagation();
                             (e.target as Element).setPointerCapture(e.pointerId);
                             dragStartProps.current = { r_x1: wall.r_x1, r_y1: wall.r_y1, r_x2: wall.r_x2, r_y2: wall.r_y2 };
+                            onEndpointDragStart?.();
                         }}
                         onPointerUp={(e) => {
                             e.stopPropagation();
                             (e.target as Element).releasePointerCapture(e.pointerId);
                             dragStartProps.current = null;
+                            onEndpointDragEnd?.();
                         }}
                         onPointerMove={(e) => {
                             if (!dragStartProps.current) return;
