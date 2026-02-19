@@ -1,4 +1,3 @@
-import React from 'react';
 import UnderConstructionPage from '../../../components/extras/UnderConstructionPage';
 
 const TimeTravelPlayback = () => {

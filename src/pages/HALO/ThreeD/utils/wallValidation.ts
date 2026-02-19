@@ -1,19 +1,4 @@
-/**
- * Wall Validation Utilities
- * 
- * Purpose: Fixes Issue #4 (no visual feedback for invalid clicks)
- *          and Issue #7 (coordinate transformation lacks validation)
- * 
- * Problem:
- * - Clicking outside building bounds silently fails
- * - No user feedback when clicks are invalid
- * - Invalid coordinates can be saved to backend
- * 
- * Solution:
- * - Validate all wall-related operations
- * - Return user-friendly error messages
- * - Prevent corrupt data from being created
- */
+
 
 import * as THREE from 'three';
 import { Wall } from '../../../../types/sensor';
@@ -26,9 +11,6 @@ import {
     FLOOR_Y_TOLERANCE
 } from '../../../../constants/wallDefaults';
 
-// ============================================
-// VALIDATION RESULT TYPE
-// ============================================
 
 export interface ValidationResult {
     valid: boolean;
@@ -36,28 +18,12 @@ export interface ValidationResult {
     severity?: 'error' | 'warning' | 'info';
 }
 
-// ============================================
-// CLICK VALIDATION
-// ============================================
 
-/**
- * Validate if a click point is suitable for wall creation
- * 
- * Checks:
- * - Point has valid areaId (clicked on floor mesh)
- * - Point is within building calibration bounds
- * 
- * @param point - 3D coordinates of the click
- * @param areaId - Area ID from raycast userData
- * @param calibration - Floor calibration data
- * @returns Validation result with error message if invalid
- */
 export function validateWallClick(
     point: THREE.Vector3,
     areaId: number | undefined,
     calibration: FloorCalibration
 ): ValidationResult {
-    // Check 1: Must have areaId (clicked on a floor mesh)
     if (areaId === undefined) {
         return {
             valid: false,
@@ -66,7 +32,6 @@ export function validateWallClick(
         };
     }
 
-    // Check 2: Point must be within calibration bounds (X axis)
     const normalizedX = (point.x - calibration.minX) / calibration.width;
     if (normalizedX < -0.1 || normalizedX > 1.1) {
         return {
@@ -76,7 +41,6 @@ export function validateWallClick(
         };
     }
 
-    // Check 3: Point must be within calibration bounds (Z axis)
     const normalizedZ = (point.z - calibration.minZ) / calibration.depth;
     if (normalizedZ < -0.1 || normalizedZ > 1.1) {
         return {
@@ -86,7 +50,6 @@ export function validateWallClick(
         };
     }
 
-    // Check 4: Warning if very close to edge (within 5% of bounds)
     if (normalizedX < 0.05 || normalizedX > 0.95 || normalizedZ < 0.05 || normalizedZ > 0.95) {
         return {
             valid: true,
@@ -98,19 +61,7 @@ export function validateWallClick(
     return { valid: true };
 }
 
-/**
- * Validate if two click points can form a valid wall segment
- * 
- * Checks:
- * - Both points are on the same floor (Y coordinate)
- * - Distance between points meets min/max requirements
- * - Points are not identical
- * 
- * @param point1 - First click point
- * @param point2 - Second click point
- * @param floorY - Expected floor Y coordinate
- * @returns Validation result with error message if invalid
- */
+
 export function validateWallSegment(
     point1: THREE.Vector3,
     point2: THREE.Vector3,
@@ -175,16 +126,7 @@ export function validateWallSegment(
     return { valid: true };
 }
 
-// ============================================
-// WALL PROPERTIES VALIDATION
-// ============================================
 
-/**
- * Validate wall height value
- * 
- * @param height - Wall height in meters
- * @returns Validation result
- */
 export function validateWallHeight(height: number): ValidationResult {
     if (height < MIN_WALL_HEIGHT) {
         return {
@@ -222,12 +164,7 @@ export function validateWallHeight(height: number): ValidationResult {
     return { valid: true };
 }
 
-/**
- * Validate wall color hex code
- * 
- * @param color - Hex color string
- * @returns Validation result
- */
+
 export function validateWallColor(color: string): ValidationResult {
     // Check if valid hex color format
     const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
@@ -243,12 +180,7 @@ export function validateWallColor(color: string): ValidationResult {
     return { valid: true };
 }
 
-/**
- * Validate wall opacity value
- * 
- * @param opacity - Opacity value (0-1)
- * @returns Validation result
- */
+
 export function validateWallOpacity(opacity: number): ValidationResult {
     if (opacity < 0 || opacity > 1) {
         return {
@@ -270,12 +202,7 @@ export function validateWallOpacity(opacity: number): ValidationResult {
     return { valid: true };
 }
 
-/**
- * Validate wall thickness value
- * 
- * @param thickness - Thickness in meters
- * @returns Validation result
- */
+
 export function validateWallThickness(thickness: number): ValidationResult {
     if (thickness <= 0) {
         return {
@@ -305,17 +232,7 @@ export function validateWallThickness(thickness: number): ValidationResult {
     return { valid: true };
 }
 
-// ============================================
-// NORMALIZED COORDINATES VALIDATION
-// ============================================
 
-/**
- * Validate normalized coordinate value (should be 0-1)
- * 
- * @param value - Normalized coordinate
- * @param label - Name of coordinate for error message
- * @returns Validation result
- */
 export function validateNormalizedCoordinate(value: number, label: string): ValidationResult {
     if (value < 0 || value > 1) {
         return {
@@ -328,14 +245,7 @@ export function validateNormalizedCoordinate(value: number, label: string): Vali
     return { valid: true };
 }
 
-/**
- * Validate complete wall object before saving
- * 
- * Performs comprehensive validation of all wall properties
- * 
- * @param wall - Wall object to validate
- * @returns Validation result
- */
+
 export function validateWallObject(wall: Partial<Wall>): ValidationResult {
     // Required fields check
     if (wall.r_x1 === undefined || wall.r_y1 === undefined ||

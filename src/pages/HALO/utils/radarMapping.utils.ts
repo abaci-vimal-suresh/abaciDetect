@@ -1,6 +1,5 @@
 import { Area } from '../../../types/sensor';
 
-// ── Metric Map ────────────────────────────────────────────────────────────────
 export const METRIC_MAP: Record<string, { config: string; agg: string; unit: string; label: string }> = {
     temperature: { config: 'temp_c', agg: 'temperature', unit: '°C', label: 'Temperature' },
     humidity: { config: 'Humidity', agg: 'humidity', unit: '%', label: 'Humidity' },
@@ -20,7 +19,6 @@ export const METRIC_MAP: Record<string, { config: string; agg: string; unit: str
     aqi: { config: 'AQI', agg: 'aqi', unit: 'index', label: 'AQI' },
 };
 
-// ── Events (binary — shown as status badges, NOT on charts) ──────────────────
 export const EVENT_METRIC_KEYS = ['panic', 'acc_x', 'acc_y', 'acc_z'];
 
 export const EVENT_MAP: Record<string, { config: string; label: string }> = {
@@ -58,7 +56,6 @@ export const getEffectiveConfig = (
     return {};
 };
 
-// ── Filter rules ──────────────────────────────────────────────────────────────
 // Skip: null values, both min+max = 0, event-type keys
 export const isValidMetric = (
     key: string,

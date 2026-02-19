@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { Wall } from '../../../../types/sensor';
 import { transform3DToNormalized, FloorCalibration } from './coordinateTransform';
 
-/**
- * Wall drawing handlers for raycasting-based wall creation
- */
+
 
 export interface WallDrawingHandlers {
     handleFloorClick: (event: any) => void;

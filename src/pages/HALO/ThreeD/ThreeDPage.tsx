@@ -1,14 +1,3 @@
-/**
- * 3D Page - Main Orchestrator Component
- * 
- * ✨ MAJOR REFACTORS (Issues #1, #2, #3, #9):
- * - Unified preview state (Issue #3)
- * - Centralized wall fetching (Issue #2)
- * - Fixed race condition in wall creation (Issue #1)
- * - Added keyboard shortcuts (Issue #9)
- * - Better state management and data flow
- */
-
 import { Suspense, useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
@@ -34,7 +23,6 @@ import { flattenAreas } from './utils/dataTransform';
 import { Wall } from '../../../types/sensor';
 import useToasterNotification from '../../../hooks/useToasterNotification';
 
-// ✨ NEW IMPORTS
 import {
     PreviewState,
     createSensorPositionPreview,
@@ -52,9 +40,6 @@ const ThreeDPage = () => {
     const { darkModeStatus } = useDarkMode();
     const { showNotification } = useToasterNotification();
 
-    // ============================================
-    // ✨ STATE MANAGEMENT (Refactored)
-    // ============================================
 
     // UI State
     const [showBoundaries, setShowBoundaries] = useState(true);
@@ -75,35 +60,21 @@ const ThreeDPage = () => {
     const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
     const [isWallEndpointDragging, setIsWallEndpointDragging] = useState(false);
 
-    // ✨ NEW: Unified Preview State (Fixes Issue #3)
     const [previewState, setPreviewState] = useState<PreviewState>(null);
 
-    // ✨ NEW: Wall creation counter (Fixes Issue #1 - Race condition)
     const [wallCreationTrigger, setWallCreationTrigger] = useState(0);
     const [pendingWall, setPendingWall] = useState<Partial<Wall> | null>(null);
 
-    // 3D Calibration
     const [calibration, setCalibration] = useState<any>(null);
 
-    // ============================================
-    // ✨ DATA FETCHING (Centralized)
-    // ============================================
-
-    // Fetch areas and sensors
     const { data: areasData, isLoading: areasLoading } = useAreas();
     const { data: sensorsData, isLoading: sensorsLoading } = useSensors();
-
-    // Mutations
     const createWallMutation = useCreateWall();
 
-    // ✨ NEW: Centralized wall fetching (Fixes Issue #2)
-    // Fetch walls for all selected areas at once
     const { data: wallsData, isLoading: wallsLoading } = useQuery({
         queryKey: ['walls-centralized', selectedAreaIds],
         queryFn: async () => {
             if (selectedAreaIds.length === 0) return {};
-
-            // Fetch walls for all selected areas in parallel
             const wallPromises = selectedAreaIds.map(async (areaId) => {
                 try {
                     const { data } = await axiosInstance.get<{ results: Wall[] }>(
@@ -119,7 +90,6 @@ const ThreeDPage = () => {
 
             const results = await Promise.all(wallPromises);
 
-            // Convert to Record<areaId, Wall[]>
             const wallsByArea: Record<number, Wall[]> = {};
             results.forEach(({ areaId, walls }) => {
                 wallsByArea[areaId] = walls;
@@ -132,16 +102,11 @@ const ThreeDPage = () => {
         staleTime: 2 * 60 * 1000, // 2 minutes
     });
 
-    // ============================================
-    // ✨ KEYBOARD SHORTCUTS (Fixes Issue #9)
-    // ============================================
 
     useKeyboardShortcuts({
         onSave: () => {
             if (showSettingsOverlay || editingAreaForWalls) {
                 console.log('Keyboard: Save triggered');
-                // The save button in overlays will handle this
-                // We just need to trigger a click event on the save button
                 const saveButton = document.querySelector('[data-save-button="true"]') as HTMLButtonElement;
                 if (saveButton) {
                     saveButton.click();
@@ -161,7 +126,6 @@ const ThreeDPage = () => {
         },
         onEscape: () => {
             console.log('Keyboard: Escape triggered');
-            // Same as cancel
             if (wallDrawMode) {
                 setWallDrawMode(false);
             } else if (showSettingsOverlay) {
@@ -182,9 +146,6 @@ const ThreeDPage = () => {
         debug: false
     });
 
-    // ============================================
-    // ESC KEY HANDLER (Wall Drawing Cancellation)
-    // ============================================
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -197,9 +158,6 @@ const ThreeDPage = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [wallDrawMode, showNotification]);
 
-    // ============================================
-    // DATA FILTERING (Building-specific)
-    // ============================================
 
     const { filteredAreas, filteredSensors } = useMemo(() => {
         const rawAreas = areasData || [];
@@ -253,9 +211,6 @@ const ThreeDPage = () => {
     const areas = filteredAreas;
     const sensors = filteredSensors;
 
-    // ============================================
-    // DERIVED STATE
-    // ============================================
 
     const selectedSensor = useMemo(() => {
         if (!selectedSensorId) return null;
@@ -282,9 +237,6 @@ const ThreeDPage = () => {
         return grouped;
     }, [sensors]);
 
-    // ============================================
-    // ✨ INITIALIZATION (Area Selection)
-    // ============================================
 
     useEffect(() => {
         if (areas.length > 0 && selectedAreaIds.length === 0 && !urlAreaId) {
@@ -299,9 +251,6 @@ const ThreeDPage = () => {
         }
     }, [urlAreaId]);
 
-    // ============================================
-    // ✨ AREA ISOLATION (When Sensor Selected)
-    // ============================================
 
     useEffect(() => {
         if (selectedSensor) {
@@ -314,20 +263,14 @@ const ThreeDPage = () => {
         }
     }, [selectedSensor]);
 
-    // ============================================
-    // ✨ WALL CREATION HANDLER (Fixes Issue #1)
-    // ============================================
 
     const handleWallCreated = (newWall: Partial<Wall>) => {
         console.log('ThreeDPage: onWallCreated received:', newWall);
 
         if (editingAreaForWalls) {
             console.log('ThreeDPage: Buffering wall for AreaSettingsOverlay');
-            // ✨ FIX: Use counter to force re-render instead of setTimeout
             setPendingWall(newWall);
             setWallCreationTrigger(prev => prev + 1);
-
-            // Clear after a brief moment (longer than before to ensure propagation)
             setTimeout(() => {
                 setPendingWall(null);
             }, 500);
@@ -338,16 +281,11 @@ const ThreeDPage = () => {
         setWallDrawMode(false);
     };
 
-    // ============================================
-    // ✨ PREVIEW STATE HANDLERS (Unified)
-    // ============================================
 
     const handleSensorPreviewChange = (sensorId: string | number, changes: any) => {
         if (changes === null) {
-            // Clear preview
             setPreviewState(null);
         } else if (changes.walls) {
-            // Sensor walls preview
             setPreviewState(createSensorWallsPreview(sensorId, changes.walls));
         } else {
             // Sensor position preview
@@ -371,7 +309,7 @@ const ThreeDPage = () => {
     };
 
     const handleWallPointsUpdate = (wall: Wall, points: { r_x1?: number, r_y1?: number, r_x2?: number, r_y2?: number }) => {
-        console.log('🐞 update_debug: ThreeDPage received update', { wallId: wall.id, points });
+        console.log(' update_debug: ThreeDPage received update', { wallId: wall.id, points });
         const areaId = wall.area_ids && wall.area_ids.length > 0 ? wall.area_ids[0] : null;
         if (!areaId) return;
 
@@ -397,9 +335,6 @@ const ThreeDPage = () => {
         }
     };
 
-    // ============================================
-    // SENSOR DRAG HANDLER
-    // ============================================
 
     const handleSensorDrag = (sensor: any, newCoords: { x_val: number, y_val: number, z_val: number }) => {
         const updatedPreview = createSensorPositionPreview(
@@ -414,18 +349,11 @@ const ThreeDPage = () => {
 
     const isLoading = areasLoading || sensorsLoading;
 
-    // ============================================
-    // RENDER
-    // ============================================
 
     return (
         <PageWrapper title='3D Sensor Visualization'>
             <Page container='fluid' className='p-0 h-100'>
                 <div className='threed-page-container d-flex flex-column'>
-                    {/* ============================================ */}
-                    {/* HEADER CONTROLS                              */}
-                    {/* ============================================ */}
-
                     <Card className='mb-0 rounded-0 border-0 border-bottom'>
                         <CardHeader className='bg-transparent border-0'>
                             <div className='d-flex justify-content-between align-items-center'>
@@ -463,16 +391,10 @@ const ThreeDPage = () => {
                         </CardHeader>
                     </Card>
 
-                    {/* ============================================ */}
-                    {/* 3D CANVAS                                    */}
-                    {/* ============================================ */}
 
                     <div
                         className='flex-grow-1 position-relative d-flex overflow-hidden'
                     >
-                        {/* ============================================ */}
-                        {/* SENSORS SIDEBAR                              */}
-                        {/* ============================================ */}
 
                         {showSidebar && (
                             <div
@@ -524,7 +446,7 @@ const ThreeDPage = () => {
                                                                 }
                                                                 setSelectedSensorId(s.id);
                                                                 setShowSettingsOverlay(false);
-                                                                // ✨ MODIFIED: Use unified preview state
+                                                                // MODIFIED: Use unified preview state
                                                                 setPreviewState(createSensorPositionPreview(
                                                                     s.id,
                                                                     s.x_val || 0,
@@ -583,9 +505,6 @@ const ThreeDPage = () => {
                             </div>
                         )}
 
-                        {/* ============================================ */}
-                        {/* 3D SCENE                                     */}
-                        {/* ============================================ */}
 
                         <Canvas shadows gl={{ antialias: false }}>
                             <Suspense fallback={<Html center><div className='text-white d-flex align-items-center gap-2'><div className='spinner-border spinner-border-sm' /> Initializing 3D Scene...</div></Html>}>
@@ -640,7 +559,6 @@ const ThreeDPage = () => {
                                     selectedWallId={selectedWallId}
                                     onWallClick={(wall) => {
                                         setSelectedWallId(wall.id);
-                                        // Find which area this wall belongs to
                                         if (wallsData) {
                                             for (const [areaId, walls] of Object.entries(wallsData)) {
                                                 if (walls.some(w => String(w.id) === String(wall.id))) {
@@ -684,13 +602,13 @@ const ThreeDPage = () => {
                                 originalSensor={selectedSensor}
                                 onClose={() => {
                                     setShowSettingsOverlay(false);
-                                    setPreviewState(null); // ✨ Clear preview
+                                    setPreviewState(null); //  Clear preview
                                 }}
                                 onPreviewChange={(changes) => {
                                     handleSensorPreviewChange(selectedSensor.id, changes);
                                 }}
                                 onBlinkingWallsChange={setBlinkingWallIds}
-                                previewState={previewState} // ✨ NEW: Sync from 3D drag
+                                previewState={previewState} //  NEW: Sync from 3D drag
                             />
                         )}
 
@@ -699,7 +617,7 @@ const ThreeDPage = () => {
                                 sensor={selectedSensor}
                                 onClose={() => {
                                     setSelectedSensorId(null);
-                                    setPreviewState(null); // ✨ Clear preview
+                                    setPreviewState(null); //  Clear preview
                                 }}
                                 onSettingsClick={() => setShowSettingsOverlay(true)}
                             />
@@ -710,11 +628,11 @@ const ThreeDPage = () => {
                                 area={editingAreaForWalls}
                                 isDrawing={wallDrawMode}
                                 onToggleDrawing={setWallDrawMode}
-                                newlyCreatedWall={pendingWall} // ✨ FIX: Use controlled state
-                                wallCreationTrigger={wallCreationTrigger} // ✨ FIX: Counter to force updates
+                                newlyCreatedWall={pendingWall}
+                                wallCreationTrigger={wallCreationTrigger}
                                 onClose={() => {
                                     setEditingAreaForWalls(null);
-                                    setPreviewState(null); // ✨ Clear preview
+                                    setPreviewState(null);
                                     setWallDrawMode(false);
                                 }}
                                 onPreviewChange={(changes) => {

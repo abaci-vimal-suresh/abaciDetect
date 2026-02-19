@@ -1,24 +1,7 @@
-/**
- * Wall Drawing History Hook (Undo/Redo)
- * 
- * Purpose: Fixes Issue #5 (no undo/redo for wall drawing)
- * 
- * Problem:
- * - User misclicks second point → must cancel and start over
- * - Very frustrating when drawing complex floor plans
- * - No way to go back one step
- * 
- * Solution:
- * - Track history of drawing actions
- * - Allow undo to previous state
- * - Keyboard shortcut support (Ctrl+Z)
- */
 
 import { useState, useCallback } from 'react';
 
-// ============================================
-// ACTION TYPES
-// ============================================
+
 
 export type DrawingActionType =
     | 'SET_FIRST_POINT'
@@ -54,41 +37,17 @@ export interface WallDrawingState {
 // HOOK
 // ============================================
 
-/**
- * Hook for managing wall drawing history with undo capability
- * 
- * Usage:
- * ```typescript
- * const { 
- *     currentState, 
- *     recordSetFirstPoint, 
- *     recordClearFirstPoint,
- *     undo, 
- *     canUndo,
- *     clear
- * } = useWallDrawingHistory();
- * ```
- */
 export function useWallDrawingHistory() {
-    // History stack (stores all actions)
     const [history, setHistory] = useState<DrawingAction[]>([]);
 
-    // Current index in history (-1 = no actions)
     const [currentIndex, setCurrentIndex] = useState<number>(-1);
 
-    // Current drawing state (derived from history)
     const [currentState, setCurrentState] = useState<WallDrawingState>({
         firstPoint: null,
         previewEndPoint: null
     });
 
-    // ============================================
-    // RECORD ACTIONS
-    // ============================================
 
-    /**
-     * Record: User set first point
-     */
     const recordSetFirstPoint = useCallback((point: FirstPointData) => {
         const action: DrawingAction = {
             type: 'SET_FIRST_POINT',
@@ -104,9 +63,6 @@ export function useWallDrawingHistory() {
         });
     }, [currentIndex]);
 
-    /**
-     * Record: User cleared first point (cancelled)
-     */
     const recordClearFirstPoint = useCallback(() => {
         const action: DrawingAction = {
             type: 'CLEAR_FIRST_POINT',
@@ -122,10 +78,7 @@ export function useWallDrawingHistory() {
         });
     }, [currentIndex]);
 
-    /**
-     * Record: User updated preview endpoint (mouse move)
-     * Note: We don't add this to history stack (too many events)
-     */
+
     const updatePreviewEndPoint = useCallback((point: { x: number; y: number; z: number } | null) => {
         setCurrentState(prev => ({
             ...prev,
@@ -133,9 +86,7 @@ export function useWallDrawingHistory() {
         }));
     }, []);
 
-    /**
-     * Record: User created wall (second click)
-     */
+
     const recordCreateWall = useCallback((wall: any) => {
         const action: DrawingAction = {
             type: 'CREATE_WALL',
@@ -151,9 +102,7 @@ export function useWallDrawingHistory() {
         });
     }, [currentIndex]);
 
-    /**
-     * Record: User cancelled drawing mode
-     */
+
     const recordCancel = useCallback(() => {
         const action: DrawingAction = {
             type: 'CANCEL',
@@ -169,51 +118,33 @@ export function useWallDrawingHistory() {
         });
     }, [currentIndex]);
 
-    // ============================================
-    // UNDO/REDO
-    // ============================================
 
-    /**
-     * Undo last action
-     * 
-     * Goes back one step in history and restores previous state
-     */
     const undo = useCallback(() => {
         if (currentIndex <= 0) {
-            // No actions to undo
             return;
         }
 
         const newIndex = currentIndex - 1;
         setCurrentIndex(newIndex);
 
-        // Rebuild state from history up to newIndex
         const newState = rebuildStateFromHistory(history.slice(0, newIndex + 1));
         setCurrentState(newState);
     }, [currentIndex, history]);
 
-    /**
-     * Redo last undone action
-     */
+
     const redo = useCallback(() => {
         if (currentIndex >= history.length - 1) {
-            // No actions to redo
             return;
         }
 
         const newIndex = currentIndex + 1;
         setCurrentIndex(newIndex);
 
-        // Rebuild state from history up to newIndex
         const newState = rebuildStateFromHistory(history.slice(0, newIndex + 1));
         setCurrentState(newState);
     }, [currentIndex, history]);
 
-    /**
-     * Clear entire history
-     * 
-     * Resets to initial state
-     */
+
     const clear = useCallback(() => {
         setHistory([]);
         setCurrentIndex(-1);
@@ -223,61 +154,40 @@ export function useWallDrawingHistory() {
         });
     }, []);
 
-    // ============================================
-    // STATE CHECKS
-    // ============================================
+
 
     const canUndo = currentIndex > 0;
     const canRedo = currentIndex < history.length - 1;
     const hasFirstPoint = currentState.firstPoint !== null;
     const hasPreviewEndPoint = currentState.previewEndPoint !== null;
 
-    // ============================================
-    // RETURN API
-    // ============================================
+
 
     return {
-        // Current state
         currentState,
         firstPoint: currentState.firstPoint,
         previewEndPoint: currentState.previewEndPoint,
 
-        // Recording actions
         recordSetFirstPoint,
         recordClearFirstPoint,
         updatePreviewEndPoint,
         recordCreateWall,
         recordCancel,
 
-        // Undo/Redo
         undo,
         redo,
         clear,
 
-        // State checks
         canUndo,
         canRedo,
         hasFirstPoint,
         hasPreviewEndPoint,
-
-        // Debug info
         history,
         currentIndex
     };
 }
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 
-/**
- * Rebuild drawing state from action history
- * 
- * Replays all actions to compute current state
- * 
- * @param actions - Array of actions to replay
- * @returns Reconstructed state
- */
 function rebuildStateFromHistory(actions: DrawingAction[]): WallDrawingState {
     let state: WallDrawingState = {
         firstPoint: null,
@@ -302,7 +212,6 @@ function rebuildStateFromHistory(actions: DrawingAction[]): WallDrawingState {
                 };
                 break;
 
-            // UPDATE_PREVIEW is not in history, so we skip it
             default:
                 break;
         }
@@ -311,12 +220,7 @@ function rebuildStateFromHistory(actions: DrawingAction[]): WallDrawingState {
     return state;
 }
 
-/**
- * Get human-readable description of an action
- * 
- * @param action - Drawing action
- * @returns Description string
- */
+
 export function getActionDescription(action: DrawingAction): string {
     switch (action.type) {
         case 'SET_FIRST_POINT':
