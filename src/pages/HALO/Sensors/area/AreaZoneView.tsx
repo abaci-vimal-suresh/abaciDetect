@@ -384,7 +384,6 @@ const AreaZoneView = () => {
         );
     }
 
-    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <PageWrapper title={currentZone?.name || 'Area'}>
 

@@ -1133,9 +1133,10 @@ input[type=number] {
 
 // Neumorphic Button Style
 .btn-neumorphic {
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
   font-weight: 600 !important;
   border-radius: 12px !important;
+  box-shadow: none !important; // Clear any default bootstrap shadows
 
   // LIGHT MODE: Apply Neumorphic Effect
   &:not([data-bs-theme='dark'] &):not([theme='dark'] &) {
@@ -1149,9 +1150,10 @@ input[type=number] {
     &:active,
     &.active {
       background: #e0e5ec !important;
-      color: #4d4d4d !important;
+      color: #7a3a6f !important; // Use project primary color
       box-shadow: inset 6px 6px 12px #b8b9be, inset -6px -6px 12px #ffffff !important;
       transform: translateY(1px);
+      outline: none !important;
     }
 
     // Contextual text colors for light mode (since bg is grey)
@@ -1160,22 +1162,26 @@ input[type=number] {
     }
 
     &.text-info {
-      color: #0dcaf0 !important;
+      color: #0d6efd !important;
     }
 
-    &.text-primary {
-      color: #0d6efd !important;
+    &.text-primary,
+    &.btn-primary {
+      color: #7a3a6f !important; // Specific project primary purple
     }
   }
 
-  // DARK MODE: Reset to allow original Bootstrap/Gradient styles
   [data-bs-theme='dark'] &,
   [theme='dark'] & {
     box-shadow: none !important;
+
+    &:hover,
+    &:focus {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35) !important;
+    }
   }
 }
 
-// Neumorphic Mixin (Inline for now to ensure application)
 @mixin neumorphic-sidebar-item {
   border: none !important;
   background: #e0e5ec !important;
@@ -1197,10 +1203,8 @@ input[type=number] {
   }
 }
 
-// Sidebar Navigation Neumorphic Style
 .navigation-link {
 
-  // LIGHT MODE ONLY
   &:not([data-bs-theme='dark'] &):not([theme='dark'] &) {
     @include neumorphic-sidebar-item;
     margin-bottom: 0.5rem;

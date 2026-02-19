@@ -269,16 +269,16 @@ const AlertFilterPage = () => {
                                     {
                                         icon: () => (
                                             <Button
-                                                className='btn-neumorphic d-flex align-items-center'
+                                                className='btn-neumorphic align-items-center'
                                                 color='primary'
                                                 isLight
                                                 icon='Add'
                                                 style={{ padding: '8px 16px', borderRadius: '10px' }}
                                             >
-                                                Add Rule
+                                                Add Filters
                                             </Button>
                                         ),
-                                        tooltip: 'Add Rule',
+                                        tooltip: 'Add Filters',
                                         isFreeAction: true,
                                         onClick: handleOpenCreate
                                     }

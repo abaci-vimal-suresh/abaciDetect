@@ -33,7 +33,6 @@ const Aside: FC<IAsideProps> = ({ children }) => {
 	const { asideStatus, mobileDesign } = useContext(ThemeContext);
 
 	const { asideStyle, touchStatus, hasTouchButton, asideWidthWithSpace, x } = useAsideTouch();
-	// console.log(asideWidthWithSpace,asideStyle)
 
 	const isModernDesign = import.meta.env.VITE_MODERN_DESGIN === 'true';
 
