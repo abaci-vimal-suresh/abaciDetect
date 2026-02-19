@@ -214,7 +214,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ isOpen, setIsOpen, on
                                             </FormGroup>
                                         </div>
                                         <div className="col-12">
-                                            <FormGroup label="Head User (Manager)">
+                                            <FormGroup label="Report Line">
                                                 <Select
                                                     ariaLabel="Select Head User"
                                                     placeholder="Select head user..."

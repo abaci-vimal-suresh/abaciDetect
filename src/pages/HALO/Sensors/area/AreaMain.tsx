@@ -198,26 +198,6 @@ const AreaMain = () => {
                 </SubHeaderLeft>
                 <SubHeaderRight>
                     <Button
-                        color={viewMode === 'grid' ? 'primary' : 'secondary'}
-                        icon='GridView'
-                        isLight={viewMode !== 'grid'}
-                        className='me-2'
-                        onClick={() => setViewMode('grid')}
-                        title='Grid View'
-                    >
-                        Grid
-                    </Button>
-                    <Button
-                        color={viewMode === 'tree' ? 'primary' : 'light'}
-                        icon='AccountTree'
-                        isLight={viewMode !== 'tree'}
-                        className='me-2'
-                        onClick={() => setViewMode('tree')}
-                        title='Tree View'
-                    >
-                        Tree
-                    </Button>
-                    <Button
                         color='info'
                         icon='Add'
                         className='me-2'
