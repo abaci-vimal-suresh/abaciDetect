@@ -9,6 +9,8 @@ import Spinner from '../../../../components/bootstrap/Spinner';
 import { Area, User } from '../../../../types/sensor';
 import { useUpdateArea, useUsers } from '../../../../api/sensors.api';
 
+import Icon from '../../../../components/icon/Icon';
+
 interface EditAreaModalProps {
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
@@ -24,6 +26,7 @@ const EditAreaModal: React.FC<EditAreaModalProps> = ({ isOpen, setIsOpen, area }
     const [areaPlan, setAreaPlan] = useState<File | null>(null);
     const [personInChargeIds, setPersonInChargeIds] = useState<number[]>([]);
     const [offsetZ, setOffsetZ] = useState<number>(0);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -43,6 +46,18 @@ const EditAreaModal: React.FC<EditAreaModalProps> = ({ isOpen, setIsOpen, area }
             setError('');
         }
     }, [area, isOpen]);
+
+    useEffect(() => {
+        if (areaPlan) {
+            const objectUrl = URL.createObjectURL(areaPlan);
+            setPreviewUrl(objectUrl);
+            return () => URL.revokeObjectURL(objectUrl);
+        } else if (area?.area_plan) {
+            setPreviewUrl(area.area_plan);
+        } else {
+            setPreviewUrl(null);
+        }
+    }, [areaPlan, area, isOpen]);
 
     const handleSubmit = () => {
         if (!area) return;
@@ -130,9 +145,26 @@ const EditAreaModal: React.FC<EditAreaModalProps> = ({ isOpen, setIsOpen, area }
                                 accept='image/*'
                                 onChange={(e: any) => setAreaPlan(e.target.files[0])}
                             />
-                            {area?.floor_plan_url && !areaPlan && (
-                                <div className='mt-2 small text-muted'>
-                                    Current plan: <a href={area.floor_plan_url} target='_blank' rel='noreferrer'>View Image</a>
+                            {previewUrl ? (
+                                <div className='mt-3 text-center border rounded p-2 bg-light bg-opacity-10'>
+                                    <p className='small text-muted mb-2'>
+                                        {areaPlan ? 'New Preview:' : 'Current Plan:'}
+                                    </p>
+                                    <img
+                                        src={previewUrl}
+                                        alt='Area Plan'
+                                        style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '4px' }}
+                                    />
+                                    {areaPlan && (
+                                        <div className='mt-2 small text-success'>
+                                            <Icon icon='CheckCircle' size='sm' className='me-1' />
+                                            {areaPlan.name}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className='mt-2 small text-muted italic'>
+                                    No floor plan uploaded for this area.
                                 </div>
                             )}
                         </FormGroup>

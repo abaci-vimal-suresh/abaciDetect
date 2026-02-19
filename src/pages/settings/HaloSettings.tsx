@@ -8,6 +8,7 @@ import FormGroup from '../../components/bootstrap/forms/FormGroup';
 import Button from '../../components/bootstrap/Button';
 import Icon from '../../components/icon/Icon';
 import Spinner from '../../components/bootstrap/Spinner';
+import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../components/bootstrap/Modal';
 import { ThemeProvider } from '@mui/material';
 import MaterialTable from '@material-table/core';
 import useTablestyle from '../../hooks/useTablestyles';
@@ -22,6 +23,9 @@ const HaloSettings = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [pageSize, setPageSize] = useState(5);
     const { theme, headerStyles, rowStyles } = useTablestyle();
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [soundToDelete, setSoundToDelete] = useState<SoundFile | null>(null);
 
     const filteredSounds = soundFiles?.filter(s => {
         const name = (s.name || '').toLowerCase();
@@ -50,10 +54,9 @@ const HaloSettings = () => {
         }
     };
 
-    const handleDelete = (id: number) => {
-        if (window.confirm('Are you sure you want to delete this sound file?')) {
-            deleteSoundMutation.mutate(id);
-        }
+    const handleDelete = (sound: SoundFile) => {
+        setSoundToDelete(sound);
+        setIsDeleteModalOpen(true);
     };
 
     return (
@@ -117,50 +120,50 @@ const HaloSettings = () => {
                                     <ThemeProvider theme={theme}>
                                         <MaterialTable
                                             title=''
-                                          columns={[
-    {
-        title: 'Name',
-        field: 'name',
-        width: '35%',
-        render: (rowData: SoundFile) => rowData.name,
-    },
-    {
-        title: 'Size',
-        field: 'file_size',
-        width: '20%',
-        render: (rowData: SoundFile) =>
-            rowData.file_size !== null
-                ? `${(rowData.file_size / 1024).toFixed(2)} KB`
-                : 'N/A',
-    },
-    {
-        title: 'Uploaded Date',
-        field: 'uploaded_at',
-        width: '30%',
-        render: (rowData: SoundFile) =>
-            new Date(rowData.uploaded_at).toLocaleDateString(),
-    },
-    {
-        title: 'Actions',
-        field: 'actions',
-        sorting: false,
-        filtering: false,
-        width: '2%',
-        cellStyle: { textAlign: 'right', paddingRight: '16px' },
-        headerStyle: { textAlign: 'right', paddingRight: '16px' },
-        render: (rowData: SoundFile) =>
-            rowData.file_size !== null ? (
-                <Button
-                    color='danger'
-                    isLight
-                    size='sm'
-                    icon='Delete'
-                    isDisable={deleteSoundMutation.isPending}
-                    onClick={() => handleDelete(rowData.id)}
-                />
-            ) : null,
-    },
-]}
+                                            columns={[
+                                                {
+                                                    title: 'Name',
+                                                    field: 'name',
+                                                    width: '35%',
+                                                    render: (rowData: SoundFile) => rowData.name,
+                                                },
+                                                {
+                                                    title: 'Size',
+                                                    field: 'file_size',
+                                                    width: '20%',
+                                                    render: (rowData: SoundFile) =>
+                                                        rowData.file_size !== null
+                                                            ? `${(rowData.file_size / 1024).toFixed(2)} KB`
+                                                            : 'N/A',
+                                                },
+                                                {
+                                                    title: 'Uploaded Date',
+                                                    field: 'uploaded_at',
+                                                    width: '30%',
+                                                    render: (rowData: SoundFile) =>
+                                                        new Date(rowData.uploaded_at).toLocaleDateString(),
+                                                },
+                                                {
+                                                    title: 'Actions',
+                                                    field: 'actions',
+                                                    sorting: false,
+                                                    filtering: false,
+                                                    width: '2%',
+                                                    cellStyle: { textAlign: 'right', paddingRight: '16px' },
+                                                    headerStyle: { textAlign: 'right', paddingRight: '16px' },
+                                                    render: (rowData: SoundFile) =>
+                                                        rowData.file_size !== null ? (
+                                                            <Button
+                                                                color='danger'
+                                                                isLight
+                                                                size='sm'
+                                                                icon='Delete'
+                                                                isDisable={deleteSoundMutation.isPending}
+                                                                onClick={() => handleDelete(rowData)}
+                                                            />
+                                                        ) : null,
+                                                },
+                                            ]}
                                             data={filteredSounds || []}
                                             isLoading={isLoading}
                                             localization={{
@@ -185,6 +188,61 @@ const HaloSettings = () => {
                                 </div>
                             </CardBody>
                         </Card>
+
+                        {/* ── Delete Confirmation Modal ── */}
+                        <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} size='sm' isCentered>
+                            <ModalHeader setIsOpen={setIsDeleteModalOpen} className='border-0 pb-0'>
+                                <ModalTitle id='delete-sound-confirm-title' className='text-danger'>
+                                    Confirm Deletion
+                                </ModalTitle>
+                            </ModalHeader>
+                            <ModalBody className='text-center py-4'>
+                                <div
+                                    className='mx-auto mb-3 d-flex align-items-center justify-content-center'
+                                    style={{
+                                        width: '60px',
+                                        height: '60px',
+                                        background: 'rgba(239, 79, 79, 0.1)',
+                                        borderRadius: '50%',
+                                        color: '#ef4f4f'
+                                    }}
+                                >
+                                    <Icon icon='DeleteSweep' size='2x' />
+                                </div>
+                                <div className='fw-bold fs-5 mb-2'>Delete sound file?</div>
+                                <div className='text-muted small px-3'>
+                                    Are you sure you want to delete <span className='fw-bold text-dark'>{soundToDelete?.name}</span>? This action cannot be undone.
+                                </div>
+                            </ModalBody>
+                            <ModalFooter className='justify-content-center border-0 pt-0 pb-4 gap-2'>
+                                <Button
+                                    color='light'
+                                    onClick={() => {
+                                        setIsDeleteModalOpen(false);
+                                        setSoundToDelete(null);
+                                    }}
+                                    className='px-4'
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    color='danger'
+                                    onClick={() => {
+                                        if (soundToDelete) {
+                                            deleteSoundMutation.mutate(soundToDelete.id, {
+                                                onSuccess: () => {
+                                                    setIsDeleteModalOpen(false);
+                                                    setSoundToDelete(null);
+                                                }
+                                            });
+                                        }
+                                    }}
+                                    className='px-4 shadow-sm'
+                                >
+                                    Delete File
+                                </Button>
+                            </ModalFooter>
+                        </Modal>
                     </div>
                 </div>
             </Page>

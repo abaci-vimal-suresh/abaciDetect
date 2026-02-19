@@ -74,11 +74,23 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                                     : '6px 6px 12px #b8b9be, -6px -6px 12px #ffffff'
                             }}
                         >
-                            <Icon
-                                icon={typeIconMap[action.type] || 'Notifications'}
-                                size='3x'
-                                style={{ color: accentColor }}
-                            />
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{
+                                    fontSize: '3rem',
+                                    fontWeight: 900,
+                                    color: accentColor,
+                                    opacity: 0.15,
+                                    position: 'absolute',
+                                    userSelect: 'none'
+                                }}>
+                                    {action.name.charAt(0).toUpperCase()}
+                                </span>
+                                <Icon
+                                    icon={typeIconMap[action.type] || 'Notifications'}
+                                    size='3x'
+                                    style={{ color: accentColor, position: 'relative', zIndex: 1 }}
+                                />
+                            </div>
                         </div>
                         <div className='h4 fw-bold mb-1'>
                             {action.name}

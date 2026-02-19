@@ -4,7 +4,7 @@ import Button from '../../../../components/bootstrap/Button';
 import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Spinner from '../../../../components/bootstrap/Spinner';
 import Alert from '../../../../components/bootstrap/Alert';
-import { useSensor, useUpdateSensor, useAreas, useSensorGroups, useUploadWaveFile } from '../../../../api/sensors.api';
+import { useSensor, useUpdateSensor, useAreas, useSensorGroups } from '../../../../api/sensors.api';
 import Input from '../../../../components/bootstrap/forms/Input';
 import Checks from '../../../../components/bootstrap/forms/Checks';
 import ReactSelectWithState from '../../../../components/CustomComponent/Select/ReactSelect';
@@ -20,7 +20,6 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
     const updateMutation = useUpdateSensor();
     const { data: areas } = useAreas();
     const { data: sensorGroups } = useSensorGroups();
-    const uploadMutation = useUploadWaveFile();
 
     const [formData, setFormData] = useState({
         name: '',

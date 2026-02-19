@@ -5,7 +5,8 @@ import Input from '../../../../components/bootstrap/forms/Input';
 import Spinner from '../../../../components/bootstrap/Spinner';
 import Icon from '../../../../components/icon/Icon';
 import Select from '../../../../components/bootstrap/forms/Select';
-import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig, useUsers, useUserGroups, useSyncHaloConfigs, useTriggerSensor, useWaveFiles } from '../../../../api/sensors.api';
+import { useSensor, useSensorConfigurations, useAddSensorConfiguration, useUpdateSensorConfiguration, useDeleteSensorConfiguration, useRemoteSensorConfig, useUsers, useUserGroups, useSyncHaloConfigs, useTriggerSensor, useSoundFiles, useBulkAddSensorConfiguration, useSensors } from '../../../../api/sensors.api';
+import useToasterNotification from '../../../../hooks/useToasterNotification';
 import { SensorConfig, SENSOR_CONFIG_CHOICES, AlertActionConfig } from '../../../../types/sensor';
 import Badge from '../../../../components/bootstrap/Badge';
 import styles from '../../../../styles/pages/HALO/Settings/ThresholdManagement.module.scss';
@@ -15,6 +16,7 @@ import ThemeContext from '../../../../contexts/themeContext';
 import Modal, { ModalHeader, ModalTitle, ModalBody, ModalFooter } from '../../../../components/bootstrap/Modal';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
+import MultiSelectDropdown, { Option } from '../../../../components/CustomComponent/Select/MultiSelectDropdown';
 import useTablestyle from '../../../../hooks/useTablestyles';
 
 import {
@@ -78,6 +80,22 @@ const SENSOR_KEY_TO_EVENT_SOURCE_KEY: Record<string, string> = {
     noise: 'Sound',
     temp_c: 'Temp_C',
     tvoc: 'TVOC'
+};
+
+const BULK_DEVICE_TYPES = [
+    { value: 'Halo', label: 'Halo' },
+    { value: 'Axis', label: 'Axis' }
+];
+
+const BULK_SUB_TYPES: Record<string, { value: string; label: string }[]> = {
+    Halo: [
+        { value: 'HALO', label: 'HALO' },
+        { value: 'HALO_2C', label: 'HALO 2C' },
+        { value: 'HALO_3C', label: 'HALO 3C' }
+    ],
+    Axis: [
+        { value: 'AXIS_CAMERA', label: 'Axis Camera' }
+    ]
 };
 
 // 🔥 MOCK DATA - Shows UI immediately without API
@@ -173,12 +191,23 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
     const triggerMutation = useTriggerSensor();
     const { data: users } = useUsers();
     const { data: userGroups } = useUserGroups();
-    const { data: wavefilesData } = useWaveFiles(
-        apiSensor?.ip_address,
-        apiSensor?.username,
-        apiSensor?.password
-    );
-    const wavefiles = wavefilesData?.wavefiles || [];
+    const { data: soundFiles } = useSoundFiles();
+    const wavefiles = soundFiles?.map(f => f.file_name) || [];
+
+    // Bulk Mode State
+    const bulkMutation = useBulkAddSensorConfiguration();
+    const [isBulkMode, setIsBulkMode] = useState(false);
+    const [bulkDeviceType, setBulkDeviceType] = useState<string>('Halo');
+    const [bulkSubType, setBulkSubType] = useState<string>('HALO_3C');
+    const [selectedBulkSensorIds, setSelectedBulkSensorIds] = useState<string[]>([]);
+    const [selectedBulkConfigIds, setSelectedBulkConfigIds] = useState<string[]>([]);
+    const [selectedSourceSensorId, setSelectedSourceSensorId] = useState<string>(deviceId);
+
+    const { data: bulkSensors, isLoading: isFetchingBulkSensors } = useSensors({
+        sensor_type: bulkSubType
+    });
+
+    const { data: sourceConfigs, isLoading: isFetchingSourceConfigs } = useSensorConfigurations(selectedSourceSensorId);
 
     // 🔥 Use real data from API
     const configs = apiConfigs || [];
@@ -517,7 +546,38 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
         setSaveStatus('idle');
     };
 
+    const { showErrorNotification } = useToasterNotification();
+
     const handleSave = () => {
+        if (isBulkMode) {
+            if (selectedBulkSensorIds.length === 0 || selectedBulkConfigIds.length === 0) {
+                showErrorNotification('Please select at least one sensor and one configuration template.');
+                return;
+            }
+
+            setSaveStatus('saving');
+            bulkMutation.mutate({
+                sensor_id: selectedBulkSensorIds.map(id => parseInt(id)),
+                config_ids: selectedBulkConfigIds.map(id => parseInt(id))
+            }, {
+                onSuccess: () => {
+                    setSaveStatus('saved');
+                    setTimeout(() => {
+                        setSaveStatus('idle');
+                        setIsConfigModalOpen(false);
+                        setIsBulkMode(false);
+                        setSelectedBulkSensorIds([]);
+                        setSelectedBulkConfigIds([]);
+                    }, 1500);
+                },
+                onError: () => {
+                    setSaveStatus('error');
+                    setTimeout(() => setSaveStatus('idle'), 2000);
+                }
+            });
+            return;
+        }
+
         setSaveStatus('saving');
 
         // Use custom event_id if provided, otherwise auto-generate from sensor_name
@@ -763,231 +823,353 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
             <ModalHeader setIsOpen={(val: boolean) => setIsConfigModalOpen(val)}>
                 <ModalTitle id='config-modal-title'>
                     <div className='d-flex align-items-center gap-2'>
-                        <Icon icon='Tune' />
-                        {isCreatingNew ? 'New Configuration' : `Edit ${displaySensorName(formData.sensor_name || '')}`}
+                        <Icon icon={isBulkMode ? 'MultipleStop' : 'Tune'} />
+                        {isBulkMode ? 'Bulk Configuration' : (isCreatingNew ? 'New Configuration' : `Edit ${displaySensorName(formData.sensor_name || '')}`)}
                     </div>
                 </ModalTitle>
             </ModalHeader>
             <ModalBody style={{ minHeight: '600px' }}>
-                <div className={styles.visualControl}>
-                    <div className={styles.formSection}>
-                        <div className={styles.sectionLabel}>
-                            <Icon icon='Settings' /> Basic Configuration
+                {/* Bulk Toggle */}
+                <div className='mb-4 d-flex align-items-center justify-content-between p-3 bg-light rounded border'>
+                    <div className='d-flex align-items-center gap-3'>
+                        <div className={`rounded-circle d-flex align-items-center justify-content-center ${isBulkMode ? 'bg-primary text-white' : 'bg-secondary text-white'}`} style={{ width: '40px', height: '40px' }}>
+                            <Icon icon='MultipleStop' size='lg' />
                         </div>
-                        <div className='row g-3'>
-                            {isCreatingNew && (
-                                <div className='col-md-12'>
-                                    <label className='form-label'>Sensor Source</label>
-                                    <Select
-                                        list={filteredChoices}
-                                        value={formData.sensor_name || ''}
-                                        onChange={(e: any) => handleFormChange({ sensor_name: e.target.value })}
-                                        ariaLabel='Select Sensor Source'
-                                    />
-                                </div>
-                            )}
-                            <div className='col-md-12'>
-                                <label className='form-label'>Event Name (Custom Identifier)</label>
-                                <input
-                                    type='text'
-                                    className='form-control'
-                                    value={formData.event_id || ''}
-                                    onChange={(e) => handleFormChange({ event_id: e.target.value })}
-                                />
-                                <small className='text-muted'>
-                                    Enter a unique name to identify this configuration. Must be unique for this sensor.
-                                </small>
-                            </div>
-                            {!isCreatingNew && (
-                                <div className='col-md-6'>
-                                    <label className='form-label'>Status</label>
-                                    <div className='d-flex align-items-center h-100' style={{ paddingBottom: '5px' }}>
-
-                                        <div
-                                            onClick={() => handleFormChange({ enabled: !formData.enabled })}
-                                            style={{ cursor: 'pointer' }}
-                                        >
-                                            <Icon
-                                                icon={formData.enabled ? 'ToggleOn' : 'ToggleOff'}
-                                                size='2x'
-                                                color={formData.enabled ? 'success' : 'secondary'}
-                                            />
-                                        </div>
-                                        <span className={classNames('ms-2 fw-bold', formData.enabled ? 'text-success' : 'text-danger')}>
-                                            {formData.enabled ? 'Active' : 'Disabled'}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
+                        <div>
+                            <div className='fw-bold' style={{ fontSize: '1.1rem' }}>Bulk Configuration Mode</div>
+                            <div className='text-muted small'>Apply selected templates to multiple sensors at once</div>
                         </div>
                     </div>
+                    <div className="form-check form-switch">
+                        <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id="bulkModeToggle"
+                            checked={isBulkMode}
+                            onChange={(e) => setIsBulkMode(e.target.checked)}
+                            style={{ width: '3rem', height: '1.5rem', cursor: 'pointer' }}
+                        />
+                    </div>
+                </div>
 
-                    <div className={styles.formSection}>
-                        <div className={styles.sectionLabel}>
-                            <Icon icon='ShowChart' /> Threshold & Range
-                        </div>
-                        <div className={styles.gaugeDisplay}>
-                            <div className={styles.gaugeTrack}>
-                                <div
-                                    className={styles.safeZone}
-                                    style={{ width: `${getThresholdPosition()}%` }}
-                                />
-                                <div
-                                    className={styles.warningZone}
-                                    style={{
-                                        left: `${getThresholdPosition()}%`,
-                                        width: `${100 - getThresholdPosition()}%`
-                                    }}
-                                />
-                                <div
-                                    className={styles.thresholdMarkerNew}
-                                    style={{ left: `${getThresholdPosition()}%` }}
-                                >
-                                    <div className={styles.markerLine} />
-                                    <div className={styles.markerDot} />
-                                    <div className={styles.markerLabel}>{formData.threshold}</div>
+                {isBulkMode ? (
+                    <div className='p-2'>
+                        <div className='row g-4'>
+                            <div className='col-md-6'>
+                                <FormGroup label='Device Category' id='bulkDeviceType'>
+                                    <Select
+                                        list={BULK_DEVICE_TYPES}
+                                        value={bulkDeviceType}
+                                        onChange={(e: any) => {
+                                            setBulkDeviceType(e.target.value);
+                                            setBulkSubType(BULK_SUB_TYPES[e.target.value][0].value);
+                                            setSelectedBulkSensorIds([]);
+                                        }}
+                                        ariaLabel='Select Device Category'
+                                    />
+                                </FormGroup>
+                            </div>
+                            <div className='col-md-6'>
+                                <FormGroup label='Sensor Model' id='bulkSubType'>
+                                    <Select
+                                        list={BULK_SUB_TYPES[bulkDeviceType] || []}
+                                        value={bulkSubType}
+                                        onChange={(e: any) => {
+                                            setBulkSubType(e.target.value);
+                                            setSelectedBulkSensorIds([]);
+                                        }}
+                                        ariaLabel='Select Sensor Model'
+                                    />
+                                </FormGroup>
+                            </div>
+
+                            <div className='col-md-12'>
+                                <FormGroup label='Source Sensor (Copy From)' id='bulkSourceSensor'>
+                                    <Select
+                                        list={(bulkSensors || []).map(s => ({ value: s.id.toString(), label: s.name }))}
+                                        value={selectedSourceSensorId}
+                                        onChange={(e: any) => {
+                                            setSelectedSourceSensorId(e.target.value);
+                                            setSelectedBulkConfigIds([]);
+                                        }}
+                                        ariaLabel='Select Source Sensor'
+                                    />
+                                </FormGroup>
+                            </div>
+
+                            <div className='col-md-12'>
+                                <div className='card border shadow-none bg-light-subtle'>
+                                    <div className='card-header bg-transparent d-flex justify-content-between align-items-center py-2'>
+                                        <div className='fw-bold'><Icon icon='Podium' className='me-2' /> Target Sensors</div>
+                                        <div className='text-muted small'>{selectedBulkSensorIds.length} sensors selected</div>
+                                    </div>
+                                    <div className='card-body p-3'>
+                                        {isFetchingBulkSensors ? (
+                                            <div className='text-center py-4'><Spinner /> <span className='ms-2'>Searching sensors...</span></div>
+                                        ) : (
+                                            <MultiSelectDropdown
+                                                options={(bulkSensors || []).map(sensor => ({
+                                                    value: sensor.id.toString(),
+                                                    label: `${sensor.name} (${sensor.mac_address || sensor.ip_address || 'No MAC'})`
+                                                }))}
+                                                value={selectedBulkSensorIds}
+                                                onChange={setSelectedBulkSensorIds}
+                                                placeholder="Select Target Sensors"
+                                                searchPlaceholder="Search by name or MAC..."
+                                            />
+                                        )}
+                                    </div>
                                 </div>
-                                {liveValue !== null && (
-                                    <div
-                                        className={classNames(styles.livePointer, styles[liveColor])}
-                                        style={{ left: `${getLivePointerPosition()}%` }}
-                                    >
-                                        <div className={styles.pointerLine} />
-                                        <div className={styles.pointerDot} />
-                                        <div className={styles.pointerLabel}>
-                                            {liveValue.toFixed(2)} - {liveLabel}
+                            </div>
+
+                            <div className='col-md-12'>
+                                <div className='card border shadow-none bg-light-subtle'>
+                                    <div className='card-header bg-transparent d-flex justify-content-between align-items-center py-2'>
+                                        <div className='fw-bold'><Icon icon='LibraryBooks' className='me-2' /> Configuration Templates</div>
+                                        <div className='text-muted small'>{selectedBulkConfigIds.length} templates selected</div>
+                                    </div>
+                                    <div className='card-body p-3'>
+                                        {isFetchingSourceConfigs ? (
+                                            <div className='text-center py-4'><Spinner /> <span className='ms-2'>Fetching templates...</span></div>
+                                        ) : (sourceConfigs || []).length === 0 ? (
+                                            <div className='text-center py-2 text-muted small'>No configurations found for selected source sensor.</div>
+                                        ) : (
+                                            <MultiSelectDropdown
+                                                options={(sourceConfigs || []).map(config => ({
+                                                    value: config.id!.toString(),
+                                                    label: `${config.event_id || config.source} (Val: ${config.threshold})`
+                                                }))}
+                                                value={selectedBulkConfigIds}
+                                                onChange={setSelectedBulkConfigIds}
+                                                placeholder="Select Config Templates"
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className={styles.visualControl}>
+                        <div className={styles.formSection}>
+                            <div className={styles.sectionLabel}>
+                                <Icon icon='Settings' /> Basic Configuration
+                            </div>
+                            <div className='row g-3'>
+                                {isCreatingNew && (
+                                    <div className='col-md-12'>
+                                        <label className='form-label'>Sensor Source</label>
+                                        <Select
+                                            list={filteredChoices}
+                                            value={formData.sensor_name || ''}
+                                            onChange={(e: any) => handleFormChange({ sensor_name: e.target.value })}
+                                            ariaLabel='Select Sensor Source'
+                                        />
+                                    </div>
+                                )}
+                                <div className='col-md-12'>
+                                    <label className='form-label'>Event Name (Custom Identifier)</label>
+                                    <input
+                                        type='text'
+                                        className='form-control'
+                                        value={formData.event_id || ''}
+                                        onChange={(e) => handleFormChange({ event_id: e.target.value })}
+                                    />
+                                    <small className='text-muted'>
+                                        Enter a unique name to identify this configuration. Must be unique for this sensor.
+                                    </small>
+                                </div>
+                                {!isCreatingNew && (
+                                    <div className='col-md-6'>
+                                        <label className='form-label'>Status</label>
+                                        <div className='d-flex align-items-center h-100' style={{ paddingBottom: '5px' }}>
+
+                                            <div
+                                                onClick={() => handleFormChange({ enabled: !formData.enabled })}
+                                                style={{ cursor: 'pointer' }}
+                                            >
+                                                <Icon
+                                                    icon={formData.enabled ? 'ToggleOn' : 'ToggleOff'}
+                                                    size='2x'
+                                                    color={formData.enabled ? 'success' : 'secondary'}
+                                                />
+                                            </div>
+                                            <span className={classNames('ms-2 fw-bold', formData.enabled ? 'text-success' : 'text-danger')}>
+                                                {formData.enabled ? 'Active' : 'Disabled'}
+                                            </span>
                                         </div>
                                     </div>
                                 )}
                             </div>
-                            <div className={styles.rangeLabels}>
-                                <span>{formData.min_value}</span>
-                                <span>{formData.max_value}</span>
-                            </div>
                         </div>
 
-                        <div className='slider-wrapper mt-4'>
-                            <div className={styles.sliderControl}>
-                                <input
-                                    type='range'
-                                    className={styles.thresholdSlider}
-                                    min={formData.min_value}
-                                    max={formData.max_value}
-                                    step='0.1'
-                                    value={formData.threshold}
-                                    onChange={(e) => handleFormChange({ threshold: parseFloat(e.target.value) })}
-                                />
+                        <div className={styles.formSection}>
+                            <div className={styles.sectionLabel}>
+                                <Icon icon='ShowChart' /> Threshold & Range
                             </div>
-                            <div className='row mt-3'>
-                                <div className='col-md-4'>
-                                    <label className='form-label'>Threshold Val</label>
+                            <div className={styles.gaugeDisplay}>
+                                <div className={styles.gaugeTrack}>
+                                    <div
+                                        className={styles.safeZone}
+                                        style={{ width: `${getThresholdPosition()}%` }}
+                                    />
+                                    <div
+                                        className={styles.warningZone}
+                                        style={{
+                                            left: `${getThresholdPosition()}%`,
+                                            width: `${100 - getThresholdPosition()}%`
+                                        }}
+                                    />
+                                    <div
+                                        className={styles.thresholdMarkerNew}
+                                        style={{ left: `${getThresholdPosition()}%` }}
+                                    >
+                                        <div className={styles.markerLine} />
+                                        <div className={styles.markerDot} />
+                                        <div className={styles.markerLabel}>{formData.threshold}</div>
+                                    </div>
+                                    {liveValue !== null && (
+                                        <div
+                                            className={classNames(styles.livePointer, styles[liveColor])}
+                                            style={{ left: `${getLivePointerPosition()}%` }}
+                                        >
+                                            <div className={styles.pointerLine} />
+                                            <div className={styles.pointerDot} />
+                                            <div className={styles.pointerLabel}>
+                                                {liveValue.toFixed(2)} - {liveLabel}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={styles.rangeLabels}>
+                                    <span>{formData.min_value}</span>
+                                    <span>{formData.max_value}</span>
+                                </div>
+                            </div>
+
+                            <div className='slider-wrapper mt-4'>
+                                <div className={styles.sliderControl}>
                                     <input
-                                        type='number'
-                                        className='form-control'
+                                        type='range'
+                                        className={styles.thresholdSlider}
+                                        min={formData.min_value}
+                                        max={formData.max_value}
+                                        step='0.1'
                                         value={formData.threshold}
                                         onChange={(e) => handleFormChange({ threshold: parseFloat(e.target.value) })}
                                     />
                                 </div>
-                                <div className='col-md-4'>
-                                    <label className='form-label'>Min Range</label>
-                                    <input
-                                        type='number'
-                                        className='form-control'
-                                        value={formData.min_value}
-                                        onChange={(e) => handleFormChange({ min_value: parseFloat(e.target.value) })}
-                                    />
-                                </div>
-                                <div className='col-md-4'>
-                                    <label className='form-label'>Max Range</label>
-                                    <input
-                                        type='number'
-                                        className='form-control'
-                                        value={formData.max_value}
-                                        onChange={(e) => handleFormChange({ max_value: parseFloat(e.target.value) })}
-                                    />
+                                <div className='row mt-3'>
+                                    <div className='col-md-4'>
+                                        <label className='form-label'>Threshold Val</label>
+                                        <input
+                                            type='number'
+                                            className='form-control'
+                                            value={formData.threshold}
+                                            onChange={(e) => handleFormChange({ threshold: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+                                    <div className='col-md-4'>
+                                        <label className='form-label'>Min Range</label>
+                                        <input
+                                            type='number'
+                                            className='form-control'
+                                            value={formData.min_value}
+                                            onChange={(e) => handleFormChange({ min_value: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+                                    <div className='col-md-4'>
+                                        <label className='form-label'>Max Range</label>
+                                        <input
+                                            type='number'
+                                            className='form-control'
+                                            value={formData.max_value}
+                                            onChange={(e) => handleFormChange({ max_value: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className={styles.formSection}>
-                        <div className={styles.sectionLabel}>
-                            <Icon icon='Lightbulb' /> LED & Audio Controls
-                        </div>
-                        <div className='row g-3'>
-                            <div className='col-md-4'>
-                                <label className='form-label'>LED Color</label>
-                                <Select
-                                    list={LED_COLOR_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
-                                    value={formData.led_color?.toString() || '16777215'}
-                                    onChange={(e: any) => handleFormChange({ led_color: parseInt(e.target.value) })}
-                                    ariaLabel='Select LED Color'
-                                />
+                        <div className={styles.formSection}>
+                            <div className={styles.sectionLabel}>
+                                <Icon icon='Lightbulb' /> LED & Audio Controls
                             </div>
-                            <div className='col-md-4'>
-                                <label className='form-label'>LED Pattern</label>
-                                <Select
-                                    list={LED_PATTERN_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
-                                    value={formData.led_pattern?.toString() || '200004'}
-                                    onChange={(e: any) => handleFormChange({ led_pattern: parseInt(e.target.value) })}
-                                    ariaLabel='Select LED Pattern'
-                                />
-                            </div>
-                            <div className='col-md-4'>
-                                <label className='form-label'>Priority</label>
-                                <Select
-                                    list={LED_PRIORITY_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
-                                    value={formData.led_priority?.toString() || '1'}
-                                    onChange={(e: any) => handleFormChange({ led_priority: parseInt(e.target.value) })}
-                                    ariaLabel='Select LED Priority'
-                                />
-                            </div>
-                            <div className='col-md-6'>
-                                <label className='form-label'>Sound</label>
-                                <Select
-                                    list={wavefiles.map(f => ({ value: f, label: f }))}
-                                    value={formData.sound || ''}
-                                    onChange={(e: any) => handleFormChange({ sound: e.target.value })}
-                                    ariaLabel='Select Sound Alert'
-                                />
-                            </div>
-                            <div className='col-md-6'>
-                                <label className='form-label'>Relay Duration</label>
-                                <Select
-                                    list={RELAY_DURATION_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
-                                    value={formData.relay1?.toString() || '0'}
-                                    onChange={(e: any) => handleFormChange({ relay1: parseInt(e.target.value) })}
-                                    ariaLabel='Select Relay Duration'
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className={styles.formSection}>
-                        <div className={styles.sectionLabel}>
-                            <Icon icon='Info' /> Additional Settings
-                        </div>
-                        <div className='row g-3'>
-                            <div className='col-md-12'>
-                                <label className='form-label'>Pause Time (pause_minutes)</label>
-                                <div className='input-group' style={{ maxWidth: '300px' }}>
-                                    <input
-                                        type='number'
-                                        className='form-control'
-                                        value={formData.pause_minutes}
-                                        onChange={(e) => handleFormChange({ pause_minutes: parseInt(e.target.value) })}
+                            <div className='row g-3'>
+                                <div className='col-md-4'>
+                                    <label className='form-label'>LED Color</label>
+                                    <Select
+                                        list={LED_COLOR_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+                                        value={formData.led_color?.toString() || '16777215'}
+                                        onChange={(e: any) => handleFormChange({ led_color: parseInt(e.target.value) })}
+                                        ariaLabel='Select LED Color'
                                     />
-                                    <span className='input-group-text'>min</span>
+                                </div>
+                                <div className='col-md-4'>
+                                    <label className='form-label'>LED Pattern</label>
+                                    <Select
+                                        list={LED_PATTERN_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+                                        value={formData.led_pattern?.toString() || '200004'}
+                                        onChange={(e: any) => handleFormChange({ led_pattern: parseInt(e.target.value) })}
+                                        ariaLabel='Select LED Pattern'
+                                    />
+                                </div>
+                                <div className='col-md-4'>
+                                    <label className='form-label'>Priority</label>
+                                    <Select
+                                        list={LED_PRIORITY_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+                                        value={formData.led_priority?.toString() || '1'}
+                                        onChange={(e: any) => handleFormChange({ led_priority: parseInt(e.target.value) })}
+                                        ariaLabel='Select LED Priority'
+                                    />
+                                </div>
+                                <div className='col-md-6'>
+                                    <label className='form-label'>Sound</label>
+                                    <Select
+                                        list={wavefiles.map(f => ({ value: f, label: f }))}
+                                        value={formData.sound || ''}
+                                        onChange={(e: any) => handleFormChange({ sound: e.target.value })}
+                                        ariaLabel='Select Sound Alert'
+                                    />
+                                </div>
+                                <div className='col-md-6'>
+                                    <label className='form-label'>Relay Duration</label>
+                                    <Select
+                                        list={RELAY_DURATION_OPTIONS.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+                                        value={formData.relay1?.toString() || '0'}
+                                        onChange={(e: any) => handleFormChange({ relay1: parseInt(e.target.value) })}
+                                        ariaLabel='Select Relay Duration'
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className={styles.formSection}>
+                            <div className={styles.sectionLabel}>
+                                <Icon icon='Info' /> Additional Settings
+                            </div>
+                            <div className='row g-3'>
+                                <div className='col-md-12'>
+                                    <label className='form-label'>Pause Time (pause_minutes)</label>
+                                    <div className='input-group' style={{ maxWidth: '300px' }}>
+                                        <input
+                                            type='number'
+                                            className='form-control'
+                                            value={formData.pause_minutes}
+                                            onChange={(e) => handleFormChange({ pause_minutes: parseInt(e.target.value) })}
+                                        />
+                                        <span className='input-group-text'>min</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
             </ModalBody>
             <ModalFooter>
                 <div className='d-flex justify-content-between w-100'>
                     <div>
-                        {!isCreatingNew && (
+                        {!isCreatingNew && !isBulkMode && (
                             <Button
                                 color='danger'
                                 isLight
@@ -1010,7 +1192,12 @@ const ThresholdManagementSection: React.FC<ThresholdManagementSectionProps> = ({
                             color='primary'
                             icon='Save'
                             onClick={handleSave}
-                            isDisable={!hasUnsavedChanges || saveStatus === 'saving'}
+                            isDisable={
+                                (isBulkMode
+                                    ? (selectedBulkSensorIds.length === 0 || selectedBulkConfigIds.length === 0)
+                                    : !hasUnsavedChanges) ||
+                                saveStatus === 'saving'
+                            }
                         >
                             {saveStatus === 'saving' ? <Spinner isSmall inButton /> : 'Save Changes'}
                         </Button>

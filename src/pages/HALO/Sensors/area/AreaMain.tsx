@@ -48,6 +48,7 @@ const AreaMain = () => {
     const [scaleFactor, setScaleFactor] = useState(1.0);
     const [personInChargeIds, setPersonInChargeIds] = useState<number[]>([]);
     const [error, setError] = useState('');
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'tree'>('grid');
 
@@ -59,6 +60,19 @@ const AreaMain = () => {
             setIsAreaModalOpen(true);
         }
     }, [location.search]);
+
+    useEffect(() => {
+        if (!areaPlan) {
+            setPreviewUrl(null);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(areaPlan);
+        setPreviewUrl(objectUrl);
+
+        // Free memory whenever this component is unmounted or areaPlan changes
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [areaPlan]);
 
     // Get main areas (areas with no parent)
     const mainAreas = useMemo(() => {
@@ -467,10 +481,18 @@ const AreaMain = () => {
                                     accept='image/*'
                                     onChange={(e: any) => setAreaPlan(e.target.files[0])}
                                 />
-                                {areaPlan && (
-                                    <div className='mt-2 small text-success'>
-                                        <Icon icon='CheckCircle' size='sm' className='me-1' />
-                                        {areaPlan.name}
+                                {previewUrl && (
+                                    <div className='mt-3 text-center border rounded p-2 bg-light bg-opacity-10'>
+                                        <p className='small text-muted mb-2'>Image Preview:</p>
+                                        <img
+                                            src={previewUrl}
+                                            alt='Area Plan Preview'
+                                            style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '4px' }}
+                                        />
+                                        <div className='mt-2 small text-success'>
+                                            <Icon icon='CheckCircle' size='sm' className='me-1' />
+                                            {areaPlan?.name}
+                                        </div>
                                     </div>
                                 )}
                             </FormGroup>

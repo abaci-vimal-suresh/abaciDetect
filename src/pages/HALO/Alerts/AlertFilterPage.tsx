@@ -28,6 +28,9 @@ const AlertFilterPage = () => {
     const [isDetailModalOpen, setIsDetailModalOpen] = React.useState(false);
     const [selectedDetailFilter, setSelectedDetailFilter] = React.useState<AlertFilter | null>(null);
 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+    const [filterToDelete, setFilterToDelete] = React.useState<AlertFilter | null>(null);
+
     const { theme, headerStyle, rowStyle } = useTablestyle();
     const { themeStatus } = useDarkMode();
 
@@ -226,9 +229,8 @@ const AlertFilterPage = () => {
                                                     isLight
                                                     icon='Delete'
                                                     onClick={() => {
-                                                        if (window.confirm('Are you sure you want to delete this filter?')) {
-                                                            deleteFilterMutation.mutate(rowData.id);
-                                                        }
+                                                        setFilterToDelete(rowData);
+                                                        setIsDeleteModalOpen(true);
                                                     }}
                                                     title='Delete'
                                                     style={{
@@ -421,6 +423,58 @@ const AlertFilterPage = () => {
                                     onClick={() => setIsDetailModalOpen(false)}
                                 >
                                     Close Details
+                                </Button>
+                            </ModalFooter>
+                        </Modal>
+
+                        {/* ── Delete Confirmation Modal ── */}
+                        <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} size='sm' isCentered>
+                            <ModalHeader setIsOpen={setIsDeleteModalOpen} className='border-0 pb-0'>
+                                <ModalTitle id='delete-confirm-title' className='text-danger'>
+                                    Confirm Deletion
+                                </ModalTitle>
+                            </ModalHeader>
+                            <ModalBody className='text-center py-4'>
+                                <div
+                                    className='mx-auto mb-3 d-flex align-items-center justify-content-center'
+                                    style={{
+                                        width: '60px',
+                                        height: '60px',
+                                        background: 'rgba(239, 79, 79, 0.1)',
+                                        borderRadius: '50%',
+                                        color: '#ef4f4f'
+                                    }}
+                                >
+                                    <Icon icon='DeleteSweep' size='2x' />
+                                </div>
+                                <div className='fw-bold fs-5 mb-2'>Delete this rule?</div>
+                                <div className='text-muted small px-3'>
+                                    Are you sure you want to delete <span className='fw-bold text-dark'>{filterToDelete?.name}</span>? This action cannot be undone.
+                                </div>
+                            </ModalBody>
+                            <ModalFooter className='justify-content-center border-0 pt-0 pb-4 gap-2'>
+                                <Button
+                                    color='light'
+                                    onClick={() => {
+                                        setIsDeleteModalOpen(false);
+                                        setFilterToDelete(null);
+                                    }}
+                                    className='px-4'
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    color='danger'
+                                    onClick={() => {
+                                        if (filterToDelete) {
+                                            deleteFilterMutation.mutate(filterToDelete.id);
+                                            setIsDeleteModalOpen(false);
+                                            setFilterToDelete(null);
+                                        }
+                                    }}
+                                    className='px-4 shadow-sm'
+                                >
+                                    Delete Rule
                                 </Button>
                             </ModalFooter>
                         </Modal>

@@ -305,6 +305,7 @@ export interface Area {
     offset_z?: number;
     scale_factor?: number;
     walls?: Wall[]; // New: Area-level walls
+    config_data?: Record<string, { min: number; max: number }>; // ✅ Threshold configurations
 }
 
 export interface SubArea {
