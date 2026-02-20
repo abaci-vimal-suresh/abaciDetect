@@ -9,7 +9,7 @@ import {
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
     AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
     SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse, N8NAlertPayload,
-    Wall, SoundFile
+    Wall, SoundFile, PaginatedResponse
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 
@@ -1243,10 +1243,15 @@ export const useAlerts = (filters?: AlertFilters) => {
             if (filters?.status) params.append('status', filters.status);
             if (filters?.sensor) params.append('sensor', filters.sensor.toString());
             if (filters?.area) params.append('area', filters.area.toString());
+            if (filters?.severity) params.append('severity', filters.severity);
+            if (filters?.period) params.append('period', filters.period);
             if (filters?.search) params.append('search', filters.search);
+            if (filters?.limit) params.append('limit', filters.limit.toString());
+            if (filters?.offset) params.append('offset', filters.offset.toString());
+            if (filters?.ordering) params.append('ordering', filters.ordering);
 
             const { data } = await axiosInstance.get(`/alert-management/alerts/?${params.toString()}`);
-            return data as Alert[];
+            return data as PaginatedResponse<Alert>;
         },
         staleTime: 1 * 60 * 1000, // 1 minute
     });

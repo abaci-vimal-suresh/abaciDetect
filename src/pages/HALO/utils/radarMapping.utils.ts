@@ -109,6 +109,8 @@ export interface ProcessedMetric {
     hasThreshold: boolean;
     isScaleMismatch: boolean; // New: Flag for unit mismatches
     isAutoConverted?: boolean; // New: Flag for auto-converted units (e.g. pressure)
+    minSensorId?: number | null; // ID of the sensor that recorded the min value
+    maxSensorId?: number | null; // ID of the sensor that recorded the max value
 }
 
 export const buildProcessedMetrics = (
@@ -125,6 +127,8 @@ export const buildProcessedMetrics = (
 
         const rawMin = aggData[`${key}_min`] as number;
         const rawMax = aggData[`${key}_max`] as number;
+        const minSensorId = (aggData as any)[`${key}_min_sensor`] as number | null | undefined;
+        const maxSensorId = (aggData as any)[`${key}_max_sensor`] as number | null | undefined;
         const threshold = config[mapping.config];
 
         const hasThreshold = !!threshold;
@@ -162,6 +166,8 @@ export const buildProcessedMetrics = (
             hasThreshold,
             isScaleMismatch,
             isAutoConverted,
+            minSensorId: minSensorId ?? null,
+            maxSensorId: maxSensorId ?? null,
         });
 
         return acc;

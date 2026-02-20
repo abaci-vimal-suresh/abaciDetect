@@ -4,60 +4,39 @@ import Page from '../../layout/Page/Page';
 import SubHeader, { SubHeaderLeft } from '../../layout/SubHeader/SubHeader';
 import Breadcrumb from '../../components/bootstrap/Breadcrumb';
 import Card, { CardBody, CardHeader, CardTitle } from '../../components/bootstrap/Card';
-import FormGroup from '../../components/bootstrap/forms/FormGroup';
 import Button from '../../components/bootstrap/Button';
 import Icon from '../../components/icon/Icon';
-import Spinner from '../../components/bootstrap/Spinner';
-import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../components/bootstrap/Modal';
-import { ThemeProvider } from '@mui/material';
-import MaterialTable from '@material-table/core';
-import useTablestyle from '../../hooks/useTablestyles';
-import { debounceIntervalForTable, pageSizeOptions } from '../../helpers/constants';
-import { useSoundFiles, useAddSoundFile, useDeleteSoundFile } from '../../api/sensors.api';
-import { SoundFile } from '../../types/sensor';
+import classNames from 'classnames';
+import AudioManagementSection from './sections/AudioManagement/AudioManagementSection';
+import EmailSection from './sections/Email/EmailSection';
+
+interface SettingsSection {
+    id: string;
+    label: string;
+    icon: string;
+    component: React.ComponentType;
+}
+
+const settingsSections: SettingsSection[] = [
+    {
+        id: 'audio',
+        label: 'Audio Management',
+        icon: 'VolumeUp',
+        component: AudioManagementSection,
+    },
+    {
+        id: 'email',
+        label: 'Email Settings',
+        icon: 'Email',
+        component: EmailSection,
+    }
+];
 
 const HaloSettings = () => {
-    const { data: soundFiles, isLoading } = useSoundFiles();
-    const addSoundMutation = useAddSoundFile();
-    const deleteSoundMutation = useDeleteSoundFile();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [pageSize, setPageSize] = useState(5);
-    const { theme, headerStyles, rowStyles } = useTablestyle();
+    const [activeSection, setActiveSection] = useState<string>('audio');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [soundToDelete, setSoundToDelete] = useState<SoundFile | null>(null);
-
-    const filteredSounds = soundFiles?.filter(s => {
-        const name = (s.name || '').toLowerCase();
-        const fileName = (s.file_name || '').toLowerCase();
-        const term = searchTerm.toLowerCase();
-        return name.includes(term) || fileName.includes(term);
-    });
-
-    const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (!file.name.toLowerCase().endsWith('.wav')) {
-                alert('Please upload a .wav file only.');
-                e.target.value = '';
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('name', file.name);
-            addSoundMutation.mutate(formData, {
-                onSuccess: () => {
-                    e.target.value = '';
-                }
-            });
-        }
-    };
-
-    const handleDelete = (sound: SoundFile) => {
-        setSoundToDelete(sound);
-        setIsDeleteModalOpen(true);
-    };
+    const ActiveComponent = settingsSections.find((s) => s.id === activeSection)?.component;
 
     return (
         <PageWrapper title='HALO System Settings'>
@@ -72,177 +51,70 @@ const HaloSettings = () => {
                 </SubHeaderLeft>
             </SubHeader>
             <Page container='fluid'>
-                <div className='row'>
-                    <div className='col-12'>
-                        <Card stretch>
+                <div className='row g-4 align-items-stretch'>
+                    {/* Sidebar Navigation */}
+                    <div className={classNames('col-lg-3', { 'd-none d-lg-block': !isSidebarCollapsed })}>
+                        <Card stretch className='h-100' style={{ zIndex: 0 }}>
                             <CardHeader>
                                 <CardTitle>
-                                    <Icon icon='VolumeUp' className='me-2' />
-                                    Audio Management
+                                    <div className='d-flex align-items-center justify-content-between'>
+                                        <span>System Settings</span>
+                                        <Button
+                                            color='link'
+                                            size='sm'
+                                            icon={isSidebarCollapsed ? 'MenuOpen' : 'Menu'}
+                                            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                                            className='d-lg-none'
+                                        />
+                                    </div>
                                 </CardTitle>
                             </CardHeader>
-                            <CardBody>
-                                <div className='row mb-4 g-3'>
-                                    <div className='col-md-8'>
-                                        <FormGroup label='Upload New Sound (.wav)'>
-                                            <div className='d-flex gap-2 align-items-center'>
-                                                <input
-                                                    type='file'
-                                                    className='form-control'
-                                                    accept='.wav,audio/wav'
-                                                    disabled={addSoundMutation.isPending}
-                                                    onChange={handleUpload}
-                                                />
-                                                {addSoundMutation.isPending && <Spinner isSmall color='primary' />}
-                                            </div>
-                                            <small className='text-muted mt-1 d-block'>
-                                                Upload custom wave files to be used across the HALO system.
-                                            </small>
-                                        </FormGroup>
-                                    </div>
-                                    <div className='col-md-4'>
-                                        <FormGroup label='Search Sounds'>
-                                            <div className='input-group'>
-                                                <span className='input-group-text'><Icon icon='Search' /></span>
-                                                <input
-                                                    type='text'
-                                                    className='form-control'
-                                                    placeholder='Search by name...'
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                />
-                                            </div>
-                                        </FormGroup>
-                                    </div>
-                                </div>
-
-                                <div style={{ overflowY: 'auto' }}>
-                                    <ThemeProvider theme={theme}>
-                                        <MaterialTable
-                                            title=''
-                                            columns={[
+                            <CardBody className='p-0'>
+                                <div className='list-group list-group-flush'>
+                                    {settingsSections.map((section) => (
+                                        <button
+                                            key={section.id}
+                                            type='button'
+                                            className={classNames(
+                                                'list-group-item list-group-item-action d-flex align-items-center',
                                                 {
-                                                    title: 'Name',
-                                                    field: 'name',
-                                                    width: '35%',
-                                                    render: (rowData: SoundFile) => rowData.name,
-                                                },
-                                                {
-                                                    title: 'Size',
-                                                    field: 'file_size',
-                                                    width: '20%',
-                                                    render: (rowData: SoundFile) =>
-                                                        rowData.file_size !== null
-                                                            ? `${(rowData.file_size / 1024).toFixed(2)} KB`
-                                                            : 'N/A',
-                                                },
-                                                {
-                                                    title: 'Uploaded Date',
-                                                    field: 'uploaded_at',
-                                                    width: '30%',
-                                                    render: (rowData: SoundFile) =>
-                                                        new Date(rowData.uploaded_at).toLocaleDateString(),
-                                                },
-                                                {
-                                                    title: 'Actions',
-                                                    field: 'actions',
-                                                    sorting: false,
-                                                    filtering: false,
-                                                    width: '2%',
-                                                    cellStyle: { textAlign: 'right', paddingRight: '16px' },
-                                                    headerStyle: { textAlign: 'right', paddingRight: '16px' },
-                                                    render: (rowData: SoundFile) =>
-                                                        rowData.file_size !== null ? (
-                                                            <Button
-                                                                color='danger'
-                                                                isLight
-                                                                size='sm'
-                                                                icon='Delete'
-                                                                isDisable={deleteSoundMutation.isPending}
-                                                                onClick={() => handleDelete(rowData)}
-                                                            />
-                                                        ) : null,
-                                                },
-                                            ]}
-                                            data={filteredSounds || []}
-                                            isLoading={isLoading}
-                                            localization={{
-                                                pagination: {
-                                                    labelRowsPerPage: '',
-                                                },
-                                            }}
-                                            onRowsPerPageChange={(page) => setPageSize(page)}
-                                            options={{
-                                                actionsColumnIndex: -1,
-                                                filtering: false,
-                                                pageSizeOptions: pageSizeOptions,
-                                                pageSize: pageSize,
-                                                columnsButton: false,
-                                                headerStyle: headerStyles(),
-                                                rowStyle: rowStyles(),
-                                                search: false,
-                                                debounceInterval: debounceIntervalForTable,
-                                            }}
-                                        />
-                                    </ThemeProvider>
+                                                    active: activeSection === section.id,
+                                                }
+                                            )}
+                                            onClick={() => setActiveSection(section.id)}
+                                        >
+                                            <Icon icon={section.icon} className='me-2' />
+                                            <span>{section.label}</span>
+                                        </button>
+                                    ))}
                                 </div>
                             </CardBody>
                         </Card>
+                    </div>
 
-                        {/* ── Delete Confirmation Modal ── */}
-                        <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} size='sm' isCentered>
-                            <ModalHeader setIsOpen={setIsDeleteModalOpen} className='border-0 pb-0'>
-                                <ModalTitle id='delete-sound-confirm-title' className='text-danger'>
-                                    Confirm Deletion
-                                </ModalTitle>
-                            </ModalHeader>
-                            <ModalBody className='text-center py-4'>
-                                <div
-                                    className='mx-auto mb-3 d-flex align-items-center justify-content-center'
-                                    style={{
-                                        width: '60px',
-                                        height: '60px',
-                                        background: 'rgba(239, 79, 79, 0.1)',
-                                        borderRadius: '50%',
-                                        color: '#ef4f4f'
-                                    }}
-                                >
-                                    <Icon icon='DeleteSweep' size='2x' />
-                                </div>
-                                <div className='fw-bold fs-5 mb-2'>Delete sound file?</div>
-                                <div className='text-muted small px-3'>
-                                    Are you sure you want to delete <span className='fw-bold text-dark'>{soundToDelete?.name}</span>? This action cannot be undone.
-                                </div>
-                            </ModalBody>
-                            <ModalFooter className='justify-content-center border-0 pt-0 pb-4 gap-2'>
-                                <Button
-                                    color='light'
-                                    onClick={() => {
-                                        setIsDeleteModalOpen(false);
-                                        setSoundToDelete(null);
-                                    }}
-                                    className='px-4'
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    color='danger'
-                                    onClick={() => {
-                                        if (soundToDelete) {
-                                            deleteSoundMutation.mutate(soundToDelete.id, {
-                                                onSuccess: () => {
-                                                    setIsDeleteModalOpen(false);
-                                                    setSoundToDelete(null);
-                                                }
-                                            });
-                                        }
-                                    }}
-                                    className='px-4 shadow-sm'
-                                >
-                                    Delete File
-                                </Button>
-                            </ModalFooter>
-                        </Modal>
+                    {/* Main Content Area */}
+                    <div className='col-lg-9 d-flex flex-column'>
+                        {/* Mobile Section Selector */}
+                        <div className='d-lg-none mb-3'>
+                            <Card>
+                                <CardBody>
+                                    <select
+                                        className='form-select'
+                                        value={activeSection}
+                                        onChange={(e) => setActiveSection(e.target.value)}
+                                    >
+                                        {settingsSections.map((section) => (
+                                            <option key={section.id} value={section.id}>
+                                                {section.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </CardBody>
+                            </Card>
+                        </div>
+
+                        {/* Active Section Content */}
+                        {ActiveComponent && <ActiveComponent />}
                     </div>
                 </div>
             </Page>

@@ -9,7 +9,6 @@ import { SensorRegistrationData, Area } from '../../../types/sensor';
 import '../../../styles/pages/deviceregistration.scss';
 
 interface IDeviceRegistrationProps {
-
     onSuccess: () => void;
     onCancel: () => void;
 }
@@ -49,15 +48,22 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
     });
 
     const formValues = watch();
+    const hasAreaSelected = !!formValues.area_id;
 
     const onSubmit = (data: any) => {
+        // Only allow submission from the final step
+        if (step < 3) {
+            console.log('Submission blocked: user is not on the final step (step:', step, ')');
+            return;
+        }
+
         console.log('Form data received:', data);
 
         // Transform area_id to area for backend
         const apiData = {
             ...data,
             mac_address: data.mac_address ? data.mac_address.replace(/:/g, '') : data.mac_address,
-            area: data.area_id, // ✅ Backend expects 'area' not 'area_id'
+            area: data.area_id || null, // ✅ Backend expects 'area' not 'area_id'
             // Remove area_id from payload
             area_id: undefined
         };
@@ -84,7 +90,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
     const steps = [
         { number: 1, title: 'Device Info', icon: 'Info' },
         { number: 2, title: 'Network', icon: 'Router' },
-        { number: 3, title: 'Review', icon: 'CheckCircle' }
+        { number: 3, title: 'Area', icon: 'LocationOn' }
     ];
 
     return (
@@ -193,9 +199,6 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                                 }
                                                 const formatted = parts.join(':');
 
-                                                // Use setValue to update without full re-render overhead if possible, 
-                                                // but we need to update the input value immediately.
-                                                // Setting the value in the event target helps, but setValue updates the internal state.
                                                 if (e.target.value !== formatted) {
                                                     e.target.value = formatted;
                                                     setValue('mac_address', formatted, { shouldValidate: true });
@@ -239,29 +242,6 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                 </div>
                             </FormGroup>
                         </div>
-                        <div className='col-12'>
-                            <FormGroup label='Area / Location' className='mb-0'>
-                                <div className='input-icon-wrapper'>
-                                    <Icon icon='LocationOn' className='input-icon' />
-                                    <select
-                                        className={`form-select input-with-icon ${errors.area_id ? 'is-invalid' : ''}`}
-                                        {...register('area_id', {
-                                            required: 'Area is required',
-                                            valueAsNumber: true
-                                        })}
-                                    >
-                                        <option value=''>Select Area...</option>
-                                        {areas && flattenAreas(areas).map(area => (
-                                            <option key={area.id} value={area.id}>
-                                                {'\u00A0'.repeat(area.depth * 4)}{area.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.area_id && <div className='invalid-feedback'>{errors.area_id.message}</div>}
-                                </div>
-                            </FormGroup>
-                        </div>
-
                         <div className='col-12 col-md-6'>
                             <FormGroup label='Device Username' className='mb-0'>
                                 <div className='input-icon-wrapper'>
@@ -301,14 +281,39 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                 </div>
                             </FormGroup>
                         </div>
+                    </div>
+                )}
 
-                        {/* Position Coordinates (X, Y, Z) */}
+                {step === 3 && (
+                    <div className='row g-4'>
                         <div className='col-12'>
-                            <div className='alert alert-info d-flex align-items-center mb-3'>
-                                <Icon icon='Info' className='me-2' />
-                                <small>Set sensor position coordinates (0.0 to 1.0 range). These will place the sensor in the 3D view.</small>
-                            </div>
+                            {/* Optional area hint */}
+                            <p className='text-muted small mb-3 d-flex align-items-center gap-1'>
+                                <Icon icon='InfoOutlined' style={{ fontSize: '1rem' }} />
+                                Area is optional — you can assign or change it anytime from the sensor settings.
+                            </p>
+                            <FormGroup label='Area / Location' className='mb-0'>
+                                <div className='input-icon-wrapper'>
+                                    <Icon icon='LocationOn' className='input-icon' />
+                                    <select
+                                        className={`form-select input-with-icon ${errors.area_id ? 'is-invalid' : ''}`}
+                                        {...register('area_id', {
+                                            valueAsNumber: true
+                                        })}
+                                    >
+                                        <option value=''>No area — assign later</option>
+                                        {areas && flattenAreas(areas).map(area => (
+                                            <option key={area.id} value={area.id}>
+                                                {'\u00A0'.repeat(area.depth * 4)}{area.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.area_id && <div className='invalid-feedback'>{errors.area_id.message}</div>}
+                                </div>
+                            </FormGroup>
                         </div>
+
+
                         <div className='col-12 col-md-4'>
                             <FormGroup label='X Position (0-1)' className='mb-0'>
                                 <div className='input-icon-wrapper'>
@@ -374,79 +379,12 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                         </div>
                     </div>
                 )}
-
-                {step === 3 && (
-                    <div>
-                        <div className='review-card'>
-                            <div className='review-card-title'>
-                                <Icon icon='Info' size='sm' />
-                                Device Information
-                            </div>
-                            <div className='review-item'>
-                                <div className='review-label'>Sensor Name</div>
-                                <div className='review-value'>{formValues.name || 'Not provided'}</div>
-                            </div>
-                            <div className='review-item'>
-                                <div className='review-label'>Sensor Type</div>
-                                <div className='review-value'>{formValues.sensor_type || 'Not provided'}</div>
-                            </div>
-                            <div className='review-item'>
-                                <div className='review-label'>Description</div>
-                                <div className='review-value'>{formValues.description || 'Not provided'}</div>
-                            </div>
-                        </div>
-
-                        <div className='review-card'>
-                            <div className='review-card-title'>
-                                <Icon icon='Router' size='sm' />
-                                Network & Location
-                            </div>
-                            <div className='review-item'>
-                                <div className='review-label'>MAC Address</div>
-                                <div className='review-value font-monospace'>{formValues.mac_address || 'Not provided'}</div>
-                            </div>
-                            <div className='review-item'>
-                                <div className='review-label'>IP Address</div>
-                                <div className='review-value font-monospace'>{formValues.ip_address || 'Not provided'}</div>
-                            </div>
-                            <div className='review-item'>
-                                <div className='review-label'>Area</div>
-                                <div className='review-value'>
-                                    {formValues.area_id
-                                        ? (flattenAreas(areas || []).find(a => a.id === Number(formValues.area_id))?.name || 'Unknown Area')
-                                        : 'Not specified'}
-                                </div>
-                            </div>
-                            {(formValues.x_val !== undefined || formValues.y_val !== undefined || formValues.z_val !== undefined) && (
-                                <div className='review-item'>
-                                    <div className='review-label'>Position Coordinates</div>
-                                    <div className='review-value'>
-                                        X: {formValues.x_val ?? 'Not set'} |
-                                        Y: {formValues.y_val ?? 'Not set'} |
-                                        Z: {formValues.z_val ?? 'Not set'}m
-                                    </div>
-                                </div>
-                            )}
-                            {(formValues.username || formValues.password) && (
-                                <div className='review-item'>
-                                    <div className='review-label'>Credentials</div>
-                                    <div className='review-value'>
-                                        {formValues.username ? `User: ${formValues.username}` : ''}
-                                        {formValues.username && formValues.password ? ' / ' : ''}
-                                        {formValues.password ? 'Password: ••••••••' : ''}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Footer Actions */}
             <div className='form-footer'>
                 <Button
                     type='button'
-                    // color='light'
                     icon={step === 1 ? 'Close' : 'ChevronLeft'}
                     onClick={() => {
                         if (step === 1) {
@@ -459,8 +397,10 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                 >
                     {step === 1 ? 'Cancel' : 'Back'}
                 </Button>
+
                 {step < 3 ? (
                     <Button
+                        key='btn-continue'
                         type='button'
                         color='primary'
                         icon='ChevronRight'
@@ -468,7 +408,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                         onClick={async () => {
                             const fields = step === 1
                                 ? ['name', 'sensor_type']
-                                : ['mac_address', 'ip_address', 'area_id'];
+                                : ['mac_address', 'ip_address', 'username', 'password'];
                             // @ts-ignore
                             const isValid = await trigger(fields);
                             if (isValid) setStep(step + 1);
@@ -478,6 +418,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                     </Button>
                 ) : (
                     <Button
+                        key='btn-register'
                         type='submit'
                         color='primary'
                         icon='Check'
@@ -485,7 +426,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                         data-tour='sensor-confirm-btn'
                     >
                         {registerSensorMutation.isPending && <Spinner isSmall inButton />}
-                        Confirm & Register
+                        {hasAreaSelected ? 'Confirm & Register' : 'Register — Area can be set later'}
                     </Button>
                 )}
             </div>

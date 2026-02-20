@@ -200,18 +200,11 @@ const AreaMain = () => {
                     <Button
                         color='info'
                         icon='Add'
-                        className='me-2'
+                        className='btn-neumorphic'
                         onClick={() => setIsAreaModalOpen(true)}
                         data-tour='create-area-btn'
                     >
                         Create New Area
-                    </Button>
-                    <Button
-                        color='primary'
-                        icon='Sensors'
-                        onClick={() => setIsSensorModalOpen(true)}
-                    >
-                        Add Sensor to Area
                     </Button>
                 </SubHeaderRight>
             </SubHeader>

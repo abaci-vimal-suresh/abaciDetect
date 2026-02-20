@@ -106,10 +106,14 @@ export interface SensorLog {
     recorded_at: string;
 }
 
-export interface SensorLogResponse {
+export interface PaginatedResponse<T> {
     count: number;
-    results: SensorLog[];
+    next: string | null;
+    previous: string | null;
+    results: T[];
 }
+
+export interface SensorLogResponse extends PaginatedResponse<SensorLog> { }
 
 export interface SensorData {
     ip: string;
@@ -653,12 +657,23 @@ export type AlertStatus = 'active' | 'acknowledged' | 'resolved' | 'dismissed' |
 export type AlertType = 'high_co2' | 'high_temperature' | 'high_humidity' | 'smoke_detected' |
     'motion_alert' | 'gunshot_detected' | 'aggression_detected' | 'aqi_warning' | 'sensor_offline' | 'custom';
 
+export interface AlertAction {
+    id: number;
+    alert_id: number;
+    action_id: number;
+    action_name: string;
+    status: 'success' | 'failed' | 'pending' | string;
+    executed_at: string;
+    error_message: string | null;
+}
+
 export interface Alert {
     id: number;
     type: AlertType | string;
+    source: 'External' | 'Internal' | string;
     status: AlertStatus;
     description: string;
-    remarks?: string;
+    remarks?: string | null;
     sensor: number | {
         id: number;
         name: string;
@@ -673,8 +688,12 @@ export interface Alert {
     user_acknowledged_username?: string | null;
     time_of_acknowledgment?: string | null;
     next_trigger_time?: string | null;
+    recheck_next_trigger?: boolean;
+    value_reset_time?: string | null;
+    alert_actions: AlertAction[];
     created_at: string;
     updated_at: string;
+    superseded_by?: number | null;
 }
 
 export interface AlertCreateData {
@@ -698,7 +717,12 @@ export interface AlertFilters {
     status?: AlertStatus;
     sensor?: number;
     area?: number;
+    severity?: string;
+    period?: string;
     search?: string;
+    limit?: number;
+    offset?: number;
+    ordering?: string;
 }
 
 export interface AlertTrendResponse {
@@ -814,6 +838,8 @@ export interface Action {
     n8n_api_key?: string;
     n8n_auth_header?: string; // Default: 'X-API-Key'
     n8n_timeout?: number; // Default: 30 seconds
+    retry_count?: number;
+    retry_interval?: number; // in seconds
 
     created_by?: number;
     created_at: string;

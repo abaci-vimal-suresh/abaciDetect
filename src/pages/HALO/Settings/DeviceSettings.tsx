@@ -11,8 +11,8 @@ import Spinner from '../../../components/bootstrap/Spinner';
 import classNames from 'classnames';
 import { useSensor } from '../../../api/sensors.api';
 import ThemeContext from '../../../contexts/themeContext';
-import DeviceConfigSection from './sections/DeviceConfigSection';
-import ThresholdManagementSection from './sections/ThresholdManagementSection';
+import DeviceConfigSection from './sections/DeviceConfig/DeviceConfigSection';
+import ThresholdManagement from './sections/Threshold/ThresholdManagement';
 
 
 interface SettingsSection {
@@ -33,7 +33,7 @@ const settingsSections: SettingsSection[] = [
         id: 'thresholds',
         label: 'Thresholds & Configuration',
         icon: 'Speed',
-        component: ThresholdManagementSection,
+        component: ThresholdManagement
     }
 ];
 

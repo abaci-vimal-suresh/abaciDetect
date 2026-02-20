@@ -150,31 +150,24 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                                 </div>
                             )}
 
-                            {action.type === 'device_notification' && (
-                                <div className='row g-3'>
-                                    <div className='col-md-6'>
-                                        <Label className='fw-bold text-secondary small text-uppercase mb-1' style={{ opacity: 0.8 }}>Device Type</Label>
-                                        <div className='p-2'>
-                                            <Badge color="primary" isLight>{action.device_type || 'HALO'}</Badge>
-                                        </div>
-                                    </div>
-                                    <div className='col-md-6'>
-                                        <Label className='fw-bold text-secondary small text-uppercase mb-1' style={{ opacity: 0.8 }}>Sound File</Label>
-                                        <div className='p-2 fw-semibold'>
-                                            <Icon icon="MusicNote" size="sm" className="me-1 text-info" />
-                                            {action.device_sound || 'None'}
-                                        </div>
-                                    </div>
-                                    <div className='col-12'>
-                                        <Label className='fw-bold text-secondary small text-uppercase mb-1' style={{ opacity: 0.8 }}>LED Configuration</Label>
-                                        <div className='d-flex gap-3 p-2'>
-                                            <div><span className='text-muted small'>Color:</span> <span className='fw-bold'>{action.device_led_color ?? '—'}</span></div>
-                                            <div><span className='text-muted small'>Pattern:</span> <span className='fw-bold'>{action.device_led_pattern ?? '—'}</span></div>
-                                            <div><span className='text-muted small'>Priority:</span> <span className='fw-bold'>{action.device_led_priority ?? '—'}</span></div>
-                                        </div>
+                            <div className='row g-3'>
+                                <div className='col-md-4'>
+                                    <Label className='fw-bold text-secondary small text-uppercase mb-1' style={{ opacity: 0.8 }}>Retry Count</Label>
+                                    <div className='p-2 fw-bold'>{action.retry_count ?? 0}</div>
+                                </div>
+                                <div className='col-md-4'>
+                                    <Label className='fw-bold text-secondary small text-uppercase mb-1' style={{ opacity: 0.8 }}>Retry Interval</Label>
+                                    <div className='p-2 fw-bold'>{action.retry_interval ?? 60} sec</div>
+                                </div>
+                                <div className='col-md-4'>
+                                    <Label className='fw-bold text-secondary small text-uppercase mb-1' style={{ opacity: 0.8 }}>Alert on Failure</Label>
+                                    <div className='p-2'>
+                                        <Badge color={action.alert_on_failure ? 'danger' : 'secondary'} isLight>
+                                            {action.alert_on_failure ? 'YES' : 'NO'}
+                                        </Badge>
                                     </div>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
                         {/* Recipients */}

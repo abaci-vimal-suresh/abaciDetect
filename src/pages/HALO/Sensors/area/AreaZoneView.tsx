@@ -48,7 +48,11 @@ const METRIC_GROUPS = [
 ];
 
 // ── Mini Gauge Card ───────────────────────────────────────────────────────────
-const MiniGauge: React.FC<{ metric: ProcessedMetric }> = ({ metric }) => {
+const MiniGauge: React.FC<{
+    metric: ProcessedMetric;
+    onSensorClick?: (sensorId: number) => void;
+}> = ({ metric, onSensorClick }) => {
+    const [hovered, setHovered] = React.useState(false);
     const pct = parseFloat(metric.normalizedValue.toFixed(1));
     const color = metric.statusColor;
 
@@ -106,88 +110,196 @@ const MiniGauge: React.FC<{ metric: ProcessedMetric }> = ({ metric }) => {
         tooltip: { enabled: false },
     };
 
+    const hasSensorInfo = metric.minSensorId != null || metric.maxSensorId != null;
+    const shouldFlip = hasSensorInfo && hovered;
+
+    // shared card face style
+    const faceBase: React.CSSProperties = {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        borderRadius: 12,
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '12px 10px',
+    };
+
     return (
         <div
-            className='rounded-3 p-3 d-flex flex-column align-items-center text-center h-100'
             style={{
-                border: `1.5px solid ${color}44`,
-                background: `${color}08`,
-                transition: 'all 0.2s ease',
-                cursor: 'default',
+                perspective: '1200px',
+                cursor: hasSensorInfo ? 'pointer' : 'default',
+                height: '100%',
+                minHeight: 200,
             }}
-            onMouseEnter={e => {
-                e.currentTarget.style.boxShadow = `0 6px 24px ${color}33`;
-                e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={e => {
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'none';
-            }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
         >
-            {/* Gauge chart */}
-            <div style={{ width: 110, height: 85, marginBottom: 0 }}>
-                <Chart
-                    type='radialBar'
-                    series={[pct]}
-                    options={options}
-                    height={110}
-                    width={110}
-                />
-            </div>
-
-            {/* Metric label */}
-            <div className='fw-bold' style={{ fontSize: '0.75rem', color: '#111827', lineHeight: 1.2, marginBottom: 4 }}>
-                {metric.label}
-            </div>
-
-            {/* Raw value — big and prominent */}
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: color, lineHeight: 1 }}>
-                {metric.rawMax}
-                <span style={{ fontSize: '0.6rem', fontWeight: 400, color: '#9ca3af', marginLeft: 2 }}>
-                    {metric.unit}
-                </span>
-            </div>
-
-            {/* Min value */}
-            {metric.rawMin !== metric.rawMax && (
-                <div style={{ fontSize: '0.6rem', color: '#9ca3af', marginTop: 1 }}>
-                    min: {metric.rawMin} {metric.unit}
-                </div>
-            )}
-
-            {/* Threshold reference */}
-            {metric.hasThreshold && !metric.isScaleMismatch && (
-                <div style={{ fontSize: '0.58rem', color: '#d1d5db', marginTop: 1 }}>
-                    limit: {metric.thresholdMax} {metric.unit}
-                </div>
-            )}
-
-            {/* Mismatch hint */}
-            {metric.isScaleMismatch && (
-                <div style={{ fontSize: '0.58rem', color: '#9ca3af', marginTop: 1, fontStyle: 'italic' }}>
-                    Check unit/threshold
-                </div>
-            )}
-
-            {/* Conversion hint */}
-            {metric.isAutoConverted && (
-                <div style={{ fontSize: '0.58rem', color: '#10b981', marginTop: 1, fontStyle: 'italic' }}>
-                    inHg → hPa
-                </div>
-            )}
-
-            {/* Status pill */}
+            {/* ── Flip container ── */}
             <div
-                className='rounded-pill mt-2 px-2 py-1'
                 style={{
-                    fontSize: '0.58rem',
-                    fontWeight: 700,
-                    background: `${color}22`,
-                    color: color,
-                    letterSpacing: '0.03em',
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    transition: 'transform 0.6s cubic-bezier(0.4,0.2,0.2,1)',
+                    transformStyle: 'preserve-3d',
+                    transform: shouldFlip ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                    border: `1.5px solid ${color}44`,
+                    borderRadius: 12,
+                    boxShadow: hovered ? `0 8px 32px ${color}33` : 'none',
+                    background: hovered ? `${color}11` : 'transparent',
                 }}
             >
-                {statusLabel}
+                {/* ════ FRONT FACE ════ */}
+                <div
+                    style={{
+                        ...faceBase,
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        textAlign: 'center',
+                    }}
+                >
+                    {/* Gauge */}
+                    <div style={{ width: 110, height: 85 }}>
+                        <Chart
+                            type='radialBar'
+                            series={[pct]}
+                            options={options}
+                            height={110}
+                            width={110}
+                        />
+                    </div>
+
+                    {/* Metric label */}
+                    <div className='fw-bold' style={{ fontSize: '0.85rem', color: '#111827', lineHeight: 1.2, marginBottom: 4 }}>
+                        {metric.label}
+                    </div>
+
+                    {/* Raw value */}
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color, lineHeight: 1 }}>
+                        {metric.rawMax}
+                        <span style={{ fontSize: '0.7rem', fontWeight: 400, color: '#9ca3af', marginLeft: 2 }}>
+                            {metric.unit}
+                        </span>
+                    </div>
+
+                    {/* Min value */}
+                    {metric.rawMin !== metric.rawMax && (
+                        <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2 }}>
+                            min: {metric.rawMin} {metric.unit}
+                        </div>
+                    )}
+
+                    {/* Status hint */}
+                    <div
+                        className='rounded-pill mt-2 px-3 py-1'
+                        style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            background: `${color}22`,
+                            color,
+                            letterSpacing: '0.04em',
+                        }}
+                    >
+                        {statusLabel}
+                    </div>
+
+                    {/* Sensor hint badge */}
+                    {hasSensorInfo && (
+                        <div style={{ fontSize: '0.6rem', color: '#9ca3af', marginTop: 6, fontStyle: 'italic' }}>
+                            <Icon icon="Info" size="sm" className="me-1" />
+                            hover for sensors
+                        </div>
+                    )}
+                </div>
+
+                {/* ════ BACK FACE ════ */}
+                <div
+                    style={{
+                        ...faceBase,
+                        transform: 'rotateY(180deg)',
+                        gap: 14,
+                        padding: '20px 16px',
+                        textAlign: 'center',
+                    }}
+                >
+                    {/* Title */}
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: 2 }}>
+                        {metric.label}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Source Sensors
+                    </div>
+
+                    {/* Min sensor chip */}
+                    {metric.minSensorId != null && (
+                        <div style={{ width: '100%' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#d1d5db', marginBottom: 5 }}>
+                                Min: <span style={{ color: '#10b981', fontWeight: 800 }}>{metric.rawMin} {metric.unit}</span>
+                            </div>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onSensorClick?.(metric.minSensorId!); }}
+                                className="btn-neumorphic"
+                                style={{
+                                    border: '1.5px solid #10b981',
+                                    borderRadius: 10,
+                                    color: '#10b981',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 900,
+                                    padding: '8px 0',
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8,
+                                    background: 'rgba(16, 185, 129, 0.1)',
+                                }}
+                            >
+                                <Icon icon="Sensors" className="fs-5" />
+                                Sensor #{metric.minSensorId}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Max sensor chip */}
+                    {metric.maxSensorId != null && (
+                        <div style={{ width: '100%' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#d1d5db', marginBottom: 5 }}>
+                                Max: <span style={{ color: '#ef4444', fontWeight: 800 }}>{metric.rawMax} {metric.unit}</span>
+                            </div>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onSensorClick?.(metric.maxSensorId!); }}
+                                className="btn-neumorphic"
+                                style={{
+                                    border: '1.5px solid #ef4444',
+                                    borderRadius: 10,
+                                    color: '#ef4444',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 900,
+                                    padding: '8px 0',
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8,
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                }}
+                            >
+                                <Icon icon="Sensors" className="fs-5" />
+                                Sensor #{metric.maxSensorId}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Click hint */}
+                    <div style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: 4 }}>
+                        Click to view details
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -238,6 +350,8 @@ const AreaZoneView = () => {
     const [personInChargeIds, setPersonInChargeIds] = useState<number[]>([]);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [error, setError] = useState('');
+    const [isMetricsCollapsed, setIsMetricsCollapsed] = useState(false);
+    const [isMetricsHeaderHovered, setIsMetricsHeaderHovered] = useState(false);
 
     useEffect(() => {
         if (!subAreaPlan) {
@@ -404,7 +518,6 @@ const AreaZoneView = () => {
 
             <Page container='fluid'>
 
-                {/* ── No config warning ── */}
                 {hasNoConfig && (
                     <div className='alert alert-warning d-flex align-items-center mb-4' role='alert'>
                         <Icon icon='WarningAmber' className='me-2' />
@@ -412,73 +525,82 @@ const AreaZoneView = () => {
                     </div>
                 )}
 
-                {/* ── Summary stat cards ── */}
-                {summaryStats && (
-                    <div className='row g-3 mb-4'>
-                        {[
-                            { label: 'Active Metrics', value: summaryStats.total, color: '#6366f1', border: '#6366f133' },
-                            { label: 'Safe', value: summaryStats.safe, color: '#10b981', border: '#10b98133' },
-                            { label: 'Warning', value: summaryStats.warning, color: '#f59e0b', border: '#f59e0b33' },
-                            { label: 'Critical', value: summaryStats.critical, color: '#ef4444', border: '#ef444433' },
-                        ].map(stat => (
-                            <div key={stat.label} className='col-6 col-md-3'>
-                                <Card className='shadow-none text-center h-100' style={{ border: `1px solid ${stat.border}` }}>
-                                    <CardBody className='py-3'>
-                                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: stat.color, lineHeight: 1 }}>
-                                            {stat.value}
-                                        </div>
-                                        <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 4 }}>{stat.label}</div>
-                                    </CardBody>
-                                </Card>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-
-
-                {/* {eventStatuses.length > 0 && (
-                    <Card className='shadow-none border border-light mb-4'>
-                        <CardHeader className='bg-transparent'>
-                            <CardTitle>
-                                <Icon icon='NotificationsActive' className='me-2 text-warning' />
-                                Detection Events
-                            </CardTitle>
-                            <CardActions>
-                                <Badge color={eventStatuses.some(e => e.triggered) ? 'danger' : 'success'} isLight className='px-3 py-2'>
-                                    {eventStatuses.some(e => e.triggered)
-                                        ? `${eventStatuses.filter(e => e.triggered).length} Active`
-                                        : 'All Clear'}
-                                </Badge>
-                            </CardActions>
-                        </CardHeader>
+                <Card className='mb-4'>
+                    <CardHeader
+                        className='bg-transparent'
+                        onMouseEnter={() => setIsMetricsHeaderHovered(true)}
+                        onMouseLeave={() => setIsMetricsHeaderHovered(false)}
+                    >
                         <CardBody>
-                            <div className='row g-3'>
-                                {eventStatuses.map(evt => (
-                                    <div key={evt.key} className='col-6 col-md-4 col-lg-3 col-xl-2'>
-                                        <div
-                                            className='rounded-2 p-3 d-flex flex-column align-items-center text-center'
-                                            style={{
-                                                border: `1px solid ${evt.triggered ? '#ef444433' : '#10b98133'}`,
-                                                background: evt.triggered ? '#ef444411' : '#10b98111',
-                                            }}
-                                        >
-                                            <Icon
-                                                icon={evt.triggered ? 'Error' : 'CheckCircle'}
-                                                className='mb-1'
-                                                style={{ color: evt.triggered ? '#ef4444' : '#10b981', fontSize: '1.5rem' }}
-                                            />
-                                            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#374151' }}>{evt.label}</div>
-                                            <Badge color={evt.triggered ? 'danger' : 'success'} isLight className='mt-1' style={{ fontSize: '0.6rem' }}>
-                                                {evt.triggered ? 'Triggered' : 'Clear'}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className='d-flex flex-wrap align-items-center gap-2'>
+                                <div className='d-flex flex-wrap gap-2 flex-grow-1'>
+                                    <button
+                                        className='btn-neumorphic px-3 py-1'
+                                        onClick={() => {
+                                            setActiveGroupKey(null);
+                                            setIsMetricsCollapsed(false);
+                                        }}
+                                    >
+                                        All
+                                    </button>
+                                    {METRIC_GROUPS.map(g => {
+                                        const gm = buildProcessedMetrics(aggData, effectiveConfig, g.metricKeys);
+                                        if (gm.length === 0) return null;
+                                        const isActive = activeGroupKey === g.key;
+                                        return (
+                                            <button
+                                                key={g.key}
+                                                onClick={() => {
+                                                    setActiveGroupKey(isActive ? null : g.key);
+                                                    setIsMetricsCollapsed(false);
+                                                }}
+                                                className='btn-neumorphic px-3 py-1'
+                                            >
+                                                {g.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={{
+                                    opacity: isMetricsHeaderHovered ? 1 : 0,
+                                    transition: 'opacity 0.2s ease',
+                                    visibility: isMetricsHeaderHovered ? 'visible' : 'hidden'
+                                }}>
+                                    <Button
+                                        isNeumorphic
+                                        color={isMetricsCollapsed ? 'success' : 'light'}
+                                        size='sm'
+                                        icon={isMetricsCollapsed ? 'KeyboardArrowDown' : 'KeyboardArrowUp'}
+                                        onClick={() => setIsMetricsCollapsed(!isMetricsCollapsed)}
+                                        title={isMetricsCollapsed ? 'Expand Metrics' : 'Collapse Metrics'}
+                                    />
+                                </div>
                             </div>
                         </CardBody>
-                    </Card>
-                )} */}
+                    </CardHeader>
+                    {!isMetricsCollapsed && (
+                        <CardBody>
+                            {displayedMetrics.length > 0 ? (
+                                <div className='row g-3'>
+                                    {displayedMetrics.map(metric => (
+                                        <div key={metric.key} className='col-6 col-md-4 col-lg-3 col-xl-2'>
+                                            <MiniGauge
+                                                metric={metric}
+                                                onSensorClick={(sensorId) => navigate(`/halo/sensors/detail/${sensorId}`)}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className='text-center py-5 text-muted'>
+                                    <Icon icon='Speed' className='fs-1 mb-2' />
+                                    <p className='mb-0'>No sensor data available for this area yet.</p>
+                                </div>
+                            )}
+                        </CardBody>
+                    )}
+                </Card>
 
                 {/* ── Filter Bar ── */}
                 <div className='row mb-4'>
@@ -574,7 +696,6 @@ const AreaZoneView = () => {
                     </div>
                 </div>
 
-                {/* ── Sensors Section ── */}
                 <div>
                     <div className='d-flex align-items-center justify-content-between mb-3'>
                         <div className='d-flex align-items-center'>
@@ -619,71 +740,7 @@ const AreaZoneView = () => {
                     </div>
                 </div>
 
-                {/* ── Gauge Grid Section ── */}
-                <Card className='shadow-none border border-light mb-4'>
-                    <CardHeader className='bg-transparent'>
-                        <CardTitle>
-                            <Icon icon='Speed' className='me-2 text-primary' />
-                            {activeGroupKey
-                                ? `${METRIC_GROUPS.find(g => g.key === activeGroupKey)?.label} — Live Readings`
-                                : 'All Metrics — Live Readings'}
-                        </CardTitle>
-                        <CardActions>
-                            {/* Group filter pill tabs */}
-                            <div className='d-flex flex-wrap gap-2'>
-                                <button
-                                    onClick={() => setActiveGroupKey(null)}
-                                    style={{
-                                        background: !activeGroupKey ? '#4d69fa' : 'transparent',
-                                        color: !activeGroupKey ? '#fff' : '#6b7280',
-                                        border: `1px solid ${!activeGroupKey ? '#4d69fa' : '#d1d5db'}`,
-                                        borderRadius: 20, fontSize: '0.7rem', padding: '3px 12px',
-                                        cursor: 'pointer', transition: 'all 0.15s',
-                                    }}
-                                >
-                                    All
-                                </button>
-                                {METRIC_GROUPS.map(g => {
-                                    const gm = buildProcessedMetrics(aggData, effectiveConfig, g.metricKeys);
-                                    if (gm.length === 0) return null;
-                                    const isActive = activeGroupKey === g.key;
-                                    const worstColor = [...gm].sort((a, b) => b.normalizedValue - a.normalizedValue)[0]?.statusColor || '#6b7280';
-                                    return (
-                                        <button
-                                            key={g.key}
-                                            onClick={() => setActiveGroupKey(isActive ? null : g.key)}
-                                            style={{
-                                                background: isActive ? worstColor : 'transparent',
-                                                color: isActive ? '#fff' : '#6b7280',
-                                                border: `1px solid ${isActive ? worstColor : '#d1d5db'}`,
-                                                borderRadius: 20, fontSize: '0.7rem', padding: '3px 12px',
-                                                cursor: 'pointer', transition: 'all 0.15s',
-                                            }}
-                                        >
-                                            {g.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </CardActions>
-                    </CardHeader>
-                    <CardBody>
-                        {displayedMetrics.length > 0 ? (
-                            <div className='row g-3'>
-                                {displayedMetrics.map(metric => (
-                                    <div key={metric.key} className='col-6 col-md-4 col-lg-3 col-xl-2'>
-                                        <MiniGauge metric={metric} />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className='text-center py-5 text-muted'>
-                                <Icon icon='Speed' className='fs-1 mb-2' />
-                                <p className='mb-0'>No sensor data available for this area yet.</p>
-                            </div>
-                        )}
-                    </CardBody>
-                </Card>
+
             </Page>
 
             {/* ── Add Sensor Modal ── */}

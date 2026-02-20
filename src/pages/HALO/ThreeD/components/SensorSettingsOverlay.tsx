@@ -24,6 +24,8 @@ interface SensorSettingsOverlayProps {
     onPreviewChange?: (values: (Partial<SensorUpdatePayload> & { walls?: Wall[] }) | null) => void;
     onBlinkingWallsChange?: (wallIds: (number | string)[]) => void;
     previewState?: PreviewState;
+    externalWallToLink?: Wall | null;
+    onExternalWallLinkHandled?: () => void;
 }
 
 const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
@@ -32,7 +34,9 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     onClose,
     onPreviewChange,
     onBlinkingWallsChange,
-    previewState
+    previewState,
+    externalWallToLink,
+    onExternalWallLinkHandled
 }) => {
     const { darkModeStatus } = useDarkMode();
     const updateSensorMutation = useUpdateSensor();
@@ -100,6 +104,30 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
             }
         }
     }, [previewState, sensor.id]);
+
+    // ============================================
+    // ✨ NEW: HANDLE EXTERNAL WALL LINK FROM 3D
+    // ============================================
+
+    useEffect(() => {
+        if (externalWallToLink) {
+            const alreadyLinked = walls.find(w => w.id === externalWallToLink.id);
+
+            if (alreadyLinked) {
+                // Already linked, just select it
+                setSelectedWallId(alreadyLinked.id);
+                // Scroll into view logic could be added here if needed
+            } else {
+                // Link it
+                handleLinkWall(externalWallToLink);
+            }
+
+            // Acknowledge handling
+            if (onExternalWallLinkHandled) {
+                onExternalWallLinkHandled();
+            }
+        }
+    }, [externalWallToLink, walls]);
 
     // ============================================
     // BLINKING WALLS SYNC
@@ -265,6 +293,8 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     // ============================================
 
     const handleLinkWall = (areaWall: Wall) => {
+        if (walls.find(w => w.id === areaWall.id)) return;
+
         const updatedWalls = [...walls, areaWall];
         setWalls(updatedWalls);
         setIsDirty(true);
@@ -349,30 +379,47 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
 
     const renderInput = (label: string, field: keyof SensorUpdatePayload, errorKey?: string) => {
         const base = originalSensor || sensor;
-        const isModified = (values[field] ?? (base[field] || 0)) !== (base[field] || 0);
+        const value = (values[field] as number) ?? (base[field] || 0);
 
         return (
-            <FormGroup label={label} className="mb-3" id={`field-${field}`}>
-                <InputGroup>
-                    <Input
+            <div className="mb-3">
+                <div className="d-flex justify-content-between align-items-center mb-1">
+                    <label className="small text-muted">{label}</label>
+                    <span className="small fw-bold text-info">{value.toFixed(2)}m</span>
+                </div>
+                <div
+                    className={`d-flex align-items-center p-2 rounded ${darkModeStatus ? 'bg-dark bg-opacity-50' : 'bg-light'}`}
+                    style={{
+                        border: darkModeStatus ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+                        boxShadow: darkModeStatus ? 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(255,255,255,0.05)' : 'inset 2px 2px 5px rgba(0,0,0,0.1), inset -1px -1px 2px rgba(255,255,255,0.5)'
+                    }}
+                >
+                    <Button
+                        color="link"
+                        size="sm"
+                        className="p-1 px-2"
+                        onClick={() => handleInputChange(field, value - 0.1)}
+                    >
+                        <Icon icon="Remove" />
+                    </Button>
+                    <input
                         type="number"
                         step={0.1}
-                        value={(values[field] as number | string) ?? ''}
+                        value={value}
                         onChange={(e: any) => handleInputChange(field, parseFloat(e.target.value) || 0)}
-                        isValid={!errors[errorKey || (field as string)]}
-                        isTouched={isDirty}
-                        invalidFeedback={errors[errorKey || (field as string)]}
-                        className={isModified ? 'border-info' : ''}
+                        className={`form-control form-control-sm bg-transparent border-0 text-center fw-bold ${darkModeStatus ? 'text-white' : 'text-dark'}`}
+                        style={{ boxShadow: 'none' }}
                     />
                     <Button
-                        color="light"
+                        color="link"
                         size="sm"
-                        onClick={() => handleInputChange(field, ((values[field] as number) || 0) + 0.1)}
+                        className="p-1 px-2"
+                        onClick={() => handleInputChange(field, value + 0.1)}
                     >
                         <Icon icon="Add" />
                     </Button>
-                </InputGroup>
-            </FormGroup>
+                </div>
+            </div>
         );
     };
 
@@ -438,227 +485,172 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                             <div className="d-flex align-items-center mb-3">
                                 <Icon icon="ViewQuilt" className="text-info me-2" />
                                 <h6 className="mb-0 text-uppercase small fw-bold text-info">
-                                    Monitoring Area Walls ({walls.length})
+                                    Sensor Area Walls ({walls.length})
                                 </h6>
                             </div>
 
-                            {/* Info Tip */}
-                            <div className="mb-3 p-2 rounded" style={{
+                            {/* Instruction Tip */}
+                            <div className="mb-3 p-2 rounded d-flex align-items-center" style={{
                                 background: darkModeStatus ? 'rgba(74, 144, 226, 0.1)' : 'rgba(74, 144, 226, 0.05)',
                                 border: '1px solid rgba(74, 144, 226, 0.2)'
                             }}>
+                                <Icon icon="TouchApp" className="text-info me-2" size="sm" />
                                 <div className="small text-muted">
-                                    <Icon icon="Lightbulb" className="me-2" size="sm" />
-                                    These walls define the sensor's monitoring boundary.
+                                    Click walls in the 3D scene to link them to this sensor.
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Wall Grid (4 per row) */}
-                            {walls.length === 0 ? (
-                                <div className="text-muted small py-3 text-center">
-                                    <Icon icon="Info" className="mb-2 d-block mx-auto" />
-                                    No walls linked to this sensor
-                                </div>
-                            ) : (
-                                <div className="row g-2 mb-3">
-                                    {walls.map((wall, idx) => {
-                                        const isSelected = selectedWallId === wall.id;
-                                        const length = calculateWallLength(wall);
+                        {/* Wall Chips (Clean list) */}
+                        {walls.length === 0 ? (
+                            <div className="text-muted small py-4 text-center border rounded border-dashed" style={{ borderStyle: 'dashed' }}>
+                                <Icon icon="Mouse" className="mb-2 d-block mx-auto opacity-50" size="lg" />
+                                No walls linked. Click a wall in 3D to start.
+                            </div>
+                        ) : (
+                            <div className="d-flex flex-wrap gap-2 mb-3">
+                                {walls.map((wall) => {
+                                    const isSelected = selectedWallId === wall.id;
+                                    const length = calculateWallLength(wall);
 
-                                        return (
-                                            <div key={wall.id} className="col-3">
-                                                <div
-                                                    className={`
-                                                        p-2 rounded cursor-pointer text-center
-                                                        transition-all
-                                                        ${isSelected
-                                                            ? 'bg-info bg-opacity-25 border border-info border-2 shadow'
-                                                            : darkModeStatus
-                                                                ? 'bg-dark bg-opacity-50 border border-secondary hover-bg-dark'
-                                                                : 'bg-light border border-secondary hover-bg-light'
-                                                        }
-                                                    `}
-                                                    onClick={() => setSelectedWallId(isSelected ? null : wall.id)}
-                                                    style={{
-                                                        minHeight: '70px',
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        justifyContent: 'center',
-                                                        alignItems: 'center'
-                                                    }}
-                                                >
-                                                    {/* Wall Number */}
-                                                    <div
-                                                        className={`fw-bold mb-1 ${isSelected ? 'text-info' : darkModeStatus ? 'text-white' : 'text-dark'}`}
-                                                        style={{ fontSize: '1.3rem' }}
-                                                    >
-                                                        {idx + 1}
-                                                    </div>
-
-                                                    {/* Wall Length */}
-                                                    <div
-                                                        className="small text-muted"
-                                                        style={{ fontSize: '0.7rem' }}
-                                                    >
-                                                        {length}
-                                                    </div>
-
-                                                    {/* Color Indicator */}
-                                                    <div
-                                                        className="mt-1"
-                                                        style={{
-                                                            width: '20px',
-                                                            height: '3px',
-                                                            backgroundColor: wall.color || '#ffffff',
-                                                            borderRadius: '2px'
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {/* ✨ NEW: MINI INFO DRAWER (Expands below grid) */}
-                            {selectedWall && (
-                                <div
-                                    className="mb-3 p-3 rounded border"
-                                    style={{
-                                        background: darkModeStatus ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
-                                        borderColor: darkModeStatus ? 'rgba(74, 144, 226, 0.3)' : 'rgba(74, 144, 226, 0.2)',
-                                        animation: 'slideDown 0.3s ease'
-                                    }}
-                                >
-                                    <div className="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 className="mb-0 text-info">
-                                            <Icon icon="Info" className="me-2" />
-                                            Wall {walls.findIndex(w => w.id === selectedWall.id) + 1} Details
-                                        </h6>
-                                        <Button
-                                            color="link"
-                                            size="sm"
-                                            onClick={() => setSelectedWallId(null)}
-                                            icon="Close"
-                                        />
-                                    </div>
-
-                                    {/* Wall Info Grid */}
-                                    <div className="row g-2 small mb-3">
-                                        <div className="col-6">
-                                            <div className="text-muted">Length:</div>
-                                            <div className="fw-bold">{calculateWallLength(selectedWall)}</div>
-                                        </div>
-                                        <div className="col-6">
-                                            <div className="text-muted">Height:</div>
-                                            <div className="fw-bold">{(selectedWall.r_height || 2.4).toFixed(2)}m</div>
-                                        </div>
-                                        <div className="col-6">
-                                            <div className="text-muted">Start Point:</div>
-                                            <div className="font-monospace" style={{ fontSize: '0.8rem' }}>
-                                                ({selectedWall.r_x1.toFixed(2)}, {selectedWall.r_y1.toFixed(2)})
-                                            </div>
-                                        </div>
-                                        <div className="col-6">
-                                            <div className="text-muted">End Point:</div>
-                                            <div className="font-monospace" style={{ fontSize: '0.8rem' }}>
-                                                ({selectedWall.r_x2.toFixed(2)}, {selectedWall.r_y2.toFixed(2)})
-                                            </div>
-                                        </div>
-                                        <div className="col-6">
-                                            <div className="text-muted">Color:</div>
-                                            <div className="d-flex align-items-center">
-                                                <span
-                                                    className="d-inline-block me-2"
-                                                    style={{
-                                                        width: '20px',
-                                                        height: '20px',
-                                                        backgroundColor: selectedWall.color || '#ffffff',
-                                                        border: '1px solid #ccc',
-                                                        borderRadius: '2px'
-                                                    }}
-                                                />
-                                                <span className="font-monospace" style={{ fontSize: '0.75rem' }}>
-                                                    {selectedWall.color || '#ffffff'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="col-6">
-                                            <div className="text-muted">Wall ID:</div>
-                                            <div className="font-monospace" style={{ fontSize: '0.8rem' }}>
-                                                {selectedWall.id}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="d-flex gap-2">
-                                        <Button
-                                            color="info"
-                                            size="sm"
-                                            isLight
-                                            icon="Visibility"
-                                            onClick={() => {
-                                                // Trigger camera focus (handled by parent)
-                                                console.log('View wall in 3D:', selectedWall.id);
+                                    return (
+                                        <div
+                                            key={wall.id}
+                                            className={`
+                                                    px-3 py-2 rounded-pill cursor-pointer d-flex align-items-center
+                                                    transition-all border-1
+                                                    ${isSelected
+                                                    ? 'bg-info bg-opacity-25 border-info shadow-sm'
+                                                    : darkModeStatus
+                                                        ? 'bg-dark bg-opacity-50 border-secondary hover-bg-dark text-white'
+                                                        : 'bg-light border-secondary hover-bg-light text-dark'
+                                                }
+                                                `}
+                                            onClick={() => setSelectedWallId(isSelected ? null : wall.id)}
+                                            style={{
+                                                border: '1px solid',
+                                                fontSize: '0.85rem'
                                             }}
                                         >
-                                            View in 3D
-                                        </Button>
-                                        <Button
-                                            color="warning"
-                                            size="sm"
-                                            isLight
-                                            icon="LinkOff"
-                                            onClick={() => handleUnlinkWallClick(
-                                                selectedWall,
-                                                walls.findIndex(w => w.id === selectedWall.id) + 1
-                                            )}
-                                        >
-                                            Unlink
-                                        </Button>
+                                            {/* Color Dot */}
+                                            <span
+                                                className="me-2 rounded-circle"
+                                                style={{
+                                                    width: '10px',
+                                                    height: '10px',
+                                                    backgroundColor: wall.color || '#ffffff',
+                                                    border: '1px solid rgba(0,0,0,0.1)'
+                                                }}
+                                            />
+                                            <span className="fw-bold me-2">Wall</span>
+                                            <span className="opacity-75">{length}</span>
+                                            {isSelected && <Icon icon="CheckCircle" className="ms-2 text-info" size="sm" />}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* ✨ NEW: MINI INFO DRAWER (Expands below grid) */}
+                        {selectedWall && (
+                            <div
+                                className="mb-3 p-3 rounded border"
+                                style={{
+                                    background: darkModeStatus ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
+                                    borderColor: darkModeStatus ? 'rgba(74, 144, 226, 0.3)' : 'rgba(74, 144, 226, 0.2)',
+                                    animation: 'slideDown 0.3s ease'
+                                }}
+                            >
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 className="mb-0 text-info">
+                                        <Icon icon="Info" className="me-2" />
+                                        Selected Wall Details
+                                    </h6>
+                                    <Button
+                                        color="link"
+                                        size="sm"
+                                        onClick={() => setSelectedWallId(null)}
+                                        icon="Close"
+                                    />
+                                </div>
+
+                                {/* Wall Info Grid */}
+                                <div className="row g-2 small mb-3">
+                                    <div className="col-6">
+                                        <div className="text-muted">Length:</div>
+                                        <div className="fw-bold">{calculateWallLength(selectedWall)}</div>
+                                    </div>
+                                    <div className="col-6">
+                                        <div className="text-muted">Height:</div>
+                                        <div className="fw-bold">{(selectedWall.r_height || 2.4).toFixed(2)}m</div>
+                                    </div>
+                                    <div className="col-6">
+                                        <div className="text-muted">Start Point:</div>
+                                        <div className="font-monospace" style={{ fontSize: '0.8rem' }}>
+                                            ({selectedWall.r_x1.toFixed(2)}, {selectedWall.r_y1.toFixed(2)})
+                                        </div>
+                                    </div>
+                                    <div className="col-6">
+                                        <div className="text-muted">End Point:</div>
+                                        <div className="font-monospace" style={{ fontSize: '0.8rem' }}>
+                                            ({selectedWall.r_x2.toFixed(2)}, {selectedWall.r_y2.toFixed(2)})
+                                        </div>
+                                    </div>
+                                    <div className="col-6">
+                                        <div className="text-muted">Color:</div>
+                                        <div className="d-flex align-items-center">
+                                            <span
+                                                className="d-inline-block me-2"
+                                                style={{
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    backgroundColor: selectedWall.color || '#ffffff',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '2px'
+                                                }}
+                                            />
+                                            <span className="font-monospace" style={{ fontSize: '0.75rem' }}>
+                                                {selectedWall.color || '#ffffff'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="col-6">
+                                        <div className="text-muted">Wall ID:</div>
+                                        <div className="font-monospace" style={{ fontSize: '0.8rem' }}>
+                                            {selectedWall.id}
+                                        </div>
                                     </div>
                                 </div>
-                            )}
 
-                            {/* ============================================ */}
-                            {/* ✨ NEW: AVAILABLE WALLS (Chip Buttons)       */}
-                            {/* ============================================ */}
-
-                            {availableAreaWalls.length > 0 && (
-                                <div className="mt-3 pt-3 border-top">
-                                    <div className="d-flex align-items-center justify-content-between mb-2">
-                                        <h6 className="mb-0 text-uppercase small fw-bold text-muted">
-                                            <Icon icon="Link" className="me-2" />
-                                            Link More Walls
-                                        </h6>
-                                    </div>
-
-                                    <div className="small text-muted mb-2">
-                                        <Icon icon="Info" className="me-1" size="sm" />
-                                        Hover to highlight in 3D view
-                                    </div>
-
-                                    <div className="d-flex flex-wrap gap-2">
-                                        {availableAreaWalls.map(aw => (
-                                            <Button
-                                                key={`avail-${aw.id}`}
-                                                color="info"
-                                                size="sm"
-                                                isLight
-                                                onClick={() => handleLinkWall(aw)}
-                                                onMouseEnter={() => setHoveredWallId(aw.id)}
-                                                onMouseLeave={() => setHoveredWallId(null)}
-                                                className="d-flex align-items-center"
-                                            >
-                                                Wall {aw.id}
-                                                <span className="ms-1 opacity-75">• {calculateWallLength(aw)}</span>
-                                            </Button>
-                                        ))}
-                                    </div>
+                                {/* Action Buttons */}
+                                <div className="d-flex gap-2">
+                                    <Button
+                                        color="info"
+                                        size="sm"
+                                        isLight
+                                        icon="Visibility"
+                                        onClick={() => {
+                                            // Trigger camera focus (handled by parent)
+                                            console.log('View wall in 3D:', selectedWall.id);
+                                        }}
+                                    >
+                                        View in 3D
+                                    </Button>
+                                    <Button
+                                        color="warning"
+                                        size="sm"
+                                        isLight
+                                        icon="LinkOff"
+                                        onClick={() => handleUnlinkWallClick(
+                                            selectedWall,
+                                            0 // Index no longer needed
+                                        )}
+                                    >
+                                        Unlink
+                                    </Button>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </CardBody>
 
                     {/* ============================================ */}

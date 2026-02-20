@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { format, subDays, subHours, isToday, isWithinInterval, startOfDay } from 'date-fns';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { format, subHours, isToday } from 'date-fns';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
@@ -11,11 +11,8 @@ import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import useTablestyle from '../../../hooks/useTablestyles';
 import {
-    useAlertFilters, useCreateAlertFilter, useUpdateAlertFilter, useDeleteAlertFilter, useActions,
-    useCreateAction, useUpdateAction, useDeleteAction,
     useAlertTrends,
     useAlerts,
-    useSensors,
     useAreas,
     useCreateAlert,
     useUpdateAlert,
@@ -28,14 +25,14 @@ import Select from '../../../components/bootstrap/forms/Select';
 import Textarea from '../../../components/bootstrap/forms/Textarea';
 import Checks from '../../../components/bootstrap/forms/Checks';
 import Label from '../../../components/bootstrap/forms/Label';
-import { Action, Alert, AlertCreateData, AlertFilter, AlertStatus, AlertType } from '../../../types/sensor';
+import { AlertAction, AlertStatus } from '../../../types/sensor';
 import Chart, { IChartOptions } from '../../../components/extras/Chart';
 import Breadcrumb from '../../../components/bootstrap/Breadcrumb';
-import Timeline, { TimelineItem } from '../../../components/extras/Timeline';
 import useDarkMode from '../../../hooks/useDarkMode';
 
-// Types for our Alert History
-interface AlertHistoryItem {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface AlertRecord {
     id: string;
     originalId: number;
     timestamp: string;
@@ -45,501 +42,348 @@ interface AlertHistoryItem {
     severity: 'critical' | 'warning' | 'info';
     value: string | number;
     status: AlertStatus | 'Resolved';
-    remarks?: string;
+    remarks?: string | null;
     resolved_at?: string;
-    value_reset_time?: string; // NEW
+    value_reset_time?: string;
+    source: string;
+    alert_actions: AlertAction[];
+    recheck_next_trigger?: boolean;
 }
+
+type SeverityFilter = 'all' | 'critical' | 'warning';
+type ChartTimeRange = '24h' | '7d';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const mapApiAlertToRecord = (alert: any): AlertRecord => ({
+    id: `ALH-${1000 + alert.id}`,
+    originalId: alert.id,
+    timestamp: alert.created_at,
+    sensor_name:
+        alert.sensor_name ??
+        (typeof alert.sensor === 'object' ? alert.sensor?.name : `Sensor-${alert.sensor}`),
+    area_name:
+        alert.area_name ??
+        (typeof alert.area === 'object' ? alert.area?.name : `Area-${alert.area}`),
+    alert_type: alert.type,
+    severity:
+        alert.type.includes('smoke') ||
+            alert.type.includes('fire') ||
+            alert.type === 'sensor_offline' ||
+            alert.status === 'critical'
+            ? 'critical'
+            : alert.status === 'warning' || alert.type.includes('high')
+                ? 'warning'
+                : 'info',
+    value: alert.description,
+    status: alert.status,
+    remarks: alert.remarks,
+    resolved_at: alert.status === 'resolved' ? alert.updated_at : undefined,
+    value_reset_time: alert.value_reset_time ?? undefined,
+    source: alert.source,
+    alert_actions: alert.alert_actions ?? [],
+    recheck_next_trigger: alert.recheck_next_trigger,
+});
+
+const STATUS_COLORS: Record<string, string> = {
+    active: 'danger',
+    acknowledged: 'warning',
+    resolved: 'success',
+    dismissed: 'secondary',
+    suspended: 'dark',
+};
+
+const getButtonBaseStyle = (r: number, g: number, b: number, isDark: boolean) => ({
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    padding: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: isDark ? `rgba(${r},${g},${b},0.15)` : `rgba(${r},${g},${b},0.12)`,
+    border: isDark ? 'none' : `1px solid rgba(${r},${g},${b},0.3)`,
+    color: isDark ? `rgb(${r},${g},${b})` : `rgb(${Math.floor(r * 0.85)},${Math.floor(g * 0.85)},${Math.floor(b * 0.85)})`,
+    transition: 'all 0.2s ease',
+});
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const AlertHistory = () => {
     const { themeStatus } = useDarkMode();
     const { theme, headerStyle, rowStyle } = useTablestyle();
+    const tableRef = useRef<any>();
 
-    const [filter, setFilter] = useState<'all' | 'critical' | 'warning'>('all');
-    const [timelineFilter, setTimelineFilter] = useState<'today' | '24h' | 'all'>('all');
-    const [chartTimeRange, setChartTimeRange] = useState<'24h' | '7d'>('7d');
+    // ── Filter & Pagination State ──
+    const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
+    const [chartTimeRange, setChartTimeRange] = useState<ChartTimeRange>('7d');
     const [showTableFilters, setShowTableFilters] = useState(false);
+    const [page, setPage] = useState(0);
+    const [pageSize, setPageSize] = useState(10);
 
-    // Fetch trends and alerts from API
-    const { data: trendData, isLoading: isTrendLoading } = useAlertTrends({ period: chartTimeRange });
-    const { data: alertsData, isLoading: isAlertsLoading } = useAlerts();
-    const { data: sensors } = useSensors();
+    // ── Modal State ──
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    const [selectedAlert, setSelectedAlert] = useState<AlertRecord | null>(null);
+    const [alertToDelete, setAlertToDelete] = useState<AlertRecord | null>(null);
+    const [selectedDetailAlert, setSelectedDetailAlert] = useState<AlertRecord | null>(null);
+
+    // ── Status Update Form State ──
+    const [targetStatus, setTargetStatus] = useState<AlertStatus | null>(null);
+    const [statusRemarks, setStatusRemarks] = useState('');
+    const [nextTriggerTime, setNextTriggerTime] = useState('');
+    const [isRecheckEnabled, setIsRecheckEnabled] = useState(false);
+
+    // ── Create Alert Form State ──
+    const [newAlertForm, setNewAlertForm] = useState<{ description: string; area: number | undefined }>({
+        description: '',
+        area: undefined,
+    });
+
+    // ── API Hooks ──
+    const { data: trendData } = useAlertTrends({ period: chartTimeRange });
+    const { data: alertsData, isLoading: isAlertsLoading } = useAlerts({
+        limit: pageSize,
+        offset: page * pageSize,
+        severity: severityFilter !== 'all' ? severityFilter : undefined,
+    });
     const { data: areas } = useAreas();
 
     const createAlertMutation = useCreateAlert();
     const updateAlertMutation = useUpdateAlert();
     const deleteAlertMutation = useDeleteAlert();
 
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [newAlert, setNewAlert] = useState<Partial<AlertCreateData>>({
-        type: 'high_temperature',
-        status: 'active',
-        description: '',
-        remarks: '',
-        sensor: undefined,
-        area: undefined
-    });
+    // ── Derived Data ──
+    const alertRecords: AlertRecord[] = useMemo(
+        () => (alertsData?.results ?? []).map(mapApiAlertToRecord),
+        [alertsData],
+    );
 
-    // States for status update modal
-    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-    const [selectedAlert, setSelectedAlert] = useState<AlertHistoryItem | null>(null);
-    const [targetStatus, setTargetStatus] = useState<AlertStatus | null>(null);
-    const [remarks, setRemarks] = useState('');
-    const [nextTriggerTime, setNextTriggerTime] = useState<string>('');
-    const [isNextTriggerEnabled, setIsNextTriggerEnabled] = useState(false);
-    const [isRecheckEnabled, setIsRecheckEnabled] = useState(false); // NEW
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [alertToDelete, setAlertToDelete] = useState<AlertHistoryItem | null>(null);
-    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [selectedDetailAlert, setSelectedDetailAlert] = useState<AlertHistoryItem | null>(null);
+    const totalCount = alertsData?.count ?? (alertsData as any)?.total ?? 0;
 
-    // Alert Filters State
-    const deleteFilterMutation = useDeleteAlertFilter();
+    const stats = useMemo(() => ({
+        total: totalCount,
+        critical: (alertsData as any)?.critical_count ?? alertRecords.filter(r => r.severity === 'critical').length,
+        warning: (alertsData as any)?.warning_count ?? alertRecords.filter(r => r.severity === 'warning').length,
+        resolved: (alertsData as any)?.resolved_count ?? alertRecords.filter(r => r.status === 'resolved' || r.status === 'Resolved').length,
+    }), [alertRecords, alertsData, totalCount]);
 
-    const createActionMutation = useCreateAction();
-    const updateActionMutation = useUpdateAction();
-    const deleteActionMutation = useDeleteAction();
 
+
+    // ── Handlers ──
+    const openStatusModal = (alert: AlertRecord, status: AlertStatus) => {
+        setSelectedAlert(alert);
+        setTargetStatus(status);
+        setStatusRemarks('');
+        setNextTriggerTime('');
+        setIsRecheckEnabled(false);
+        setIsStatusModalOpen(true);
+    };
 
     const handleStatusUpdate = async () => {
         if (!selectedAlert || !targetStatus) return;
 
-        const payload: any = {
-            status: targetStatus,
-            remarks: remarks,
-        };
+        const payload: any = { status: targetStatus, remarks: statusRemarks };
 
-        if (targetStatus === 'acknowledged') {
-            payload.user_acknowledged = 1;
+        if (targetStatus === 'acknowledged') payload.user_acknowledged = 1;
+        if (targetStatus === 'suspended') {
+            payload.next_trigger_time = nextTriggerTime || null;
+            payload.recheck_next_trigger = isRecheckEnabled;
         }
 
-        if (targetStatus === 'suspended' && isNextTriggerEnabled && nextTriggerTime) {
-            payload.next_trigger_time = nextTriggerTime;
-            payload.recheck_next_trigger = isRecheckEnabled; // NEW
-        } else if (targetStatus === 'suspended') {
-            payload.next_trigger_time = null;
-            payload.recheck_next_trigger = false; // NEW
-        }
-
-        await updateAlertMutation.mutateAsync({
-            alertId: selectedAlert.originalId,
-            data: payload
-        });
+        await updateAlertMutation.mutateAsync({ alertId: selectedAlert.originalId, data: payload });
 
         setIsStatusModalOpen(false);
-        setRemarks('');
-        setNextTriggerTime('');
-        setIsRecheckEnabled(false); // NEW
         setSelectedAlert(null);
         setTargetStatus(null);
     };
 
-    const openStatusModal = (alert: AlertHistoryItem, status: AlertStatus) => {
-        setSelectedAlert(alert);
-        setTargetStatus(status);
-        setNextTriggerTime('');
-        setIsNextTriggerEnabled(false);
-        setIsRecheckEnabled(false); // NEW
-        setIsStatusModalOpen(true);
-    };
-
-    const handleDeleteClick = (alert: AlertHistoryItem) => {
-        setAlertToDelete(alert);
-        setIsDeleteModalOpen(true);
-    };
-
-    const confirmDelete = async () => {
-        if (alertToDelete) {
-            await deleteAlertMutation.mutateAsync(alertToDelete.originalId);
-            setIsDeleteModalOpen(false);
-            setAlertToDelete(null);
-        }
+    const handleDeleteConfirm = async () => {
+        if (!alertToDelete) return;
+        await deleteAlertMutation.mutateAsync(alertToDelete.originalId);
+        setIsDeleteModalOpen(false);
+        setAlertToDelete(null);
     };
 
     const handleCreateAlert = async () => {
-        if (newAlert.sensor && newAlert.area && newAlert.type && newAlert.description) {
-            await createAlertMutation.mutateAsync(newAlert as AlertCreateData);
-            setIsCreateModalOpen(false);
-            setNewAlert({
-                type: 'high_temperature',
-                status: 'active',
-                description: '',
-                remarks: '',
-                sensor: undefined,
-                area: undefined
-            });
-        }
+        if (!newAlertForm.description || !newAlertForm.area) return;
+        await createAlertMutation.mutateAsync(newAlertForm as any);
+        setIsCreateModalOpen(false);
+        setNewAlertForm({ description: '', area: undefined });
     };
 
-    // Map API Alerts to UI format
-    const mockAlertHistory: AlertHistoryItem[] = useMemo(() => {
-        if (!alertsData) return [];
-        return (alertsData as any[]).map((alert: any) => ({
-            id: `ALH-${1000 + alert.id}`,
-            originalId: alert.id,
-            timestamp: alert.created_at,
-            sensor_name: alert.sensor_name || (typeof alert.sensor === 'object' ? alert.sensor?.name : `Sensor-${alert.sensor}`),
-            area_name: alert.area_name || (typeof alert.area === 'object' ? alert.area?.name : `Area-${alert.area}`),
-            alert_type: alert.type,
-            severity: (alert.type.includes('smoke') || alert.type.includes('fire') || alert.type === 'sensor_offline' || alert.status === 'critical') ? 'critical' :
-                (alert.status === 'warning' || alert.type.includes('high')) ? 'warning' : 'info',
-            value: alert.description,
-            status: alert.status,
-            remarks: alert.remarks,
-            resolved_at: alert.status === 'resolved' ? alert.updated_at : undefined,
-            value_reset_time: alert.value_reset_time || undefined, // NEW
-        }));
-    }, [alertsData]);
+    const handleSeverityFilterClick = (clicked: SeverityFilter) => {
+        setSeverityFilter(prev => (prev === clicked ? 'all' : clicked));
+        setPage(0);
+    };
 
-    const filteredData = useMemo(() => {
-        if (filter === 'all') return mockAlertHistory;
-        return mockAlertHistory.filter(item => item.severity === filter);
-    }, [filter, mockAlertHistory]);
-
-    const timelineItems = useMemo(() => {
-        let items = [...mockAlertHistory];
-
-        if (timelineFilter === 'today') {
-            items = items.filter(item => isToday(new Date(item.timestamp)));
-        } else if (timelineFilter === '24h') {
-            const twentyFourHoursAgo = subHours(new Date(), 24);
-            items = items.filter(item => new Date(item.timestamp) >= twentyFourHoursAgo);
-        }
-
-        // Grouping by day
-        const groups: { [key: string]: AlertHistoryItem[] } = {};
-        items.forEach(item => {
-            const date = new Date(item.timestamp);
-            let dateKey = format(date, 'yyyy-MM-dd');
-
-            if (isToday(date)) {
-                dateKey = 'Today';
-            } else if (format(subDays(new Date(), 1), 'yyyy-MM-dd') === dateKey) {
-                dateKey = 'Yesterday';
-            } else {
-                dateKey = format(date, 'MMM dd, yyyy');
-            }
-
-            if (!groups[dateKey]) groups[dateKey] = [];
-            groups[dateKey].push(item);
-        });
-
-        return groups;
-    }, [timelineFilter, mockAlertHistory]);
-
-    const stats = useMemo(() => {
-        return {
-            total: mockAlertHistory.length,
-            critical: mockAlertHistory.filter(h => h.severity === 'critical').length,
-            warning: mockAlertHistory.filter(h => h.severity === 'warning').length,
-            resolved: mockAlertHistory.filter(h => h.status === 'resolved' || h.status === 'Resolved').length,
-        };
-    }, [mockAlertHistory]);
-
-    const chartOptions: IChartOptions = useMemo(() => {
-        const data = trendData?.data?.chart_data?.values || [];
-        const labels = trendData?.data?.chart_data?.labels || [];
-
-        return {
-            series: [{
-                name: 'Alerts',
-                data
-            }],
-            options: {
-                chart: {
-                    type: 'area',
-                    height: 150,
-                    sparkline: { enabled: true },
-                    toolbar: { show: false },
+    // ── Chart Config ──
+    const chartOptions: IChartOptions = useMemo(() => ({
+        series: [{ name: 'Alerts', data: trendData?.data?.chart_data?.values ?? [] }],
+        options: {
+            chart: { type: 'area', height: 150, sparkline: { enabled: true }, toolbar: { show: false } },
+            stroke: { curve: 'smooth', width: 3 },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: themeStatus === 'dark' ? 'dark' : 'light',
+                    type: 'vertical',
+                    shadeIntensity: 0.5,
+                    gradientToColors: [themeStatus === 'dark' ? '#7a3a6f' : '#a87ca1'],
+                    inverseColors: true,
+                    opacityFrom: themeStatus === 'dark' ? 0.5 : 0.4,
+                    opacityTo: 0.1,
+                    stops: [0, 100],
                 },
-                stroke: {
-                    curve: 'smooth',
-                    width: 3,
-                },
-                fill: {
-                    type: 'gradient',
-                    gradient: {
-                        shade: themeStatus === 'dark' ? 'dark' : 'light',
-                        type: 'vertical',
-                        shadeIntensity: 0.5,
-                        gradientToColors: [themeStatus === 'dark' ? '#7a3a6f' : '#a87ca1'],
-                        inverseColors: true,
-                        opacityFrom: themeStatus === 'dark' ? 0.5 : 0.4,
-                        opacityTo: 0.1,
-                        stops: [0, 100]
-                    }
-                },
-                colors: [themeStatus === 'dark' ? '#a87ca1' : '#7a3a6f'],
-                labels,
-                tooltip: {
-                    theme: themeStatus,
-                    y: {
-                        formatter: (value: number) => `${value} alerts`
-                    }
-                },
-                grid: { show: false },
-                xaxis: {
-                    labels: { show: false },
-                    axisBorder: { show: false },
-                    axisTicks: { show: false }
-                },
-                yaxis: { labels: { show: false } },
-                dataLabels: { enabled: false },
-                markers: {
-                    size: 0,
-                    hover: { size: 6, sizeOffset: 3 }
-                }
-            }
-        };
-    }, [trendData, themeStatus]);
+            },
+            colors: [themeStatus === 'dark' ? '#a87ca1' : '#7a3a6f'],
+            labels: trendData?.data?.chart_data?.labels ?? [],
+            tooltip: { theme: themeStatus, y: { formatter: (v: number) => `${v} alerts` } },
+            grid: { show: false },
+            xaxis: { labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false } },
+            yaxis: { labels: { show: false } },
+            dataLabels: { enabled: false },
+            markers: { size: 0, hover: { size: 6, sizeOffset: 3 } },
+        },
+    }), [trendData, themeStatus]);
 
+    // ── Table Columns ──
     const columns = [
         {
             title: 'Alert Info',
             field: 'alert_type',
-            render: (rowData: AlertHistoryItem) => (
+            render: (row: AlertRecord) => (
                 <div>
-                    <div className='fw-bold'>{rowData.alert_type}</div>
-                    <div className='small text-muted' style={{ fontSize: '0.75rem' }}>{rowData.id}</div>
+                    <div className='fw-bold'>{row.alert_type}</div>
+                    <div className='small text-muted' style={{ fontSize: '0.75rem' }}>{row.id}</div>
                 </div>
-            )
+            ),
+        },
+        {
+            title: 'Origin',
+            field: 'source',
+            render: (row: AlertRecord) => (
+                <Badge color={row.source === 'External' ? 'info' : 'secondary'} isLight style={{ fontSize: '0.7rem' }}>
+                    {row.source.toUpperCase()}
+                </Badge>
+            ),
         },
         {
             title: 'Timestamp',
             field: 'timestamp',
-            render: (rowData: AlertHistoryItem) => (
+            render: (row: AlertRecord) => (
                 <div className='d-flex align-items-center' style={{ fontSize: '0.75rem' }}>
                     <Icon icon='Schedule' className='me-2 text-muted' />
                     <div>
-                        <div className='fw-bold'>{format(new Date(rowData.timestamp), 'MMM dd, yyyy')}</div>
-                        <div className='small text-muted'>{format(new Date(rowData.timestamp), 'HH:mm')}</div>
+                        <div className='fw-bold'>{format(new Date(row.timestamp), 'MMM dd, yyyy')}</div>
+                        <div className='small text-muted'>{format(new Date(row.timestamp), 'HH:mm')}</div>
                     </div>
                 </div>
             ),
         },
         {
-            title: 'Source',
+            title: 'Device / Location',
             field: 'sensor_name',
-            render: (rowData: AlertHistoryItem) => (
+            render: (row: AlertRecord) => (
                 <div style={{ fontSize: '0.75rem' }}>
-                    <div className='fw-bold'>{rowData.sensor_name}</div>
-                    <div className='small text-muted'>{rowData.area_name}</div>
+                    <div className='fw-bold'>{row.sensor_name}</div>
+                    <div className='small text-muted'>{row.area_name}</div>
                 </div>
-            )
+            ),
         },
         {
             title: 'Value',
             field: 'value',
-            render: (rowData: AlertHistoryItem) => (
+            render: (row: AlertRecord) => (
                 <div className='fw-bold text-info' style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                    {rowData.value}
+                    {row.value}
                 </div>
-            )
+            ),
         },
         {
             title: 'Status',
             field: 'status',
-            render: (rowData: AlertHistoryItem) => {
-                const colors: Record<string, string> = {
-                    'active': 'danger',
-                    'acknowledged': 'warning',
-                    'resolved': 'success',
-                    'dismissed': 'secondary',
-                    'suspended': 'dark'
-                };
-                return (
-                    <Badge color={colors[rowData.status.toLowerCase()] as any || 'primary'} isLight style={{ fontSize: '0.75rem' }}>
-                        {rowData.status.toUpperCase()}
-                    </Badge>
-                );
-            },
+            render: (row: AlertRecord) => (
+                <Badge
+                    color={(STATUS_COLORS[row.status.toLowerCase()] ?? 'primary') as any}
+                    isLight
+                    style={{ fontSize: '0.75rem' }}
+                >
+                    {row.status.toUpperCase()}
+                </Badge>
+            ),
         },
         {
             title: 'Actions',
             field: 'actions',
             sorting: false,
             filtering: false,
-            render: (rowData: AlertHistoryItem) => (
-                <div className='d-flex gap-2 justify-content-start align-items-center'>
-                    <Button
-                        color='primary'
-                        isLight
-                        icon='Visibility'
-                        onClick={() => {
-                            setSelectedDetailAlert(rowData);
-                            setIsDetailModalOpen(true);
-                        }}
-                        title='View Details'
-                        style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            padding: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)',
-                            border: themeStatus === 'dark' ? 'none' : '1px solid rgba(77, 105, 250, 0.3)',
-                            color: themeStatus === 'dark' ? '#4d69fa' : '#3650d4',
-                            transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e: any) => {
-                            e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.25)' : 'rgba(77, 105, 250, 0.2)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = themeStatus === 'dark'
-                                ? '0 4px 8px rgba(0, 0, 0, 0.3)'
-                                : '0 4px 8px rgba(77, 105, 250, 0.2)';
-                        }}
-                        onMouseLeave={(e: any) => {
-                            e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                        }}
-                    />
-
-                    {rowData.status === 'active' && (
+            render: (row: AlertRecord) => {
+                const isDark = themeStatus === 'dark';
+                return (
+                    <div className='d-flex gap-2 align-items-center'>
+                        {/* View */}
                         <Button
-                            color='success'
-                            isLight
-                            icon='CheckCircle'
-                            title='Acknowledge Alert'
-                            onClick={() => openStatusModal(rowData, 'acknowledged')}
-                            style={{
-                                width: '36px',
-                                height: '36px',
-                                borderRadius: '8px',
-                                padding: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: themeStatus === 'dark' ? 'rgba(25, 135, 84, 0.15)' : 'rgba(25, 135, 84, 0.12)',
-                                border: themeStatus === 'dark' ? 'none' : '1px solid rgba(25, 135, 84, 0.3)',
-                                color: themeStatus === 'dark' ? '#198754' : '#146c43',
-                                transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e: any) => {
-                                e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(25, 135, 84, 0.25)' : 'rgba(25, 135, 84, 0.2)';
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = themeStatus === 'dark'
-                                    ? '0 4px 8px rgba(0, 0, 0, 0.3)'
-                                    : '0 4px 8px rgba(25, 135, 84, 0.2)';
-                            }}
-                            onMouseLeave={(e: any) => {
-                                e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(25, 135, 84, 0.15)' : 'rgba(25, 135, 84, 0.12)';
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                            }}
+                            color='primary' isLight icon='Visibility'
+                            title='View Details'
+                            style={getButtonBaseStyle(77, 105, 250, isDark)}
+                            onClick={() => { setSelectedDetailAlert(row); setIsDetailModalOpen(true); }}
                         />
-                    )}
-
-                    {rowData.status === 'acknowledged' && (
-                        <Button
-                            color='success'
-                            isLight
-                            icon='TaskAlt'
-                            title='Resolve Alert'
-                            onClick={() => openStatusModal(rowData, 'resolved')}
-                            style={{
-                                width: '36px',
-                                height: '36px',
-                                borderRadius: '8px',
-                                padding: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: themeStatus === 'dark' ? 'rgba(25, 135, 84, 0.15)' : 'rgba(25, 135, 84, 0.12)',
-                                border: themeStatus === 'dark' ? 'none' : '1px solid rgba(25, 135, 84, 0.3)',
-                                color: themeStatus === 'dark' ? '#198754' : '#146c43',
-                                transition: 'all 0.2s ease'
-                            }}
-                        />
-                    )}
-
-                    {(rowData.status === 'active' || rowData.status === 'suspended') && (
-                        <>
+                        {/* Acknowledge (active only) */}
+                        {row.status === 'active' && (
                             <Button
-                                color='secondary'
-                                isLight
-                                icon='Block'
-                                title='Dismiss Alert'
-                                onClick={() => openStatusModal(rowData, 'dismissed')}
-                                style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '8px',
-                                    padding: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: themeStatus === 'dark' ? 'rgba(108, 117, 125, 0.15)' : 'rgba(108, 117, 125, 0.12)',
-                                    border: themeStatus === 'dark' ? 'none' : '1px solid rgba(108, 117, 125, 0.3)',
-                                    color: themeStatus === 'dark' ? '#6c757d' : '#495057',
-                                    transition: 'all 0.2s ease'
-                                }}
+                                color='success' isLight icon='CheckCircle'
+                                title='Acknowledge'
+                                style={getButtonBaseStyle(25, 135, 84, isDark)}
+                                onClick={() => openStatusModal(row, 'acknowledged')}
                             />
-                            {rowData.status === 'active' && (
-                                <Button
-                                    color='dark'
-                                    isLight
-                                    icon='PauseCircle'
-                                    title='Suspend Alert'
-                                    onClick={() => openStatusModal(rowData, 'suspended')}
-                                    style={{
-                                        width: '36px',
-                                        height: '36px',
-                                        borderRadius: '8px',
-                                        padding: 0,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        background: themeStatus === 'dark' ? 'rgba(33, 37, 41, 0.15)' : 'rgba(33, 37, 41, 0.12)',
-                                        border: themeStatus === 'dark' ? 'none' : '1px solid rgba(33, 37, 41, 0.3)',
-                                        color: themeStatus === 'dark' ? '#adb5bd' : '#212529',
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                />
-                            )}
-                        </>
-                    )}
-
-                    <Button
-                        color='danger'
-                        isLight
-                        icon='Delete'
-                        onClick={() => handleDeleteClick(rowData)}
-                        title='Delete Log'
-                        style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            padding: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: themeStatus === 'dark' ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)',
-                            border: themeStatus === 'dark' ? 'none' : '1px solid rgba(239, 79, 79, 0.3)',
-                            color: themeStatus === 'dark' ? '#ef4f4f' : '#cf3b3b',
-                            transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e: any) => {
-                            e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(239, 79, 79, 0.25)' : 'rgba(239, 79, 79, 0.2)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = themeStatus === 'dark'
-                                ? '0 4px 8px rgba(0, 0, 0, 0.3)'
-                                : '0 4px 8px rgba(239, 79, 79, 0.2)';
-                        }}
-                        onMouseLeave={(e: any) => {
-                            e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                        }}
-                    />
-                </div>
-            )
-        }
+                        )}
+                        {/* Resolve (acknowledged only) */}
+                        {row.status === 'acknowledged' && (
+                            <Button
+                                color='success' isLight icon='TaskAlt'
+                                title='Resolve'
+                                style={getButtonBaseStyle(25, 135, 84, isDark)}
+                                onClick={() => openStatusModal(row, 'resolved')}
+                            />
+                        )}
+                        {/* Dismiss */}
+                        {(row.status === 'active' || row.status === 'suspended') && (
+                            <Button
+                                color='secondary' isLight icon='Block'
+                                title='Dismiss'
+                                style={getButtonBaseStyle(108, 117, 125, isDark)}
+                                onClick={() => openStatusModal(row, 'dismissed')}
+                            />
+                        )}
+                        {/* Suspend (active only) */}
+                        {row.status === 'active' && (
+                            <Button
+                                color='dark' isLight icon='PauseCircle'
+                                title='Suspend'
+                                style={getButtonBaseStyle(33, 37, 41, isDark)}
+                                onClick={() => openStatusModal(row, 'suspended')}
+                            />
+                        )}
+                        {/* Delete */}
+                        <Button
+                            color='danger' isLight icon='Delete'
+                            title='Delete Log'
+                            style={getButtonBaseStyle(239, 79, 79, isDark)}
+                            onClick={() => { setAlertToDelete(row); setIsDeleteModalOpen(true); }}
+                        />
+                    </div>
+                );
+            },
+        },
     ];
 
+    // ── Render ──
     return (
-        <PageWrapper title="Alert History">
+        <PageWrapper title='Alert History'>
             <SubHeader>
                 <SubHeaderLeft>
                     <Breadcrumb
@@ -550,116 +394,72 @@ const AlertHistory = () => {
                     />
                 </SubHeaderLeft>
                 <SubHeaderRight>
-                    <Button color="primary" isLight icon="Add" onClick={() => setIsCreateModalOpen(true)}>
+                    <Button className='btn-neumorphic' color='primary' isLight icon='Add' onClick={() => setIsCreateModalOpen(true)}>
                         Trigger Alert
-                    </Button>
-                    <Button color="dark" isLight icon="Download" className="ms-2">
-                        Export Logs
                     </Button>
                 </SubHeaderRight>
             </SubHeader>
+
             <Page container='fluid'>
-                <div className="row">
+                <div className='row'>
+                    {/* ── Stat Cards ── */}
+                    {[
+                        { label: 'Critical Alerts', value: stats.critical, icon: 'ReportProblem', color: 'danger', filterKey: 'critical' as SeverityFilter },
+                        { label: 'Warnings', value: stats.warning, icon: 'Warning', color: 'warning', filterKey: 'warning' as SeverityFilter },
+                        { label: 'Cases Resolved', value: stats.resolved, icon: 'CheckCircle', color: 'success', filterKey: null },
+                        { label: 'Total Records', value: stats.total, icon: 'SignalCellularAlt', color: 'primary', filterKey: 'all' as SeverityFilter },
+                    ].map(({ label, value, icon, color, filterKey }) => (
+                        <div key={label} className='col-lg-3 col-md-6 mb-4'>
+                            <Card
+                                stretch
+                                className={`shadow-sm ${filterKey ? 'cursor-pointer' : ''} ${severityFilter === filterKey && filterKey ? 'border-primary' : ''}`}
+                                onClick={filterKey ? () => handleSeverityFilterClick(filterKey) : undefined}
+                            >
+                                <CardBody className='py-4'>
+                                    <div className='d-flex align-items-center'>
+                                        <div className={`flex-shrink-0 bg-l10-${color} rounded-circle p-3`}>
+                                            <Icon icon={icon as any} size='2x' className={`text-${color}`} />
+                                        </div>
+                                        <div className='flex-grow-1 ms-3 text-end'>
+                                            <div className={`h4 fw-bold mb-0 text-${color}`}>{value}</div>
+                                            <div className='text-muted small'>{label}</div>
+                                        </div>
+                                    </div>
+                                </CardBody>
+                            </Card>
+                        </div>
+                    ))}
 
-                    <div className="col-lg-3 col-md-6 mb-4">
-                        <Card stretch className="shadow-sm">
-                            <CardBody className="py-4">
-                                <div className="d-flex align-items-center">
-                                    <div className="flex-shrink-0 bg-white rounded-circle p-3 shadow-sm">
-                                        <Icon icon="ReportProblem" size="2x" className="text-danger" />
-                                    </div>
-                                    <div className="flex-grow-1 ms-3 text-end">
-                                        <div className="h4 fw-bold mb-0 text-danger">{stats.critical}</div>
-                                        <div className="small">Critical Alerts</div>
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    <div className="col-lg-3 col-md-6 mb-4">
-                        <Card stretch>
-                            <CardBody className="py-4">
-                                <div className="d-flex align-items-center">
-                                    <div className="flex-shrink-0 bg-white rounded-circle p-3 shadow-sm">
-                                        <Icon icon="Warning" size="2x" className="text-warning" />
-                                    </div>
-                                    <div className="flex-grow-1 ms-3 text-end">
-                                        <div className="h4 fw-bold mb-0 text-warning">{stats.warning}</div>
-                                        <div className="small">Warnings</div>
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    <div className="col-lg-3 col-md-6 mb-4">
-                        <Card stretch className="shadow-sm">
-                            <CardBody className="py-4">
-                                <div className="d-flex align-items-center">
-                                    <div className="flex-shrink-0 bg-l10-success rounded-circle p-3">
-                                        <Icon icon="CheckCircle" size="2x" className="text-success" />
-                                    </div>
-                                    <div className="flex-grow-1 ms-3 text-end">
-                                        <div className="h4 fw-bold mb-0">{stats.resolved}</div>
-                                        <div className="text-muted small">Cases Resolved</div>
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    <div className="col-lg-3 col-md-6 mb-4">
-                        <Card stretch className="shadow-sm">
-                            <CardBody className="py-4">
-                                <div className="d-flex align-items-center">
-                                    <div className="flex-shrink-0 bg-l10-primary rounded-circle p-3">
-                                        <Icon icon="SignalCellularAlt" size="2x" className="text-primary" />
-                                    </div>
-                                    <div className="flex-grow-1 ms-3 text-end">
-                                        <div className="h4 fw-bold mb-0">{stats.total}</div>
-                                        <div className="text-muted small">Total Records</div>
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    <div className="col-xl-12 mb-4">
-                        <Card stretch className="shadow-sm">
+                    {/* ── Main Card ── */}
+                    <div className='col-xl-12 mb-4'>
+                        <Card stretch className='shadow-sm'>
                             <CardHeader borderSize={1}>
                                 <CardTitle>Alert Incidence Trend</CardTitle>
                                 <CardActions>
                                     <ButtonGroup>
-                                        <Button
-                                            color="primary"
-                                            isLight={chartTimeRange !== '24h'}
-                                            onClick={() => setChartTimeRange('24h')}
-                                            size="sm"
-                                        >
-                                            Last 24 Hours
-                                        </Button>
-                                        <Button
-                                            color="primary"
-                                            isLight={chartTimeRange !== '7d'}
-                                            onClick={() => setChartTimeRange('7d')}
-                                            size="sm"
-                                        >
-                                            Last 7 Days
-                                        </Button>
+                                        {(['24h', '7d'] as ChartTimeRange[]).map(range => (
+                                            <Button
+                                                key={range}
+                                                color='primary'
+                                                isLight={chartTimeRange !== range}
+                                                size='sm'
+                                                onClick={() => setChartTimeRange(range)}
+                                            >
+                                                {range === '24h' ? 'Last 24 Hours' : 'Last 7 Days'}
+                                            </Button>
+                                        ))}
                                     </ButtonGroup>
                                 </CardActions>
                             </CardHeader>
                             <CardBody>
-                                <Chart
-                                    series={chartOptions.series}
-                                    options={chartOptions.options}
-                                    type="area"
-                                    height={200}
-                                />
-                                <div className="mt-4">
+                                <Chart series={chartOptions.series} options={chartOptions.options} type='area' height={200} />
+
+                                <div className='mt-4'>
                                     <ThemeProvider theme={theme}>
                                         <MaterialTable
+                                            tableRef={tableRef}
+                                            page={page}
+                                            totalCount={totalCount}
                                             title={
                                                 <div className='d-flex align-items-center'>
                                                     <Icon icon='History' className='me-2 text-primary fs-4' />
@@ -667,16 +467,18 @@ const AlertHistory = () => {
                                                 </div>
                                             }
                                             columns={columns}
-                                            data={filteredData as any}
+                                            data={alertRecords}
+                                            isLoading={isAlertsLoading}
+                                            onPageChange={(newPage) => setPage(newPage)}
+                                            onRowsPerPageChange={(newSize) => { setPageSize(newSize); setPage(0); }}
                                             options={{
-                                                headerStyle: {
-                                                    ...headerStyle(),
-                                                    fontWeight: 'bold',
-                                                },
+                                                headerStyle: { ...headerStyle(), fontWeight: 'bold' },
                                                 rowStyle: rowStyle(),
-                                                pageSize: 10,
+                                                pageSize,
                                                 search: true,
                                                 filtering: showTableFilters,
+                                                showFirstLastPageButtons: true,
+                                                paginationType: 'stepped',
                                                 actionsColumnIndex: -1,
                                             }}
                                             actions={[
@@ -684,79 +486,12 @@ const AlertHistory = () => {
                                                     icon: () => <Icon icon='FilterAlt' />,
                                                     tooltip: showTableFilters ? 'Hide filters' : 'Show filters',
                                                     isFreeAction: true,
-                                                    onClick: () => setShowTableFilters((prev) => !prev),
+                                                    onClick: () => setShowTableFilters(prev => !prev),
                                                 },
                                             ]}
                                         />
                                     </ThemeProvider>
                                 </div>
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    <div className="col-xl-12 mb-4">
-                        <Card stretch className="shadow-sm">
-                            <CardHeader borderSize={1}>
-                                <CardTitle>Recent Activity</CardTitle>
-                                <CardActions>
-                                    <ButtonGroup>
-                                        <Button
-                                            color="primary"
-                                            isLight={timelineFilter !== 'today'}
-                                            onClick={() => setTimelineFilter('today')}
-                                            size="sm"
-                                        >
-                                            Today
-                                        </Button>
-                                        <Button
-                                            color="primary"
-                                            isLight={timelineFilter !== '24h'}
-                                            onClick={() => setTimelineFilter('24h')}
-                                            size="sm"
-                                        >
-                                            24h
-                                        </Button>
-                                        <Button
-                                            color="primary"
-                                            isLight={timelineFilter !== 'all'}
-                                            onClick={() => setTimelineFilter('all')}
-                                            size="sm"
-                                        >
-                                            All
-                                        </Button>
-                                    </ButtonGroup>
-                                </CardActions>
-                            </CardHeader>
-                            <CardBody className="overflow-auto" style={{ maxHeight: '600px' }}>
-                                <Timeline>
-                                    {Object.keys(timelineItems).map((date) => (
-                                        <React.Fragment key={date}>
-                                            <div className="text-muted fw-bold small p-2 rounded-pill mb-3 text-center sticky-top" style={{ top: 0, zIndex: 10 }}>
-                                                {date}
-                                            </div>
-                                            {timelineItems[date].map((item) => (
-                                                <TimelineItem
-                                                    key={item.id}
-                                                    label={format(new Date(item.timestamp), 'HH:mm')}
-                                                    color={item.severity === 'critical' ? 'danger' : item.severity === 'warning' ? 'warning' : 'primary'}
-                                                >
-                                                    <div className="fw-bold">{item.alert_type}</div>
-                                                    <div className="text-muted small mb-1">
-                                                        {item.area_name} • <code>{item.sensor_name}</code>
-                                                    </div>
-                                                    <Badge color={item.status === 'Resolved' ? 'success' : 'danger'} isLight>
-                                                        {item.status}
-                                                    </Badge>
-                                                </TimelineItem>
-                                            ))}
-                                        </React.Fragment>
-                                    ))}
-                                    {Object.keys(timelineItems).length === 0 && (
-                                        <div className="text-center text-muted py-5">
-                                            No activities found for this period.
-                                        </div>
-                                    )}
-                                </Timeline>
                             </CardBody>
                         </Card>
                     </div>
@@ -769,62 +504,57 @@ const AlertHistory = () => {
                     Update Alert Status: {targetStatus?.toUpperCase()}
                 </ModalHeader>
                 <ModalBody>
-                    <div className="row g-3">
-                        <div className="col-12 text-center mb-2">
+                    <div className='row g-3'>
+                        <div className='col-12 text-center mb-2'>
                             <Icon
                                 icon={
                                     targetStatus === 'resolved' ? 'TaskAlt' :
                                         targetStatus === 'dismissed' ? 'Block' :
                                             targetStatus === 'suspended' ? 'PauseCircle' : 'Info'
                                 }
-                                size="3x"
+                                size='3x'
                                 className={`text-${targetStatus === 'resolved' ? 'success' :
                                     targetStatus === 'dismissed' ? 'secondary' :
                                         targetStatus === 'suspended' ? 'dark' : 'primary'
                                     }`}
                             />
-                            <div className="mt-2 fw-bold">
-                                Updating Alert {selectedAlert?.id} to {targetStatus?.toUpperCase()}
+                            <div className='mt-2 fw-bold'>
+                                Updating Alert {selectedAlert?.id} → {targetStatus?.toUpperCase()}
                             </div>
                         </div>
-                        <div className="col-12">
-                            <FormGroup label="Remarks / Resolution Notes">
+                        <div className='col-12'>
+                            <FormGroup label='Remarks / Resolution Notes'>
                                 <Textarea
-                                    placeholder="Enter details about why this alert is being updated..."
-                                    value={remarks}
-                                    onChange={(e: any) => setRemarks(e.target.value)}
+                                    placeholder='Enter details about this status change...'
+                                    value={statusRemarks}
+                                    onChange={(e: any) => setStatusRemarks(e.target.value)}
                                     rows={4}
                                 />
                             </FormGroup>
                         </div>
-
                         {targetStatus === 'suspended' && (
-                            <div className="col-12">
-                                {/* Existing: Auto Reactivation Time Toggle */}
-
-                                <FormGroup label="Next Trigger Time" formText="The alert will be reactivated after this time.">
+                            <div className='col-12'>
+                                <FormGroup label='Next Trigger Time' formText='Alert will reactivate after this time.'>
                                     <Input
-                                        type="datetime-local"
+                                        type='datetime-local'
                                         value={nextTriggerTime}
                                         onChange={(e: any) => setNextTriggerTime(e.target.value)}
                                     />
                                 </FormGroup>
-
-                                {/* NEW: Smart Reactivation (recheck_next_trigger) */}
                                 <div className='d-flex align-items-center justify-content-between mt-3 pt-3 border-top'>
                                     <div>
                                         <Label htmlFor='toggle-recheck' className='mb-0 fw-bold'>
                                             Only reactivate if condition persists?
                                         </Label>
                                         <div className='text-muted small mt-1'>
-                                            System will check sensor value before reactivating the alert
+                                            System will check sensor value before reactivating
                                         </div>
                                     </div>
                                     <Checks
                                         type='switch'
                                         id='toggle-recheck'
                                         checked={isRecheckEnabled}
-                                        onChange={() => setIsRecheckEnabled(!isRecheckEnabled)}
+                                        onChange={() => setIsRecheckEnabled(v => !v)}
                                         label={isRecheckEnabled ? 'Yes' : 'No'}
                                     />
                                 </div>
@@ -833,140 +563,75 @@ const AlertHistory = () => {
                     </div>
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="secondary" isLight onClick={() => setIsStatusModalOpen(false)}>
-                        Cancel
-                    </Button>
+                    <Button color='secondary' isLight onClick={() => setIsStatusModalOpen(false)}>Cancel</Button>
                     <Button
                         color={
                             targetStatus === 'resolved' ? 'success' :
                                 targetStatus === 'dismissed' ? 'secondary' :
                                     targetStatus === 'suspended' ? 'dark' : 'primary'
                         }
-                        icon="Save"
+                        icon='Save'
                         onClick={handleStatusUpdate}
-                        isDisable={
-                            updateAlertMutation.isPending ||
-                            !remarks.trim() ||
-                            (targetStatus === 'suspended' && isNextTriggerEnabled && !nextTriggerTime)
-                        }
+                        isDisable={updateAlertMutation.isPending || !statusRemarks.trim()}
                     >
                         Confirm Update
                     </Button>
                 </ModalFooter>
             </Modal>
 
-            {/* ── Create Alert Modal ── */}
-            <Modal isOpen={isCreateModalOpen} setIsOpen={setIsCreateModalOpen} size="lg">
-                <ModalHeader setIsOpen={setIsCreateModalOpen}>
-                    Trigger Manual Alert
-                </ModalHeader>
+            <Modal isOpen={isCreateModalOpen} setIsOpen={setIsCreateModalOpen}>
+                <ModalHeader setIsOpen={setIsCreateModalOpen}>Trigger Manual Alert</ModalHeader>
                 <ModalBody>
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <FormGroup label="Alert Type">
+                    <div className='row g-3'>
+                        <div className='col-12'>
+                            <FormGroup label='Area'>
                                 <Select
-                                    ariaLabel='test'
-                                    value={newAlert.type}
-                                    onChange={(e: any) => setNewAlert({ ...newAlert, type: e.target.value as AlertType })}
-                                    list={[
-                                        { text: 'High Temperature', value: 'temperature' },
-                                        { text: 'High CO2', value: 'co2' },
-                                        { text: 'Smoke Detected', value: 'smoke' },
-                                        { text: 'Sensor Offline', value: 'offline' },
-                                        { text: 'Motion Detected', value: 'motion' },
-                                    ]}
+                                    value={newAlertForm.area?.toString()}
+                                    onChange={(e: any) => setNewAlertForm(f => ({ ...f, area: parseInt(e.target.value) }))}
+                                    list={areas?.map((a: any) => ({ text: a.name, value: a.id.toString() })) ?? []}
+                                    ariaLabel='Select Area'
                                 />
                             </FormGroup>
                         </div>
-                        <div className="col-md-6">
-                            <FormGroup label="Status">
-                                <Select
-                                    ariaLabel='test'
-                                    value={newAlert.status}
-                                    onChange={(e: any) => setNewAlert({ ...newAlert, status: e.target.value as AlertStatus })}
-                                    list={[
-                                        { text: 'Active', value: 'active' },
-                                        { text: 'Warning', value: 'warning' },
-                                    ]}
-                                />
-                            </FormGroup>
-                        </div>
-                        <div className="col-md-6">
-                            <FormGroup label="Sensor">
-                                <Select
-                                    value={newAlert.sensor?.toString()}
-                                    onChange={(e: any) => setNewAlert({ ...newAlert, sensor: parseInt(e.target.value) })}
-                                    list={sensors?.map((s: any) => ({ text: s.name, value: s.id.toString() })) || []}
-                                    ariaLabel="Select Sensor"
-                                />
-                            </FormGroup>
-                        </div>
-                        <div className="col-md-6">
-                            <FormGroup label="Area">
-                                <Select
-                                    value={newAlert.area?.toString()}
-                                    onChange={(e: any) => setNewAlert({ ...newAlert, area: parseInt(e.target.value) })}
-                                    list={areas?.map((a: any) => ({ text: a.name, value: a.id.toString() })) || []}
-                                    ariaLabel="Select Area"
-                                />
-                            </FormGroup>
-                        </div>
-                        <div className="col-12">
-                            <FormGroup label="Description">
+                        <div className='col-12'>
+                            <FormGroup label='Description'>
                                 <Input
-                                    placeholder="Enter alert description..."
-                                    value={newAlert.description}
-                                    onChange={(e: any) => setNewAlert({ ...newAlert, description: e.target.value })}
-                                />
-                            </FormGroup>
-                        </div>
-                        <div className="col-12">
-                            <FormGroup label="Remarks">
-                                <Input
-                                    placeholder="Enter remarks..."
-                                    value={newAlert.remarks}
-                                    onChange={(e: any) => setNewAlert({ ...newAlert, remarks: e.target.value })}
+                                    placeholder='Enter alert description...'
+                                    value={newAlertForm.description}
+                                    onChange={(e: any) => setNewAlertForm(f => ({ ...f, description: e.target.value }))}
                                 />
                             </FormGroup>
                         </div>
                     </div>
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="secondary" isLight onClick={() => setIsCreateModalOpen(false)}>
-                        Cancel
-                    </Button>
+                    <Button color='secondary' isLight onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
                     <Button
-                        color="danger"
-                        icon="ReportProblem"
+                        color='danger'
+                        icon='ReportProblem'
                         onClick={handleCreateAlert}
-                        isDisable={createAlertMutation.isPending}
+                        isDisable={createAlertMutation.isPending || !newAlertForm.description.trim() || !newAlertForm.area}
                     >
                         Trigger Now
                     </Button>
                 </ModalFooter>
             </Modal>
 
-            {/* ── Delete Confirmation Modal ── */}
-            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} title="Confirm Deletion">
+            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} title='Confirm Deletion'>
                 <ModalBody>
-                    <div className="text-center p-3">
-                        <Icon icon="ReportProblem" size="3x" className="text-danger mb-3" />
+                    <div className='text-center p-3'>
+                        <Icon icon='ReportProblem' size='3x' className='text-danger mb-3' />
                         <h5>Are you sure?</h5>
-                        <p className="text-muted">
+                        <p className='text-muted'>
                             Do you really want to delete this alert log? This action cannot be undone.
                         </p>
                     </div>
                 </ModalBody>
                 <ModalFooter>
-                    <Button color="light" onClick={() => setIsDeleteModalOpen(false)}>
-                        Cancel
-                    </Button>
-                    <Button color="danger" onClick={confirmDelete}>
-                        Delete Log
-                    </Button>
+                    <Button color='light' onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                    <Button color='danger' onClick={handleDeleteConfirm}>Delete Log</Button>
                 </ModalFooter>
             </Modal>
-
 
             {/* ── Alert Detail Modal ── */}
             <Modal isOpen={isDetailModalOpen} setIsOpen={setIsDetailModalOpen} size='lg' isCentered>
@@ -978,32 +643,21 @@ const AlertHistory = () => {
                         <div className='row g-3'>
                             <div className='col-12 text-center mb-4'>
                                 <div
-                                    className='neumorphic-icon-container mx-auto mb-3'
+                                    className='mx-auto mb-3'
                                     style={{
-                                        width: '80px',
-                                        height: '80px',
-                                        background: '#e0e5ec',
-                                        borderRadius: '50%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        boxShadow: '6px 6px 12px #b8b9be, -6px -6px 12px #ffffff'
+                                        width: '80px', height: '80px',
+                                        background: '#e0e5ec', borderRadius: '50%',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: '6px 6px 12px #b8b9be, -6px -6px 12px #ffffff',
                                     }}
                                 >
                                     <Icon
-                                        icon={
-                                            selectedDetailAlert.severity === 'critical' ? 'ReportProblem' :
-                                                selectedDetailAlert.severity === 'warning' ? 'Warning' : 'Info'
-                                        }
+                                        icon={selectedDetailAlert.severity === 'critical' ? 'ReportProblem' : selectedDetailAlert.severity === 'warning' ? 'Warning' : 'Info'}
                                         size='3x'
-                                        className={`text-${selectedDetailAlert.severity === 'critical' ? 'danger' :
-                                            selectedDetailAlert.severity === 'warning' ? 'warning' : 'primary'
-                                            }`}
+                                        className={`text-${selectedDetailAlert.severity === 'critical' ? 'danger' : selectedDetailAlert.severity === 'warning' ? 'warning' : 'primary'}`}
                                     />
                                 </div>
-                                <div className='h4 fw-bold mb-1'>
-                                    {selectedDetailAlert.alert_type}
-                                </div>
+                                <div className='h4 fw-bold mb-1'>{selectedDetailAlert.alert_type}</div>
                                 <div className='text-muted small'>
                                     ID: {selectedDetailAlert.id} • {format(new Date(selectedDetailAlert.timestamp), 'MMM dd, yyyy HH:mm:ss')}
                                 </div>
@@ -1014,16 +668,25 @@ const AlertHistory = () => {
                                     <div className='row g-3'>
                                         <div className='col-md-6'>
                                             <Label className='fw-bold text-secondary small text-uppercase mb-1'>Sensor Source</Label>
-                                            <div className='d-flex align-items-center p-3 rounded' >
+                                            <div className='d-flex align-items-center p-3 rounded'>
                                                 <Icon icon='Sensors' className='me-2 text-primary' />
                                                 <span className='fw-bold'>{selectedDetailAlert.sensor_name}</span>
                                             </div>
                                         </div>
                                         <div className='col-md-6'>
                                             <Label className='fw-bold text-secondary small text-uppercase mb-1'>Location Area</Label>
-                                            <div className='d-flex align-items-center p-3 rounded' >
+                                            <div className='d-flex align-items-center p-3 rounded'>
                                                 <Icon icon='Place' className='me-2 text-info' />
                                                 <span className='fw-bold'>{selectedDetailAlert.area_name}</span>
+                                            </div>
+                                        </div>
+                                        <div className='col-md-6'>
+                                            <Label className='fw-bold text-secondary small text-uppercase mb-1'>Alert Origin</Label>
+                                            <div className='d-flex align-items-center p-3 rounded'>
+                                                <Icon icon='Hub' className='me-2 text-warning' />
+                                                <Badge color={selectedDetailAlert.source === 'External' ? 'info' : 'secondary'} isLight>
+                                                    {selectedDetailAlert.source.toUpperCase()}
+                                                </Badge>
                                             </div>
                                         </div>
                                     </div>
@@ -1031,15 +694,47 @@ const AlertHistory = () => {
 
                                 <div className='border-top pt-3 mb-3'>
                                     <Label className='fw-bold text-secondary small text-uppercase mb-1'>Value / Description</Label>
-                                    <div className='p-3 rounded font-monospace' >
-                                        {selectedDetailAlert.value}
-                                    </div>
+                                    <div className='p-3 rounded font-monospace'>{selectedDetailAlert.value}</div>
                                 </div>
+
+                                {selectedDetailAlert.alert_actions?.length > 0 && (
+                                    <div className='border-top pt-3 mb-3'>
+                                        <Label className='fw-bold text-secondary small text-uppercase mb-1'>Notification Actions</Label>
+                                        <div className='mt-2'>
+                                            {selectedDetailAlert.alert_actions.map((action, i) => (
+                                                <div
+                                                    key={i}
+                                                    className='d-flex align-items-center justify-content-between p-2 mb-2 rounded border-start border-4'
+                                                    style={{
+                                                        background: 'rgba(0,0,0,0.02)',
+                                                        borderLeftColor: action.status === 'success' ? '#198754' : action.status === 'failed' ? '#dc3545' : '#ffc107',
+                                                    }}
+                                                >
+                                                    <div className='d-flex align-items-center'>
+                                                        <Icon
+                                                            icon={action.action_name.toLowerCase().includes('email') ? 'Email' : 'Notifications'}
+                                                            className='me-2 text-muted'
+                                                        />
+                                                        <div>
+                                                            <div className='fw-bold small'>{action.action_name}</div>
+                                                            <div className='text-muted' style={{ fontSize: '0.7rem' }}>
+                                                                {format(new Date(action.executed_at), 'HH:mm:ss')}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <Badge color={action.status === 'success' ? 'success' : action.status === 'failed' ? 'danger' : 'warning'} isLight>
+                                                        {action.status.toUpperCase()}
+                                                    </Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className='border-top pt-3 mb-3'>
                                     <Label className='fw-bold text-secondary small text-uppercase mb-1'>Remarks / Notes</Label>
-                                    <div className='p-3 rounded' >
-                                        {selectedDetailAlert.remarks || <span className='text-muted fst-italic'>No remarks available</span>}
+                                    <div className='p-3 rounded'>
+                                        {selectedDetailAlert.remarks ?? <span className='text-muted fst-italic'>No remarks available</span>}
                                     </div>
                                 </div>
 
@@ -1072,15 +767,11 @@ const AlertHistory = () => {
                     )}
                 </ModalBody>
                 <ModalFooter className='justify-content-center border-0 pb-4'>
-                    <Button
-                        className='btn-neumorphic px-5 py-2'
-                        onClick={() => setIsDetailModalOpen(false)}
-                    >
+                    <Button className='btn-neumorphic px-5 py-2' onClick={() => setIsDetailModalOpen(false)}>
                         Close Details
                     </Button>
                 </ModalFooter>
             </Modal>
-
         </PageWrapper>
     );
 };
