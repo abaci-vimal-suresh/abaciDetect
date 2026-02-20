@@ -86,7 +86,7 @@ const Header: FC<IHeaderProps> = ({ children, hasLeftMobileMenu, hasRightMobileM
 
 	return (
 		<>
-			<header ref={refMobileHeader} className='mobile-header'>
+			<header ref={refMobileHeader} className='mobile-header '>
 				<div className='container-fluid'>
 					<div className='row'>
 						<div className='col'>

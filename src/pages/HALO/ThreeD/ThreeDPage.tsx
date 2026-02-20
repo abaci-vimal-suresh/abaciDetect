@@ -59,6 +59,7 @@ const ThreeDPage = () => {
     const [wallDrawMode, setWallDrawMode] = useState(false);
     const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
     const [isWallEndpointDragging, setIsWallEndpointDragging] = useState(false);
+    const [externalWallToLink, setExternalWallToLink] = useState<Wall | null>(null);
 
     const [previewState, setPreviewState] = useState<PreviewState>(null);
 
@@ -558,6 +559,12 @@ const ThreeDPage = () => {
                                     onWallCreated={handleWallCreated}
                                     selectedWallId={selectedWallId}
                                     onWallClick={(wall) => {
+                                        if (showSettingsOverlay && selectedSensor) {
+                                            // Redirect to sensor settings if they are open
+                                            setExternalWallToLink(wall);
+                                            return;
+                                        }
+
                                         setSelectedWallId(wall.id);
                                         if (wallsData) {
                                             for (const [areaId, walls] of Object.entries(wallsData)) {
@@ -609,6 +616,8 @@ const ThreeDPage = () => {
                                 }}
                                 onBlinkingWallsChange={setBlinkingWallIds}
                                 previewState={previewState} //  NEW: Sync from 3D drag
+                                externalWallToLink={externalWallToLink}
+                                onExternalWallLinkHandled={() => setExternalWallToLink(null)}
                             />
                         )}
 

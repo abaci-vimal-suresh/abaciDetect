@@ -287,7 +287,6 @@ const AlertActionPage = () => {
                                                 color='primary'
                                                 isLight
                                                 icon='Add'
-                                                style={{ padding: '8px 16px', borderRadius: '10px' }}
                                             >
                                                 New Action
                                             </Button>

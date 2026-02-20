@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import useDarkMode from '../../../../hooks/useDarkMode';
-import { useAggregatedSensorData } from '../../../../api/sensors.api';
+import { useAggregatedSensorData, useAreas } from '../../../../api/sensors.api';
 import Icon from '../../../../components/icon/Icon';
 import Modal, { ModalHeader, ModalBody, ModalTitle } from '../../../../components/bootstrap/Modal';
+import { useNavigate } from 'react-router-dom';
+import { getEffectiveConfig, buildProcessedMetrics } from '../../utils/radarMapping.utils';
+import Button from '../../../../components/bootstrap/Button';
 
 const METRIC_GROUPS = [
     {
@@ -101,6 +104,7 @@ interface AggregateMetricCardsProps {
 
 const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, sensorGroupIds }) => {
     const { darkModeStatus } = useDarkMode();
+    const navigate = useNavigate();
     const [activeMetricGroup, setActiveMetricGroup] = useState<any>(null);
     const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
@@ -109,24 +113,30 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
         sensor_group_id: sensorGroupIds,
     });
 
+    const { data: areas } = useAreas();
+
     const metricGroups = useMemo(() => {
         const data = response?.aggregated_data || {};
-        return METRIC_GROUPS.map(group => ({
-            ...group,
-            metrics: group.metrics.map(m => ({
-                ...m,
-                min: data[`${m.key}_min`] != null ? Number(data[`${m.key}_min`]).toFixed(1) : null,
-                max: data[`${m.key}_max`] != null ? Number(data[`${m.key}_max`]).toFixed(1) : null,
-            })),
-            hasData: group.metrics.some(
-                m => data[`${m.key}_min`] != null || data[`${m.key}_max`] != null
-            ),
-            representativeMin: data[`${group.representative}_min`] != null
-                ? Number(data[`${group.representative}_min`]).toFixed(1) : null,
-            representativeMax: data[`${group.representative}_max`] != null
-                ? Number(data[`${group.representative}_max`]).toFixed(1) : null,
-        }));
-    }, [response]);
+
+        // Find the "primary" area for config (usually the first one or the building)
+        const primaryArea = areas?.find(a => areaIds.includes(a.id));
+        const effectiveConfig = getEffectiveConfig(primaryArea, areas);
+
+        return METRIC_GROUPS.map(group => {
+            const metricKeys = group.metrics.map(m => m.key);
+            const processed = buildProcessedMetrics(data, effectiveConfig, metricKeys);
+
+            return {
+                ...group,
+                metrics: processed,
+                hasData: processed.length > 0,
+                representativeMin: data[`${group.representative}_min`] != null
+                    ? Number(data[`${group.representative}_min`]).toFixed(1) : null,
+                representativeMax: data[`${group.representative}_max`] != null
+                    ? Number(data[`${group.representative}_max`]).toFixed(1) : null,
+            };
+        });
+    }, [response, areas, areaIds]);
 
     if (isLoading) return null;
 
@@ -314,29 +324,71 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
                                                 <div
                                                     className='p-3 rounded-2 text-center'
                                                     style={{
-                                                        border: '1px solid #e5e7eb',
-                                                        background: '#f9fafb',
+                                                        border: `1px solid ${darkModeStatus ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
+                                                        background: darkModeStatus ? 'rgba(255,255,255,0.03)' : '#f9fafb',
                                                     }}
                                                 >
-                                                    <div className='fw-bold mb-3' style={{ fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#374151' }}>
+                                                    <div className='fw-bold mb-3' style={{ fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: darkModeStatus ? 'rgba(255,255,255,0.7)' : '#374151' }}>
                                                         {metric.label}
                                                     </div>
-                                                    <div className='d-flex justify-content-between align-items-center mb-2 px-1'>
-                                                        <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MIN</span>
-                                                        <span className='fw-bold' style={{ fontSize: '1.1rem' }}>
-                                                            {metric.min ?? <span className='text-muted fs-6'>—</span>}
-                                                        </span>
+
+                                                    {/* MIN Value with Sensor Navigation */}
+                                                    <div className='d-flex flex-column gap-2 mb-3'>
+                                                        <div className='d-flex justify-content-between align-items-center px-1'>
+                                                            <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MIN</span>
+                                                            <span className='fw-bold' style={{ fontSize: '1.1rem' }}>
+                                                                {metric.rawMin != null ? metric.rawMin.toFixed(1) : <span className='text-muted fs-6'>—</span>}
+                                                            </span>
+                                                        </div>
+                                                        {metric.minSensorId && (
+                                                            <Button
+                                                                isNeumorphic
+                                                                size='sm'
+                                                                color='info'
+                                                                isLight
+                                                                icon='DirectionsRun'
+                                                                className='w-100 py-1'
+                                                                style={{ fontSize: '0.7rem' }}
+                                                                onClick={() => navigate(`/halo/sensors/detail/${metric.minSensorId}`)}
+                                                            >
+                                                                Sensor #{metric.minSensorId}
+                                                            </Button>
+                                                        )}
                                                     </div>
-                                                    <div className='d-flex justify-content-between align-items-center px-1'>
-                                                        <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MAX</span>
-                                                        <span className='fw-bold' style={{ fontSize: '1.1rem', color: '#374151' }}>
-                                                            {metric.max ?? <span className='text-muted fs-6'>—</span>}
-                                                        </span>
+
+                                                    {/* MAX Value with Sensor Navigation */}
+                                                    <div className='d-flex flex-column gap-2'>
+                                                        <div className='d-flex justify-content-between align-items-center px-1'>
+                                                            <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MAX</span>
+                                                            <span className='fw-bold' style={{ fontSize: '1.1rem', color: metric.statusColor }}>
+                                                                {metric.rawMax != null ? metric.rawMax.toFixed(1) : <span className='text-muted fs-6'>—</span>}
+                                                            </span>
+                                                        </div>
+                                                        {metric.maxSensorId && (
+                                                            <Button
+                                                                isNeumorphic
+                                                                size='sm'
+                                                                color='danger'
+                                                                isLight
+                                                                icon='Sensors'
+                                                                className='w-100 py-1'
+                                                                style={{ fontSize: '0.7rem' }}
+                                                                onClick={() => navigate(`/halo/sensors/detail/${metric.maxSensorId}`)}
+                                                            >
+                                                                Sensor #{metric.maxSensorId}
+                                                            </Button>
+                                                        )}
                                                     </div>
-                                                    <div className='mt-2'>
+
+                                                    <div className='mt-3'>
                                                         <span
                                                             className='rounded-pill px-2 py-1'
-                                                            style={{ fontSize: '0.62rem', fontWeight: 600, background: '#e5e7eb', color: '#374151' }}
+                                                            style={{
+                                                                fontSize: '0.62rem',
+                                                                fontWeight: 600,
+                                                                background: darkModeStatus ? 'rgba(255,255,255,0.1)' : '#e5e7eb',
+                                                                color: darkModeStatus ? 'rgba(255,255,255,0.7)' : '#374151'
+                                                            }}
                                                         >
                                                             {metric.unit}
                                                         </span>

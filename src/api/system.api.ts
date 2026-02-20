@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { USE_MOCK_DATA } from '../config';
-import { publicAxios } from '../axiosInstance';
+import { publicAxios, authAxios } from '../axiosInstance';
 
 export interface SystemStatus {
     deviceId: string | null;
@@ -13,10 +13,18 @@ export interface SystemConfig {
     is_activated: boolean;
     version: string;
     is_firstuser_created: boolean;
+    email_protocol?: string;
+    email_host?: string;
+    email_port?: number;
+    sender_email?: string;
+    email_password?: string;
+    encryption_type?: string;
     created_at: string;
     updated_at: string;
     device_id: string;
 }
+
+export type SystemSettings = SystemConfig;
 
 const MOCK_SYSTEM_STATUS: SystemStatus = {
     deviceId: "HALO-12345",
@@ -83,6 +91,100 @@ export const useSystemConfig = () => {
     return useQuery({
         queryKey: ['systemConfig'],
         queryFn: fetchSystemConfig,
+    });
+};
+
+/**
+ * Fetch System Settings (Authorized)
+ */
+export const fetchSystemSettings = async (): Promise<SystemSettings> => {
+    if (USE_MOCK_DATA) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    id: 1,
+                    is_activated: true,
+                    version: "1.0.0",
+                    is_firstuser_created: true,
+                    email_protocol: 'SMTP',
+                    email_host: 'smtp.gmail.com',
+                    email_port: 587,
+                    sender_email: 'halo-alerts@gmail.com',
+                    encryption_type: 'TLS',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    device_id: "HALO-12345",
+                });
+            }, 500);
+        });
+    }
+
+    const { data } = await authAxios.get<SystemSettings>('/administration/system-config/');
+    return data;
+};
+
+/**
+ * Hook for System Settings
+ */
+export const useSystemSettings = () => {
+    return useQuery({
+        queryKey: ['systemSettings'],
+        queryFn: fetchSystemSettings,
+    });
+};
+
+export const useUpdateSystemSettings = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (settings: Partial<SystemSettings>) => {
+            if (USE_MOCK_DATA) {
+                console.log('🚀 Mock Updating System Settings:', settings);
+                return new Promise((resolve) => setTimeout(() => resolve(settings), 800));
+            }
+            const { data } = await authAxios.patch('/administration/system-config/', settings);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['systemSettings'] });
+            queryClient.invalidateQueries({ queryKey: ['systemConfig'] });
+        }
+    });
+};
+
+/**
+ * Hook for Updating Email Configuration
+ */
+export const useUpdateEmailConfig = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (config: Partial<SystemConfig>) => {
+            if (USE_MOCK_DATA) {
+                console.log('🚀 Mock Updating Email Config:', config);
+                return new Promise((resolve) => setTimeout(() => resolve(config), 800));
+            }
+            const { data } = await authAxios.patch('/administration/system-config/update_email_config/', config);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['systemSettings'] });
+            queryClient.invalidateQueries({ queryKey: ['systemConfig'] });
+        }
+    });
+};
+
+/**
+ * Hook for Sending Test Email
+ */
+export const useSendTestEmail = () => {
+    return useMutation({
+        mutationFn: async (payload: Partial<SystemConfig> & { email: string }) => {
+            if (USE_MOCK_DATA) {
+                console.log('🚀 Mock Sending Test Email:', payload);
+                return new Promise((resolve) => setTimeout(() => resolve({ message: 'Test email sent' }), 1500));
+            }
+            const { data } = await authAxios.post('/administration/system-config/send_test_email/', payload);
+            return data;
+        }
     });
 };
 

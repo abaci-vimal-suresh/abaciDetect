@@ -13,10 +13,7 @@
 				map.get($header, color));
 	}
 
-	// @include padding(map.get($header, padding-y) map.get($header, padding-x));
-	@include padding(0 $spacer); // Adjusted padding for better spacing
-	// @include header-shadow(map.get($header, box-shadow));
-
+	@include padding(0 $spacer);
 	position: sticky;
 	z-index: 1040;
 	top: 0; // Docked to top
@@ -33,11 +30,11 @@
 	background-color: rgba($body-bg, 0.95); // More opaque for better contrast
 	box-shadow: $box-shadow-sm; // Subtle shadow for depth
 	border-radius: 15px 0 0 15px; // Left side alone rounded
-	margin: 5px; // No side margins
-	width: calc(100% - 10px); // specific width calculation considering margin
+	margin: 10px; // No side margins
+	width: calc(100% - 10px);
 
 	@include dark-mode {
-		background-color: rgba($dark-body-bg, 0.95); // More opaque dark mode
+		background-color: rgba($dark-body-bg, 0.95);
 		backdrop-filter: blur(10px);
 		-webkit-backdrop-filter: blur(10px);
 		box-shadow: none;
