@@ -1,8 +1,5 @@
 import { SensorConfig } from '../types/sensor';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
 
 export interface ThresholdManagementSectionProps {
     deviceId: string;
@@ -10,9 +7,6 @@ export interface ThresholdManagementSectionProps {
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sensor Defaults
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const DEFAULT_SENSOR_VALUES: Record<string, { min: number; max: number; threshold: number }> = {
     temperature: { min: 0, max: 50, threshold: 28 },
@@ -47,9 +41,6 @@ export const DEFAULT_SENSOR_VALUES: Record<string, { min: number; max: number; t
     hi_no2: { min: 0, max: 100, threshold: 50 },
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sensor Key → Event Source Key mapping
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const SENSOR_KEY_TO_EVENT_SOURCE_KEY: Record<string, string> = {
     aggression: 'Aggression',
@@ -73,9 +64,6 @@ export const SENSOR_KEY_TO_EVENT_SOURCE_KEY: Record<string, string> = {
     tvoc: 'TVOC',
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bulk config device / sub-type options
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const BULK_DEVICE_TYPES = [
     { value: 'Halo', label: 'Halo' },
@@ -91,9 +79,6 @@ export const BULK_SUB_TYPES: Record<string, { value: string; label: string }[]> 
     Axis: [{ value: 'AXIS_CAMERA', label: 'Axis Camera' }],
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock / Demo data (used when API has no configs yet)
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const MOCK_CONFIGS: SensorConfig[] = [
     {

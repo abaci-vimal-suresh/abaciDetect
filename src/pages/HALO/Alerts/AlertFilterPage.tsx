@@ -18,15 +18,15 @@ import {
 } from '../../../api/sensors.api';
 import AlertFilterForm from './components/AlertFilterForm';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../../components/bootstrap/Modal';
-import { AlertFilter, ALERT_TYPE_CHOICES, ALERT_SOURCE_CHOICES, Action } from '../../../types/sensor';
+import { AlertFilter, ALERT_TYPE_CHOICES, ALERT_SOURCE_CHOICES } from '../../../types/sensor';
 import Button from '../../../components/bootstrap/Button';
+import ConfirmDeleteModal from './modals/ConfirmDeleteModal';
 
 const AlertFilterPage = () => {
     const [isManagementFormOpen, setIsManagementFormOpen] = React.useState(false);
     const [editingFilter, setEditingFilter] = React.useState<Partial<AlertFilter> | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = React.useState(false);
     const [selectedDetailFilter, setSelectedDetailFilter] = React.useState<AlertFilter | null>(null);
-
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
     const [filterToDelete, setFilterToDelete] = React.useState<AlertFilter | null>(null);
 
@@ -82,6 +82,14 @@ const AlertFilterPage = () => {
         setEditingFilter(null);
     };
 
+    const handleDeleteConfirm = () => {
+        if (filterToDelete) {
+            deleteFilterMutation.mutate(filterToDelete.id);
+            setIsDeleteModalOpen(false);
+            setFilterToDelete(null);
+        }
+    };
+
     return (
         <PageWrapper>
             <SubHeader>
@@ -94,7 +102,6 @@ const AlertFilterPage = () => {
             <Page container="fluid">
                 <div className="row">
                     <div className="col-12">
-
                         <ThemeProvider theme={theme}>
                             <MaterialTable
                                 title="Your Smart Rules"
@@ -125,9 +132,7 @@ const AlertFilterPage = () => {
                                                         </Badge>
                                                     ))}
                                                     {extra > 0 && (
-                                                        <small className="text-muted fw-bold" style={{ fontSize: '0.75rem' }}>
-                                                            +{extra}
-                                                        </small>
+                                                        <small className="text-muted fw-bold" style={{ fontSize: '0.75rem' }}>+{extra}</small>
                                                     )}
                                                 </div>
                                             );
@@ -167,90 +172,49 @@ const AlertFilterPage = () => {
                                         render: (rowData: AlertFilter) => (
                                             <div className='d-flex gap-2 justify-content-start align-items-center'>
                                                 <Button
-                                                    color='primary'
-                                                    isLight
-                                                    icon='Visibility'
-                                                    onClick={() => {
-                                                        setSelectedDetailFilter(rowData);
-                                                        setIsDetailModalOpen(true);
-                                                    }}
+                                                    color='primary' isLight icon='Visibility'
+                                                    onClick={() => { setSelectedDetailFilter(rowData); setIsDetailModalOpen(true); }}
                                                     title='View Details'
                                                     style={{
-                                                        width: '36px',
-                                                        height: '36px',
-                                                        borderRadius: '8px',
-                                                        padding: 0,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
+                                                        width: '36px', height: '36px', borderRadius: '8px', padding: 0,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         background: themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)',
                                                         border: themeStatus === 'dark' ? 'none' : '1px solid rgba(77, 105, 250, 0.3)',
                                                         color: themeStatus === 'dark' ? '#4d69fa' : '#3650d4',
                                                         transition: 'all 0.2s ease'
                                                     }}
-                                                    onMouseEnter={(e: any) => {
-                                                        e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.25)' : 'rgba(77, 105, 250, 0.2)';
-                                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                                    }}
-                                                    onMouseLeave={(e: any) => {
-                                                        e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)';
-                                                        e.currentTarget.style.transform = 'translateY(0)';
-                                                    }}
+                                                    onMouseEnter={(e: any) => { e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.25)' : 'rgba(77, 105, 250, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                                    onMouseLeave={(e: any) => { e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)'; e.currentTarget.style.transform = 'translateY(0)'; }}
                                                 />
                                                 <Button
-                                                    color='info'
-                                                    isLight
-                                                    icon='Edit'
+                                                    color='info' isLight icon='Edit'
                                                     onClick={() => handleOpenEdit(rowData)}
                                                     title='Edit'
                                                     style={{
-                                                        width: '36px',
-                                                        height: '36px',
-                                                        borderRadius: '8px',
-                                                        padding: 0,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
+                                                        width: '36px', height: '36px', borderRadius: '8px', padding: 0,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         background: themeStatus === 'dark' ? 'rgba(13, 202, 240, 0.15)' : 'rgba(13, 202, 240, 0.12)',
                                                         border: themeStatus === 'dark' ? 'none' : '1px solid rgba(13, 202, 240, 0.3)',
                                                         color: themeStatus === 'dark' ? '#0dcaf0' : '#0aa2c0',
                                                         transition: 'all 0.2s ease'
                                                     }}
-                                                    onMouseEnter={(e: any) => {
-                                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                                    }}
-                                                    onMouseLeave={(e: any) => {
-                                                        e.currentTarget.style.transform = 'translateY(0)';
-                                                    }}
+                                                    onMouseEnter={(e: any) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                                    onMouseLeave={(e: any) => { e.currentTarget.style.transform = 'translateY(0)'; }}
                                                 />
                                                 <Button
-                                                    color='danger'
-                                                    isLight
-                                                    icon='Delete'
-                                                    onClick={() => {
-                                                        setFilterToDelete(rowData);
-                                                        setIsDeleteModalOpen(true);
-                                                    }}
+                                                    color='danger' isLight icon='Delete'
+                                                    onClick={() => { setFilterToDelete(rowData); setIsDeleteModalOpen(true); }}
                                                     title='Delete'
                                                     style={{
-                                                        width: '36px',
-                                                        height: '36px',
-                                                        borderRadius: '8px',
-                                                        padding: 0,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
+                                                        width: '36px', height: '36px', borderRadius: '8px', padding: 0,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         background: themeStatus === 'dark' ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)',
                                                         border: themeStatus === 'dark' ? 'none' : '1px solid rgba(239, 79, 79, 0.3)',
                                                         color: themeStatus === 'dark' ? '#ef4f4f' : '#cf3b3b',
                                                         transition: 'all 0.2s ease'
                                                     }}
-                                                    onMouseEnter={(e: any) => {
-                                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                                    }}
-                                                    onMouseLeave={(e: any) => {
-                                                        e.currentTarget.style.transform = 'translateY(0)';
-                                                    }}
+                                                    onMouseEnter={(e: any) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                                    onMouseLeave={(e: any) => { e.currentTarget.style.transform = 'translateY(0)'; }}
                                                 />
                                             </div>
                                         )
@@ -267,13 +231,8 @@ const AlertFilterPage = () => {
                                 actions={[
                                     {
                                         icon: () => (
-                                            <Button
-                                                className='btn-neumorphic align-items-center'
-                                                color='primary'
-                                                isLight
-                                                icon='Add'
-                                                style={{ padding: '8px 16px', borderRadius: '10px' }}
-                                            >
+                                            <Button className='btn-neumorphic align-items-center' color='primary' isLight icon='Add'
+                                                style={{ padding: '8px 16px', borderRadius: '10px' }}>
                                                 Add Filters
                                             </Button>
                                         ),
@@ -285,13 +244,8 @@ const AlertFilterPage = () => {
                             />
                         </ThemeProvider>
 
-                        <Modal
-                            isOpen={isManagementFormOpen}
-                            setIsOpen={setIsManagementFormOpen}
-                            size="lg"
-                            isCentered
-                            isScrollable
-                        >
+                        {/* ── Form Modal ── */}
+                        <Modal isOpen={isManagementFormOpen} setIsOpen={setIsManagementFormOpen} size="lg" isCentered isScrollable>
                             <ModalHeader setIsOpen={setIsManagementFormOpen}>
                                 <ModalTitle id="alert-filter-form-modal">
                                     {editingFilter ? 'Edit Filter' : 'New Smart Rule'}
@@ -318,27 +272,15 @@ const AlertFilterPage = () => {
                                             <div
                                                 className='neumorphic-icon-container mx-auto mb-3'
                                                 style={{
-                                                    width: '80px',
-                                                    height: '80px',
+                                                    width: '80px', height: '80px',
                                                     background: themeStatus === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#e0e5ec',
-                                                    borderRadius: '50%',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    boxShadow: themeStatus === 'dark'
-                                                        ? '0 0 20px rgba(0,0,0,0.5)'
-                                                        : '6px 6px 12px #b8b9be, -6px -6px 12px #ffffff'
+                                                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    boxShadow: themeStatus === 'dark' ? '0 0 20px rgba(0,0,0,0.5)' : '6px 6px 12px #b8b9be, -6px -6px 12px #ffffff'
                                                 }}
                                             >
-                                                <Icon
-                                                    icon='FilterAlt'
-                                                    size='3x'
-                                                    className='text-primary'
-                                                />
+                                                <Icon icon='FilterAlt' size='3x' className='text-primary' />
                                             </div>
-                                            <div className='h4 fw-bold mb-1'>
-                                                {selectedDetailFilter.name}
-                                            </div>
+                                            <div className='h4 fw-bold mb-1'>{selectedDetailFilter.name}</div>
                                             <div className='text-muted small'>
                                                 ID: {selectedDetailFilter.id} • Active: {selectedDetailFilter.is_active ? 'YES' : 'NO'}
                                             </div>
@@ -347,7 +289,7 @@ const AlertFilterPage = () => {
                                         <div className='col-12'>
                                             <div className='border-top pt-3 mb-3' style={{ borderColor: themeStatus === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }}>
                                                 <Label className='fw-bold text-secondary small text-uppercase mb-1' style={{ opacity: 0.8 }}>Rule Description</Label>
-                                                <div className='p-3 rounded' style={{ background: themeStatus === 'dark' ? 'rgba(0, 0, 0, 0.2)' : '#f8f9fa', borderLeft: '4px solid #7a3a6f' }}>
+                                                <div className='p-3 rounded' style={{ background: themeStatus === 'dark' ? 'rgba(0,0,0,0.2)' : '#f8f9fa', borderLeft: '4px solid #7a3a6f' }}>
                                                     {selectedDetailFilter.description || <span className='text-muted fst-italic'>No description provided</span>}
                                                 </div>
                                             </div>
@@ -417,67 +359,22 @@ const AlertFilterPage = () => {
                                 )}
                             </ModalBody>
                             <ModalFooter className='justify-content-center border-0 pb-4'>
-                                <Button
-                                    className='btn-neumorphic px-5 py-2'
-                                    onClick={() => setIsDetailModalOpen(false)}
-                                >
+                                <Button className='btn-neumorphic px-5 py-2' onClick={() => setIsDetailModalOpen(false)}>
                                     Close Details
                                 </Button>
                             </ModalFooter>
                         </Modal>
 
-                        {/* ── Delete Confirmation Modal ── */}
-                        <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} size='sm' isCentered>
-                            <ModalHeader setIsOpen={setIsDeleteModalOpen} className='border-0 pb-0'>
-                                <ModalTitle id='delete-confirm-title' className='text-danger'>
-                                    Confirm Deletion
-                                </ModalTitle>
-                            </ModalHeader>
-                            <ModalBody className='text-center py-4'>
-                                <div
-                                    className='mx-auto mb-3 d-flex align-items-center justify-content-center'
-                                    style={{
-                                        width: '60px',
-                                        height: '60px',
-                                        background: 'rgba(239, 79, 79, 0.1)',
-                                        borderRadius: '50%',
-                                        color: '#ef4f4f'
-                                    }}
-                                >
-                                    <Icon icon='DeleteSweep' size='2x' />
-                                </div>
-                                <div className='fw-bold fs-5 mb-2'>Delete this rule?</div>
-                                <div className='text-muted small px-3'>
-                                    Are you sure you want to delete <span className='fw-bold text-dark'>{filterToDelete?.name}</span>? This action cannot be undone.
-                                </div>
-                            </ModalBody>
-                            <ModalFooter className='justify-content-center border-0 pt-0 pb-4 gap-2'>
-                                <Button
-                                    color='light'
-                                    onClick={() => {
-                                        setIsDeleteModalOpen(false);
-                                        setFilterToDelete(null);
-                                    }}
-                                    className='px-4'
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    color='danger'
-                                    onClick={() => {
-                                        if (filterToDelete) {
-                                            deleteFilterMutation.mutate(filterToDelete.id);
-                                            setIsDeleteModalOpen(false);
-                                            setFilterToDelete(null);
-                                        }
-                                    }}
-                                    className='px-4 shadow-sm'
-                                >
-                                    Delete Rule
-                                </Button>
-                            </ModalFooter>
-                        </Modal>
-
+                        {/* ── Delete Confirmation ── */}
+                        <ConfirmDeleteModal
+                            isOpen={isDeleteModalOpen}
+                            setIsOpen={setIsDeleteModalOpen}
+                            itemName={filterToDelete?.name}
+                            title='Confirm Deletion'
+                            onConfirm={handleDeleteConfirm}
+                            isPending={deleteFilterMutation.isPending}
+                            confirmLabel='Delete Rule'
+                        />
                     </div>
                 </div>
             </Page>

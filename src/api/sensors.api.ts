@@ -3,13 +3,15 @@ import React from 'react';
 import axios from 'axios';
 import { authAxios as axiosInstance } from '../axiosInstance';
 import { queryKeys } from '../lib/queryClient';
+import { USE_MOCK_DATA } from '../config';
+import { MOCK_AREAS, MOCK_SENSORS, MOCK_ALERTS, MOCK_ACTIONS, MOCK_WALLS, MOCK_USERS, MOCK_AGGREGATED_DATA } from './mockData';
 import {
     Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, UserActivity, UserRole, UserGroup,
     UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData,
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
     AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
     SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse, N8NAlertPayload,
-    Wall, SoundFile, PaginatedResponse
+    Wall, SoundFile, PaginatedResponse, AlertResponse
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 
@@ -18,6 +20,9 @@ export const useUsers = () => {
     return useQuery({
         queryKey: ['users'],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                return MOCK_USERS;
+            }
             const { data } = await axiosInstance.get('/users/list/');
             return data as User[];
         }
@@ -117,6 +122,9 @@ export const useAreas = () => {
     return useQuery({
         queryKey: ['areas'],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                return MOCK_AREAS;
+            }
             const { data } = await axiosInstance.get(
                 '/administration/areas/?include_subareas=true&include_config_data=true'
             );
@@ -133,6 +141,9 @@ export const useCreateArea = () => {
 
     return useMutation({
         mutationFn: async (data: FormData | { name: string; area_type?: string; parent_id?: number | null; person_in_charge_ids?: number[] }) => {
+            if (USE_MOCK_DATA) {
+                return { id: Math.floor(Math.random() * 1000), name: (data as any).name || 'Mock Area' } as Area;
+            }
             const headers = data instanceof FormData
                 ? { 'Content-Type': 'multipart/form-data' }
                 : {};
@@ -160,6 +171,9 @@ export const useAddSensorToSubArea = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, subAreaId }: { sensorId: string; subAreaId: string }) => {
+            if (USE_MOCK_DATA) {
+                return { success: true };
+            }
             const { data } = await axiosInstance.patch(`/devices/sensors/${sensorId}/`, {
                 area: Number(subAreaId)
             });
@@ -186,6 +200,9 @@ export const useCreateSubArea = () => {
 
     return useMutation({
         mutationFn: async (data: FormData | { name: string; areaId: string; area_type?: string; person_in_charge_ids?: number[] }) => {
+            if (USE_MOCK_DATA) {
+                return { id: Math.floor(Math.random() * 1000), name: (data as any).name || 'Mock Sub Area' } as Area;
+            }
             if (data instanceof FormData) {
                 const headers = { 'Content-Type': 'multipart/form-data' };
                 const response = await axiosInstance.post('/administration/areas/', data, { headers });
@@ -257,6 +274,9 @@ export const useSubAreaSensors = (subAreaId: string) => {
     return useQuery({
         queryKey: ['subareas', subAreaId, 'sensors'],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                return MOCK_SENSORS.filter(s => s.area?.toString() === subAreaId || s.subarea_id?.toString() === subAreaId);
+            }
             const { data: backendResponse } = await axiosInstance.get<Sensor[] | { results: Sensor[] }>(
                 `/devices/sensors/?area=${subAreaId}`
             );
@@ -281,6 +301,20 @@ export const useSensors = (filters?: {
     return useQuery({
         queryKey: queryKeys.sensors.list(filters || {}),
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                let filtered = [...MOCK_SENSORS];
+                if (filters?.areaId) filtered = filtered.filter(s => s.area?.toString() === filters.areaId);
+                if (filters?.status && filters.status !== 'all') {
+                    filtered = filtered.filter(s => filters.status === 'active' ? s.is_active : !s.is_active);
+                }
+                if (filters?.sensor_type) filtered = filtered.filter(s => s.sensor_type === filters.sensor_type);
+                if (filters?.is_online !== undefined) filtered = filtered.filter(s => s.is_online === filters.is_online);
+                if (filters?.search) {
+                    const search = filters.search.toLowerCase();
+                    filtered = filtered.filter(s => s.name.toLowerCase().includes(search) || s.mac_address?.toLowerCase().includes(search));
+                }
+                return filtered;
+            }
             const params = new URLSearchParams();
             if (filters?.areaId) params.append('area', filters.areaId);
             if (filters?.status && filters.status !== 'all') {
@@ -312,6 +346,11 @@ export const useSensor = (sensorId: string | number) => {
     return useQuery({
         queryKey: queryKeys.sensors.detail(sensorId.toString()),
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                const sensor = MOCK_SENSORS.find(s => s.id.toString() === sensorId.toString());
+                if (sensor) return sensor;
+                throw new Error('Sensor not found');
+            }
             const { data: backendSensor } = await axiosInstance.get<Sensor>(`/devices/sensors/${sensorId}/`);
 
             return backendSensor;
@@ -458,6 +497,17 @@ export const useAggregatedSensorData = (filters: {
     return useQuery({
         queryKey: ['aggregatedSensorData', filters],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                // Return mock aggregated data
+                return {
+                    area_ids: Array.isArray(filters.area_id) ? filters.area_id.map(Number) : [Number(filters.area_id)],
+                    area_ids_included: Array.isArray(filters.area_id) ? filters.area_id.map(Number) : [Number(filters.area_id)],
+                    sensor_group_ids: null,
+                    sensor_count: 5,
+                    time_window: { from: new Date(Date.now() - 3600000).toISOString(), to: new Date().toISOString() },
+                    aggregated_data: MOCK_AGGREGATED_DATA.aggregated_data
+                } as unknown as AggregatedSensorDataResponse;
+            }
             const { data } = await axiosInstance.get<AggregatedSensorDataResponse>('/data-management/sensor-logs/aggregated_data/', {
                 params: {
                     area_id: Array.isArray(filters.area_id) ? filters.area_id.join(',') : filters.area_id,
@@ -754,6 +804,9 @@ export const useUpdateSensor = () => {
 
     return useMutation({
         mutationFn: async ({ sensorId, data }: { sensorId: string | number; data: Partial<SensorUpdatePayload> }) => {
+            if (USE_MOCK_DATA) {
+                return { success: true };
+            }
             const backendPayload = data;
 
             const { data: response } = await axiosInstance.patch(`/devices/sensors/${sensorId}/`, backendPayload);
@@ -1238,6 +1291,23 @@ export const useAlerts = (filters?: AlertFilters) => {
     return useQuery({
         queryKey: ['alerts', filters],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                let filtered = [...MOCK_ALERTS];
+                if (filters?.type) filtered = filtered.filter(a => a.type === filters.type);
+                if (filters?.status) filtered = filtered.filter(a => a.status === filters.status);
+                if (filters?.sensor) filtered = filtered.filter(a => (typeof a.sensor === 'number' ? a.sensor : a.sensor.id) === filters.sensor);
+                if (filters?.area) filtered = filtered.filter(a => (typeof a.area === 'number' ? a.area : a.area.id) === filters.area);
+                if (filters?.search) {
+                    const search = filters.search.toLowerCase();
+                    filtered = filtered.filter(a => a.description.toLowerCase().includes(search));
+                }
+                return {
+                    results: filtered,
+                    count: filtered.length,
+                    next: null,
+                    previous: null
+                } as AlertResponse;
+            }
             const params = new URLSearchParams();
             if (filters?.type) params.append('type', filters.type);
             if (filters?.status) params.append('status', filters.status);
@@ -1251,7 +1321,7 @@ export const useAlerts = (filters?: AlertFilters) => {
             if (filters?.ordering) params.append('ordering', filters.ordering);
 
             const { data } = await axiosInstance.get(`/alert-management/alerts/?${params.toString()}`);
-            return data as PaginatedResponse<Alert>;
+            return (Array.isArray(data) ? { results: data, count: data.length, next: null, previous: null } : data) as AlertResponse;
         },
         staleTime: 1 * 60 * 1000, // 1 minute
     });
@@ -1262,7 +1332,12 @@ export const useAlert = (alertId: number) => {
     return useQuery({
         queryKey: ['alerts', alertId],
         queryFn: async () => {
-            const { data } = await axiosInstance.get(`/alert-management/alerts/${alertId}/`);
+            if (USE_MOCK_DATA) {
+                const alert = MOCK_ALERTS.find(a => a.id === alertId);
+                if (alert) return alert;
+                throw new Error('Alert not found');
+            }
+            const { data } = await axiosInstance.get(`/devices/alerts/${alertId}/`);
             return data as Alert;
         },
         enabled: !!alertId,
@@ -1420,13 +1495,23 @@ export const useActions = (filters?: { search?: string; type?: string; is_active
     return useQuery({
         queryKey: ['actions', filters],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                let filtered = [...MOCK_ACTIONS];
+                if (filters?.type) filtered = filtered.filter(a => a.type === filters.type);
+                if (filters?.is_active !== undefined) filtered = filtered.filter(a => a.is_active === filters.is_active);
+                if (filters?.search) {
+                    const search = filters.search.toLowerCase();
+                    filtered = filtered.filter(a => a.name.toLowerCase().includes(search));
+                }
+                return filtered;
+            }
             const params = new URLSearchParams();
             if (filters?.search) params.append('search', filters.search);
             if (filters?.type) params.append('type', filters.type);
             if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
 
             const { data } = await axiosInstance.get(`/alert-management/actions/?${params.toString()}`);
-            return data as Action[];
+            return (Array.isArray(data) ? data : (data as any).results) as Action[];
         }
     });
 };
@@ -1720,7 +1805,7 @@ export const triggerN8NWorkflow = async (
 
         const timeout = (action.n8n_timeout || 30) * 1000;
 
-        console.log('🚀 Triggering N8N workflow:', {
+        console.log(' Triggering N8N workflow:', {
             workflow_id: action.n8n_workflow_id,
             url: action.n8n_workflow_url,
             alert_id: payload.alert.id,
@@ -1790,6 +1875,9 @@ export const useWalls = (areaId: string | number) => {
     return useQuery({
         queryKey: ['walls', areaId?.toString()],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                return MOCK_WALLS.filter(w => w.area_ids?.includes(Number(areaId)));
+            }
             const { data } = await axiosInstance.get<{ results: Wall[] }>(
                 `/administration/walls/byarea/`,
                 { params: { area_id: areaId } }
@@ -1804,6 +1892,9 @@ export const useUpdateWall = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async ({ wallId, data }: { wallId: number | string, data: Partial<Wall> }) => {
+            if (USE_MOCK_DATA) {
+                return { id: Number(wallId), ...data } as Wall;
+            }
             const response = await axiosInstance.patch<Wall>(`/administration/walls/${wallId}/`, data);
             return response.data;
         },
@@ -1822,6 +1913,9 @@ export const useCreateWall = () => {
 
     return useMutation({
         mutationFn: async (data: Partial<Wall>) => {
+            if (USE_MOCK_DATA) {
+                return { id: Math.floor(Math.random() * 10000), ...data } as Wall;
+            }
             const response = await axiosInstance.post<Wall>('/administration/walls/', data);
             return response.data;
         },
@@ -1846,6 +1940,9 @@ export const useDeleteWall = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (wallId: number | string) => {
+            if (USE_MOCK_DATA) {
+                return wallId;
+            }
             await axiosInstance.delete(`/administration/walls/${wallId}/`);
             return wallId;
         },

@@ -10,6 +10,7 @@
 	flex-direction: column;
 	transition: $transition-base;
 
+	// Aside minimized
 	@include aside-close-wrapper {
 		@include media-breakpoint-down(map-get($aside, mobile-breakpoint)) {
 			left: 0;
@@ -22,19 +23,20 @@
 
 	@include aside-close-wrapper(true) {
 		@include media-breakpoint-up(map-get($aside, mobile-breakpoint)) {
-			padding-left: map-deep-get($aside, minimize, width) + ($spacer);
+			padding-left: map-deep-get($aside, minimize, width) + $spacer;
 		}
 	}
 
+	// Modern design touch-close state
 	@include aside-touch-close-wrapper {
 		@include media-breakpoint-up(map-get($aside, mobile-breakpoint)) {
-			padding-left: $modern-design-size * 0.5;
+			padding-left: $modern-design-size * 0.2;
 		}
 	}
 
-	// If before aside
+	// Aside present — offset wrapper to the right
 	.aside~& {
-		padding-left: map.get($aside, width) + 1.5rem; // Accommodate floating gap
+		padding-left: map.get($aside, width) + $spacer;
 
 		@include media-breakpoint-down(map-get($aside, mobile-breakpoint)) {
 			position: relative;
@@ -43,19 +45,20 @@
 		}
 	}
 
-	// Aside is fly
+	// Modern design aside offset
 	@at-root .modern-design .aside~& {
 		@include aside-modern {
-			padding-left: map.get($aside, width) + ($spacer);
+			padding-left: map.get($aside, width) + $spacer;
 		}
 	}
 
-	// Right Panel
+	// Right panel active
 	&.wrapper-right-panel-active {
 		width: calc(100% - #{$offcanvas-horizontal-width});
 	}
 }
 
+// Wrapper overlay (e.g. when aside or right panel opens)
 .wrapper-overlay {
 	@include backdrop-filter-blur($overlay-backdrop-filter);
 

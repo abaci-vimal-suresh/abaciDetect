@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '../../../components/bootstrap/Button';
-import FormGroup from '../../../components/bootstrap/forms/FormGroup';
-import Icon from '../../../components/icon/Icon';
-import Spinner from '../../../components/bootstrap/Spinner';
-import { useRegisterSensor, useAreas } from '../../../api/sensors.api';
-import { SensorRegistrationData, Area } from '../../../types/sensor';
-import '../../../styles/pages/deviceregistration.scss';
+import Button from '../../../../components/bootstrap/Button';
+import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
+import Icon from '../../../../components/icon/Icon';
+import Spinner from '../../../../components/bootstrap/Spinner';
+import { useRegisterSensor, useAreas } from '../../../../api/sensors.api';
+import { SensorRegistrationData, Area } from '../../../../types/sensor';
+import '../../../../styles/pages/deviceregistration.scss';
 
 interface IDeviceRegistrationProps {
     onSuccess: () => void;
@@ -301,7 +301,7 @@ const DeviceRegistration = ({ onSuccess, onCancel }: IDeviceRegistrationProps) =
                                             valueAsNumber: true
                                         })}
                                     >
-                                        <option value=''>No area — assign later</option>
+                                        <option value=''>Assign later</option>
                                         {areas && flattenAreas(areas).map(area => (
                                             <option key={area.id} value={area.id}>
                                                 {'\u00A0'.repeat(area.depth * 4)}{area.name}

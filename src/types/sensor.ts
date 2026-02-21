@@ -725,6 +725,12 @@ export interface AlertFilters {
     ordering?: string;
 }
 
+export interface AlertResponse extends PaginatedResponse<Alert> {
+    critical_count?: number;
+    warning_count?: number;
+    resolved_count?: number;
+}
+
 export interface AlertTrendResponse {
     success: boolean;
     data: {

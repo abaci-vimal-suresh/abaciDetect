@@ -10,20 +10,20 @@ import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
 import Badge from '../../../components/bootstrap/Badge';
 import Spinner from '../../../components/bootstrap/Spinner';
-import Modal, { ModalHeader, ModalBody, ModalTitle, ModalFooter } from '../../../components/bootstrap/Modal';
+import Modal, { ModalHeader, ModalBody, ModalTitle } from '../../../components/bootstrap/Modal';
 
 import useTablestyle from '../../../hooks/useTablestyles';
 import useColumnHiding from '../../../hooks/useColumnHiding';
 import { updateHiddenColumnsInLocalStorage } from '../../../helpers/functions';
 import ThemeContext from '../../../contexts/themeContext';
-import { useSensors, useTriggerSensor, useDeleteSensor } from '../../../api/sensors.api';
+import { useSensors } from '../../../api/sensors.api';
 import { getSensorStatusTheme, getSensorStatusLabel, getSensorOnlineLabel } from '../utils/sensorStatus.utils';
 import { formatLastHeartbeat } from '../utils/format.utils';
-import DeviceRegistration from './DeviceRegistration';
+import DeviceRegistration from './components/DeviceRegistration';
+import { useSensorActions } from './hooks/useSensorActions';
 
 const SensorList = () => {
     const { fullScreenStatus, darkModeStatus } = useContext(ThemeContext);
-    const triggerSensorMutation = useTriggerSensor();
     const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
 
     // Filter states
@@ -33,36 +33,21 @@ const SensorList = () => {
     const [onlineFilter, setOnlineFilter] = useState<boolean | undefined>(undefined);
     const [showFilters, setShowFilters] = useState(false);
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [sensorToDelete, setSensorToDelete] = useState<any>(null);
-    const [triggeringId, setTriggeringId] = useState<number | null>(null);
-
-    const deleteSensorMutation = useDeleteSensor();
-
-    const location = useLocation();
-
-    useEffect(() => {
-        const urlParams = new URLSearchParams(location.search);
-        if (urlParams.get('startTour') === 'true') {
-            setIsModalOpen(true);
-        }
-    }, [location.search]);
-
-    // Debounce search input
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchTerm);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [searchTerm]);
-
     // Use server-side filtering
     const { data: sensors, isLoading, refetch } = useSensors({
         search: debouncedSearch || undefined,
         sensor_type: sensorTypeFilter || undefined,
         is_online: onlineFilter
     });
+
+    // Sensor Actions Hook
+    const {
+        isRegistrationModalOpen,
+        setIsRegistrationModalOpen,
+        handleDeleteSensor,
+        triggeringId,
+        handleTriggerSensor,
+    } = useSensorActions(refetch);
 
     // Clear all filters
     const handleClearFilters = useCallback(() => {
@@ -73,44 +58,6 @@ const SensorList = () => {
 
     // Check if any filters are active
     const hasActiveFilters = searchTerm || sensorTypeFilter || onlineFilter !== undefined;
-
-    const handleTriggerSensor = (sensor: any) => {
-        if (!sensor.ip_address) {
-            alert('Cannot trigger sensor: IP address not configured');
-            return;
-        }
-
-        setTriggeringId(sensor.id);
-        triggerSensorMutation.mutate(
-            {
-                sensorId: sensor.id,
-                event: 'Alert',
-                ip: sensor.ip_address
-            },
-            {
-                onSettled: () => {
-                    setTriggeringId(null);
-                }
-            }
-        );
-    };
-
-    const handleDeleteClick = (sensor: any) => {
-        setSensorToDelete(sensor);
-        setIsDeleteModalOpen(true);
-    };
-
-    const handleDeleteConfirm = () => {
-        if (!sensorToDelete) return;
-
-        deleteSensorMutation.mutate(sensorToDelete.id, {
-            onSuccess: () => {
-                setIsDeleteModalOpen(false);
-                setSensorToDelete(null);
-                refetch();
-            }
-        });
-    };
 
     const staticColumns = [
         {
@@ -364,7 +311,7 @@ const SensorList = () => {
                         color='danger'
                         isLight
                         icon='Delete'
-                        onClick={() => handleDeleteClick(rowData)}
+                        onClick={(e: any) => handleDeleteSensor(rowData, e)}
                         title='Delete Sensor'
                         style={{
                             width: '36px',
@@ -430,7 +377,7 @@ const SensorList = () => {
                     <Button
                         color='primary'
                         icon='Add'
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => setIsRegistrationModalOpen(true)}
                         data-tour='register-device-btn'
                     >
                         Register New Device
@@ -601,13 +548,13 @@ const SensorList = () => {
 
             {/* Device Registration Modal */}
             <Modal
-                isOpen={isModalOpen}
-                setIsOpen={setIsModalOpen}
+                isOpen={isRegistrationModalOpen}
+                setIsOpen={setIsRegistrationModalOpen}
                 size='lg'
                 isCentered
                 titleId='deviceRegistrationModal'
             >
-                <ModalHeader setIsOpen={setIsModalOpen}>
+                <ModalHeader setIsOpen={setIsRegistrationModalOpen}>
                     <ModalTitle id='deviceRegistrationModal'>
                         Register New Device
                     </ModalTitle>
@@ -615,46 +562,12 @@ const SensorList = () => {
                 <ModalBody>
                     <DeviceRegistration
                         onSuccess={() => {
-                            setIsModalOpen(false);
+                            setIsRegistrationModalOpen(false);
                             refetch();
                         }}
-                        onCancel={() => setIsModalOpen(false)}
+                        onCancel={() => setIsRegistrationModalOpen(false)}
                     />
                 </ModalBody>
-            </Modal>
-
-            {/* Delete Confirmation Modal */}
-            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} isCentered>
-                <ModalHeader setIsOpen={setIsDeleteModalOpen}>
-                    <ModalTitle id='deleteSensorModal'>Delete Sensor</ModalTitle>
-                </ModalHeader>
-                <ModalBody>
-                    <div className='alert alert-danger d-flex align-items-center mb-3'>
-                        <Icon icon='Warning' className='me-2' size='2x' />
-                        <div>
-                            <strong>Warning:</strong> This action cannot be undone.
-                        </div>
-                    </div>
-                    <p>
-                        Are you sure you want to delete the sensor <strong>"{sensorToDelete?.name}"</strong>?
-                    </p>
-                    <p className='text-muted small'>
-                        This will permanently remove the device from the system.
-                    </p>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color='light' onClick={() => setIsDeleteModalOpen(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        color='danger'
-                        onClick={handleDeleteConfirm}
-                        isDisable={deleteSensorMutation.isPending}
-                    >
-                        {deleteSensorMutation.isPending && <Spinner isSmall inButton />}
-                        Delete Sensor
-                    </Button>
-                </ModalFooter>
             </Modal>
         </PageWrapper>
     );

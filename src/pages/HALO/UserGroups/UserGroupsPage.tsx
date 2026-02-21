@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React from 'react';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 
@@ -14,31 +14,21 @@ import Modal, {
     ModalHeader,
     ModalTitle
 } from '../../../components/bootstrap/Modal';
-import Spinner from '../../../components/bootstrap/Spinner';
 
-import ThemeContext from '../../../contexts/themeContext';
 import useTablestyle from '../../../hooks/useTablestyles';
 import useColumnHiding from '../../../hooks/useColumnHiding';
 import { updateHiddenColumnsInLocalStorage } from '../../../helpers/functions';
 
-import { useUserGroups, useDeleteUserGroup } from '../../../api/sensors.api';
+import { useUserGroups } from '../../../api/sensors.api';
 import UserGroupCreateModal from './modals/UserGroupCreateModal';
 import UserGroupEditModal from './modals/UserGroupEditModal';
 import ManageGroupMembersModal from './modals/ManageGroupMembersModal';
+import { useUserGroupActions } from './hooks/useUserGroupActions';
 
 const UserGroupsPage = () => {
     const { data: groups, isLoading } = useUserGroups();
-    const deleteGroupMutation = useDeleteUserGroup();
-    const { darkModeStatus } = useContext(ThemeContext);
     const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
-
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [editGroupId, setEditGroupId] = useState<number | null>(null);
-    const [manageGroupId, setManageGroupId] = useState<number | null>(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [groupToDelete, setGroupToDelete] = useState<any>(null);
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-    const [viewGroup, setViewGroup] = useState<any | null>(null);
+    const actions = useUserGroupActions(); // Initialize the hook
 
     const staticColumns = [
         {
@@ -51,7 +41,7 @@ const UserGroupsPage = () => {
                         style={{
                             width: 38,
                             height: 38,
-                            background: darkModeStatus
+                            background: actions.darkModeStatus // Use actions.darkModeStatus
                                 ? 'rgba(77,105,250,0.2)'
                                 : 'rgba(77,105,250,0.15)',
                             fontWeight: 600
@@ -77,7 +67,7 @@ const UserGroupsPage = () => {
                     style={{
                         fontSize: '0.75rem',
                         fontWeight: 500,
-                        background: darkModeStatus
+                        background: actions.darkModeStatus // Use actions.darkModeStatus
                             ? 'rgba(70,188,170,0.2)'
                             : 'rgba(70,188,170,0.15)',
                         color: '#2d8478'
@@ -116,10 +106,7 @@ const UserGroupsPage = () => {
                         isLight
                         icon="Visibility"
                         title="View"
-                        onClick={() => {
-                            setViewGroup(rowData);
-                            setIsViewModalOpen(true);
-                        }}
+                        onClick={() => actions.openViewModal(rowData)} // Use actions.openViewModal
                         style={{ width: 36, height: 36, borderRadius: 8 }}
                     />
                     <Button
@@ -127,7 +114,7 @@ const UserGroupsPage = () => {
                         isLight
                         icon="Edit"
                         title="Edit"
-                        onClick={() => setEditGroupId(rowData.id)}
+                        onClick={() => actions.setEditGroupId(rowData.id)} // Use actions.setEditGroupId
                         style={{ width: 36, height: 36, borderRadius: 8 }}
                     />
                     <Button
@@ -135,10 +122,7 @@ const UserGroupsPage = () => {
                         isLight
                         icon="Delete"
                         title="Delete"
-                        onClick={() => {
-                            setGroupToDelete(rowData);
-                            setIsDeleteModalOpen(true);
-                        }}
+                        onClick={() => actions.handleDeleteGroup(rowData.id, rowData.name)} // Use actions.handleDeleteGroup
                         style={{ width: 36, height: 36, borderRadius: 8 }}
                     />
                 </div>
@@ -160,7 +144,7 @@ const UserGroupsPage = () => {
                     <span className="h4 fw-bold mb-0">User Groups</span>
                 </SubHeaderLeft>
                 <SubHeaderRight>
-                    <Button color="primary" icon="Add" onClick={() => setIsCreateOpen(true)}>
+                    <Button color="primary" icon="Add" onClick={() => actions.setIsCreateOpen(true)}>
                         Create Group
                     </Button>
                 </SubHeaderRight>
@@ -198,36 +182,36 @@ const UserGroupsPage = () => {
             </Page>
 
             {/* Modals */}
-            <UserGroupCreateModal isOpen={isCreateOpen} setIsOpen={setIsCreateOpen} />
+            <UserGroupCreateModal isOpen={actions.isCreateOpen} setIsOpen={actions.setIsCreateOpen} />
             <UserGroupEditModal
-                isOpen={!!editGroupId}
-                setIsOpen={() => setEditGroupId(null)}
-                groupId={editGroupId}
+                isOpen={!!actions.editGroupId}
+                setIsOpen={() => actions.setEditGroupId(null)}
+                groupId={actions.editGroupId}
             />
             <ManageGroupMembersModal
-                isOpen={!!manageGroupId}
-                setIsOpen={() => setManageGroupId(null)}
-                groupId={manageGroupId}
+                isOpen={!!actions.manageGroupId}
+                setIsOpen={() => actions.setManageGroupId(null)}
+                groupId={actions.manageGroupId}
             />
 
-            <Modal isOpen={isViewModalOpen} setIsOpen={setIsViewModalOpen} isCentered>
-                <ModalHeader setIsOpen={setIsViewModalOpen}>
+            <Modal isOpen={actions.isViewModalOpen} setIsOpen={actions.setIsViewModalOpen} isCentered>
+                <ModalHeader setIsOpen={actions.setIsViewModalOpen}>
                     <ModalTitle id='viewUserGroupModal'>User Group Details</ModalTitle>
                 </ModalHeader>
                 <ModalBody>
-                    <h5 className='mb-1'>{viewGroup?.name}</h5>
-                    {viewGroup?.description && (
-                        <p className='text-muted mb-3'>{viewGroup.description}</p>
+                    <h5 className='mb-1'>{actions.viewGroup?.name}</h5>
+                    {actions.viewGroup?.description && (
+                        <p className='text-muted mb-3'>{actions.viewGroup.description}</p>
                     )}
                     <div className='d-flex flex-wrap gap-3 mb-3'>
                         <div className='small text-muted'>
                             <strong>Members:</strong>{' '}
-                            {viewGroup?.member_count ?? 0}
+                            {actions.viewGroup?.member_count ?? 0}
                         </div>
-                        {viewGroup?.created_at && (
+                        {actions.viewGroup?.created_at && (
                             <div className='small text-muted'>
                                 <strong>Created:</strong>{' '}
-                                {new Date(viewGroup.created_at).toLocaleDateString('en-US', {
+                                {new Date(actions.viewGroup.created_at).toLocaleDateString('en-US', {
                                     year: 'numeric',
                                     month: 'short',
                                     day: 'numeric'
@@ -235,12 +219,12 @@ const UserGroupsPage = () => {
                             </div>
                         )}
                     </div>
-                    {viewGroup?.members && viewGroup.members.length > 0 && (
+                    {actions.viewGroup?.members && actions.viewGroup.members.length > 0 && (
                         <div
                             className='border rounded'
                             style={{ maxHeight: 260, overflowY: 'auto' }}
                         >
-                            {viewGroup.members.map((member: any) => (
+                            {actions.viewGroup.members.map((member: any) => (
                                 <div
                                     key={member.id}
                                     className='d-flex align-items-center justify-content-between px-3 py-2 border-bottom'
@@ -251,7 +235,7 @@ const UserGroupsPage = () => {
                                             style={{
                                                 width: 32,
                                                 height: 32,
-                                                background: darkModeStatus
+                                                background: actions.darkModeStatus // Use actions.darkModeStatus
                                                     ? 'rgba(77,105,250,0.25)'
                                                     : 'rgba(77,105,250,0.15)',
                                                 fontSize: 14,
@@ -276,7 +260,7 @@ const UserGroupsPage = () => {
                                             className='px-2 py-1 rounded-pill small'
                                             style={{
                                                 fontWeight: 500,
-                                                background: darkModeStatus
+                                                background: actions.darkModeStatus // Use actions.darkModeStatus
                                                     ? 'rgba(122,58,111,0.25)'
                                                     : 'rgba(122,58,111,0.15)',
                                                 color: '#7a3a6f'
@@ -300,7 +284,7 @@ const UserGroupsPage = () => {
                             ))}
                         </div>
                     )}
-                    {(!viewGroup?.members || viewGroup.members.length === 0) && (
+                    {(!actions.viewGroup?.members || actions.viewGroup.members.length === 0) && (
                         <div className='text-muted small'>
                             No members in this group yet.
                         </div>
@@ -309,63 +293,21 @@ const UserGroupsPage = () => {
                 <ModalFooter>
                     <Button
                         color='light'
-                        onClick={() => {
-                            setIsViewModalOpen(false);
-                            setViewGroup(null);
-                        }}
+                        onClick={() => actions.closeViewModal()} // Use actions.closeViewModal
                     >
                         Close
                     </Button>
                     <Button
                         color='primary'
                         onClick={() => {
-                            if (viewGroup) {
-                                setIsViewModalOpen(false);
-                                setManageGroupId(viewGroup.id);
+                            if (actions.viewGroup) {
+                                const gid = actions.viewGroup.id;
+                                actions.closeViewModal(); // Use actions.closeViewModal
+                                actions.setManageGroupId(gid); // Use actions.setManageGroupId
                             }
                         }}
                     >
                         Manage Members
-                    </Button>
-                </ModalFooter>
-            </Modal>
-
-            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} isCentered>
-                <ModalHeader setIsOpen={setIsDeleteModalOpen}>
-                    <ModalTitle id='deleteGroupModal'>Delete User Group</ModalTitle>
-                </ModalHeader>
-                <ModalBody>
-                    <div className='alert alert-danger d-flex align-items-center mb-3'>
-                        <Icon icon='Warning' className='me-2' size='2x' />
-                        <div>
-                            <strong>Warning:</strong> This action cannot be undone.
-                        </div>
-                    </div>
-                    <p>
-                        Are you sure you want to delete the user group <strong>"{groupToDelete?.name}"</strong>?
-                    </p>
-                    <p className='text-muted small'>
-                        This will permanently remove the group and all its settings from the system.
-                    </p>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color='light' onClick={() => setIsDeleteModalOpen(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        color='danger'
-                        onClick={() => {
-                            if (groupToDelete) {
-                                deleteGroupMutation.mutateAsync(groupToDelete.id).then(() => {
-                                    setIsDeleteModalOpen(false);
-                                    setGroupToDelete(null);
-                                });
-                            }
-                        }}
-                        isDisable={deleteGroupMutation.isPending}
-                    >
-                        {deleteGroupMutation.isPending && <Spinner isSmall inButton isGrow />}
-                        Delete Group
                     </Button>
                 </ModalFooter>
             </Modal>

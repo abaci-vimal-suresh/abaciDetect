@@ -1,24 +1,5 @@
-/**
- * Keyboard Shortcuts Hook
- * 
- * Purpose: Fixes Issue #9 (limited keyboard shortcuts)
- * 
- * Problem:
- * - Only ESC key works
- * - Power users want Ctrl+S, Ctrl+Z, Delete, etc.
- * - Slow workflow
- * 
- * Solution:
- * - Comprehensive keyboard shortcut system
- * - Platform-aware (Ctrl vs Cmd)
- * - Customizable handlers
- */
-
 import { useEffect, useCallback, useRef } from 'react';
 
-// ============================================
-// HANDLER TYPES
-// ============================================
 
 export interface ShortcutHandlers {
     onSave?: () => void;

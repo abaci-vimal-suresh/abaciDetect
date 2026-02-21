@@ -62,13 +62,9 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                         <div
                             className='neumorphic-icon-container mx-auto mb-3'
                             style={{
-                                width: '80px',
-                                height: '80px',
+                                width: '80px', height: '80px',
                                 background: themeStatus === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#e0e5ec',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 boxShadow: themeStatus === 'dark'
                                     ? '0 0 20px rgba(0,0,0,0.5)'
                                     : '6px 6px 12px #b8b9be, -6px -6px 12px #ffffff'
@@ -76,12 +72,8 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                         >
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <span style={{
-                                    fontSize: '3rem',
-                                    fontWeight: 900,
-                                    color: accentColor,
-                                    opacity: 0.15,
-                                    position: 'absolute',
-                                    userSelect: 'none'
+                                    fontSize: '3rem', fontWeight: 900, color: accentColor,
+                                    opacity: 0.15, position: 'absolute', userSelect: 'none'
                                 }}>
                                     {action.name.charAt(0).toUpperCase()}
                                 </span>
@@ -92,16 +84,13 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                                 />
                             </div>
                         </div>
-                        <div className='h4 fw-bold mb-1'>
-                            {action.name}
-                        </div>
+                        <div className='h4 fw-bold mb-1'>{action.name}</div>
                         <div className='text-muted small'>
                             ID: {action.id} • Type: {typeMap[action.type] || action.type}
                         </div>
                     </div>
 
                     <div className='col-12'>
-                        {/* Status & General */}
                         <div className='border-top pt-3 mb-3' style={{ borderColor: themeStatus === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }}>
                             <div className='row g-3'>
                                 <div className='col-md-6'>
@@ -121,7 +110,6 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                             </div>
                         </div>
 
-                        {/* Config Specifics */}
                         <div className='border-top pt-3 mb-3' style={{ borderColor: themeStatus === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }}>
                             {action.type === 'webhook' && (
                                 <div className='row g-3'>
@@ -170,7 +158,6 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                             </div>
                         </div>
 
-                        {/* Recipients */}
                         {(action.type === 'email' || action.type === 'sms' || action.type === 'push_notification') && (
                             <div className='border-top pt-3 mb-3' style={{ borderColor: themeStatus === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }}>
                                 <div className='row g-3'>
@@ -200,7 +187,6 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                             </div>
                         )}
 
-                        {/* Message Template */}
                         {action.message_template && (
                             <div className='border-top pt-3 mb-3' style={{ borderColor: themeStatus === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }}>
                                 <Label className='fw-bold text-secondary small text-uppercase mb-1' style={{ opacity: 0.8 }}>Message Template</Label>
@@ -234,10 +220,7 @@ const ActionViewModal: React.FC<ActionViewModalProps> = ({ action, isOpen, setIs
                 </div>
             </ModalBody>
             <ModalFooter className='justify-content-center border-0 pb-4'>
-                <Button
-                    className='btn-neumorphic px-5 py-2'
-                    onClick={() => setIsOpen(false)}
-                >
+                <Button className='btn-neumorphic px-5 py-2' onClick={() => setIsOpen(false)}>
                     Close Details
                 </Button>
             </ModalFooter>

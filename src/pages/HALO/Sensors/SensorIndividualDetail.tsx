@@ -20,29 +20,33 @@ import {
 import { isSensorOnline } from '../utils/sensorStatus.utils';
 
 // Views
-import SensorCardView from './views/SensorCardView';
-import SensorDashboardView from './views/SensorDashboardView';
-import SentinelDashboardView from './views/SentinelDashboardView';
+import SensorCardView from './components/SensorCardView';
+import SensorDashboardView from './components/SensorDashboardView';
+import SentinelDashboardView from './components/SentinelDashboardView';
 import PersonnelModal from '../../../components/PersonnelModal';
+import { useSensorActions } from './hooks/useSensorActions';
 
 const SensorIndividualDetail = () => {
     const { id } = useParams<{ id: string }>();
-    const { data: sensor, isLoading } = useSensor(id || '');
+    const { data: sensor, isLoading, refetch } = useSensor(id || '');
     const { data: latestLog } = useLatestSensorLog(id || '', { refetchInterval: 15000 });
     const { data: configurations } = useSensorConfigurations(id || '');
     const { darkModeStatus } = useContext(ThemeContext);
-    const updateSensorMutation = useUpdateSensor();
+
+    // Sensor Actions Hook
+    const {
+        isPersonnelModalOpen,
+        setIsPersonnelModalOpen,
+        isSavingPersonnel,
+        handleSavePersonnel,
+        isDeviceInfoModalOpen: isDeviceModalOpen,
+        setIsDeviceInfoModalOpen: setIsDeviceModalOpen,
+    } = useSensorActions(refetch);
 
     // View toggle
     const [currentView, setCurrentView] = useState<'cards' | 'dashboard' | 'sentinel'>('cards');
 
-    // Modals
-    const [isThresholdModalOpen, setIsThresholdModalOpen] = useState(false);
-    const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
 
-    // Personnel
-    const [isPersonnelModalOpen, setIsPersonnelModalOpen] = useState(false);
-    const [isSavingPersonnel, setIsSavingPersonnel] = useState(false);
 
     if (isLoading) {
         return (
@@ -76,33 +80,7 @@ const SensorIndividualDetail = () => {
     const activeEvents =
         sensor.sensor_data?.active_events_list || (sensor as any).active_events_list || [];
 
-    // ---------------------------
-    // Personnel Save Handler
-    // ---------------------------
-    const handleSavePersonnel = async (personnelData: {
-        personnel_in_charge?: string;
-        personnel_contact?: string;
-        personnel_email?: string;
-    }) => {
-        setIsSavingPersonnel(true);
 
-        try {
-            await updateSensorMutation.mutateAsync({
-                sensorId: sensor.id,
-                data: {
-                    personnel_in_charge: personnelData.personnel_in_charge,
-                    personnel_contact: personnelData.personnel_contact,
-                    personnel_email: personnelData.personnel_email,
-                },
-            });
-
-            setIsPersonnelModalOpen(false);
-        } catch (err) {
-            console.error('Failed to save personnel:', err);
-        } finally {
-            setIsSavingPersonnel(false);
-        }
-    };
 
     return (
         <PageWrapper title='Sensor Details'>
@@ -180,7 +158,7 @@ const SensorIndividualDetail = () => {
                     isOpen={isPersonnelModalOpen}
                     setIsOpen={setIsPersonnelModalOpen}
                     sensor={sensor}
-                    onSave={handleSavePersonnel}
+                    onSave={(data) => handleSavePersonnel(sensor.id, data)}
                     isSaving={isSavingPersonnel}
                 />
 

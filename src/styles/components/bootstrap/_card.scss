@@ -265,3 +265,23 @@ $border-radius-child: #{$card-border-radius - $card-border-width};
 }
 
 // stylelint-enable font-weight-notation
+
+.card-neumorphic {
+	border: none !important;
+	background: #e0e5ec !important;
+	box-shadow: 6px 6px 12px #b8b9be, -6px -6px 12px #ffffff !important;
+
+	@include dark-mode {
+		background: var(--#{$prefix}card-bg) !important;
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35) !important;
+	}
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 8px 8px 16px #b8b9be, -8px -8px 16px #ffffff !important;
+
+		@include dark-mode {
+			box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5) !important;
+		}
+	}
+}

@@ -19,6 +19,8 @@ import AggregationFilterPanel from './components/AggregationFilterPanel';
 import './ThreeDPage.scss';
 
 import { useAreas, useSensors, useCreateWall } from '../../../api/sensors.api';
+import { USE_MOCK_DATA } from '../../../config';
+import { MOCK_WALLS } from '../../../api/mockData';
 import { flattenAreas } from './utils/dataTransform';
 import { Wall } from '../../../types/sensor';
 import useToasterNotification from '../../../hooks/useToasterNotification';
@@ -76,6 +78,15 @@ const ThreeDPage = () => {
         queryKey: ['walls-centralized', selectedAreaIds],
         queryFn: async () => {
             if (selectedAreaIds.length === 0) return {};
+
+            if (USE_MOCK_DATA) {
+                const wallsByArea: Record<number, Wall[]> = {};
+                selectedAreaIds.forEach(id => {
+                    wallsByArea[Number(id)] = MOCK_WALLS.filter(w => w.area_ids?.includes(Number(id)));
+                });
+                return wallsByArea;
+            }
+
             const wallPromises = selectedAreaIds.map(async (areaId) => {
                 try {
                     const { data } = await axiosInstance.get<{ results: Wall[] }>(

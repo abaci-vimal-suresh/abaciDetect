@@ -5,8 +5,6 @@ import {
     useSensorConfigurations,
     useRemoteSensorConfig,
     useUpdateSensorConfiguration,
-    useUsers,
-    useUserGroups,
     useSoundFiles,
     useSensors,
 } from '../../../../../api/sensors.api';
@@ -20,10 +18,7 @@ import {
 } from '../../../../../constants/threshold.constants';
 import { getMetricStatusFromConfig, getStatusColor, getStatusLabel } from '../../../../../helpers/thresholdUtils';
 
-import { useThresholdForm } from './hooks/useThresholdForm';
 import { useThresholdActions } from './hooks/useThresholdActions';
-import { ConfirmModalState } from './modals/ConfirmModal';
-import ConfirmModal from './modals/ConfirmModal';
 import ConfigModal from './modals/ConfigModal';
 import ThresholdTable from './components/ThresholdTable';
 
@@ -35,8 +30,6 @@ const ThresholdManagement: React.FC<ThresholdManagementSectionProps> = ({ device
     const { data: remoteConfig } = useRemoteSensorConfig(apiSensor?.sensor_type as string);
     const updateMutation = useUpdateSensorConfiguration();
     const { data: soundFiles } = useSoundFiles();
-    const { data: _users } = useUsers();
-    const { data: _userGroups } = useUserGroups();
 
     const configs: SensorConfig[] = apiConfigs || [];
     const latestSensor = apiSensor || MOCK_SENSOR_DATA;
@@ -47,72 +40,34 @@ const ThresholdManagement: React.FC<ThresholdManagementSectionProps> = ({ device
     const wavefiles =
         soundFiles?.map((f: any) => ({ value: f.file_name || f.name, label: f.name })) || [];
 
-    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-    const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
-
-    const [isBulkMode, setIsBulkMode] = useState(false);
     const [bulkDeviceType, setBulkDeviceType] = useState<string>('Halo');
     const [bulkSubType, setBulkSubType] = useState<string>('HALO_3C');
-    const [selectedBulkSensorIds, setSelectedBulkSensorIds] = useState<string[]>([deviceId]);
-    const [selectedBulkConfigIds, setSelectedBulkConfigIds] = useState<string[]>([]);
     const [selectedSourceSensorId, setSelectedSourceSensorId] = useState<string>(deviceId);
-
-    const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
-        isOpen: false,
-        title: '',
-        message: '',
-        onConfirm: () => { },
-        color: 'primary',
-    });
 
     // ── Bulk API ─────────────────────────────────────────────────────────────
     const { data: bulkSensors } = useSensors({ sensor_type: bulkSubType });
     const { data: sourceConfigs, isLoading: isFetchingSourceConfigs } =
         useSensorConfigurations(selectedSourceSensorId);
 
-    // ── Form hook ────────────────────────────────────────────────────────────
+    // ── Form choices ─────────────────────────────────────────────────────────
     const filteredChoices = sensorConfigChoices.filter(
         (choice: any) => !configs?.some((c: any) => c.sensor_name === choice.value),
     );
-
-    const form = useThresholdForm({ configs, selectedConfigId });
-
-    // Auto-select first config on load
-    useEffect(() => {
-        if (configs && configs.length > 0 && !selectedConfigId && !form.isCreatingNew) {
-            setSelectedConfigId(configs[0].id!);
-        }
-    }, [configs, selectedConfigId, form.isCreatingNew]);
 
     // ── Actions hook ─────────────────────────────────────────────────────────
     const actions = useThresholdActions({
         deviceId,
         configs,
-        formData: form.formData,
-        isCreatingNew: form.isCreatingNew,
-        hasUnsavedChanges: form.hasUnsavedChanges,
-        selectedConfigId,
-        isBulkMode,
-        selectedBulkSensorIds,
-        selectedBulkConfigIds,
         eventSources,
-        setSaveStatus: form.setSaveStatus,
-        setHasUnsavedChanges: form.setHasUnsavedChanges,
-        setIsCreatingNew: form.setIsCreatingNew,
-        setIsConfigModalOpen,
-        setIsBulkMode,
-        setSelectedConfigId,
-        setSelectedBulkSensorIds,
-        setSelectedBulkConfigIds,
-        setConfirmModal,
-        initNewForm: form.initNewForm,
-        filteredChoices,
         apiSensorIp: apiSensor?.ip_address,
-        apiSensorName: apiSensor?.name,
-        getSensorLabel: (key: string) =>
-            SENSOR_CONFIG_CHOICES.find((c) => c.value === key)?.label || key,
-        selectedConfig: form.selectedConfig,
     });
+
+    // Auto-select first config on load
+    useEffect(() => {
+        if (configs && configs.length > 0 && !actions.selectedConfigId && !actions.isCreatingNew) {
+            actions.setSelectedConfigId(configs[0].id!);
+        }
+    }, [configs, actions.selectedConfigId, actions.isCreatingNew]);
 
     // ── Helpers ──────────────────────────────────────────────────────────────
     const displaySensorName = (name: string) =>
@@ -125,33 +80,33 @@ const ThresholdManagement: React.FC<ThresholdManagementSectionProps> = ({ device
 
     // ── Live telemetry ───────────────────────────────────────────────────────
     const getLiveValue = () => {
-        if (!latestSensor || !form.formData.sensor_name) return null;
+        if (!latestSensor || !actions.formData.sensor_name) return null;
         const sensors =
             latestSensor.sensor_data?.sensors ||
             (latestSensor as any).sensors ||
             (latestSensor as any);
-        return sensors[form.formData.sensor_name] ?? 0;
+        return sensors[actions.formData.sensor_name] ?? 0;
     };
 
     const liveValue = getLiveValue();
     const liveStatus =
         liveValue !== null
-            ? getMetricStatusFromConfig(form.formData.sensor_name!, liveValue, [form.formData as SensorConfig])
+            ? getMetricStatusFromConfig(actions.formData.sensor_name!, liveValue, [actions.formData as SensorConfig])
             : 'safe';
     const liveColor = getStatusColor(liveStatus);
     const liveLabel = getStatusLabel(liveStatus);
 
     const getLivePointerPosition = () => {
         if (liveValue === null) return 0;
-        const min = form.formData.min_value || 0;
-        const max = form.formData.max_value || 100;
+        const min = actions.formData.min_value || 0;
+        const max = actions.formData.max_value || 100;
         return Math.min(Math.max(((liveValue - min) / (max - min)) * 100, 0), 100);
     };
 
     const getThresholdPosition = () => {
-        const min = form.formData.min_value || 0;
-        const max = form.formData.max_value || 100;
-        const threshold = form.formData.threshold || 0;
+        const min = actions.formData.min_value || 0;
+        const max = actions.formData.max_value || 100;
+        const threshold = actions.formData.threshold || 0;
         return ((threshold - min) / (max - min)) * 100;
     };
 
@@ -166,11 +121,10 @@ const ThresholdManagement: React.FC<ThresholdManagementSectionProps> = ({ device
                     displaySensorName={displaySensorName}
                     getSoundLabel={getSoundLabel}
                     onEdit={(configId) => {
-                        setSelectedConfigId(configId);
-                        setIsConfigModalOpen(true);
+                        actions.handleSelectConfig(configId);
                     }}
                     onDelete={(configId) => {
-                        setSelectedConfigId(configId);
+                        actions.setSelectedConfigId(configId);
                         actions.handleDelete();
                     }}
                     onToggleEnabled={(rowData) => {
@@ -182,7 +136,7 @@ const ThresholdManagement: React.FC<ThresholdManagementSectionProps> = ({ device
                     }}
                     onTestSensor={actions.handleTestSensor}
                     onSync={actions.handleSync}
-                    onCreateNew={actions.handleCreateNew}
+                    onCreateNew={() => actions.handleCreateNew(filteredChoices)}
                     isSyncPending={actions.syncMutation.isPending}
                     isTriggerPending={actions.triggerMutation.isPending}
                     hasIpAddress={!!apiSensor?.ip_address}
@@ -190,15 +144,15 @@ const ThresholdManagement: React.FC<ThresholdManagementSectionProps> = ({ device
             </div>
 
             <ConfigModal
-                isOpen={isConfigModalOpen}
-                setIsOpen={setIsConfigModalOpen}
-                isBulkMode={isBulkMode}
-                setIsBulkMode={setIsBulkMode}
-                isCreatingNew={form.isCreatingNew}
-                formData={form.formData}
-                handleFormChange={form.handleFormChange}
-                saveStatus={form.saveStatus}
-                hasUnsavedChanges={form.hasUnsavedChanges}
+                isOpen={actions.isConfigModalOpen}
+                setIsOpen={actions.setIsConfigModalOpen}
+                isBulkMode={actions.isBulkMode}
+                setIsBulkMode={actions.setIsBulkMode}
+                isCreatingNew={actions.isCreatingNew}
+                formData={actions.formData}
+                handleFormChange={actions.handleFormChange}
+                saveStatus={actions.saveStatus}
+                hasUnsavedChanges={actions.hasUnsavedChanges}
                 handleSave={actions.handleSave}
                 handleDelete={actions.handleDelete}
                 getThresholdPosition={getThresholdPosition}
@@ -213,31 +167,31 @@ const ThresholdManagement: React.FC<ThresholdManagementSectionProps> = ({ device
                 setBulkDeviceType={(v) => {
                     setBulkDeviceType(v);
                     setBulkSubType(BULK_SUB_TYPES[v][0]?.value || '');
-                    setSelectedBulkSensorIds([]);
+                    actions.setSelectedBulkSensorIds([]);
                 }}
                 bulkSubType={bulkSubType}
                 setBulkSubType={(v) => {
                     setBulkSubType(v);
-                    setSelectedBulkSensorIds([]);
+                    actions.setSelectedBulkSensorIds([]);
                 }}
                 selectedSourceSensorId={selectedSourceSensorId}
                 setSelectedSourceSensorId={(v) => {
                     setSelectedSourceSensorId(v);
-                    setSelectedBulkConfigIds([]);
+                    actions.setSelectedBulkConfigIds([]);
                 }}
-                selectedBulkSensorIds={selectedBulkSensorIds}
-                selectedBulkConfigIds={selectedBulkConfigIds}
-                setSelectedBulkConfigIds={setSelectedBulkConfigIds}
+                selectedBulkSensorIds={actions.selectedBulkSensorIds}
+                selectedBulkConfigIds={actions.selectedBulkConfigIds}
+                setSelectedBulkConfigIds={actions.setSelectedBulkConfigIds}
                 bulkSensors={bulkSensors as any}
                 sourceConfigs={sourceConfigs}
                 isFetchingSourceConfigs={isFetchingSourceConfigs}
                 configs={configs}
                 targetSensorName={apiSensor?.name}
             />
-
-            <ConfirmModal confirmModal={confirmModal} setConfirmModal={setConfirmModal} />
         </div>
     );
 };
+
+
 
 export default ThresholdManagement;
