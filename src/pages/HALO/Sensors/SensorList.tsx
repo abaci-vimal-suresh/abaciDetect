@@ -66,7 +66,7 @@ const SensorList = () => {
             render: (rowData: any) => (
                 <div>
                     <div className='fw-bold'>{rowData.name}</div>
-                    <div className='small text-muted'>{rowData.sensor_type}</div>
+                    {/* <div className='small text-muted'>{rowData.sensor_type}</div>    */}
                 </div>
             )
         },
@@ -76,7 +76,7 @@ const SensorList = () => {
             render: (rowData: any) => (
                 <div>
                     <div className='fw-bold'>{rowData.mac_address}</div>
-                    <div className='small text-muted'>ID: {rowData.id}</div>
+                    {/* <div className='small text-muted'>ID: {rowData.id}</div> */}
                 </div>
             )
         },

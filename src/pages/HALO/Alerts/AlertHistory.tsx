@@ -186,7 +186,6 @@ const AlertHistory = () => {
             render: (row: AlertRecord) => (
                 <div>
                     <div className='fw-bold'>{row.alert_type}</div>
-                    <div className='small text-muted' style={{ fontSize: '0.75rem' }}>{row.id}</div>
                 </div>
             ),
         },

@@ -16,6 +16,7 @@ import Badge from '../../../components/bootstrap/Badge';
 import useDarkMode from '../../../hooks/useDarkMode';
 import AggregateMetricCards from './components/AggregateMetricCards';
 import AggregationFilterPanel from './components/AggregationFilterPanel';
+import MetricIntegratedDashboard from './components/MetricIntegratedDashboard';
 import './ThreeDPage.scss';
 
 import { useAreas, useSensors, useCreateWall } from '../../../api/sensors.api';
@@ -49,6 +50,7 @@ const ThreeDPage = () => {
     const [showSidebar, setShowSidebar] = useState(true);
     const [sidebarTab, setSidebarTab] = useState<'sensors' | 'filters'>('sensors');
     const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
+    const [activeMetricGroup, setActiveMetricGroup] = useState<any>(null);
 
     // Selection State
     const [selectedSensorId, setSelectedSensorId] = useState<number | string | null>(null);
@@ -134,6 +136,8 @@ const ThreeDPage = () => {
                 setShowSettingsOverlay(false);
             } else if (editingAreaForWalls) {
                 setEditingAreaForWalls(null);
+            } else if (activeMetricGroup) {
+                setActiveMetricGroup(null);
             }
         },
         onEscape: () => {
@@ -144,6 +148,8 @@ const ThreeDPage = () => {
                 setShowSettingsOverlay(false);
             } else if (editingAreaForWalls) {
                 setEditingAreaForWalls(null);
+            } else if (activeMetricGroup) {
+                setActiveMetricGroup(null);
             }
         },
         onToggleDrawMode: () => {
@@ -251,17 +257,13 @@ const ThreeDPage = () => {
 
 
     useEffect(() => {
-        if (areas.length > 0 && selectedAreaIds.length === 0 && !urlAreaId) {
+        if (areas.length > 0 && selectedAreaIds.length === 0) {
             const floorIds = areas.filter(a => a.area_type === 'floor' || a.area_type === 'room').map(a => a.id);
             setSelectedAreaIds(floorIds);
         }
-    }, [areas, urlAreaId, selectedAreaIds.length]);
+    }, [areas, selectedAreaIds.length]);
 
-    useEffect(() => {
-        if (urlAreaId) {
-            setSelectedAreaIds([Number(urlAreaId)]);
-        }
-    }, [urlAreaId]);
+
 
 
     useEffect(() => {
@@ -376,15 +378,7 @@ const ThreeDPage = () => {
                                 </CardTitle>
 
                                 <div className='d-flex gap-2 align-items-center'>
-                                    <div className='d-flex align-items-center gap-2'>
-                                        <Button
-                                            color='info'
-                                            isLight={!showBoundaries}
-                                            icon='Visibility'
-                                            onClick={() => setShowBoundaries(!showBoundaries)}>
-                                            {showBoundaries ? 'Hide Boundaries' : 'Show Boundaries'}
-                                        </Button>
-                                    </div>
+
 
                                     <Button
                                         color={showSidebar ? 'primary' : 'light'}
@@ -410,109 +404,127 @@ const ThreeDPage = () => {
 
                         {showSidebar && (
                             <div
-                                className='position-absolute start-0 p-0 shadow overflow-hidden d-flex flex-column'
+                                className='position-absolute start-0 top-0 h-100'
                                 style={{
-                                    left: '0',
-                                    background: darkModeStatus ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-                                    backdropFilter: 'blur(12px)',
-                                    width: '320px',
-                                    height: 'calc(100% - 70px)',
-                                    border: darkModeStatus ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                                    zIndex: 100
+                                    width: '190px',
+                                    zIndex: 1100,
+                                    pointerEvents: 'auto',
+                                    animation: 'slide-in-left 0.4s ease-out'
                                 }}
                             >
-                                <div className='p-0 border-bottom d-flex'>
-                                    <div
-                                        className={`flex-grow-1 p-3 text-center cursor-pointer transition-all ${sidebarTab === 'sensors' ? 'border-bottom border-info border-3 fw-bold text-info' : 'text-muted'}`}
-                                        onClick={() => setSidebarTab('sensors')}
-                                    >
-                                        <Icon icon='Sensors' className='me-2' /> Sensors
-                                    </div>
-                                    <div
-                                        className={`flex-grow-1 p-3 text-center cursor-pointer transition-all ${sidebarTab === 'filters' ? 'border-bottom border-info border-3 fw-bold text-info' : 'text-muted'}`}
-                                        onClick={() => setSidebarTab('filters')}
-                                    >
-                                        <Icon icon='FilterAlt' className='me-2' /> Filters
-                                    </div>
-                                </div>
+                                <style>{`
+                                    @keyframes slide-in-left {
+                                        from { transform: translateX(-100%); opacity: 0; }
+                                        to { transform: translateX(0); opacity: 1; }
+                                    }
+                                    .sidebar-glass-card {
+                                        backdrop-filter: blur(20px);
+                                        background: ${darkModeStatus ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.75)'};
+                                        border-right: 1px solid ${darkModeStatus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.1)'};
+                                        box-shadow: 5px 0 20px rgba(0,0,0,0.2);
+                                    }
+                                `}</style>
 
-                                <div className='flex-grow-1 overflow-auto p-2 scrollbar-hidden'>
-                                    {sidebarTab === 'sensors' ? (
-                                        <>
-                                            {Object.keys(sensorsByFloor).sort((a, b) => Number(b) - Number(a)).map(floor => (
-                                                <div key={floor} className='mb-3'>
-                                                    <div className='small fw-bold mb-1 px-2 text-info text-uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-                                                        Floor {floor}
+                                <div className="sidebar-glass-card h-100 d-flex flex-column">
+                                    <div className='p-0 border-bottom d-flex'>
+                                        <div
+                                            className={`flex-grow-1 p-2 text-center cursor-pointer transition-all ${sidebarTab === 'sensors' ? 'border-bottom border-info border-3 fw-bold text-info' : 'text-muted'}`}
+                                            onClick={() => setSidebarTab('sensors')}
+                                            style={{ fontSize: '0.75rem' }}
+                                        >
+                                            <Icon icon='Sensors' className='me-1' /> Sensors
+                                        </div>
+                                        <div
+                                            className={`flex-grow-1 p-2 text-center cursor-pointer transition-all ${sidebarTab === 'filters' ? 'border-bottom border-info border-3 fw-bold text-info' : 'text-muted'}`}
+                                            onClick={() => setSidebarTab('filters')}
+                                            style={{ fontSize: '0.75rem' }}
+                                        >
+                                            <Icon icon='FilterAlt' className='me-1' /> Filters
+                                        </div>
+                                    </div>
+
+                                    <div className='flex-grow-1 overflow-auto p-2 scrollbar-hidden'>
+                                        {sidebarTab === 'sensors' ? (
+                                            <>
+                                                {Object.keys(sensorsByFloor).sort((a, b) => Number(b) - Number(a)).map(floor => (
+                                                    <div key={floor} className='mb-3'>
+
+                                                        {sensorsByFloor[Number(floor)].map(s => (
+                                                            <div
+                                                                key={s.id}
+                                                                className={`p-2 rounded mb-1 cursor-pointer transition-all ${selectedSensor?.id === s.id ? 'bg-info bg-opacity-25 border border-info border-opacity-50 text-info shadow-sm' : (darkModeStatus ? 'hover-bg-dark text-white text-opacity-75' : 'hover-bg-light text-dark text-opacity-75')}`}
+                                                                onClick={() => {
+                                                                    const sensorAreaId = typeof s.area === 'object' && s.area !== null
+                                                                        ? s.area.id
+                                                                        : (s.area || s.area_id);
+
+                                                                    if (sensorAreaId && !selectedAreaIds.includes(Number(sensorAreaId))) {
+                                                                        setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
+                                                                    }
+                                                                    setSelectedSensorId(s.id);
+                                                                    setShowSettingsOverlay(false);
+                                                                    setEditingAreaForWalls(null);
+                                                                    setActiveMetricGroup(null);
+
+                                                                    // MODIFIED: Use unified preview state
+                                                                    setPreviewState(createSensorPositionPreview(
+                                                                        s.id,
+                                                                        s.x_val || 0,
+                                                                        s.y_val || 0,
+                                                                        s.z_val || 0
+                                                                    ));
+                                                                }}
+                                                                style={{ fontSize: '0.75rem' }}
+                                                            >
+                                                                <div className='d-flex align-items-center justify-content-between mb-1'>
+                                                                    <div className='text-truncate fw-bold'>{s.name}</div>
+                                                                    <Badge
+                                                                        color={s.status === 'safe' || s.status === 'Normal' ? 'success' : s.status === 'warning' || s.status === 'Warning' ? 'warning' : 'danger'}
+                                                                        isLight
+                                                                        style={{ fontSize: '0.7rem' }}
+                                                                    >
+                                                                        {s.status}
+                                                                    </Badge>
+                                                                </div>
+                                                                <div className='d-flex gap-2' style={{ fontSize: '0.75rem', opacity: 0.6 }}>
+                                                                    <span className='font-monospace'>{s.mac_address || 'NO-MAC'}</span>
+                                                                    <span className='ms-auto'>{s.ip_address || 'NO-IP'}</span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                    {sensorsByFloor[Number(floor)].map(s => (
-                                                        <div
-                                                            key={s.id}
-                                                            className={`p-2 rounded mb-1 cursor-pointer transition-all ${selectedSensor?.id === s.id ? 'bg-info bg-opacity-25 border border-info border-opacity-50 text-info shadow-sm' : (darkModeStatus ? 'hover-bg-dark text-white text-opacity-75' : 'hover-bg-light text-dark text-opacity-75')}`}
-                                                            onClick={() => {
-                                                                const sensorAreaId = typeof s.area === 'object' && s.area !== null
-                                                                    ? s.area.id
-                                                                    : (s.area || s.area_id);
-
-                                                                if (sensorAreaId && !selectedAreaIds.includes(Number(sensorAreaId))) {
-                                                                    setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
-                                                                }
-                                                                setSelectedSensorId(s.id);
-                                                                setShowSettingsOverlay(false);
-                                                                // MODIFIED: Use unified preview state
-                                                                setPreviewState(createSensorPositionPreview(
-                                                                    s.id,
-                                                                    s.x_val || 0,
-                                                                    s.y_val || 0,
-                                                                    s.z_val || 0
-                                                                ));
-                                                            }}
-                                                            style={{ fontSize: '0.85rem' }}
-                                                        >
-                                                            <div className='d-flex align-items-center justify-content-between mb-1'>
-                                                                <div className='text-truncate fw-bold'>{s.name}</div>
-                                                                <Badge
-                                                                    color={s.status === 'safe' || s.status === 'Normal' ? 'success' : s.status === 'warning' || s.status === 'Warning' ? 'warning' : 'danger'}
-                                                                    isLight
-                                                                    style={{ fontSize: '0.7rem' }}
-                                                                >
-                                                                    {s.status}
-                                                                </Badge>
-                                                            </div>
-                                                            <div className='d-flex gap-2' style={{ fontSize: '0.75rem', opacity: 0.6 }}>
-                                                                <span className='font-monospace'>{s.mac_address || 'NO-MAC'}</span>
-                                                                <span className='ms-auto'>{s.ip_address || 'NO-IP'}</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ))}
-                                            {sensors.length === 0 && !isLoading && (
-                                                <div className='text-center py-4 text-muted small'>
-                                                    No placed sensors in this area
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <AggregationFilterPanel
-                                            areas={areas}
-                                            selectedAreaIds={selectedAreaIds}
-                                            onAreaSelectionChange={setSelectedAreaIds}
-                                            selectedGroupIds={selectedGroupIds}
-                                            onGroupSelectionChange={setSelectedGroupIds}
-                                            onShowAllAreas={() => {
-                                                setSelectedSensorId(null);
-                                                setShowSettingsOverlay(false);
-                                                setEditingAreaForWalls(null);
-                                                const floorIds = areas.filter(a => a.area_type === 'floor' || a.area_type === 'room').map(a => a.id);
-                                                setSelectedAreaIds(floorIds);
-                                            }}
-                                            onEditAreaWalls={(area) => {
-                                                setSelectedSensorId(null);
-                                                setShowSettingsOverlay(false);
-                                                setEditingAreaForWalls(area);
-                                            }}
-                                        />
-                                    )}
+                                                ))}
+                                                {sensors.length === 0 && !isLoading && (
+                                                    <div className='text-center py-4 text-muted small'>
+                                                        No placed sensors in this area
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <AggregationFilterPanel
+                                                areas={areas}
+                                                selectedAreaIds={selectedAreaIds}
+                                                onAreaSelectionChange={setSelectedAreaIds}
+                                                selectedGroupIds={selectedGroupIds}
+                                                onGroupSelectionChange={setSelectedGroupIds}
+                                                onShowAllAreas={() => {
+                                                    setSelectedSensorId(null);
+                                                    setShowSettingsOverlay(false);
+                                                    setEditingAreaForWalls(null);
+                                                    setActiveMetricGroup(null);
+                                                    const floorIds = areas.filter(a => a.area_type === 'floor' || a.area_type === 'room').map(a => a.id);
+                                                    setSelectedAreaIds(floorIds);
+                                                }}
+                                                onEditAreaWalls={(area) => {
+                                                    setSelectedSensorId(null);
+                                                    setShowSettingsOverlay(false);
+                                                    setEditingAreaForWalls(area);
+                                                    setSelectedSensorId(null);
+                                                    setActiveMetricGroup(null);
+                                                }}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -550,6 +562,8 @@ const ThreeDPage = () => {
                                         }
                                         setSelectedSensorId(id);
                                         setShowSettingsOverlay(true);
+                                        setEditingAreaForWalls(null);
+                                        setActiveMetricGroup(null);
                                     }}
                                     onSensorClick={(sensor) => {
                                         const sensorAreaId = typeof sensor.area === 'object' && sensor.area !== null
@@ -562,6 +576,7 @@ const ThreeDPage = () => {
                                         setSelectedSensorId(sensor.id);
                                         setShowSettingsOverlay(false);
                                         setEditingAreaForWalls(null);
+                                        setActiveMetricGroup(null);
                                     }}
                                     onSensorDrag={handleSensorDrag}
                                     previewState={previewState}
@@ -582,7 +597,9 @@ const ThreeDPage = () => {
                                                 if (walls.some(w => String(w.id) === String(wall.id))) {
                                                     const area = filteredAreas.find(a => String(a.id) === String(areaId));
                                                     if (area) {
+                                                        setSelectedSensorId(null);
                                                         setEditingAreaForWalls(area);
+                                                        setActiveMetricGroup(null);
                                                     }
                                                     break;
                                                 }
@@ -609,64 +626,89 @@ const ThreeDPage = () => {
                             <AggregateMetricCards
                                 areaIds={selectedAreaIds}
                                 sensorGroupIds={selectedGroupIds}
+                                activeMetricGroup={activeMetricGroup}
+                                setActiveMetricGroup={(group: any) => {
+                                    setActiveMetricGroup(group);
+                                    if (group) {
+                                        setSelectedSensorId(null);
+                                        setShowSettingsOverlay(false);
+                                        setEditingAreaForWalls(null);
+                                    }
+                                }}
                             />
                         )}
 
 
 
-                        {showSettingsOverlay && selectedSensor && (
-                            <SensorSettingsOverlay
-                                sensor={selectedSensor}
-                                originalSensor={selectedSensor}
-                                onClose={() => {
-                                    setShowSettingsOverlay(false);
-                                    setPreviewState(null); //  Clear preview
-                                }}
-                                onPreviewChange={(changes) => {
-                                    handleSensorPreviewChange(selectedSensor.id, changes);
-                                }}
-                                onBlinkingWallsChange={setBlinkingWallIds}
-                                previewState={previewState} //  NEW: Sync from 3D drag
-                                externalWallToLink={externalWallToLink}
-                                onExternalWallLinkHandled={() => setExternalWallToLink(null)}
-                            />
-                        )}
+                        <div
+                            className='position-absolute end-0 top-0 h-100 p-0'
+                            style={{
+                                width: '190px',
+                                zIndex: 1100,
+                                pointerEvents: 'none'
+                            }}
+                        >
+                            {showSettingsOverlay && selectedSensor && (
+                                <SensorSettingsOverlay
+                                    sensor={selectedSensor}
+                                    originalSensor={selectedSensor}
+                                    onClose={() => {
+                                        setShowSettingsOverlay(false);
+                                        setPreviewState(null);
+                                    }}
+                                    onPreviewChange={(changes) => {
+                                        handleSensorPreviewChange(selectedSensor.id, changes);
+                                    }}
+                                    onBlinkingWallsChange={setBlinkingWallIds}
+                                    previewState={previewState}
+                                    externalWallToLink={externalWallToLink}
+                                    onExternalWallLinkHandled={() => setExternalWallToLink(null)}
+                                />
+                            )}
 
-                        {!showSettingsOverlay && selectedSensor && (
-                            <SensorDataOverlay
-                                sensor={selectedSensor}
-                                onClose={() => {
-                                    setSelectedSensorId(null);
-                                    setPreviewState(null); //  Clear preview
-                                }}
-                                onSettingsClick={() => setShowSettingsOverlay(true)}
-                            />
-                        )}
+                            {!showSettingsOverlay && selectedSensor && (
+                                <SensorDataOverlay
+                                    sensor={selectedSensor}
+                                    onClose={() => {
+                                        setSelectedSensorId(null);
+                                        setPreviewState(null);
+                                    }}
+                                    onSettingsClick={() => setShowSettingsOverlay(true)}
+                                />
+                            )}
 
-                        {editingAreaForWalls && (
-                            <AreaSettingsOverlay
-                                area={editingAreaForWalls}
-                                isDrawing={wallDrawMode}
-                                onToggleDrawing={setWallDrawMode}
-                                newlyCreatedWall={pendingWall}
-                                wallCreationTrigger={wallCreationTrigger}
-                                onClose={() => {
-                                    setEditingAreaForWalls(null);
-                                    setPreviewState(null);
-                                    setWallDrawMode(false);
-                                }}
-                                onPreviewChange={(changes) => {
-                                    handleAreaPreviewChange(editingAreaForWalls.id, changes);
-                                }}
-                                onBlinkingWallsChange={setBlinkingWallIds}
-                                externalSelectedWallId={selectedWallId}
-                                previewState={previewState}
-                            />
-                        )}
+                            {editingAreaForWalls && (
+                                <AreaSettingsOverlay
+                                    area={editingAreaForWalls}
+                                    isDrawing={wallDrawMode}
+                                    onToggleDrawing={setWallDrawMode}
+                                    newlyCreatedWall={pendingWall}
+                                    wallCreationTrigger={wallCreationTrigger}
+                                    onClose={() => {
+                                        setEditingAreaForWalls(null);
+                                        setPreviewState(null);
+                                        setWallDrawMode(false);
+                                    }}
+                                    onPreviewChange={(changes) => {
+                                        handleAreaPreviewChange(editingAreaForWalls.id, changes);
+                                    }}
+                                    onBlinkingWallsChange={setBlinkingWallIds}
+                                    externalSelectedWallId={selectedWallId}
+                                    previewState={previewState}
+                                />
+                            )}
+
+                            {activeMetricGroup && (
+                                <MetricIntegratedDashboard
+                                    group={activeMetricGroup}
+                                    onClose={() => setActiveMetricGroup(null)}
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
             </Page>
-        </PageWrapper>
+        </PageWrapper >
     );
 };
 

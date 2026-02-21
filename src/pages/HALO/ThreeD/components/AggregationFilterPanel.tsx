@@ -52,7 +52,7 @@ const AggregationFilterPanel: React.FC<AggregationFilterPanelProps> = ({
     const isGroupSelected = (id: number | string) => selectedGroupIds.includes(Number(id));
 
     return (
-        <div className="p-2 no-scrollbar overflow-auto h-100">
+        <div className="no-scrollbar overflow-auto h-100">
             {/* Areas Section */}
             <div className='mb-4'>
                 <div className='d-flex justify-content-between align-items-center mb-2 px-2'>
@@ -91,15 +91,17 @@ const AggregationFilterPanel: React.FC<AggregationFilterPanelProps> = ({
                                 className="p-1 line-height-1 ms-auto"
                                 onClick={(e: React.MouseEvent) => {
                                     e.stopPropagation();
+                                    // Only check the clicked area and uncheck everything else
+                                    onAreaSelectionChange([area.id]);
                                     onEditAreaWalls(area);
                                 }}
                             >
                                 <Icon icon="Settings" size="sm" />
                             </Button>
                         </div>
-                        <div style={{ opacity: 0.6, fontSize: '0.75rem' }}>
+                        {/* <div style={{ opacity: 0.6, fontSize: '0.75rem' }}>
                             {area.area_type === 'floor' ? 'Floor' : 'Zone'}
-                        </div>
+                        </div> */}
                     </div>
                 ))}
             </div>

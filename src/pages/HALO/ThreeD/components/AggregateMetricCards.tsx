@@ -100,12 +100,20 @@ const METRIC_GROUPS = [
 interface AggregateMetricCardsProps {
     areaIds: (number | string)[];
     sensorGroupIds?: (number | string)[];
+    activeMetricGroup: any;
+    setActiveMetricGroup: (group: any) => void;
 }
 
-const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, sensorGroupIds }) => {
+
+
+const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({
+    areaIds,
+    sensorGroupIds,
+    activeMetricGroup,
+    setActiveMetricGroup
+}) => {
     const { darkModeStatus } = useDarkMode();
     const navigate = useNavigate();
-    const [activeMetricGroup, setActiveMetricGroup] = useState<any>(null);
     const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
     const { data: response, isLoading } = useAggregatedSensorData({
@@ -118,7 +126,6 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
     const metricGroups = useMemo(() => {
         const data = response?.aggregated_data || {};
 
-        // Find the "primary" area for config (usually the first one or the building)
         const primaryArea = areas?.find(a => areaIds.includes(a.id));
         const effectiveConfig = getEffectiveConfig(primaryArea, areas);
 
@@ -140,7 +147,7 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
 
     if (isLoading) return null;
 
-    // Neutral gray palette (dark-mode aware)
+    // Neutral gray palette
     const cardBgDefault = darkModeStatus ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.55)';
     const cardBgHovered = darkModeStatus ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.75)';
     const borderDefault = darkModeStatus ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
@@ -163,30 +170,32 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
                 .dock-card:hover {
                     transform: translateY(-8px) scale(1.08);
                 }
+                .dock-container {
+                    position: absolute;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 1000;
+                    display: flex;
+                    alignItems: flex-end;
+                    gap: 8px;
+                    padding: 0 4px;
+                }
             `}</style>
 
+
+
             {/* ── Dock ── */}
-            <div
-                style={{
-                    position: 'absolute',
-                    bottom: 20,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    zIndex: 1000,
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    gap: 8,
-                    padding: '0 4px',
-                }}
-            >
+            <div className="dock-container">
                 {metricGroups.map(group => {
                     const isHovered = hoveredKey === group.key;
+                    const isActive = activeMetricGroup?.key === group.key;
 
                     return (
                         <div
                             key={group.key}
                             className='dock-card'
-                            onClick={() => setActiveMetricGroup(group)}
+                            onClick={() => setActiveMetricGroup(isActive ? null : group)}
                             onMouseEnter={() => setHoveredKey(group.key)}
                             onMouseLeave={() => setHoveredKey(null)}
                             style={{
@@ -197,12 +206,13 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
                                 width: 112,
                                 padding: '10px 10px 8px',
                                 borderRadius: 14,
-                                background: isHovered ? cardBgHovered : cardBgDefault,
-                                border: `1px solid ${isHovered ? borderHovered : borderDefault}`,
+                                background: isActive || isHovered ? cardBgHovered : cardBgDefault,
+                                border: `1px solid ${isActive || isHovered ? borderHovered : borderDefault}`,
+                                outline: isActive ? `2px solid #4d69fa` : 'none',
                                 backdropFilter: 'blur(12px)',
                                 WebkitBackdropFilter: 'blur(12px)',
                                 cursor: 'pointer',
-                                boxShadow: isHovered
+                                boxShadow: isActive || isHovered
                                     ? '0 6px 20px rgba(0,0,0,0.12)'
                                     : '0 2px 8px rgba(0,0,0,0.06)',
                             }}
@@ -230,7 +240,7 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
                                 letterSpacing: '0.03em',
                                 textTransform: 'uppercase',
                                 textAlign: 'center',
-                                color: isHovered ? labelHovered : labelColor,
+                                color: isActive || isHovered ? labelHovered : labelColor,
                                 lineHeight: 1.3,
                                 marginBottom: 6,
                                 transition: 'color 0.3s ease',
@@ -242,7 +252,7 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
                             <div style={{
                                 width: '100%',
                                 height: 1,
-                                background: isHovered ? dividerHovered : dividerDefault,
+                                background: isActive || isHovered ? dividerHovered : dividerDefault,
                                 marginBottom: 6,
                                 transition: 'background 0.3s ease',
                             }} />
@@ -282,138 +292,6 @@ const AggregateMetricCards: React.FC<AggregateMetricCardsProps> = ({ areaIds, se
                     );
                 })}
             </div>
-
-            {/* ── Detail Modal ── */}
-            <Modal
-                isOpen={!!activeMetricGroup}
-                setIsOpen={(v) => { if (!v) setActiveMetricGroup(null); }}
-                size='lg'
-                isCentered
-                isScrollable
-            >
-                <ModalHeader setIsOpen={(v: boolean) => { if (!v) setActiveMetricGroup(null); }}>
-                    <ModalTitle id='metric-detail-modal'>
-                        {activeMetricGroup && (
-                            <div className='d-flex align-items-center gap-3'>
-                                <div
-                                    className='rounded-2 d-flex align-items-center justify-content-center flex-shrink-0'
-                                    style={{ width: 36, height: 36, background: '#e5e7eb', color: '#374151' }}
-                                >
-                                    <Icon icon={activeMetricGroup.icon as any} />
-                                </div>
-                                <div>
-                                    <div className='fw-bold fs-6'>{activeMetricGroup.label}</div>
-                                    <div className='text-muted' style={{ fontSize: '0.72rem' }}>
-                                        Building Metrics · Min & Max over selected period
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </ModalTitle>
-                </ModalHeader>
-
-                <ModalBody>
-                    {activeMetricGroup && (
-                        <>
-                            <div style={{ height: 3, background: '#e5e7eb' }} />
-                            <div className='p-4'>
-                                {activeMetricGroup.hasData ? (
-                                    <div className='row g-3'>
-                                        {activeMetricGroup.metrics.map((metric: any) => (
-                                            <div key={metric.key} className='col-6 col-md-4'>
-                                                <div
-                                                    className='p-3 rounded-2 text-center'
-                                                    style={{
-                                                        border: `1px solid ${darkModeStatus ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
-                                                        background: darkModeStatus ? 'rgba(255,255,255,0.03)' : '#f9fafb',
-                                                    }}
-                                                >
-                                                    <div className='fw-bold mb-3' style={{ fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: darkModeStatus ? 'rgba(255,255,255,0.7)' : '#374151' }}>
-                                                        {metric.label}
-                                                    </div>
-
-                                                    {/* MIN Value with Sensor Navigation */}
-                                                    <div className='d-flex flex-column gap-2 mb-3'>
-                                                        <div className='d-flex justify-content-between align-items-center px-1'>
-                                                            <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MIN</span>
-                                                            <span className='fw-bold' style={{ fontSize: '1.1rem' }}>
-                                                                {metric.rawMin != null ? metric.rawMin.toFixed(1) : <span className='text-muted fs-6'>—</span>}
-                                                            </span>
-                                                        </div>
-                                                        {metric.minSensorId && (
-                                                            <Button
-                                                                isNeumorphic
-                                                                size='sm'
-                                                                color='info'
-                                                                isLight
-                                                                icon='DirectionsRun'
-                                                                className='w-100 py-1'
-                                                                style={{ fontSize: '0.7rem' }}
-                                                                onClick={() => navigate(`/halo/sensors/detail/${metric.minSensorId}`)}
-                                                            >
-                                                                Sensor #{metric.minSensorId}
-                                                            </Button>
-                                                        )}
-                                                    </div>
-
-                                                    {/* MAX Value with Sensor Navigation */}
-                                                    <div className='d-flex flex-column gap-2'>
-                                                        <div className='d-flex justify-content-between align-items-center px-1'>
-                                                            <span className='text-muted' style={{ fontSize: '0.65rem', fontWeight: 700 }}>MAX</span>
-                                                            <span className='fw-bold' style={{ fontSize: '1.1rem', color: metric.statusColor }}>
-                                                                {metric.rawMax != null ? metric.rawMax.toFixed(1) : <span className='text-muted fs-6'>—</span>}
-                                                            </span>
-                                                        </div>
-                                                        {metric.maxSensorId && (
-                                                            <Button
-                                                                isNeumorphic
-                                                                size='sm'
-                                                                color='danger'
-                                                                isLight
-                                                                icon='Sensors'
-                                                                className='w-100 py-1'
-                                                                style={{ fontSize: '0.7rem' }}
-                                                                onClick={() => navigate(`/halo/sensors/detail/${metric.maxSensorId}`)}
-                                                            >
-                                                                Sensor #{metric.maxSensorId}
-                                                            </Button>
-                                                        )}
-                                                    </div>
-
-                                                    <div className='mt-3'>
-                                                        <span
-                                                            className='rounded-pill px-2 py-1'
-                                                            style={{
-                                                                fontSize: '0.62rem',
-                                                                fontWeight: 600,
-                                                                background: darkModeStatus ? 'rgba(255,255,255,0.1)' : '#e5e7eb',
-                                                                color: darkModeStatus ? 'rgba(255,255,255,0.7)' : '#374151'
-                                                            }}
-                                                        >
-                                                            {metric.unit}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className='text-center py-5'>
-                                        <div
-                                            className='rounded-circle d-inline-flex align-items-center justify-content-center mb-3'
-                                            style={{ width: 64, height: 64, background: '#f3f4f6' }}
-                                        >
-                                            <Icon icon={activeMetricGroup.icon as any} className='text-muted fs-3' />
-                                        </div>
-                                        <div className='fw-semibold text-muted mb-1'>No data available</div>
-                                        <div className='text-muted small'>No readings recorded for this group in the selected time window.</div>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </ModalBody>
-            </Modal>
         </>
     );
 };

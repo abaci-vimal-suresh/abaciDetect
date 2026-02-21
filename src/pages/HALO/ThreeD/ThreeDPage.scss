@@ -1,6 +1,7 @@
 .threed-page-container {
-    height: calc(100vh - 85px) !important;
+    height: calc(99vh - var(--header-height, 0px) - var(--subheader-height, 0px) - var(--footer-height, 0px)) !important;
     overflow: hidden;
+    width: 100%;
 
     .threed-canvas {
         opacity: 0;

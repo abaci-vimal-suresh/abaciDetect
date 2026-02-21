@@ -38,27 +38,36 @@ const SensorDataOverlay: React.FC<SensorDataOverlayProps> = ({ sensor, onClose, 
 
     return (
         <div
-            className='position-absolute end-0  p-0  shadow overflow-hidden d-flex flex-column transition-all'
+            className='h-100 p-0'
             style={{
-                top: '1px',
-                background: darkModeStatus ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                backdropFilter: 'blur(16px)',
-                width: '320px',
-                maxHeight: 'calc(100% - 110px)',
-                border: darkModeStatus ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                zIndex: 101,
-                boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+                width: '100%',
+                zIndex: 1100,
+                pointerEvents: 'auto',
+                animation: 'slide-in-right 0.4s ease-out'
             }}
         >
-            <Card className="mb-0 border-0 bg-transparent flex-grow-1 overflow-auto scrollbar-hidden">
-                <CardHeader className="bg-transparent border-bottom p-3">
+            <style>{`
+                @keyframes slide-in-right {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                .sensor-data-card {
+                    backdrop-filter: blur(20px);
+                    background: ${darkModeStatus ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.75)'};
+                    border-left: 1px solid ${darkModeStatus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.1)'};
+                    box-shadow: -5px 0 20px rgba(0,0,0,0.2);
+                }
+            `}</style>
+
+            <div className="sensor-data-card h-100 d-flex flex-column overflow-auto scrollbar-hidden">
+                <CardHeader className="bg-transparent border-bottom p-2">
                     <div className="d-flex justify-content-between align-items-center w-100">
-                        <div className="text-truncate" style={{ maxWidth: '220px' }}>
-                            <div className="d-flex align-items-center gap-2 mb-1">
-                                <h6 className={`mb-0 ${darkModeStatus ? 'text-white' : 'text-dark'}`}>{sensor.name}</h6>
-                                {isFetching && <Spinner size="10px" color="info" isSmall />}
+                        <div className="text-truncate" style={{ maxWidth: '120px' }}>
+                            <div className="d-flex align-items-center gap-1 mb-0">
+                                <h6 className={`mb-0 ${darkModeStatus ? 'text-white' : 'text-dark'}`} style={{ fontSize: '0.8rem' }}>{sensor.name}</h6>
+                                {isFetching && <Spinner size="8px" color="info" isSmall />}
                             </div>
-                            <div className="small text-muted font-monospace" style={{ fontSize: '0.7rem' }}>{sensor.mac_address}</div>
+                            <div className="small text-muted font-monospace" style={{ fontSize: '0.6rem' }}>{sensor.mac_address}</div>
                         </div>
                         <div className="d-flex align-items-center">
                             {onSettingsClick && (
@@ -67,39 +76,39 @@ const SensorDataOverlay: React.FC<SensorDataOverlayProps> = ({ sensor, onClose, 
                                     size="sm"
                                     onClick={onSettingsClick}
                                     icon="Settings"
-                                    className="me-1"
+                                    className="p-1"
                                     title="Open Settings"
                                 />
                             )}
-                            <Button color="link" size="sm" onClick={onClose} icon="Close" />
+                            <Button color="link" size="sm" onClick={onClose} icon="Close" className="p-1" />
                         </div>
                     </div>
                 </CardHeader>
-                <CardBody className="p-3">
+                <CardBody className="p-2">
                     {isLoading ? (
                         <div className="text-center py-5">
                             <Spinner color="info" />
-                            <div className="small mt-2 text-muted">Awaiting Sensor Data...</div>
+                            <div className="small mt-2 text-muted" style={{ fontSize: '0.7rem' }}>Loading...</div>
                         </div>
                     ) : latestLog ? (
                         <>
                             {/* Environmental Section */}
-                            <div className="mb-4">
-                                <div className="d-flex align-items-center mb-2 border-bottom pb-1">
-                                    <Icon icon="Thermostat" className="text-info me-2" size="sm" />
-                                    <h6 className="mb-0 text-uppercase x-small fw-bold text-info" style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>Environmental</h6>
+                            <div className="mb-3">
+                                <div className="d-flex align-items-center mb-1 border-bottom pb-1">
+                                    <Icon icon="Thermostat" className="text-info me-1" size="sm" />
+                                    <h6 className="mb-0 text-uppercase x-small fw-bold text-info" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>Environmental</h6>
                                 </div>
-                                {renderMetric('Temperature', latestLog.readings_environmental.temperature_c, '°C', 'DeviceThermostat')}
+                                {renderMetric('Temp', latestLog.readings_environmental.temperature_c, '°C', 'DeviceThermostat')}
                                 {renderMetric('Humidity', latestLog.readings_environmental.humidity_percent, '%', 'WaterDrop')}
                                 {renderMetric('Light', latestLog.readings_environmental.light_lux, 'lux', 'LightMode')}
                                 {renderMetric('Pressure', latestLog.readings_environmental.pressure_hpa, 'hPa', 'Compress')}
                             </div>
 
                             {/* Air Quality Section */}
-                            <div className="mb-4">
-                                <div className="d-flex align-items-center mb-2 border-bottom pb-1">
-                                    <Icon icon="Air" className="text-info me-2" size="sm" />
-                                    <h6 className="mb-0 text-uppercase x-small fw-bold text-info" style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>Air Quality</h6>
+                            <div className="mb-3">
+                                <div className="d-flex align-items-center mb-1 border-bottom pb-1">
+                                    <Icon icon="Air" className="text-info me-1" size="sm" />
+                                    <h6 className="mb-0 text-uppercase x-small fw-bold text-info" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>Air Quality</h6>
                                 </div>
                                 {renderMetric('CO2 Eq', latestLog.readings_air.co2_eq, 'ppm', 'Cloud')}
                                 {renderMetric('TVOC', latestLog.readings_air.tvoc, 'ppb', 'Co2')}
@@ -109,31 +118,31 @@ const SensorDataOverlay: React.FC<SensorDataOverlayProps> = ({ sensor, onClose, 
                             </div>
 
                             {/* Derived Metrics Section */}
-                            <div className="mb-4">
-                                <div className="d-flex align-items-center mb-2 border-bottom pb-1">
-                                    <Icon icon="Insights" className="text-info me-2" size="sm" />
-                                    <h6 className="mb-0 text-uppercase x-small fw-bold text-info" style={{ fontSize: '0.7rem', letterSpacing: '0.05em' }}>Derived Metrics</h6>
+                            <div className="mb-3">
+                                <div className="d-flex align-items-center mb-1 border-bottom pb-1">
+                                    <Icon icon="Insights" className="text-info me-1" size="sm" />
+                                    <h6 className="mb-0 text-uppercase x-small fw-bold text-info" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>Derived</h6>
                                 </div>
-                                {renderMetric('AQI', latestLog.readings_derived.aqi, 'index', 'Speed')}
-                                {renderMetric('Health Index', latestLog.readings_derived.health_index, '/ 5', 'MonitorHeart')}
+                                {renderMetric('AQI', latestLog.readings_derived.aqi, 'idx', 'Speed')}
+                                {renderMetric('Health', latestLog.readings_derived.health_index, '/5', 'MonitorHeart')}
                                 {renderMetric('Noise', latestLog.readings_derived.noise_db, 'dB', 'GraphicEq')}
                                 {renderMetric('Motion', latestLog.readings_derived.motion, '%', 'DirectionsRun')}
                             </div>
 
-                            <div className="text-center mt-3 pt-2 border-top">
-                                <span className="small text-muted" style={{ fontSize: '0.65rem' }}>
-                                    Last Sync: {new Date(latestLog.recorded_at).toLocaleTimeString()}
+                            <div className="text-center mt-2 pt-1 border-top">
+                                <span className="small text-muted" style={{ fontSize: '0.6rem' }}>
+                                    Sync: {new Date(latestLog.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
                         </>
                     ) : (
-                        <div className="text-center py-5">
-                            <Icon icon="SensorsOff" className="text-muted mb-2" size="lg" />
-                            <div className="small text-muted">No readings available for this sensor.</div>
+                        <div className="text-center py-4">
+                            <Icon icon="SensorsOff" className="text-muted mb-1" size="lg" />
+                            <div className="small text-muted" style={{ fontSize: '0.7rem' }}>No data.</div>
                         </div>
                     )}
                 </CardBody>
-            </Card>
+            </div>
         </div>
     );
 };

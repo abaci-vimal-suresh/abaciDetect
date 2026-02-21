@@ -12,14 +12,14 @@ const ErrorPage = () => {
 					<div
 						className='col-12 d-flex justify-content-center'
 						style={{
-						fontSize: 'calc(3rem + 3vw)',
-						background: 'linear-gradient(45deg,rgb(5, 44, 20),rgb(89, 197, 147))',
-						WebkitBackgroundClip: 'text',
-						WebkitTextFillColor: 'transparent', // Ensures text fills with the gradient
-						fontWeight: 'bold',
-					}}
-						
-						>
+							fontSize: 'calc(3rem + 3vw)',
+							background: 'linear-gradient(45deg,rgb(5, 44, 20),rgb(89, 197, 147))',
+							WebkitBackgroundClip: 'text',
+							WebkitTextFillColor: 'transparent', // Ensures text fills with the gradient
+							fontWeight: 'bold',
+						}}
+
+					>
 						<p>Internal Server Error</p>
 					</div>
 					<div className='col-12 d-flex align-items-baseline justify-content-center'>
