@@ -382,41 +382,39 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
         const value = (values[field] as number) ?? (base[field] || 0);
 
         return (
-            <div className="mb-3">
-                <div className="d-flex justify-content-between align-items-center mb-1">
-                    <label className="small text-muted">{label}</label>
-                    <span className="small fw-bold text-info">{value.toFixed(2)}m</span>
+            <div className="d-flex align-items-center justify-content-between mb-2 p-1 rounded bg-dark bg-opacity-10 border border-secondary border-opacity-10">
+                <div className="d-flex flex-column ms-1">
+                    <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>{label}</span>
+                    <span className="text-info fw-bold" style={{ fontSize: '0.65rem' }}>{value.toFixed(2)}m</span>
                 </div>
-                <div
-                    className={`d-flex align-items-center p-2 rounded ${darkModeStatus ? 'bg-dark bg-opacity-50' : 'bg-light'}`}
-                    style={{
-                        border: darkModeStatus ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
-                        boxShadow: darkModeStatus ? 'inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(255,255,255,0.05)' : 'inset 2px 2px 5px rgba(0,0,0,0.1), inset -1px -1px 2px rgba(255,255,255,0.5)'
-                    }}
-                >
+                <div className="d-flex align-items-center gap-1">
                     <Button
-                        color="link"
+                        color="light"
                         size="sm"
-                        className="p-1 px-2"
+                        isLight
+                        className="p-0 d-flex align-items-center justify-content-center"
+                        style={{ width: '22px', height: '22px' }}
                         onClick={() => handleInputChange(field, value - 0.1)}
                     >
-                        <Icon icon="Remove" />
+                        <Icon icon="Remove" size="sm" />
                     </Button>
                     <input
                         type="number"
                         step={0.1}
                         value={value}
                         onChange={(e: any) => handleInputChange(field, parseFloat(e.target.value) || 0)}
-                        className={`form-control form-control-sm bg-transparent border-0 text-center fw-bold ${darkModeStatus ? 'text-white' : 'text-dark'}`}
-                        style={{ boxShadow: 'none' }}
+                        className={`bg-transparent border-0 text-center fw-bold p-0 ${darkModeStatus ? 'text-white' : 'text-dark'}`}
+                        style={{ width: '35px', fontSize: '0.8rem', outline: 'none' }}
                     />
                     <Button
-                        color="link"
+                        color="light"
                         size="sm"
-                        className="p-1 px-2"
+                        isLight
+                        className="p-0 d-flex align-items-center justify-content-center"
+                        style={{ width: '22px', height: '22px' }}
                         onClick={() => handleInputChange(field, value + 0.1)}
                     >
-                        <Icon icon="Add" />
+                        <Icon icon="Add" size="sm" />
                     </Button>
                 </div>
             </div>
@@ -430,30 +428,40 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     return (
         <>
             <div
-                className='position-absolute end-0 p-0 shadow overflow-hidden d-flex flex-column'
+                className='h-100 p-0'
                 style={{
-                    top: '1px',
-                    background: darkModeStatus ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                    backdropFilter: 'blur(16px)',
-                    width: '380px',
-                    maxHeight: 'calc(100% - 110px)',
-                    border: darkModeStatus ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                    zIndex: 101
+                    width: '100%',
+                    zIndex: 1100,
+                    pointerEvents: 'auto',
+                    animation: 'slide-in-right 0.4s ease-out'
                 }}
             >
-                <Card className="mb-0 border-0 bg-transparent flex-grow-1 overflow-auto scrollbar-hidden">
+                <style>{`
+                    @keyframes slide-in-right {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    .sensor-settings-card {
+                        backdrop-filter: blur(20px);
+                        background: ${darkModeStatus ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.75)'};
+                        border-left: 1px solid ${darkModeStatus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.1)'};
+                        box-shadow: -5px 0 20px rgba(0,0,0,0.2);
+                    }
+                `}</style>
+
+                <div className="sensor-settings-card h-100 d-flex flex-column overflow-auto scrollbar-hidden">
 
                     {/* ============================================ */}
                     {/* HEADER                                       */}
                     {/* ============================================ */}
 
-                    <CardHeader className="bg-transparent border-bottom p-3">
+                    <CardHeader className="bg-transparent border-bottom p-2">
                         <div className="d-flex justify-content-between align-items-center w-100">
-                            <div className="text-truncate" style={{ maxWidth: '240px' }}>
-                                <h6 className={`mb-0 ${darkModeStatus ? 'text-white' : 'text-dark'}`}>{sensor.name}</h6>
-                                <div className="small text-muted font-monospace">{sensor.mac_address}</div>
+                            <div className="text-truncate" style={{ maxWidth: '120px' }}>
+                                <h6 className={`mb-0 ${darkModeStatus ? 'text-white' : 'text-dark'}`} style={{ fontSize: '0.8rem' }}>{sensor.name}</h6>
+                                <div className="small text-muted font-monospace" style={{ fontSize: '0.6rem' }}>{sensor.mac_address}</div>
                             </div>
-                            <Button color="link" size="sm" onClick={onClose} icon="Close" />
+                            <Button color="link" size="sm" onClick={onClose} icon="Close" className="p-1" />
                         </div>
                     </CardHeader>
 
@@ -461,20 +469,20 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                     {/* BODY                                         */}
                     {/* ============================================ */}
 
-                    <CardBody className="p-3">
+                    <CardBody className="p-2">
 
                         {/* ============================================ */}
                         {/* SENSOR POSITION SECTION                      */}
                         {/* ============================================ */}
 
-                        <div className="mb-4">
-                            <div className="d-flex align-items-center mb-3">
-                                <Icon icon="LocationOn" className="text-info me-2" />
-                                <h6 className="mb-0 text-uppercase small fw-bold text-info">Sensor Position</h6>
+                        <div className="mb-3">
+                            <div className="d-flex align-items-center mb-2">
+                                <Icon icon="LocationOn" className="text-info me-1" size="sm" />
+                                <h6 className="mb-0 text-uppercase x-small fw-bold text-info" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>Position</h6>
                             </div>
-                            {renderInput('X Position', 'x_val')}
-                            {renderInput('Y Position', 'y_val')}
-                            {renderInput('Z Position', 'z_val')}
+                            {renderInput('X Pos', 'x_val')}
+                            {renderInput('Y Pos', 'y_val')}
+                            {renderInput('Z Pos', 'z_val')}
                         </div>
 
                         {/* ============================================ */}
@@ -509,45 +517,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                             </div>
                         ) : (
                             <div className="d-flex flex-wrap gap-2 mb-3">
-                                {walls.map((wall) => {
-                                    const isSelected = selectedWallId === wall.id;
-                                    const length = calculateWallLength(wall);
 
-                                    return (
-                                        <div
-                                            key={wall.id}
-                                            className={`
-                                                    px-3 py-2 rounded-pill cursor-pointer d-flex align-items-center
-                                                    transition-all border-1
-                                                    ${isSelected
-                                                    ? 'bg-info bg-opacity-25 border-info shadow-sm'
-                                                    : darkModeStatus
-                                                        ? 'bg-dark bg-opacity-50 border-secondary hover-bg-dark text-white'
-                                                        : 'bg-light border-secondary hover-bg-light text-dark'
-                                                }
-                                                `}
-                                            onClick={() => setSelectedWallId(isSelected ? null : wall.id)}
-                                            style={{
-                                                border: '1px solid',
-                                                fontSize: '0.85rem'
-                                            }}
-                                        >
-                                            {/* Color Dot */}
-                                            <span
-                                                className="me-2 rounded-circle"
-                                                style={{
-                                                    width: '10px',
-                                                    height: '10px',
-                                                    backgroundColor: wall.color || '#ffffff',
-                                                    border: '1px solid rgba(0,0,0,0.1)'
-                                                }}
-                                            />
-                                            <span className="fw-bold me-2">Wall</span>
-                                            <span className="opacity-75">{length}</span>
-                                            {isSelected && <Icon icon="CheckCircle" className="ms-2 text-info" size="sm" />}
-                                        </div>
-                                    );
-                                })}
                             </div>
                         )}
 
@@ -658,7 +628,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                     {/* ============================================ */}
 
                     <div
-                        className="p-3 border-top mt-auto"
+                        className="p-2 border-top mt-auto"
                         style={{ background: darkModeStatus ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}
                     >
                         {isDirty && (diffSummary !== 'No changes' ||
@@ -716,7 +686,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                             </Button>
                         </div>
                     </div>
-                </Card>
+                </div>
             </div>
 
             {/* ============================================ */}

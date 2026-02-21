@@ -337,51 +337,63 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
     return (
         <>
             <div
-                className='position-absolute end-0 p-0 shadow overflow-hidden d-flex flex-column'
+                className='h-100 p-0'
                 style={{
-                    top: '1px',
-                    background: darkModeStatus ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                    backdropFilter: 'blur(16px)',
-                    width: '320px',
-                    maxHeight: 'calc(100% - 110px)',
-                    zIndex: 101,
-                    transition: 'all 0.3s ease'
+                    width: '100%',
+                    zIndex: 1100,
+                    pointerEvents: 'auto',
+                    animation: 'slide-in-right 0.4s ease-out'
                 }}
             >
-                <Card className="mb-0 border-0 bg-transparent flex-grow-1 overflow-hidden d-flex flex-column">
-                    <CardHeader className="bg-transparent border-bottom p-3">
+                <style>{`
+                @keyframes slide-in-right {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                .area-settings-card {
+                    backdrop-filter: blur(20px);
+                    background: ${darkModeStatus ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.75)'};
+                    border-left: 1px solid ${darkModeStatus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.1)'};
+                    box-shadow: -5px 0 20px rgba(0,0,0,0.2);
+                }
+            `}</style>
+
+                <div className="area-settings-card h-100 d-flex flex-column overflow-auto scrollbar-hidden">
+                    <CardHeader className="bg-transparent border-bottom p-2">
                         <div className="d-flex justify-content-between align-items-center w-100">
-                            <div className="text-truncate" style={{ maxWidth: '240px' }}>
-                                <h6 className={`mb-0 ${darkModeStatus ? 'text-white' : 'text-dark'}`}>
-                                    {selectedWall ? `Edit Wall Segment ${walls.findIndex(w => w.id === selectedWall.id) + 1}` : `Area Walls: ${area.name}`}
+                            <div className="text-truncate" style={{ maxWidth: '120px' }}>
+                                <h6 className={`mb-0 ${darkModeStatus ? 'text-white' : 'text-dark'}`} style={{ fontSize: '0.8rem' }}>
+                                    {selectedWall ? `Wall Seg ${walls.findIndex(w => w.id === selectedWall.id) + 1}` : `Area: ${area.name}`}
                                 </h6>
-                                <div className="small text-muted">{selectedWall ? area.name : (area.area_type || 'Area')}</div>
+                                <div className="small text-muted" style={{ fontSize: '0.65rem' }}>{selectedWall ? area.name : (area.area_type || 'Area')}</div>
                             </div>
-                            <Button color="link" size="sm" onClick={onClose} icon="Close" />
+                            <Button color="link" size="sm" onClick={onClose} icon="Close" className="p-1" />
                         </div>
                     </CardHeader>
 
-                    <CardBody className="p-3 overflow-auto scrollbar-hidden flex-grow-1">
-                        <div className="d-flex gap-2 mb-3">
+                    <CardBody className="p-2 overflow-auto scrollbar-hidden flex-grow-1">
+                        <div className="d-flex gap-1 mb-2">
                             <Button
                                 color={isDrawing ? "warning" : "info"}
                                 size="sm"
-                                className="flex-grow-1"
+                                className="flex-grow-1 p-1"
+                                style={{ fontSize: '0.7rem' }}
                                 isLight={!isDrawing}
                                 onClick={() => onToggleDrawing?.(!isDrawing)}
                                 icon={isDrawing ? "Mouse" : "AdsClick"}
                             >
-                                {isDrawing ? "Drawing..." : "Draw"}
+                                {isDrawing ? "Drawing" : "Draw"}
                             </Button>
                             <Button
                                 color="info"
                                 size="sm"
-                                className="flex-grow-1"
+                                className="flex-grow-1 p-1"
+                                style={{ fontSize: '0.7rem' }}
                                 isLight
                                 onClick={handleAddWall}
                                 icon="Add"
                             >
-                                Add Wall
+                                Add
                             </Button>
                         </div>
 
@@ -392,77 +404,98 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
                         ) : selectedWall ? (
                             <div style={{ animation: 'slideInFromRight 0.3s ease' }}>
                                 {/* Start Point */}
-                                <div className="mb-3">
-                                    <h6 className="text-uppercase small fw-bold text-muted mb-2">Start Point</h6>
-                                    <div className="row g-2">
-                                        <div className="col-6">
-                                            <FormGroup label="X (0-1)">
-                                                <Input
-                                                    type="number"
-                                                    step={0.01}
-                                                    value={selectedWall.r_x1}
-                                                    onChange={(e: any) => handleWallChange(selectedWall.id, 'r_x1', parseFloat(e.target.value) || 0)}
-                                                />
-                                            </FormGroup>
+                                <div className="mb-2">
+                                    <div className="d-flex align-items-center mb-1">
+                                        <Icon icon="PlayCircle" className="text-info me-1" size="sm" />
+                                        <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>Start Point</span>
+                                    </div>
+                                    <div className="d-flex gap-2">
+                                        <div className="flex-grow-1 d-flex align-items-center bg-dark bg-opacity-10 rounded p-1 border border-secondary border-opacity-10">
+                                            <span className="text-muted fw-bold me-1 ms-1" style={{ fontSize: '0.6rem' }}>X</span>
+                                            <input
+                                                type="number"
+                                                step={0.01}
+                                                value={selectedWall.r_x1}
+                                                className="bg-transparent border-0 text-white w-100 p-0 text-center"
+                                                style={{ fontSize: '0.75rem', outline: 'none' }}
+                                                onChange={(e) => handleWallChange(selectedWall.id, 'r_x1', parseFloat(e.target.value) || 0)}
+                                            />
                                         </div>
-                                        <div className="col-6">
-                                            <FormGroup label="Y (0-1)">
-                                                <Input
-                                                    type="number"
-                                                    step={0.01}
-                                                    value={selectedWall.r_y1}
-                                                    onChange={(e: any) => handleWallChange(selectedWall.id, 'r_y1', parseFloat(e.target.value) || 0)}
-                                                />
-                                            </FormGroup>
+                                        <div className="flex-grow-1 d-flex align-items-center bg-dark bg-opacity-10 rounded p-1 border border-secondary border-opacity-10">
+                                            <span className="text-muted fw-bold me-1 ms-1" style={{ fontSize: '0.6rem' }}>Y</span>
+                                            <input
+                                                type="number"
+                                                step={0.01}
+                                                value={selectedWall.r_y1}
+                                                className="bg-transparent border-0 text-white w-100 p-0 text-center"
+                                                style={{ fontSize: '0.75rem', outline: 'none' }}
+                                                onChange={(e) => handleWallChange(selectedWall.id, 'r_y1', parseFloat(e.target.value) || 0)}
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* End Point */}
-                                <div className="mb-3">
-                                    <h6 className="text-uppercase small fw-bold text-muted mb-2">End Point</h6>
-                                    <div className="row g-2">
-                                        <div className="col-6">
-                                            <FormGroup label="X (0-1)">
-                                                <Input
-                                                    type="number"
-                                                    step={0.01}
-                                                    value={selectedWall.r_x2}
-                                                    onChange={(e: any) => handleWallChange(selectedWall.id, 'r_x2', parseFloat(e.target.value) || 0)}
-                                                />
-                                            </FormGroup>
+                                <div className="mb-2">
+                                    <div className="d-flex align-items-center mb-1">
+                                        <Icon icon="FiberManualRecord" className="text-danger me-1" size="sm" />
+                                        <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>End Point</span>
+                                    </div>
+                                    <div className="d-flex gap-2">
+                                        <div className="flex-grow-1 d-flex align-items-center bg-dark bg-opacity-10 rounded p-1 border border-secondary border-opacity-10">
+                                            <span className="text-muted fw-bold me-1 ms-1" style={{ fontSize: '0.6rem' }}>X</span>
+                                            <input
+                                                type="number"
+                                                step={0.01}
+                                                value={selectedWall.r_x2}
+                                                className="bg-transparent border-0 text-white w-100 p-0 text-center"
+                                                style={{ fontSize: '0.75rem', outline: 'none' }}
+                                                onChange={(e) => handleWallChange(selectedWall.id, 'r_x2', parseFloat(e.target.value) || 0)}
+                                            />
                                         </div>
-                                        <div className="col-6">
-                                            <FormGroup label="Y (0-1)">
-                                                <Input
-                                                    type="number"
-                                                    step={0.01}
-                                                    value={selectedWall.r_y2}
-                                                    onChange={(e: any) => handleWallChange(selectedWall.id, 'r_y2', parseFloat(e.target.value) || 0)}
-                                                />
-                                            </FormGroup>
+                                        <div className="flex-grow-1 d-flex align-items-center bg-dark bg-opacity-10 rounded p-1 border border-secondary border-opacity-10">
+                                            <span className="text-muted fw-bold me-1 ms-1" style={{ fontSize: '0.6rem' }}>Y</span>
+                                            <input
+                                                type="number"
+                                                step={0.01}
+                                                value={selectedWall.r_y2}
+                                                className="bg-transparent border-0 text-white w-100 p-0 text-center"
+                                                style={{ fontSize: '0.75rem', outline: 'none' }}
+                                                onChange={(e) => handleWallChange(selectedWall.id, 'r_y2', parseFloat(e.target.value) || 0)}
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Wall Properties */}
-                                <div className="mb-3">
-                                    <h6 className="text-uppercase small fw-bold text-muted mb-2">Properties</h6>
-                                    <FormGroup label="Height (m)" className="mb-2">
-                                        <Input
+                                <div className="mb-2">
+                                    <div className="d-flex align-items-center mb-1">
+                                        <Icon icon="Settings" className="text-warning me-1" size="sm" />
+                                        <span className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.6rem', letterSpacing: '0.05em' }}>Properties</span>
+                                    </div>
+                                    <div className="d-flex align-items-center mb-2 bg-dark bg-opacity-10 rounded p-1 border border-secondary border-opacity-10">
+                                        <span className="text-muted fw-bold me-2 ms-1" style={{ fontSize: '0.6rem' }}>HEIGHT</span>
+                                        <input
                                             type="number"
                                             step={0.1}
                                             value={selectedWall.r_height || DEFAULT_WALL_HEIGHT}
-                                            onChange={(e: any) => handleWallChange(selectedWall.id, 'r_height', parseFloat(e.target.value) || 0)}
+                                            className="bg-transparent border-0 text-white w-100 p-0"
+                                            style={{ fontSize: '0.75rem', outline: 'none' }}
+                                            onChange={(e) => handleWallChange(selectedWall.id, 'r_height', parseFloat(e.target.value) || 0)}
                                         />
-                                    </FormGroup>
-                                    <FormGroup label="Color">
-                                        <Input
+                                        <span className="text-muted x-small me-1" style={{ fontSize: '0.6rem' }}>m</span>
+                                    </div>
+                                    <div className="d-flex align-items-center mb-2 bg-dark bg-opacity-10 rounded p-1 border border-secondary border-opacity-10">
+                                        <span className="text-muted fw-bold me-2 ms-1" style={{ fontSize: '0.6rem' }}>COLOR</span>
+                                        <input
                                             type="color"
                                             value={selectedWall.color || DEFAULT_WALL_COLOR}
-                                            onChange={(e: any) => handleWallChange(selectedWall.id, 'color', e.target.value)}
+                                            className="p-0 border-0 bg-transparent cursor-pointer"
+                                            style={{ width: '20px', height: '20px', borderRadius: '4px' }}
+                                            onChange={(e) => handleWallChange(selectedWall.id, 'color', e.target.value)}
                                         />
-                                    </FormGroup>
+                                        <span className="text-muted font-monospace ms-2" style={{ fontSize: '0.65rem' }}>{selectedWall.color || DEFAULT_WALL_COLOR}</span>
+                                    </div>
                                 </div>
 
                                 {/* Wall Info */}
@@ -508,7 +541,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
 
                     {/* Footer with Save/Reset */}
                     <div
-                        className="p-3 border-top"
+                        className="p-2 border-top"
                         style={{ background: darkModeStatus ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}
                     >
                         {isDirty && (
@@ -551,7 +584,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
                             </Button>
                         </div>
                     </div>
-                </Card>
+                </div>
             </div>
 
             {/* Delete Confirmation Modal */}

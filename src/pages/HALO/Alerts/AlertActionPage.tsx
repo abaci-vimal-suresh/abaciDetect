@@ -14,7 +14,7 @@ import ActionForm from './components/ActionForm';
 import ActionViewModal from './components/ActionViewModal';
 import { Action } from '../../../types/sensor';
 import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../../components/bootstrap/Modal';
-import ConfirmDeleteModal from './modals/ConfirmDeleteModal';
+import Swal from 'sweetalert2';
 
 const AlertActionPage = () => {
     const { theme, headerStyle, rowStyle } = useTablestyle();
@@ -29,8 +29,6 @@ const AlertActionPage = () => {
     const [editingAction, setEditingAction] = useState<Partial<Action> | null>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [viewingAction, setViewingAction] = useState<Action | null>(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [actionToDelete, setActionToDelete] = useState<Action | null>(null);
 
     const handleSaveAction = async (data: Partial<Action>) => {
         const payload: any = { ...data };
@@ -70,12 +68,31 @@ const AlertActionPage = () => {
         setEditingAction(null);
     };
 
-    const handleDeleteConfirm = () => {
-        if (actionToDelete) {
-            deleteActionMutation.mutate(actionToDelete.id);
-            setIsDeleteModalOpen(false);
-            setActionToDelete(null);
-        }
+    const handleDeleteAction = (action: Action, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+
+        const swalTheme = {
+            background: themeStatus === 'dark' ? '#1a1a1a' : '#fff',
+            color: themeStatus === 'dark' ? '#fff' : '#000',
+        };
+
+        Swal.fire({
+            title: 'Delete Action?',
+            text: `Are you sure you want to delete "${action.name}"? This action cannot be undone.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: 'btn btn-danger mx-2',
+                cancelButton: 'btn btn-secondary mx-2 btn-neumorphic'
+            },
+            ...swalTheme,
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteActionMutation.mutate(action.id);
+            }
+        });
     };
 
     return (
@@ -91,16 +108,14 @@ const AlertActionPage = () => {
                     <div className="col-12">
                         <ThemeProvider theme={theme}>
                             <MaterialTable
-                                title="Available Notification Actions"
+                                title="Available  Actions"
                                 columns={[
                                     {
                                         title: 'Action Info',
                                         render: (row: any) => (
                                             <div>
                                                 <div className="fw-bold">{row.name}</div>
-                                                <div className="small text-muted text-truncate" style={{ maxWidth: '250px' }}>
-                                                    {row.type.replace(/_/g, ' ').replace(/\b\w/g, (l: any) => l.toUpperCase())}
-                                                </div>
+
                                             </div>
                                         )
                                     },
@@ -204,7 +219,7 @@ const AlertActionPage = () => {
                                                 />
                                                 <Button
                                                     color='danger' isLight icon='Delete'
-                                                    onClick={() => { setActionToDelete(rowData); setIsDeleteModalOpen(true); }}
+                                                    onClick={(e: any) => handleDeleteAction(rowData, e)}
                                                     title='Delete'
                                                     style={{
                                                         width: '36px', height: '36px', borderRadius: '8px', padding: 0,
@@ -267,16 +282,7 @@ const AlertActionPage = () => {
                             setIsOpen={setIsViewModalOpen}
                         />
 
-                        {/* ── Delete Confirmation ── */}
-                        <ConfirmDeleteModal
-                            isOpen={isDeleteModalOpen}
-                            setIsOpen={setIsDeleteModalOpen}
-                            itemName={actionToDelete?.name}
-                            title='Delete Action'
-                            onConfirm={handleDeleteConfirm}
-                            isPending={deleteActionMutation.isPending}
-                            confirmLabel='Delete Action'
-                        />
+
                     </div>
                 </div>
             </Page>
