@@ -4,199 +4,45 @@ import Button from '../../../../../components/bootstrap/Button';
 import FormGroup from '../../../../../components/bootstrap/forms/FormGroup';
 import Spinner from '../../../../../components/bootstrap/Spinner';
 import Alert from '../../../../../components/bootstrap/Alert';
-import { useSensor, useUpdateSensor, useAreas, useSensorGroups } from '../../../../../api/sensors.api';
+import { useSensor, useAreas, useSensorGroups } from '../../../../../api/sensors.api';
 import Input from '../../../../../components/bootstrap/forms/Input';
 import ReactSelectWithState from '../../../../../components/CustomComponent/Select/ReactSelect';
-import InputGroup, { InputGroupText } from '../../../../../components/bootstrap/forms/InputGroup';
-import Icon from '../../../../../components/icon/Icon';
 import { MultiSelectDropdown } from '../../../../../components/CustomComponent/Select/MultiSelectDropdown';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const formatMAC = (mac: string) => {
-    if (!mac) return '';
-    const clean = mac.replace(/[^A-Fa-f0-9]/g, '').toUpperCase();
-    const parts = clean.match(/.{1,2}/g) || [];
-    return parts.slice(0, 6).join(':');
-};
-
-const unformatMAC = (mac: string) =>
-    mac.replace(/[^A-Fa-f0-9]/g, '').toUpperCase();
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface DeviceFormData {
-    name: string;
-    description: string;
-    area: number | undefined;
-    sensor_group_ids: number[];
-    username: string;
-    password: string;
-    is_active: boolean;
-    is_online: boolean;
-    ip_address: string;
-    mac_address: string;
-}
+import { useDeviceConfigActions, formatMAC } from './hooks/useDeviceConfigActions';
+import AuthCard from './components/AuthCard';
 
 interface DeviceConfigSectionProps {
     deviceId: string;
 }
 
-// ─── Helper: build form data from raw sensor ─────────────────────────────────
-
-const buildFormData = (sensor: any): DeviceFormData => ({
-    name: sensor.name || '',
-    description: sensor.description || '',
-    area: typeof sensor.area === 'object' ? sensor.area?.id : sensor.area,
-    sensor_group_ids:
-        sensor.sensor_group_ids ||
-        sensor.sensor_groups?.map((g: any) => g.id) ||
-        [],
-    username: sensor.username || '',
-    password: sensor.password || '',
-    is_active: sensor.is_active ?? true,
-    is_online: sensor.is_online ?? true,
-    ip_address: sensor.ip_address || '',
-    mac_address: formatMAC(sensor.mac_address || ''),
-});
-
-// ─── Sub-components ──────────────────────────────────────────────────────────
-
-interface AuthCardProps {
-    username: string;
-    password: string;
-    showPassword: boolean;
-    onUsernameChange: (val: string) => void;
-    onPasswordChange: (val: string) => void;
-    onTogglePassword: () => void;
-}
-
-const AuthCard: React.FC<AuthCardProps> = ({
-    username,
-    password,
-    showPassword,
-    onUsernameChange,
-    onPasswordChange,
-    onTogglePassword,
-}) => (
-    <Card className=''>
-        <CardHeader className=''>
-            <CardTitle className=' m-0 fs-6 fw-bold'>Authentication</CardTitle>
-        </CardHeader>
-        <CardBody className='p-3'>
-            <div className='row g-3'>
-                <div className='col-12'>
-                    <FormGroup label='Username'>
-                        <Input
-                            value={username}
-                            onChange={(e: any) => onUsernameChange(e.target.value)}
-                            placeholder='Sensor username'
-                        />
-                    </FormGroup>
-                </div>
-                <div className='col-12'>
-                    <FormGroup label='Password'>
-                        <InputGroup>
-                            <Input
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={(e: any) => onPasswordChange(e.target.value)}
-                                placeholder='Sensor password'
-                            />
-                            <InputGroupText>
-                                <span
-                                    style={{ cursor: 'pointer' }}
-                                    onClick={onTogglePassword}
-                                    title={showPassword ? 'Hide Password' : 'Show Password'}
-                                >
-                                    <Icon icon={showPassword ? 'VisibilityOff' : 'Visibility'} />
-                                </span>
-                            </InputGroupText>
-                        </InputGroup>
-                    </FormGroup>
-                </div>
-            </div>
-        </CardBody>
-    </Card>
-);
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) => {
     const { data: sensor, isLoading } = useSensor(deviceId);
-    const updateMutation = useUpdateSensor();
     const { data: areas } = useAreas();
     const { data: sensorGroups } = useSensorGroups();
 
-    const [formData, setFormData] = React.useState<DeviceFormData>({
-        name: '',
-        description: '',
-        area: undefined,
-        sensor_group_ids: [],
-        username: '',
-        password: '',
-        is_active: true,
-        is_online: true,
-        ip_address: '',
-        mac_address: '',
-    });
-
-    const [successMessage, setSuccessMessage] = React.useState('');
-    const [showPassword, setShowPassword] = React.useState(false);
-
-    // Sync sensor → form
-    React.useEffect(() => {
-        if (sensor) setFormData(buildFormData(sensor));
-    }, [sensor]);
-
-    const patch = (updates: Partial<DeviceFormData>) =>
-        setFormData(prev => ({ ...prev, ...updates }));
-
-    const handleReset = () => {
-        if (sensor) setFormData(buildFormData(sensor));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        updateMutation.mutate(
-            {
-                sensorId: deviceId,
-                data: {
-                    ...formData,
-                    mac_address: unformatMAC(formData.mac_address),
-                    area: formData.area || null,
-                },
-            },
-            {
-                onSuccess: () => {
-                    setSuccessMessage('Sensor configuration updated successfully');
-                    setTimeout(() => setSuccessMessage(''), 3000);
-                },
-            },
-        );
-    };
+    const actions = useDeviceConfigActions({ deviceId, sensor });
 
     // ── Derived select values ────────────────────────────────────────────────
 
     const areaOptions = areas?.map(a => ({ value: a.id, label: a.name })) || [];
-    const areaValue = areas?.find(a => a.id === formData.area)
-        ? { value: formData.area, label: areas.find(a => a.id === formData.area)?.name }
+    const areaValue = areas?.find(a => a.id === actions.formData.area)
+        ? { value: actions.formData.area, label: areas.find(a => a.id === actions.formData.area)?.name }
         : null;
 
-    // MultiSelectDropdown works with value: string — convert to/from number[] at the boundary
     const groupOptions = React.useMemo(
         () => sensorGroups?.map(g => ({ value: String(g.id), label: g.name })) ?? [],
         [sensorGroups],
     );
-    const groupValue = formData.sensor_group_ids.map(String);
+    const groupValue = actions.formData.sensor_group_ids.map(String);
     const handleGroupChange = (selected: string[]) =>
-        patch({ sensor_group_ids: selected.map(Number) });
+        actions.patch({ sensor_group_ids: selected.map(Number) });
 
     // ── Loading state ────────────────────────────────────────────────────────
 
     if (isLoading) {
         return (
-            <Card>
+            <Card stretch>
                 <CardBody className='text-center py-5'>
                     <Spinner color='primary' />
                 </CardBody>
@@ -204,55 +50,53 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
         );
     }
 
-    // ── Render ───────────────────────────────────────────────────────────────
-
     return (
-        <form onSubmit={handleSubmit} className='h-100 d-flex flex-column'>
+        <form onSubmit={actions.handleSubmit} className='h-100 d-flex flex-column'>
             <Card stretch className='flex-grow-1 overflow-hidden'>
                 <CardHeader>
                     <CardTitle>Device Configuration</CardTitle>
                 </CardHeader>
 
                 <CardBody className='overflow-auto'>
-                    {successMessage && (
+                    {actions.successMessage && (
                         <Alert color='success' icon='CheckCircle' className='mb-4'>
-                            {successMessage}
+                            {actions.successMessage}
                         </Alert>
                     )}
-                    {updateMutation.isError && (
+                    {actions.updateMutation.isError && (
                         <Alert color='danger' icon='Error' className='mb-4'>
                             Failed to update device configuration. Please try again.
                         </Alert>
                     )}
 
                     <div className='row g-4'>
-                        {/* Row 1 — Name & MAC */}
+                        {/* Name & MAC */}
                         <div className='col-md-6'>
                             <FormGroup label='Device Name'>
                                 <Input
-                                    value={formData.name}
-                                    onChange={(e: any) => patch({ name: e.target.value })}
+                                    value={actions.formData.name}
+                                    onChange={(e: any) => actions.patch({ name: e.target.value })}
                                 />
                             </FormGroup>
                         </div>
                         <div className='col-md-6'>
                             <FormGroup label='MAC Address'>
                                 <Input
-                                    value={formData.mac_address}
+                                    value={actions.formData.mac_address}
                                     onChange={(e: any) =>
-                                        patch({ mac_address: formatMAC(e.target.value) })
+                                        actions.patch({ mac_address: formatMAC(e.target.value) })
                                     }
                                     placeholder='AA:BB:CC:DD:EE:FF'
                                 />
                             </FormGroup>
                         </div>
 
-                        {/* Row 2 — IP & Area */}
+                        {/* IP & Area */}
                         <div className='col-md-6'>
                             <FormGroup label='IP Address'>
                                 <Input
-                                    value={formData.ip_address}
-                                    onChange={(e: any) => patch({ ip_address: e.target.value })}
+                                    value={actions.formData.ip_address}
+                                    onChange={(e: any) => actions.patch({ ip_address: e.target.value })}
                                 />
                                 <small className='text-muted'>Current network address</small>
                             </FormGroup>
@@ -262,14 +106,14 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
                                 <ReactSelectWithState
                                     options={areaOptions}
                                     value={areaValue}
-                                    setValue={(opt: any) => patch({ area: opt?.value })}
+                                    setValue={(opt: any) => actions.patch({ area: opt?.value })}
                                     placeholder='Select Area'
                                     isClearable
                                 />
                             </FormGroup>
                         </div>
 
-                        {/* Row 3 — Sensor Groups via MultiSelectDropdown */}
+                        {/* Sensor Groups */}
                         <div className='col-12'>
                             <FormGroup label='Sensor Groups'>
                                 <MultiSelectDropdown
@@ -284,25 +128,25 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
                             </FormGroup>
                         </div>
 
-                        {/* Row 4 — Description */}
+                        {/* Description */}
                         <div className='col-12'>
                             <FormGroup label='Description'>
                                 <Input
-                                    value={formData.description}
-                                    onChange={(e: any) => patch({ description: e.target.value })}
+                                    value={actions.formData.description}
+                                    onChange={(e: any) => actions.patch({ description: e.target.value })}
                                 />
                             </FormGroup>
                         </div>
 
-                        {/* Row 5 — Auth card */}
+                        {/* Auth card */}
                         <div className='col-md-6'>
                             <AuthCard
-                                username={formData.username}
-                                password={formData.password}
-                                showPassword={showPassword}
-                                onUsernameChange={val => patch({ username: val })}
-                                onPasswordChange={val => patch({ password: val })}
-                                onTogglePassword={() => setShowPassword(p => !p)}
+                                username={actions.formData.username}
+                                password={actions.formData.password}
+                                showPassword={actions.showPassword}
+                                onUsernameChange={val => actions.patch({ username: val })}
+                                onPasswordChange={val => actions.patch({ password: val })}
+                                onTogglePassword={() => actions.setShowPassword(p => !p)}
                             />
                         </div>
                     </div>
@@ -310,13 +154,13 @@ const DeviceConfigSection: React.FC<DeviceConfigSectionProps> = ({ deviceId }) =
 
                 <CardFooter>
                     <div className='d-flex justify-content-end gap-2'>
-                        <Button onClick={handleReset}>Reset</Button>
+                        <Button onClick={actions.handleReset}>Reset</Button>
                         <Button
                             color='primary'
                             type='submit'
-                            isDisable={updateMutation.isPending}
+                            isDisable={actions.updateMutation.isPending}
                         >
-                            {updateMutation.isPending && <Spinner isSmall inButton />}
+                            {actions.updateMutation.isPending && <Spinner isSmall inButton />}
                             Save Changes
                         </Button>
                     </div>

@@ -18,19 +18,18 @@ import Page from '../../../layout/Page/Page';
 import useDarkMode from '../../../hooks/useDarkMode';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { useUserActions } from './hooks/useUserActions';
 
 dayjs.extend(relativeTime);
 
 const UserDetailPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { darkModeStatus } = useDarkMode();
+    const actions = useUserActions();
 
     const { data: user, isLoading: isUserLoading } = useUser(id || '');
     const { data: activities, isLoading: isActivityLoading } = useUserActivity(id || '');
     const { data: areas } = useAreas();
-    const deleteUserMutation = useDeleteUser();
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
 
     const assignedAreas = useMemo(() => {
         if (!user || !areas) return [];
@@ -51,16 +50,10 @@ const UserDetailPage = () => {
     }, [user, areas]);
 
     const handleDelete = () => {
-        setIsDeleteModalOpen(true);
-    };
-
-    const handleDeleteConfirm = async () => {
-        try {
-            await deleteUserMutation.mutateAsync(Number(id));
+        if (!user || !id) return;
+        actions.handleDeleteUser(Number(id), user.username, () => {
             navigate('/users');
-        } catch (err) {
-            console.error("Failed to delete user", err);
-        }
+        });
     };
 
     if (isUserLoading) return <div className="p-5 text-center">Loading user details...</div>;
@@ -100,7 +93,7 @@ const UserDetailPage = () => {
 
                         <div className="row g-4 mb-5">
                             <div className="col-md-4">
-                                <Card className="shadow-3d border-0 h-100" style={{ background: darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
+                                <Card className="shadow-3d border-0 h-100" style={{ background: actions.darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
                                     <CardBody className="p-4 text-center">
                                         <div className="bg-primary bg-opacity-10 text-primary rounded-circle p-4 mx-auto mb-3 d-flex align-items-center justify-content-center" style={{ width: '100px', height: '100px' }}>
                                             <span className="display-4 fw-bold">{user.username.charAt(0).toUpperCase()}</span>
@@ -138,7 +131,7 @@ const UserDetailPage = () => {
                             </div>
 
                             <div className="col-md-8">
-                                <Card className="shadow-3d border-0 mb-4" style={{ background: darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
+                                <Card className="shadow-3d border-0 mb-4" style={{ background: actions.darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
                                     <CardHeader className="bg-transparent border-bottom border-light py-3">
                                         <CardTitle className="mb-0 d-flex align-items-center justify-content-between w-100">
                                             <div className="d-flex align-items-center">
@@ -173,7 +166,7 @@ const UserDetailPage = () => {
                                     </CardBody>
                                 </Card>
 
-                                <Card className="shadow-3d border-0 mb-4" style={{ background: darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
+                                <Card className="shadow-3d border-0 mb-4" style={{ background: actions.darkModeStatus ? '#1E293B' : '#FFFFFF' }}>
                                     <CardHeader className="bg-transparent border-bottom border-light py-3">
                                         <CardTitle className="mb-0 d-flex align-items-center">
                                             <Icon icon="History" className="me-2 text-info" />
@@ -208,7 +201,7 @@ const UserDetailPage = () => {
                                     </CardBody>
                                 </Card>
 
-                                <Card className="shadow-3d border-danger border-opacity-25 border-1 bg-danger bg-opacity-10" style={{ background: darkModeStatus ? 'rgba(239, 68, 68, 0.05)' : '' }}>
+                                <Card className="shadow-3d border-danger border-opacity-25 border-1 bg-danger bg-opacity-10" style={{ background: actions.darkModeStatus ? 'rgba(239, 68, 68, 0.05)' : '' }}>
                                     <CardBody className="p-4 text-center">
                                         <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 text-start">
                                             <div>
@@ -220,7 +213,7 @@ const UserDetailPage = () => {
                                                 <Button
                                                     color="danger"
                                                     onClick={handleDelete}
-                                                    isDisable={deleteUserMutation.isPending}
+                                                    isDisable={actions.deleteUserMutation.isPending}
                                                 >
                                                     Delete User
                                                 </Button>
@@ -233,40 +226,7 @@ const UserDetailPage = () => {
                     </div>
                 </div>
             </Page>
-
-            <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} isCentered>
-                <ModalHeader setIsOpen={setIsDeleteModalOpen}>
-                    <ModalTitle id='deleteUserModal'>Delete User</ModalTitle>
-                </ModalHeader>
-                <ModalBody>
-                    <div className='alert alert-danger d-flex align-items-center mb-3'>
-                        <Icon icon='Warning' className='me-2' size='2x' />
-                        <div>
-                            <strong>Warning:</strong> This action cannot be undone.
-                        </div>
-                    </div>
-                    <p>
-                        Are you sure you want to delete user <strong>"{user?.username}"</strong>?
-                    </p>
-                    <p className='text-muted small'>
-                        This will permanently remove the user and all their associated data from the system.
-                    </p>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color='light' onClick={() => setIsDeleteModalOpen(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        color='danger'
-                        onClick={handleDeleteConfirm}
-                        isDisable={deleteUserMutation.isPending}
-                    >
-                        {deleteUserMutation.isPending && <Spinner isSmall inButton isGrow />}
-                        Delete User
-                    </Button>
-                </ModalFooter>
-            </Modal>
-        </PageWrapper>
+        </PageWrapper >
     );
 };
 

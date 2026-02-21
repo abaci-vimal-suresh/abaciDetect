@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import classNames from 'classnames';
-import styles from '../SentinelSensorDetail.module.scss';
+import styles from './SentinelSensorDetail.module.scss';
 import Icon from '../../../../components/icon/Icon';
 import { Sensor, SensorLog } from '../../../../types/sensor';
 import { getSensorMetricValue } from '../../utils/sensorData.utils';
@@ -422,7 +422,7 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
 
 
 
-                    
+
                     {/* SYSTEM CARD */}
 
                     <div className={classNames(styles.sentinelCard, styles.systemCard, styles.statusSafe)}>
@@ -451,7 +451,7 @@ const SentinelDashboardView: React.FC<SentinelDashboardViewProps> = ({
                     </div>
 
                     {/* DIAGNOSTIC TERMINAL (Matches API Response Structure) */}
-                   
+
 
                 </div>
             </div>

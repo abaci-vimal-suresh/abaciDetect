@@ -18,7 +18,7 @@
 	transition: $transition-base;
 
 	// Neumorphic Style (Light Mode)
-	border-radius: 0 30px 30px 0;
+	// border-radius: 0 30px 30px 0;
 	box-shadow: 6px 0 18px rgba(0, 0, 0, 0.06); // Soft, clean shadow to the right
 
 	@include dark-mode {

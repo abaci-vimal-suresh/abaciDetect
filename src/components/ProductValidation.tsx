@@ -20,17 +20,14 @@ const ProductValidation: FC<ProductValidationProps> = ({ children }) => {
         return <ConfigErrorPage />;
     }
 
-    // 1. Activation Check
     if (!config.is_activated) {
         return <ActivationPage />;
     }
 
-    // 2. Superuser Existence Check
     if (!config.is_firstuser_created) {
         return <SuperAdminPage />;
     }
 
-    // All checks passed
     return <>{children}</>;
 };
 

@@ -97,7 +97,6 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                 const hasRecipients = (formData.recipients && formData.recipients.length > 0) ||
                     (formData.user_groups && formData.user_groups.length > 0);
                 const hasMessage = !!formData.message_template?.trim();
-                // For SMS message is mandatory, for Email usually subject/body but here we have one template field
                 if (formData.type === 'sms' && !hasMessage) return false;
                 return hasRecipients;
 
@@ -187,7 +186,6 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                         </FormGroup>
                     </div>
 
-                    {/* Webhook Auth */}
                     <div className="col-md-4">
                         <FormGroup label="Auth Type">
                             <Select
@@ -360,7 +358,6 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                             />
                         </FormGroup>
                     </div>
-
                 </>
             )}
 
@@ -421,7 +418,6 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                         </div>
                     </div>
 
-                    {/* Authentication Section */}
                     <div className="col-12 mt-3">
                         <div className="card border-0 bg-l25-primary">
                             <div className="card-header bg-transparent">
@@ -445,7 +441,6 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                                             </small>
                                         </FormGroup>
                                     </div>
-
                                     <div className="col-md-6">
                                         <FormGroup label="Auth Header Name" id="n8n-auth-header">
                                             <Input
@@ -463,7 +458,6 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                         </div>
                     </div>
 
-                    {/* Payload Preview */}
                     <div className="col-12 mt-3">
                         <div className="card border-0 bg-l25-secondary">
                             <div className="card-header bg-transparent">
@@ -578,61 +572,46 @@ const ActionForm: React.FC<ActionFormProps> = ({ action, onSave, onCancel }) => 
                 </FormGroup>
             </div>
 
-            {
-                formData.type !== 'device_notification' && (formData.message_type === 'custom' || formData.message_type === 'custom_template') && (
-                    <div className="col-12">
-                        <FormGroup label={formData.type === 'email' || formData.type === 'sms' ? 'Message' : 'Request Body'}>
-                            <div style={{ position: 'relative' }}>
-                                <Textarea
-                                    value={formData.message_template}
-                                    onChange={(e: any) => setFormData({ ...formData, message_template: e.target.value })}
-                                    rows={12}
-                                    style={{ paddingLeft: '2.7rem', background: 'transparent', position: 'relative', zIndex: 1, height: '100%' }}
-                                />
-                                {formData.type !== 'email' && formData.type !== 'sms' && (
-                                    <>
-                                        <span style={{
-                                            position: 'absolute',
-                                            top: '10px',
-                                            left: '10px',
-                                            color: '#adb5bd',
-                                            fontSize: '0.9rem',
-                                            pointerEvents: 'none',
-                                            zIndex: 0,
-                                            fontFamily: 'monospace'
-                                        }}>
-                                            {'{'}
-                                        </span>
-                                        <span style={{
-                                            position: 'absolute',
-                                            bottom: '10px',
-                                            left: '10px',
-                                            color: '#adb5bd',
-                                            fontSize: '0.9rem',
-                                            pointerEvents: 'none',
-                                            zIndex: 0,
-                                            fontFamily: 'monospace'
-                                        }}>
-                                            {'}'}
-                                        </span>
-                                    </>
-                                )}
-                            </div>
-                        </FormGroup>
-                    </div>
-                )
-            }
+            {formData.type !== 'device_notification' && (formData.message_type === 'custom' || formData.message_type === 'custom_template') && (
+                <div className="col-12">
+                    <FormGroup label={formData.type === 'email' || formData.type === 'sms' ? 'Message' : 'Request Body'}>
+                        <div style={{ position: 'relative' }}>
+                            <Textarea
+                                value={formData.message_template}
+                                onChange={(e: any) => setFormData({ ...formData, message_template: e.target.value })}
+                                rows={12}
+                                style={{ paddingLeft: '2.7rem', background: 'transparent', position: 'relative', zIndex: 1, height: '100%' }}
+                            />
+                            {formData.type !== 'email' && formData.type !== 'sms' && (
+                                <>
+                                    <span style={{
+                                        position: 'absolute', top: '10px', left: '10px',
+                                        color: '#adb5bd', fontSize: '0.9rem', pointerEvents: 'none',
+                                        zIndex: 0, fontFamily: 'monospace'
+                                    }}>
+                                        {'{'}
+                                    </span>
+                                    <span style={{
+                                        position: 'absolute', bottom: '10px', left: '10px',
+                                        color: '#adb5bd', fontSize: '0.9rem', pointerEvents: 'none',
+                                        zIndex: 0, fontFamily: 'monospace'
+                                    }}>
+                                        {'}'}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    </FormGroup>
+                </div>
+            )}
+
             <div className="col-12 d-flex justify-content-end gap-2 mt-4">
                 <Button color="light" onClick={onCancel}>Cancel</Button>
-                <Button
-                    color="primary"
-                    onClick={() => onSave(formData)}
-                    isDisable={!isValid}
-                >
+                <Button color="primary" onClick={() => onSave(formData)} isDisable={!isValid}>
                     Save Action
                 </Button>
             </div>
-        </div >
+        </div>
     );
 };
 

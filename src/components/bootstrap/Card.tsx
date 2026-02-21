@@ -25,11 +25,11 @@ interface ICardLabelProps extends HTMLAttributes<HTMLElement> {
 	tag?: string | null;
 	className?: string;
 	children:
-		| ReactElement<ICardTitleProps>
-		| ReactElement<ICardTitleProps>[]
-		| ReactElement<ICardSubTitleProps>
-		| ReactElement<ICardSubTitleProps>[]
-		| ReactNode;
+	| ReactElement<ICardTitleProps>
+	| ReactElement<ICardTitleProps>[]
+	| ReactElement<ICardSubTitleProps>
+	| ReactElement<ICardSubTitleProps>[]
+	| ReactNode;
 	icon?: TIcons;
 	iconColor?: null | TColor;
 	pre?: ReactNode;
@@ -181,11 +181,11 @@ interface ICardHeaderProps extends HTMLAttributes<HTMLElement> {
 	tag?: string | null;
 	className?: string;
 	children:
-		| ReactElement<ICardLabelProps>
-		| ReactElement<ICardLabelProps>[]
-		| ReactElement<ICardActionsProps>
-		| ReactElement<ICardActionsProps>[]
-		| ReactNode;
+	| ReactElement<ICardLabelProps>
+	| ReactElement<ICardLabelProps>[]
+	| ReactElement<ICardActionsProps>
+	| ReactElement<ICardActionsProps>[]
+	| ReactNode;
 	size?: TCardSize;
 	borderSize?: TCardBorderSize;
 	borderColor?: null | TColor;
@@ -399,10 +399,10 @@ interface ICardFooterProps extends HTMLAttributes<HTMLElement> {
 	tag?: string | null;
 	className?: string;
 	children:
-		| ReactElement<ICardFooterLeftProps>
-		| ReactElement<ICardFooterLeftProps>[]
-		| ReactElement<ICardFooterRightProps>
-		| ReactElement<ICardFooterRightProps>[];
+	| ReactElement<ICardFooterLeftProps>
+	| ReactElement<ICardFooterLeftProps>[]
+	| ReactElement<ICardFooterRightProps>
+	| ReactElement<ICardFooterRightProps>[];
 	size?: TCardSize;
 	borderSize?: TCardBorderSize;
 	borderColor?: null | TColor;
@@ -491,6 +491,7 @@ export interface ICardProps extends HTMLAttributes<HTMLElement> {
 	borderColor?: null | TColor;
 	stretch?: boolean | 'full' | 'semi' | null;
 	isCompact?: boolean;
+	isNeumorphic?: boolean;
 	onSubmit?(...args: unknown[]): unknown;
 	noValidate?: true;
 }
@@ -508,6 +509,7 @@ const Card = forwardRef<HTMLDivElement, ICardProps>(
 			borderColor,
 			stretch,
 			isCompact,
+			isNeumorphic,
 			...props
 		},
 		ref,
@@ -522,12 +524,13 @@ const Card = forwardRef<HTMLDivElement, ICardProps>(
 					{
 						[`card-stretch-${stretch === 'semi' ? 'semi' : 'full'}`]: stretch,
 						'card-compact': isCompact,
+						'card-neumorphic': isNeumorphic,
 						[`shadow${shadow !== 'md' ? `-${shadow}` : ''}`]:
-							!!shadow && shadow !== '3d',
+							!!shadow && shadow !== '3d' && !isNeumorphic,
 						[`u-shadow-3d--primary-sm`]: shadow === '3d',
-						border: borderSize || borderSize === 0,
-						[`border-${borderSize}`]: borderSize || borderSize === 0,
-						[`border-${borderColor}`]: borderColor,
+						border: (borderSize || borderSize === 0) && !isNeumorphic,
+						[`border-${borderSize}`]: (borderSize || borderSize === 0) && !isNeumorphic,
+						[`border-${borderColor}`]: borderColor && !isNeumorphic,
 					},
 					className,
 				)}
@@ -616,6 +619,7 @@ Card.propTypes = {
 	// @ts-ignore
 	stretch: PropTypes.oneOfType([PropTypes.bool, PropTypes.oneOf(['full', 'semi'])]),
 	isCompact: PropTypes.bool,
+	isNeumorphic: PropTypes.bool,
 };
 Card.defaultProps = {
 	className: undefined,
@@ -628,6 +632,7 @@ Card.defaultProps = {
 	tabBodyClassName: undefined,
 	stretch: false,
 	isCompact: false,
+	isNeumorphic: false,
 	onSubmit: undefined,
 	noValidate: undefined,
 };

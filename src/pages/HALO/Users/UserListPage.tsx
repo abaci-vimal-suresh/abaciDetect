@@ -21,27 +21,16 @@ import { useUsers } from '../../../api/sensors.api';
 import UserCreateModal from './modals/UserCreateModal';
 import UserEditModal from './modals/UserEditModal';
 import UserViewModal from './modals/UserViewModal';
+import { useUserActions } from './hooks/useUserActions';
 
 const UserList = () => {
     const { data: users, isLoading } = useUsers();
-    const { darkModeStatus, fullScreenStatus } = useContext(ThemeContext);
+    const { fullScreenStatus } = useContext(ThemeContext);
     const { theme, rowStyles, headerStyles, searchFieldStyle } = useTablestyle();
-
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [editUserId, setEditUserId] = useState<number | null>(null);
-    const [viewUserId, setViewUserId] = useState<number | null>(null);
-    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-
-    const location = useLocation();
-    const navigate = useNavigate();
     const { setCurrentStep } = useTour();
+    const navigate = useNavigate();
 
-    useEffect(() => {
-        const urlParams = new URLSearchParams(location.search);
-        if (urlParams.get('startTour') === 'true' && localStorage.getItem('showGuidedTour') === 'active') {
-            setIsCreateOpen(true);
-        }
-    }, [location.search]);
+    const actions = useUserActions();
 
     const staticColumns = [
         {
@@ -54,7 +43,7 @@ const UserList = () => {
                         style={{
                             width: 38,
                             height: 38,
-                            background: darkModeStatus
+                            background: actions.darkModeStatus
                                 ? 'rgba(77,105,250,0.2)'
                                 : 'rgba(77,105,250,0.15)',
                             color: '#4d69fa',
@@ -92,10 +81,10 @@ const UserList = () => {
                         textTransform: 'uppercase',
                         background:
                             rowData.role?.toLowerCase() === 'admin'
-                                ? darkModeStatus
+                                ? actions.darkModeStatus
                                     ? 'rgba(122,58,111,0.2)'
                                     : 'rgba(122,58,111,0.15)'
-                                : darkModeStatus
+                                : actions.darkModeStatus
                                     ? 'rgba(70,188,170,0.2)'
                                     : 'rgba(70,188,170,0.15)',
                         color:
@@ -147,13 +136,12 @@ const UserList = () => {
             filtering: false,
             render: (rowData: any) => (
                 <div className="d-flex gap-2">
-
                     <Button
                         color="info"
                         isLight
                         icon="Edit"
                         title="Edit User"
-                        onClick={() => setEditUserId(rowData.id)}
+                        onClick={() => actions.setEditUserId(rowData.id)}
                         style={{
                             width: '36px',
                             height: '36px',
@@ -162,16 +150,30 @@ const UserList = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: darkModeStatus ? 'rgba(13, 202, 240, 0.15)' : 'rgba(13, 202, 240, 0.12)',
-                            border: darkModeStatus ? 'none' : '1px solid rgba(13, 202, 240, 0.3)',
-                            color: darkModeStatus ? '#0dcaf0' : '#0aa2c0',
+                            background: actions.darkModeStatus ? 'rgba(13, 202, 240, 0.15)' : 'rgba(13, 202, 240, 0.12)',
+                            border: actions.darkModeStatus ? 'none' : '1px solid rgba(13, 202, 240, 0.3)',
+                            color: actions.darkModeStatus ? '#0dcaf0' : '#0aa2c0',
                             transition: 'all 0.2s ease'
                         }}
-                        onMouseEnter={(e: any) => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e: any) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
+                    />
+                    <Button
+                        color="danger"
+                        isLight
+                        icon="Delete"
+                        title="Delete User"
+                        onClick={() => actions.handleDeleteUser(rowData.id, rowData.username)}
+                        style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: actions.darkModeStatus ? 'rgba(243, 84, 33, 0.15)' : 'rgba(243, 84, 33, 0.12)',
+                            border: actions.darkModeStatus ? 'none' : '1px solid rgba(243, 84, 33, 0.3)',
+                            color: actions.darkModeStatus ? '#f35421' : '#d94111',
+                            transition: 'all 0.2s ease'
                         }}
                     />
                 </div>
@@ -198,7 +200,7 @@ const UserList = () => {
                         color="primary"
                         isLight
                         icon="Add"
-                        onClick={() => setIsCreateOpen(true)}
+                        onClick={() => actions.setIsCreateOpen(true)}
                         data-tour="create-user-btn"
                         style={{ padding: '8px 16px', borderRadius: '10px' }}
                     >
@@ -239,28 +241,28 @@ const UserList = () => {
             </Page>
 
             <UserEditModal
-                isOpen={!!editUserId}
-                setIsOpen={() => setEditUserId(null)}
-                userId={editUserId}
+                isOpen={!!actions.editUserId}
+                setIsOpen={() => actions.setEditUserId(null)}
+                userId={actions.editUserId}
             />
 
             <UserViewModal
-                userId={viewUserId}
-                isOpen={!!viewUserId}
-                setIsOpen={() => setViewUserId(null)}
+                userId={actions.viewUserId}
+                isOpen={!!actions.viewUserId}
+                setIsOpen={() => actions.setViewUserId(null)}
             />
 
             <UserCreateModal
-                isOpen={isCreateOpen}
-                setIsOpen={setIsCreateOpen}
+                isOpen={actions.isCreateOpen}
+                setIsOpen={actions.setIsCreateOpen}
                 onSuccess={() => {
                     if (localStorage.getItem('showGuidedTour') === 'active') {
-                        setIsSuccessModalOpen(true);
+                        actions.setIsSuccessModalOpen(true);
                     }
                 }}
             />
-            <Modal isOpen={isSuccessModalOpen} setIsOpen={setIsSuccessModalOpen} isCentered size='lg'>
-                <ModalHeader setIsOpen={setIsSuccessModalOpen}>
+            <Modal isOpen={actions.isSuccessModalOpen} setIsOpen={actions.setIsSuccessModalOpen} isCentered size='lg'>
+                <ModalHeader setIsOpen={actions.setIsSuccessModalOpen}>
                     <ModalTitle id='user-success-title'>👤 User Created Successfully!</ModalTitle>
                 </ModalHeader>
                 <ModalBody className='text-center py-4'>
@@ -278,7 +280,7 @@ const UserList = () => {
                         color='primary'
                         className='w-100 mb-2 py-2'
                         onClick={() => {
-                            setIsSuccessModalOpen(false);
+                            actions.setIsSuccessModalOpen(false);
                             setCurrentStep(1);
                             navigate('/halo/sensors/areas?startTour=true');
                         }}
@@ -288,7 +290,7 @@ const UserList = () => {
                     <Button
                         color='light'
                         className='w-100'
-                        onClick={() => setIsSuccessModalOpen(false)}
+                        onClick={() => actions.setIsSuccessModalOpen(false)}
                     >
                         I'll do it later
                     </Button>
@@ -297,5 +299,6 @@ const UserList = () => {
         </PageWrapper>
     );
 };
+
 
 export default UserList;

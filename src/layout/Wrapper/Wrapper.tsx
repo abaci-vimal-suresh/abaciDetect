@@ -6,7 +6,6 @@ import WrapperOverlay from './WrapperOverlay';
 import HeaderRoutes from '../Header/HeaderRoutes';
 import FooterRoutes from '../Footer/FooterRoutes';
 import ThemeContext from '../../contexts/themeContext';
-import AlertSimulator from '../../components/extras/AlertSimulator';
 
 interface IWrapperContainerProps {
 	children: ReactNode;
