@@ -20,6 +20,7 @@ $border-radius-child: #{$card-border-radius - $card-border-width};
 	@include margin-bottom($grid-gutter-width);
 
 	border: 1px solid rgba($black, 0.03); // Very subtle border for better definition on white
+	border-radius: 6px 6px 0 0; // Small rounded top, square bottom
 	background-color: var(--#{$prefix}card-bg);
 	box-shadow: $neu-shadow-light;
 	transition: all 0.3s ease-in-out;

@@ -15,13 +15,19 @@
 	height: map.get($header, height);
 	align-items: center;
 
-	// Glassmorphism backdrop
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
+	// Glass container effect — shared with subheader
+	backdrop-filter: blur(18px) saturate(1.4);
+	-webkit-backdrop-filter: blur(18px) saturate(1.4);
 
-	// Background & shadow
-	background-color: rgba($body-bg, 0.95);
-	box-shadow: $box-shadow-sm;
+	// Transparent glass background
+	background-color: rgba($body-bg, 0.72);
+
+	// Very subtle bottom separator instead of heavy shadow
+	border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+	box-shadow: none;
+
+	// Smooth transition for theme switching
+	transition: background-color 0.3s ease, box-shadow 0.3s ease;
 
 	// Text color
 	color: if(map.get($header, color),
@@ -29,7 +35,8 @@
 			color-contrast(map.get($header, background-color), map.get($header, color-dark)));
 
 	@include dark-mode {
-		background-color: rgba($dark-body-bg, 0.95);
+		background-color: rgba($dark-body-bg, 0.72);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 		box-shadow: none;
 		color: if(map.get($header, color),
 				color-contrast(map.get($header, dark-background-color), map.get($header, color-dark)),

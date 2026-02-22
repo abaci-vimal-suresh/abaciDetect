@@ -40,13 +40,7 @@ export const haloMenu = {
         icon: 'Monitor',
         subMenu: null,
     },
-    timetravel: {
-        id: 'halo-timetravel',
-        text: 'Time Travel',
-        path: '/halo/timetravel',
-        icon: 'History',
-        subMenu: null,
-    },
+
     alerts: {
         id: 'halo-alerts',
         text: 'Alerts',
@@ -74,20 +68,7 @@ export const haloMenu = {
         icon: 'NotificationsActive',
         subMenu: null,
     },
-    reports: {
-        id: 'halo-reports',
-        text: 'Analytics',
-        path: '/halo/reports',
-        icon: 'Analytics',
-        subMenu: null,
-    },
-    privacy: {
-        id: 'halo-privacy',
-        text: 'Privacy Controls',
-        path: '/halo/privacy',
-        icon: 'Security',
-        subMenu: null,
-    },
+
     settings: {
         id: 'halo-settings',
         text: 'Settings',
