@@ -9,7 +9,7 @@
 	@include padding(0 $spacer);
 
 	position: sticky;
-	z-index: 1040;
+	z-index: 1020;
 	top: 0;
 	display: flex;
 	height: map.get($header, height);
@@ -22,8 +22,8 @@
 	// Transparent glass background
 	background-color: rgba($body-bg, 0.72);
 
-	// Very subtle bottom separator instead of heavy shadow
-	border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+	// No bottom border — flush connection with subheader
+	border-bottom: none;
 	box-shadow: none;
 
 	// Smooth transition for theme switching
@@ -36,7 +36,7 @@
 
 	@include dark-mode {
 		background-color: rgba($dark-body-bg, 0.72);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+		border-bottom: none;
 		box-shadow: none;
 		color: if(map.get($header, color),
 				color-contrast(map.get($header, dark-background-color), map.get($header, color-dark)),

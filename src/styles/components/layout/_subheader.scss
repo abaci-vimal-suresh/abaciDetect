@@ -39,7 +39,7 @@ color-contrast(map.get($subheader, background-color), map.get($subheader, color-
 @include padding(math.div($spacer, 2.5) $spacer);
 
 position: sticky;
-z-index: 1030;
+z-index: 1015;
 top: map.get($header, height);
 display: flex;
 min-height: map.get($subheader, height);
@@ -57,8 +57,8 @@ border-image: linear-gradient(90deg,
 	rgba(122, 58, 111, 0.15) 40%,
 	transparent 100%) 1;
 
-// Minimal shadow — just a subtle bottom edge
-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+// No shadow — flush with header above
+box-shadow: none;
 margin: 0;
 width: 100%;
 

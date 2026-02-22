@@ -136,7 +136,7 @@ const Dashboard = () => {
                     <span className='h4 mb-0 fw-bold'>HALO IoT Command Center</span>
                 </SubHeaderLeft>
                 <SubHeaderRight>
-                    <Button color='primary' isLight icon='CloudDownload'>Export Data</Button>
+                    <Button color='primary' isNeumorphic isLight icon='CloudDownload'>Export Data</Button>
                 </SubHeaderRight>
             </SubHeader>
 
@@ -156,7 +156,7 @@ const Dashboard = () => {
                         <StatCard icon='LocationCity' value={areas?.length || 0} label='Total Areas' iconColor='text-info' />
                     </div>
                     <div className='col-xl-2 col-md-4 col-sm-6'>
-                        <StatCard icon='GroupWork' value={totalSubareas} label='Sub Areas' iconColor='text-warning' />
+                        <StatCard icon='GroupWork' value={totalSubareas} label='Sub Areas' iconColor='text-primary' />
                     </div>
                     <div className='col-xl-2 col-md-4 col-sm-6'>
                         <StatCard icon='HealthAndSafety' value={`${systemHealth}%`} label='System Health' iconColor='text-success' />
