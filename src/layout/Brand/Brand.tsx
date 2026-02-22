@@ -15,16 +15,17 @@ const Brand: FC<IBrandProps> = ({ asideStatus, setAsideStatus, isDark }) => {
 	return (
 		<div className='brand d-flex align-items-center justify-content-between w-100'>
 			<div className='brand-logo'>
-				<Link to='/' className='d-flex align-items-center text-decoration-none' aria-label='Abaci Detect'>
+				<Link to='/' className='d-flex align-items-center text-decoration-none ' aria-label='Abaci Detect'>
 					<Icon icon='Sensors' color='primary' className='brand-icon me-2' />
 					{asideStatus && (
 						<div className='brand-text d-flex flex-column align-items-start'>
-							<div className='fw-bold text-dark brand-title-main' style={{ fontSize: '1.4rem' }}>Abaci</div>
-							<div className='fw-light opacity-50 brand-title-sub' style={{ fontSize: '0.65rem', letterSpacing: '2px' }}>DETECT</div>
+							<div className='fw-bold text-primary brand-title-main' style={{ fontSize: '1.4rem' }}>Abaci</div>
+							<div className='fw-bold opacity-50 brand-title-sub' style={{ fontSize: '0.65rem', letterSpacing: '2px' }}>DETECT</div>
 						</div>
 					)}
 				</Link>
 			</div>
+
 			<Tooltips title={asideStatus ? 'Collapse Sidebar' : 'Expand Sidebar'} flip={['right']}>
 				<Button
 					type='button'

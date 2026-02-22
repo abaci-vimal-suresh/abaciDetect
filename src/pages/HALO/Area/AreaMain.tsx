@@ -28,7 +28,6 @@ const AreaMain = () => {
     const location = useLocation();
 
     // ── Data ─────────────────────────────────────────────────────────────────
-    // ── Data ─────────────────────────────────────────────────────────────────
     const { data: areas, isLoading } = useAreas();
     const { data: allSensors, isLoading: sensorsLoading } = useSensors();
     const { data: users } = useUsers();

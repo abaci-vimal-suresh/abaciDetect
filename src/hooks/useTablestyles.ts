@@ -287,13 +287,12 @@ const useTablestyle = (containerRef: any = null) => {
 					root: {
 						color: themeStatus === 'dark' ? '#b89aaf' : '#7a3a6f',
 						transition: 'all 0.2s ease',
-						borderRadius: '6px',
+						borderRadius: '1px',
 						'&:hover': {
-							backgroundColor: themeStatus === 'dark'
-								? 'rgba(168, 124, 161, 0.15)'
-								: 'rgba(122, 58, 111, 0.08)',
-							transform: 'scale(1.05)',
+							backgroundColor: 'transparent',
+							transform: 'scale(0.95)',
 						},
+
 						'&.Mui-disabled': {
 							color: themeStatus === 'dark'
 								? 'rgba(255, 255, 255, 0.3)'
