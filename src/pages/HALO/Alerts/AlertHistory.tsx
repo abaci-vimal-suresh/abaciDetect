@@ -181,8 +181,15 @@ const AlertHistory = () => {
 
     // ── Table Columns ──
     const columns = [
+
         {
-            title: 'Alert Info', field: 'alert_type',
+            title: 'Alert Info',
+            field: 'alert_type',
+            sorting: true,
+            filtering: true,
+            searchable: true,
+            export: true,
+            filterPlaceholder: 'Filter type...',
             render: (row: AlertRecord) => (
                 <div>
                     <div className='fw-bold'>{row.alert_type}</div>
@@ -190,27 +197,65 @@ const AlertHistory = () => {
             ),
         },
         {
-            title: 'Origin', field: 'source',
+            title: 'Severity',
+            field: 'severity',
+            sorting: true,
+            filtering: true,
+            searchable: false,
+            export: true,
+            // ✅ lookup renders as dropdown in filter row
+            lookup: {
+                critical: 'Critical',
+                warning: 'Warning',
+                info: 'Info',
+            },
+            render: (row: AlertRecord) => {
+                const colorMap: Record<string, string> = {
+                    critical: '#dc3545',
+                    warning: '#fd7e14',
+                    info: '#0dcaf0',
+                };
+                return (
+                    <Badge
+                        isLight
+                        style={{
+                            fontSize: '0.7rem',
+                            backgroundColor: `${colorMap[row.severity]}22`,
+                            color: colorMap[row.severity],
+                            border: `1px solid ${colorMap[row.severity]}55`,
+                        }}>
+                        {row.severity.toUpperCase()}
+                    </Badge>
+                );
+            },
+        },
+        {
+            title: 'Origin',
+            field: 'source',
+            sorting: true,
+            filtering: true,
+            searchable: false,
+            export: true,
+            // ✅ lookup renders as dropdown in filter row
+            lookup: { External: 'External', Internal: 'Internal' },
             render: (row: AlertRecord) => (
                 <Badge color={row.source === 'External' ? 'info' : 'secondary'} isLight style={{ fontSize: '0.7rem' }}>
                     {row.source.toUpperCase()}
                 </Badge>
             ),
         },
+
         {
-            title: 'Timestamp', field: 'timestamp',
-            render: (row: AlertRecord) => (
-                <div className='d-flex align-items-center' style={{ fontSize: '0.75rem' }}>
-                    <Icon icon='Schedule' className='me-2 text-muted' />
-                    <div>
-                        <div className='fw-bold'>{format(new Date(row.timestamp), 'MMM dd, yyyy')}</div>
-                        <div className='small text-muted'>{format(new Date(row.timestamp), 'HH:mm')}</div>
-                    </div>
-                </div>
-            ),
-        },
-        {
-            title: 'Device / Location', field: 'sensor_name',
+            title: 'Location',
+            field: 'sensor_name',
+            sorting: true,
+            filtering: true,
+            searchable: true,
+            export: true,
+            filterPlaceholder: 'Filter device...',
+            // ✅ customFilterAndSearch to search both sensor and area
+            customFilterAndSearch: (term: string, row: AlertRecord) =>
+                `${row.sensor_name} ${row.area_name}`.toLowerCase().includes(term.toLowerCase()),
             render: (row: AlertRecord) => (
                 <div style={{ fontSize: '0.75rem' }}>
                     <div className='fw-bold'>{row.sensor_name}</div>
@@ -219,7 +264,12 @@ const AlertHistory = () => {
             ),
         },
         {
-            title: 'Value', field: 'value',
+            title: 'Value',
+            field: 'value',
+            sorting: false,
+            filtering: false,
+            searchable: true,
+            export: true,
             render: (row: AlertRecord) => (
                 <div className='fw-bold text-info' style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
                     {row.value}
@@ -227,7 +277,20 @@ const AlertHistory = () => {
             ),
         },
         {
-            title: 'Status', field: 'status',
+            title: 'Status',
+            field: 'status',
+            sorting: true,
+            filtering: true,
+            searchable: false,
+            export: true,
+            // ✅ lookup renders as dropdown in filter row
+            lookup: {
+                active: 'Active',
+                acknowledged: 'Acknowledged',
+                resolved: 'Resolved',
+                dismissed: 'Dismissed',
+                suspended: 'Suspended',
+            },
             render: (row: AlertRecord) => (
                 <Badge color={(STATUS_COLORS[row.status.toLowerCase()] ?? 'primary') as any} isLight style={{ fontSize: '0.75rem' }}>
                     {row.status.toUpperCase()}
@@ -235,7 +298,12 @@ const AlertHistory = () => {
             ),
         },
         {
-            title: 'Actions', field: 'actions', sorting: false, filtering: false,
+            title: 'Actions',
+            field: 'actions',
+            sorting: false,
+            filtering: false,
+            searchable: false,
+            export: false,                            // ✅ don't export action buttons
             render: (row: AlertRecord) => {
                 const isDark = themeStatus === 'dark';
                 return (
@@ -305,8 +373,7 @@ const AlertHistory = () => {
                     ].map(({ label, value, icon, color, filterKey }) => (
                         <div key={label} className='col-lg-3 col-md-6 mb-4'>
                             <Card
-                                stretch
-                                className={`shadow-sm ${filterKey ? 'cursor-pointer' : ''} ${severityFilter === filterKey && filterKey ? 'border-primary' : ''}`}
+                                stretch isNeumorphic
                                 onClick={filterKey ? () => handleSeverityFilterClick(filterKey) : undefined}
                             >
                                 <CardBody className='py-4'>
@@ -324,7 +391,7 @@ const AlertHistory = () => {
                         </div>
                     ))}
 
-                    {/* ── Main Card ── */}
+                    {/* ── Trend Chart Card ── */}
                     <div className='col-xl-12 mb-4'>
                         <Card stretch className='shadow-sm'>
                             <CardHeader borderSize={1}>
@@ -373,23 +440,106 @@ const AlertHistory = () => {
                                     <ThemeProvider theme={theme}>
                                         <MaterialTable
                                             tableRef={tableRef}
-                                            page={page}
                                             totalCount={totalCount}
                                             title=''
                                             columns={columns}
                                             data={alertRecords}
                                             isLoading={isAlertsLoading}
+
                                             onPageChange={(newPage) => setPage(newPage)}
                                             onRowsPerPageChange={(newSize) => { setPageSize(newSize); setPage(0); }}
+
+                                            onSearchChange={() => setPage(0)}
+
+                                            onOrderChange={() => setPage(0)}
+
                                             options={{
                                                 headerStyle: { ...headerStyle(), fontWeight: 'bold' },
-                                                rowStyle: rowStyle(),
+                                                rowStyle: (rowData: AlertRecord, index: number) => ({
+                                                    ...rowStyle(),
+                                                    backgroundColor: index % 2 === 0
+                                                        ? undefined
+                                                        : themeStatus === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                                                    borderLeft: rowData.severity === 'critical'
+                                                        ? '3px solid #dc3545'
+                                                        : rowData.severity === 'warning'
+                                                            ? '3px solid #fd7e14'
+                                                            : '3px solid transparent',
+                                                }),
+
+                                                paging: true,
                                                 pageSize,
-                                                search: false,
-                                                filtering: showTableFilters,
-                                                showFirstLastPageButtons: true,
+                                                pageSizeOptions: [5, 10, 20, 50],
                                                 paginationType: 'stepped',
+                                                numberOfPagesAround: 2,
+                                                paginationPosition: 'bottom',
+                                                showFirstLastPageButtons: true,
+                                                emptyRowsWhenPaging: false,
+
+                                                // ── Search ──
+                                                search: true,
+                                                searchAutoFocus: false,
+                                                searchFieldAlignment: 'right',
+                                                searchFieldVariant: 'outlined',
+                                                searchFieldStyle: { borderRadius: '8px', fontSize: '0.85rem' },
+                                                debounceInterval: 400,
+
+                                                // ── Filter ──
+                                                filtering: showTableFilters,
+                                                filterCellStyle: { paddingTop: '4px', paddingBottom: '4px' },
+
+                                                // ── Sorting ──
+                                                sorting: true,
+                                                thirdSortClick: false,
+
+                                                columnsButton: true,
+
+                                                // ── Layout & Padding ──
+                                                padding: 'dense',
+                                                tableLayout: 'auto',
+                                                maxBodyHeight: '600px',
                                                 actionsColumnIndex: -1,
+
+                                                // ── Loading ──
+                                                loadingType: 'overlay',
+
+                                                // ── Toolbar ──
+                                                toolbar: true,
+                                                showTitle: false,
+                                                toolbarButtonAlignment: 'right',
+
+                                                // ── Empty State ──
+                                                showEmptyDataSourceMessage: true,
+
+                                                // ── Draggable Columns ──
+                                                draggable: true,
+                                            }}
+
+                                            localization={{
+                                                toolbar: {
+                                                    searchPlaceholder: 'Search alerts...',
+                                                    searchTooltip: 'Search alerts',
+                                                    exportTitle: 'Export',
+                                                    exportCSVName: 'Export as CSV',
+                                                    showColumnsTitle: 'Show / Hide Columns',
+                                                    showColumnsAriaLabel: 'Show / Hide Columns',
+                                                    addRemoveColumns: 'Show or hide columns',
+                                                },
+                                                pagination: {
+                                                    labelRowsPerPage: 'Rows per page:',
+                                                    labelDisplayedRows: '{from}-{to} of {count}',
+                                                    firstTooltip: 'First Page',
+                                                    previousTooltip: 'Previous Page',
+                                                    nextTooltip: 'Next Page',
+                                                    lastTooltip: 'Last Page',
+                                                    labelRows: 'rows',
+                                                },
+                                                body: {
+                                                    emptyDataSourceMessage: 'No alerts found.',
+                                                    filterRow: {
+                                                        filterTooltip: 'Filter',
+                                                    },
+                                                },
                                             }}
                                         />
                                     </ThemeProvider>

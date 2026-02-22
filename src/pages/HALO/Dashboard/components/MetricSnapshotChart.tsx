@@ -20,11 +20,10 @@ const METRIC_CONFIG: Record<string, { label: string; unit: string; safeMax: numb
     light: { label: 'Light', unit: 'lux', safeMax: 10000 },
 };
 
-// Soft, muted palette — easy on the eyes
 const COLOR = {
-    safe: '#5a9e8f',  // muted teal-green
-    moderate: '#c49a3c',  // warm muted amber
-    critical: '#b85c4a',  // dusty rose-red
+    safe: '#5a9e8f',
+    moderate: '#c49a3c',
+    critical: '#b85c4a',
 };
 
 const getStatusColor = (pct: number): string => {
