@@ -37,10 +37,7 @@ export const AdminRoutes = {
 	haloArea: haloMenu.area,
 	alerts: haloMenu.alerts,
 	haloActions: haloMenu.actions,
-	privacy: haloMenu.privacy,
 	users: haloMenu.users,
-	timetravel: haloMenu.timetravel,
-	reports: haloMenu.reports,
 	systemSettings: haloMenu.systemSettings,
 };
 
@@ -55,8 +52,6 @@ export const ViewerRoutes = {
 			history: (haloMenu.alerts.subMenu as any).history,
 		},
 	},
-	timetravel: haloMenu.timetravel,
-	reports: haloMenu.reports,
 	haloActions: haloMenu.actions,
 	autocad: haloMenu.autocad,
 };

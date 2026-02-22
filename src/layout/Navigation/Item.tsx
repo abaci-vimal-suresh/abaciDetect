@@ -87,21 +87,21 @@ const Item: FC<IItemProps> = ({
 	const handleInnerClick = () => {
 
 		// console.log(title,to,children)
-		if(!children){
+		if (!children) {
 			dispatch(setHeaderTitle({ name: title, isEditable: false }));
-			if(title !=='Dashboard'){
+			if (title !== 'Dashboard') {
 				dispatch(
 					setBreadcrumbs([
 						{ label: 'Home', path: '/' },
 						{ label: title, path: to },
 					]),
 				);
-			}else{
+			} else {
 				dispatch(
 					setBreadcrumbs([]),
 				);
 			}
-			
+
 		}
 	}
 
@@ -140,15 +140,15 @@ const Item: FC<IItemProps> = ({
 				{INNER}
 			</NavHashLink>
 		)) || (
-			<NavLink
-				end
-				// @ts-ignore
-				className={classNames(LINK_CLASS, ({ isActive }) => (isActive ? 'active' : ''))}
-				to={`../${to}`}
-				onClick={linkHandleClick}>
-				{INNER}
-			</NavLink>
-		));
+				<NavLink
+					end
+					// @ts-ignore
+					className={classNames(LINK_CLASS, ({ isActive }) => (isActive ? 'active' : ''))}
+					to={`../${to}`}
+					onClick={linkHandleClick}>
+					{INNER}
+				</NavLink>
+			));
 
 	// Dropdown
 	const dropdownRef = useRef(null);
@@ -235,7 +235,8 @@ const Item: FC<IItemProps> = ({
 										ariaLabelledby={`${rootId}__${id}--link`}
 										rootId={rootId}
 										parentId={`${rootId}__${parentId}`}
-										onMouseLeave={() => setDropdownStatus(false)}>
+										onMouseLeave={() => setDropdownStatus(false)}
+									>
 										{children}
 									</List>
 								)}

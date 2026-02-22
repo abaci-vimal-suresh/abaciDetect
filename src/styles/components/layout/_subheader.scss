@@ -36,40 +36,57 @@ color-contrast(map.get($subheader, background-color), map.get($subheader, color-
 --#{$prefix}subheader-border-bottom-color: #{map.get($subheader, dark-border-color)};
 }
 
-@include padding(0 $spacer);
+@include padding(math.div($spacer, 2.5) $spacer);
 
 position: sticky;
-z-index: 1030; // Higher z-index so content scrolls underneath
-top: map.get($header, height); // Align exactly below header
+z-index: 1030;
+top: map.get($header, height);
 display: flex;
 min-height: map.get($subheader, height);
 align-items: center;
-border-bottom: 0;
 
-// Neumorphic Styling with backdrop blur
-background-color: rgba($body-bg, 0.95); // More opaque
-backdrop-filter: blur(10px); // Blur effect for content underneath
--webkit-backdrop-filter: blur(10px); // Safari support
-box-shadow: $box-shadow-sm;
-border-radius: 0; // Flush alignment
+// Glass container — matching header transparency
+background-color: rgba($body-bg, 0.72);
+backdrop-filter: blur(18px) saturate(1.4);
+-webkit-backdrop-filter: blur(18px) saturate(1.4);
+
+// Professional accent border-bottom
+border-bottom: 2px solid transparent;
+border-image: linear-gradient(90deg,
+	rgba(122, 58, 111, 0.5) 0%,
+	rgba(122, 58, 111, 0.15) 40%,
+	transparent 100%) 1;
+
+// Minimal shadow — just a subtle bottom edge
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 margin: 0;
 width: 100%;
 
+// Smooth transition for theme switching
+transition: background-color 0.3s ease,
+box-shadow 0.3s ease,
+border-image 0.3s ease;
+
 @include dark-mode {
-	background-color: rgba($dark-body-bg, 0.95); // More opaque dark mode
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	box-shadow: none;
+	background-color: rgba($dark-body-bg, 0.72);
+	backdrop-filter: blur(18px) saturate(1.3);
+	-webkit-backdrop-filter: blur(18px) saturate(1.3);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 	color: var(--#{$prefix}subheader-color);
+	border-image: linear-gradient(90deg,
+			rgba(180, 130, 170, 0.35) 0%,
+			rgba(180, 130, 170, 0.1) 40%,
+			transparent 100%) 1;
 }
 
 color: var(--#{$prefix}subheader-color);
+font-weight: 500;
+letter-spacing: 0.01em;
 
 @at-root .header+.content & {
-	top: calc(map.get($header, height) + 10px); // Offset for header margin correctly
-	margin: 5px;
-	border-radius: 15px 0 0 15px; // Left side alone rounded
-	width: calc(100% - 10px);
+	top: map.get($header, height);
+	margin: 0;
+	width: 100%;
 }
 
 @include media-breakpoint-down(map.get($aside, mobile-breakpoint)) {
@@ -96,6 +113,7 @@ color: var(--#{$prefix}subheader-color);
 	@include child-space;
 	display: flex;
 	align-items: center;
+	gap: 0.75rem;
 
 	@include media-breakpoint-down(sm) {
 		@include child-space-bottom;
@@ -108,11 +126,13 @@ color: var(--#{$prefix}subheader-color);
 	@include child-space;
 	display: flex;
 	align-items: center;
+	gap: 0.5rem;
 }
 
 .subheader-separator {
-	height: 2rem;
-	border-left: 1px solid map-deep-get($subheader, separator, border-color);
+	height: 1.5rem;
+	border-left: 1.5px solid rgba(map-deep-get($subheader, separator, border-color), 0.4);
+	margin: 0 0.25rem;
 
 	@include media-breakpoint-down(sm) {
 		display: none;

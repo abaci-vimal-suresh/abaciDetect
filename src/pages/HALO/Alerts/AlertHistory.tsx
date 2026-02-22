@@ -328,7 +328,10 @@ const AlertHistory = () => {
                     <div className='col-xl-12 mb-4'>
                         <Card stretch className='shadow-sm'>
                             <CardHeader borderSize={1}>
-                                <CardTitle>Alert Incidence Trend</CardTitle>
+                                <CardTitle>
+                                    <Icon icon='History' className='me-2' />
+                                    Alert Incidence Trend
+                                </CardTitle>
                                 <CardActions>
                                     <ButtonGroup>
                                         {(['24h', '7d'] as ChartTimeRange[]).map(range => (
@@ -341,18 +344,38 @@ const AlertHistory = () => {
                             </CardHeader>
                             <CardBody>
                                 <Chart series={chartOptions.series} options={chartOptions.options} type='area' height={200} />
-                                <div className='mt-4'>
+                            </CardBody>
+                        </Card>
+                    </div>
+
+                    {/* ── Alert Table Card ── */}
+                    <div className='col-xl-12 mb-4'>
+                        <Card stretch className='shadow-sm'>
+                            <CardHeader borderSize={1}>
+                                <CardTitle>
+                                    <Icon icon='History' className='me-2' />
+                                    Historical Logs
+                                </CardTitle>
+                                <CardActions>
+                                    <Button
+                                        className='btn-neumorphic'
+                                        color='light'
+                                        icon='FilterAlt'
+                                        isLight
+                                        onClick={() => setShowTableFilters(prev => !prev)}
+                                    >
+                                        {showTableFilters ? 'Hide Filters' : 'Filters'}
+                                    </Button>
+                                </CardActions>
+                            </CardHeader>
+                            <CardBody>
+                                <div style={{ overflowY: 'auto' }}>
                                     <ThemeProvider theme={theme}>
                                         <MaterialTable
                                             tableRef={tableRef}
                                             page={page}
                                             totalCount={totalCount}
-                                            title={
-                                                <div className='d-flex align-items-center'>
-                                                    <Icon icon='History' className='me-2 text-primary fs-4' />
-                                                    <span className='fw-bold h5 mb-0'>Historical Logs</span>
-                                                </div>
-                                            }
+                                            title=''
                                             columns={columns}
                                             data={alertRecords}
                                             isLoading={isAlertsLoading}
@@ -362,20 +385,12 @@ const AlertHistory = () => {
                                                 headerStyle: { ...headerStyle(), fontWeight: 'bold' },
                                                 rowStyle: rowStyle(),
                                                 pageSize,
-                                                search: true,
+                                                search: false,
                                                 filtering: showTableFilters,
                                                 showFirstLastPageButtons: true,
                                                 paginationType: 'stepped',
                                                 actionsColumnIndex: -1,
                                             }}
-                                            actions={[
-                                                {
-                                                    icon: () => <Icon icon='FilterAlt' />,
-                                                    tooltip: showTableFilters ? 'Hide filters' : 'Show filters',
-                                                    isFreeAction: true,
-                                                    onClick: () => setShowTableFilters(prev => !prev),
-                                                },
-                                            ]}
                                         />
                                     </ThemeProvider>
                                 </div>

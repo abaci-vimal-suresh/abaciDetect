@@ -5,20 +5,16 @@ import DeviceSettings from '../pages/HALO/Settings/DeviceSettings';
 // HALO IoT Pages
 const HaloDashboard = lazy(() => import('../pages/HALO/Dashboard/Dashboard'));
 const HaloSensorList = lazy(() => import('../pages/HALO/Sensors/SensorList'));
-const HaloPrivacySettings = lazy(() => import('../pages/HALO/Privacy/PrivacySettings'));
 const HaloAlertHistory = lazy(() => import('../pages/HALO/Alerts/AlertHistory'));
 const HaloAlertFilter = lazy(() => import('../pages/HALO/Alerts/AlertFilterPage'));
 const HaloAlertActions = lazy(() => import('../pages/HALO/Alerts/AlertActionPage'));
-const HaloReports = lazy(() => import('../pages/HALO/Reports/Reports'));
 const HaloFirmwareUpdate = lazy(() => import('../pages/HALO/Sensors/FirmwareUpdate'));
 const HaloSensorIndividualDetail = lazy(() => import('../pages/HALO/Sensors/SensorIndividualDetail'));
 const HaloSettings = lazy(() => import('../pages/HALO/Settings/DeviceSettings'));
 const HaloAreaMain = lazy(() => import('../pages/HALO/Area/AreaMain'));
 const HaloAreaZoneView = lazy(() => import('../pages/HALO/Area/AreaZoneView'));
 const HaloSensorGroupManager = lazy(() => import('../pages/HALO/Sensors/SensorGroupManager'));
-const HaloTimeTravel = lazy(() => import('../pages/HALO/TimeTravel/TimeTravelPlayback'));
 const ThreeDPage = lazy(() => import('../pages/HALO/ThreeD/ThreeDPage'));
-const N8NIntegrationTutorial = lazy(() => import('../pages/HALO/Integrations/N8NIntegrationTutorial'));
 const HaloSystemSettings = lazy(() => import('../pages/settings/HaloSettings'));
 const HaloSensorMonitoringDashboard = lazy(() => import('../pages/HALO/Sensors/SensorMonitoringDashboard'));
 // User Pages
@@ -89,11 +85,7 @@ const RouteConfig: CustomRouteConfig[] = [
 		element: <HaloSensorIndividualDetail />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
-	{
-		path: '/halo/privacy',
-		element: <HaloPrivacySettings />,
-		allowedTo: ['Admin'],
-	},
+
 	{
 		path: '/halo/alerts',
 		element: <Navigate to='/halo/alerts/history' replace />,
@@ -114,31 +106,18 @@ const RouteConfig: CustomRouteConfig[] = [
 		element: <HaloAlertActions />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
-	{
-		path: '/halo/alerts/n8n-tutorial',
-		element: <N8NIntegrationTutorial />,
-		allowedTo: ['Admin', 'Viewer'],
-	},
+
 
 	{
 		path: '/halo/monitoring',
 		element: <HaloSensorMonitoringDashboard />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
-	{
-		path: '/halo/reports',
-		element: <HaloReports />,
-		allowedTo: ['Admin', 'Viewer'],
-	},
+
 	{
 		path: '/halo/settings',
 		element: <HaloSettings />,
 		allowedTo: ['Admin'],
-	},
-	{
-		path: '/halo/timetravel',
-		element: <HaloTimeTravel />,
-		allowedTo: ['Admin', 'Viewer'],
 	},
 	{
 		path: '/halo/threed',

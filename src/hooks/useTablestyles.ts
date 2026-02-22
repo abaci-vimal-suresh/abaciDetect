@@ -37,7 +37,7 @@ const useTablestyle = (containerRef: any = null) => {
 							? '0 2px 4px rgba(0, 0, 0, 0.2), 8px 8px 16px rgba(0, 0, 0, 0.35)'
 							: '6px 6px 12px #d1d9e6, -6px -6px 12px #ffffff',
 						backgroundImage: 'none',
-						borderRadius: '12px',
+						borderRadius: '6px 6px 0 0',
 						border: 'none !important',
 						overflow: 'hidden',
 					},
