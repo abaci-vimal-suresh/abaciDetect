@@ -48,25 +48,8 @@ const MainHeaderRight: FC<IMainHeaderRightProps> = ({ beforeChildren, afterChild
 				<div className='row g-3'>
 					{beforeChildren}
 
-					{/* Privacy Shield Toggle */}
-					<div className='col-auto'>
-						<Popovers trigger='hover' desc={privacyShield ? 'Disable Privacy Shield' : 'Enable Privacy Shield'}>
-							<Button
-								// eslint-disable-next-line react/jsx-props-no-spreading
-								{...styledBtn}
-								isNeumorphic
-								color={privacyShield ? 'success' : 'light'}
-								isLight={!privacyShield}
-								icon={privacyShield ? 'Security' : 'GppBad'}
-								onClick={() => setPrivacyShield(!privacyShield)}
-								className={privacyShield ? 'text-white' : ''}
-								aria-label='Toggle Privacy Shield'>
-								{/* {privacyShield && <span className='ms-2 d-none d-md-inline'>Protected</span>} */}
-							</Button>
-						</Popovers>
-					</div>
 
-					{/* Dark Mode */}
+
 					<div className='col-auto'>
 						<Popovers trigger='hover' desc='Dark / Light mode'>
 							<Button

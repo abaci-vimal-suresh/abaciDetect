@@ -262,7 +262,7 @@ const EmailSection = () => {
                 <ModalBody>
                     <div className='row g-4'>
                         <div className='col-12'>
-                            <div className='border rounded p-3 bg-light'>
+                            <div className='border rounded p-3 bg-primary text-white'>
                                 <div className='row align-items-center'>
                                     <div className='col-auto'>
                                         <div className='bg-primary bg-opacity-10 p-3 rounded-circle'>
@@ -271,7 +271,7 @@ const EmailSection = () => {
                                     </div>
                                     <div className='col'>
                                         <h5 className='mb-1'>Verify SMTP Connectivity</h5>
-                                        <p className='text-muted small mb-0'>
+                                        <p className='small mb-0 text-white'>
                                             Confirm your email configuration is correct by sending a test message. A successful test
                                             is required before saving changes.
                                         </p>
@@ -310,7 +310,7 @@ const EmailSection = () => {
                     </div>
                 </ModalBody>
                 <ModalFooter>
-                    <Button color='light' onClick={() => setIsTestModalOpen(false)}>
+                    <Button onClick={() => setIsTestModalOpen(false)}>
                         Cancel
                     </Button>
                     <Button
