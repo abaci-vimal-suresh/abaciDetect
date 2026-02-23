@@ -96,7 +96,7 @@ export function formatDiffSummary(diff: WallDiff): string {
     }
 
     if (summary.deletedCount > 0) {
-        parts.push(`Delete ${summary.deletedCount}`);
+        parts.push(`Unlink ${summary.deletedCount}`);
     }
 
     return parts.join(', ');
@@ -124,7 +124,7 @@ export function formatDiffSummaryVerbose(diff: WallDiff): string {
 
     if (summary.deletedCount > 0) {
         const plural = summary.deletedCount === 1 ? 'wall' : 'walls';
-        parts.push(`Delete ${summary.deletedCount} ${plural}`);
+        parts.push(`Unlink ${summary.deletedCount} ${plural}`);
     }
 
     return parts.join(', ');

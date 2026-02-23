@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { format } from 'date-fns';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
@@ -10,7 +9,7 @@ import Icon from '../../../components/icon/Icon';
 import MaterialTable from '@material-table/core';
 import { ThemeProvider } from '@mui/material/styles';
 import useTablestyle from '../../../hooks/useTablestyles';
-import { useAlertTrends, useAlerts, useAreas } from '../../../api/sensors.api';
+import { useAlertTrends, useAlerts, useAreas, fetchAlertsPaginated } from '../../../api/sensors.api';
 import { AlertStatus } from '../../../types/sensor';
 import Chart, { IChartOptions } from '../../../components/extras/Chart';
 import Breadcrumb from '../../../components/bootstrap/Breadcrumb';
@@ -99,9 +98,9 @@ const AlertHistory = () => {
 
     // ── Filter & Pagination State ──
     const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
+    const severityFilterRef = useRef<SeverityFilter>('all');
     const [chartTimeRange, setChartTimeRange] = useState<ChartTimeRange>('7d');
     const [showTableFilters, setShowTableFilters] = useState(false);
-    const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(10);
 
     // ── Detail Modal State ──
@@ -124,31 +123,34 @@ const AlertHistory = () => {
 
     // ── API ──
     const { data: trendData } = useAlertTrends({ period: chartTimeRange });
-    const { data: alertsData, isLoading: isAlertsLoading } = useAlerts({
-        limit: pageSize,
-        offset: page * pageSize,
+    // useAlerts here is ONLY for the stat cards summary (no pagination needed)
+    const { data: alertsData } = useAlerts({
         severity: severityFilter !== 'all' ? severityFilter : undefined,
+        limit: 1,   // minimal payload – we only need the counts
+        offset: 0,
     });
     const { data: areas } = useAreas();
 
-    // ── Derived Data ──
-    const alertRecords: AlertRecord[] = useMemo(
-        () => (alertsData?.results ?? []).map(mapApiAlertToRecord),
-        [alertsData],
-    );
-
     const totalCount = alertsData?.count ?? 0;
+
+    // Keep severityFilterRef in sync so the remote data callback always reads latest value
+    useEffect(() => {
+        severityFilterRef.current = severityFilter;
+        // Re-trigger MaterialTable fetch when severity changes
+        if (tableRef.current) {
+            tableRef.current.onQueryChange();
+        }
+    }, [severityFilter]);
 
     const stats = useMemo(() => ({
         total: totalCount,
-        critical: alertsData?.critical_count ?? alertRecords.filter(r => r.severity === 'critical').length,
-        warning: alertsData?.warning_count ?? alertRecords.filter(r => r.severity === 'warning').length,
-        resolved: alertsData?.resolved_count ?? alertRecords.filter(r => r.status === 'resolved' || r.status === 'Resolved').length,
-    }), [alertRecords, alertsData, totalCount]);
+        critical: alertsData?.critical_count ?? 0,
+        warning: alertsData?.warning_count ?? 0,
+        resolved: alertsData?.resolved_count ?? 0,
+    }), [alertsData, totalCount]);
 
     const handleSeverityFilterClick = (clicked: SeverityFilter) => {
         setSeverityFilter(prev => (prev === clicked ? 'all' : clicked));
-        setPage(0);
     };
 
     // ── Chart Config ──
@@ -195,39 +197,6 @@ const AlertHistory = () => {
                     <div className='fw-bold'>{row.alert_type}</div>
                 </div>
             ),
-        },
-        {
-            title: 'Severity',
-            field: 'severity',
-            sorting: true,
-            filtering: true,
-            searchable: false,
-            export: true,
-            // ✅ lookup renders as dropdown in filter row
-            lookup: {
-                critical: 'Critical',
-                warning: 'Warning',
-                info: 'Info',
-            },
-            render: (row: AlertRecord) => {
-                const colorMap: Record<string, string> = {
-                    critical: '#dc3545',
-                    warning: '#fd7e14',
-                    info: '#0dcaf0',
-                };
-                return (
-                    <Badge
-                        isLight
-                        style={{
-                            fontSize: '0.7rem',
-                            backgroundColor: `${colorMap[row.severity]}22`,
-                            color: colorMap[row.severity],
-                            border: `1px solid ${colorMap[row.severity]}55`,
-                        }}>
-                        {row.severity.toUpperCase()}
-                    </Badge>
-                );
-            },
         },
         {
             title: 'Origin',
@@ -436,114 +405,130 @@ const AlertHistory = () => {
                                 </CardActions>
                             </CardHeader>
                             <CardBody>
-                                <div style={{ overflowY: 'auto' }}>
-                                    <ThemeProvider theme={theme}>
-                                        <MaterialTable
-                                            tableRef={tableRef}
-                                            totalCount={totalCount}
-                                            title=''
-                                            columns={columns}
-                                            data={alertRecords}
-                                            isLoading={isAlertsLoading}
+                                <ThemeProvider theme={theme}>
+                                    <MaterialTable
+                                        tableRef={tableRef}
+                                        title=''
+                                        columns={columns}
 
-                                            onPageChange={(newPage) => setPage(newPage)}
-                                            onRowsPerPageChange={(newSize) => { setPageSize(newSize); setPage(0); }}
+                                        data={(query) =>
+                                            new Promise((resolve) => {
+                                                let ordering: string | undefined;
+                                                if (query.orderBy && query.orderDirection) {
+                                                    const dir = query.orderDirection === 'desc' ? '-' : '';
+                                                    ordering = `${dir}${(query.orderBy as any).field}`;
+                                                }
+                                                fetchAlertsPaginated({
+                                                    limit: query.pageSize,
+                                                    offset: query.page * query.pageSize,
+                                                    severity: severityFilterRef.current !== 'all' ? severityFilterRef.current : undefined,
+                                                    search: query.search || undefined,
+                                                    ordering,
+                                                })
+                                                    .then((response) => {
+                                                        resolve({
+                                                            data: (response.results ?? []).map(mapApiAlertToRecord),
+                                                            page: query.page,
+                                                            totalCount: response.count ?? 0,
+                                                        });
+                                                    })
+                                                    .catch(() => {
+                                                        resolve({ data: [], page: query.page, totalCount: 0 });
+                                                    });
+                                            })
+                                        }
 
-                                            onSearchChange={() => setPage(0)}
+                                        onRowsPerPageChange={(newSize) => setPageSize(newSize)}
 
-                                            onOrderChange={() => setPage(0)}
+                                        options={{
+                                            headerStyle: { ...headerStyle(), fontWeight: 'bold' },
+                                            rowStyle: (rowData: AlertRecord, index: number) => ({
+                                                ...rowStyle(),
+                                                backgroundColor: index % 2 === 0
+                                                    ? undefined
+                                                    : themeStatus === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                                                borderLeft: rowData.severity === 'critical'
+                                                    ? '3px solid #dc3545'
+                                                    : rowData.severity === 'warning'
+                                                        ? '3px solid #fd7e14'
+                                                        : '3px solid transparent',
+                                            }),
 
-                                            options={{
-                                                headerStyle: { ...headerStyle(), fontWeight: 'bold' },
-                                                rowStyle: (rowData: AlertRecord, index: number) => ({
-                                                    ...rowStyle(),
-                                                    backgroundColor: index % 2 === 0
-                                                        ? undefined
-                                                        : themeStatus === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                                                    borderLeft: rowData.severity === 'critical'
-                                                        ? '3px solid #dc3545'
-                                                        : rowData.severity === 'warning'
-                                                            ? '3px solid #fd7e14'
-                                                            : '3px solid transparent',
-                                                }),
+                                            paging: true,
+                                            pageSize,
+                                            pageSizeOptions: [5, 10, 20, 50],
+                                            paginationType: 'stepped',
+                                            numberOfPagesAround: 2,
+                                            paginationPosition: 'bottom',
+                                            showFirstLastPageButtons: true,
+                                            emptyRowsWhenPaging: false,
 
-                                                paging: true,
-                                                pageSize,
-                                                pageSizeOptions: [5, 10, 20, 50],
-                                                paginationType: 'stepped',
-                                                numberOfPagesAround: 2,
-                                                paginationPosition: 'bottom',
-                                                showFirstLastPageButtons: true,
-                                                emptyRowsWhenPaging: false,
+                                            // ── Search ──
+                                            search: true,
+                                            searchAutoFocus: false,
+                                            searchFieldAlignment: 'right',
+                                            searchFieldVariant: 'outlined',
+                                            searchFieldStyle: { borderRadius: '8px', fontSize: '0.85rem' },
+                                            debounceInterval: 400,
 
-                                                // ── Search ──
-                                                search: true,
-                                                searchAutoFocus: false,
-                                                searchFieldAlignment: 'right',
-                                                searchFieldVariant: 'outlined',
-                                                searchFieldStyle: { borderRadius: '8px', fontSize: '0.85rem' },
-                                                debounceInterval: 400,
+                                            // ── Filter ──
+                                            filtering: showTableFilters,
+                                            filterCellStyle: { paddingTop: '4px', paddingBottom: '4px' },
 
-                                                // ── Filter ──
-                                                filtering: showTableFilters,
-                                                filterCellStyle: { paddingTop: '4px', paddingBottom: '4px' },
+                                            // ── Sorting ──
+                                            sorting: true,
+                                            thirdSortClick: false,
 
-                                                // ── Sorting ──
-                                                sorting: true,
-                                                thirdSortClick: false,
+                                            columnsButton: true,
 
-                                                columnsButton: true,
+                                            // ── Layout & Padding ──
+                                            padding: 'dense',
+                                            tableLayout: 'auto',
+                                            actionsColumnIndex: -1,
 
-                                                // ── Layout & Padding ──
-                                                padding: 'dense',
-                                                tableLayout: 'auto',
-                                                maxBodyHeight: '600px',
-                                                actionsColumnIndex: -1,
+                                            // ── Loading ──
+                                            loadingType: 'overlay',
 
-                                                // ── Loading ──
-                                                loadingType: 'overlay',
+                                            // ── Toolbar ──
+                                            toolbar: true,
+                                            showTitle: false,
+                                            toolbarButtonAlignment: 'right',
 
-                                                // ── Toolbar ──
-                                                toolbar: true,
-                                                showTitle: false,
-                                                toolbarButtonAlignment: 'right',
+                                            // ── Empty State ──
+                                            showEmptyDataSourceMessage: true,
 
-                                                // ── Empty State ──
-                                                showEmptyDataSourceMessage: true,
+                                            // ── Draggable Columns ──
+                                            draggable: true,
+                                        }}
 
-                                                // ── Draggable Columns ──
-                                                draggable: true,
-                                            }}
-
-                                            localization={{
-                                                toolbar: {
-                                                    searchPlaceholder: 'Search alerts...',
-                                                    searchTooltip: 'Search alerts',
-                                                    exportTitle: 'Export',
-                                                    exportCSVName: 'Export as CSV',
-                                                    showColumnsTitle: 'Show / Hide Columns',
-                                                    showColumnsAriaLabel: 'Show / Hide Columns',
-                                                    addRemoveColumns: 'Show or hide columns',
+                                        localization={{
+                                            toolbar: {
+                                                searchPlaceholder: 'Search alerts...',
+                                                searchTooltip: 'Search alerts',
+                                                exportTitle: 'Export',
+                                                exportCSVName: 'Export as CSV',
+                                                showColumnsTitle: 'Show / Hide Columns',
+                                                showColumnsAriaLabel: 'Show / Hide Columns',
+                                                addRemoveColumns: 'Show or hide columns',
+                                            },
+                                            pagination: {
+                                                labelRowsPerPage: 'Rows per page:',
+                                                labelDisplayedRows: '{from}-{to} of {count}',
+                                                firstTooltip: 'First Page',
+                                                previousTooltip: 'Previous Page',
+                                                nextTooltip: 'Next Page',
+                                                lastTooltip: 'Last Page',
+                                                labelRows: 'rows',
+                                            },
+                                            body: {
+                                                emptyDataSourceMessage: 'No alerts found.',
+                                                filterRow: {
+                                                    filterTooltip: 'Filter',
                                                 },
-                                                pagination: {
-                                                    labelRowsPerPage: 'Rows per page:',
-                                                    labelDisplayedRows: '{from}-{to} of {count}',
-                                                    firstTooltip: 'First Page',
-                                                    previousTooltip: 'Previous Page',
-                                                    nextTooltip: 'Next Page',
-                                                    lastTooltip: 'Last Page',
-                                                    labelRows: 'rows',
-                                                },
-                                                body: {
-                                                    emptyDataSourceMessage: 'No alerts found.',
-                                                    filterRow: {
-                                                        filterTooltip: 'Filter',
-                                                    },
-                                                },
-                                            }}
-                                        />
-                                    </ThemeProvider>
-                                </div>
+                                            },
+                                        }}
+                                    />
+                                </ThemeProvider>
                             </CardBody>
                         </Card>
                     </div>

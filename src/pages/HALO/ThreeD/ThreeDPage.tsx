@@ -5,7 +5,7 @@ import { CameraControls, PerspectiveCamera, Environment, Html, Loader } from '@r
 import { BuildingScene } from './components/BuildingScene';
 import SensorSettingsOverlay from './components/SensorSettingsOverlay';
 import AreaSettingsOverlay from './components/AreaSettingsOverlay';
-import SensorDataOverlay from './components/SensorDataOverlay';
+
 import SensorConfigCards from './components/SensorConfigCards';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
@@ -462,7 +462,7 @@ const ThreeDPage = () => {
                                                                         setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
                                                                     }
                                                                     setSelectedSensorId(s.id);
-                                                                    setShowSettingsOverlay(false);
+                                                                    setShowSettingsOverlay(true);
                                                                     setEditingAreaForWalls(null);
                                                                     setActiveMetricGroup(null);
 
@@ -574,7 +574,7 @@ const ThreeDPage = () => {
                                             setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
                                         }
                                         setSelectedSensorId(sensor.id);
-                                        setShowSettingsOverlay(false);
+                                        setShowSettingsOverlay(true);
                                         setEditingAreaForWalls(null);
                                         setActiveMetricGroup(null);
                                     }}
@@ -621,7 +621,7 @@ const ThreeDPage = () => {
 
 
                         {selectedSensor ? (
-                            <SensorConfigCards sensorId={selectedSensor.id} />
+                            <SensorConfigCards sensorId={selectedSensor.id} sensor={selectedSensor} />
                         ) : (
                             <AggregateMetricCards
                                 areaIds={selectedAreaIds}
@@ -666,16 +666,7 @@ const ThreeDPage = () => {
                                 />
                             )}
 
-                            {!showSettingsOverlay && selectedSensor && (
-                                <SensorDataOverlay
-                                    sensor={selectedSensor}
-                                    onClose={() => {
-                                        setSelectedSensorId(null);
-                                        setPreviewState(null);
-                                    }}
-                                    onSettingsClick={() => setShowSettingsOverlay(true)}
-                                />
-                            )}
+                            {/* SensorDataOverlay removed — live readings now shown in the top dock (SensorConfigCards) */}
 
                             {editingAreaForWalls && (
                                 <AreaSettingsOverlay

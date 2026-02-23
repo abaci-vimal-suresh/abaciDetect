@@ -39,7 +39,6 @@ const useTablestyle = (containerRef: any = null) => {
 						backgroundImage: 'none',
 						borderRadius: '6px 6px 0 0',
 						border: 'none !important',
-						overflow: 'hidden',
 					},
 				},
 			},
@@ -148,7 +147,6 @@ const useTablestyle = (containerRef: any = null) => {
 					root: {
 						backgroundColor: 'transparent',
 						borderRadius: '0',
-						overflow: 'hidden',
 					}
 				}
 			},

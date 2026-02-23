@@ -153,12 +153,7 @@ const MiniGauge: React.FC<{
                         {statusLabel}
                     </div>
 
-                    {hasSensorInfo && (
-                        <div style={{ fontSize: '0.6rem', color: '#9ca3af', marginTop: 6, fontStyle: 'italic' }}>
-                            <Icon icon="Info" size="sm" className="me-1" />
-                            hover for sensors
-                        </div>
-                    )}
+
                 </div>
 
                 {/* ════ BACK FACE ════ */}

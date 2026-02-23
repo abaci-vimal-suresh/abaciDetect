@@ -114,15 +114,15 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
             const alreadyLinked = walls.find(w => w.id === externalWallToLink.id);
 
             if (alreadyLinked) {
-                // Already linked, just select it
-                setSelectedWallId(alreadyLinked.id);
-                // Scroll into view logic could be added here if needed
+                const updatedWalls = walls.filter(w => w.id !== externalWallToLink.id);
+                setWalls(updatedWalls);
+                setIsDirty(true);
+                if (selectedWallId === externalWallToLink.id) setSelectedWallId(null);
+                if (onPreviewChange) onPreviewChange({ ...values, walls: updatedWalls });
             } else {
-                // Link it
                 handleLinkWall(externalWallToLink);
             }
 
-            // Acknowledge handling
             if (onExternalWallLinkHandled) {
                 onExternalWallLinkHandled();
             }
@@ -289,7 +289,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     };
 
     // ============================================
-    // ✨ NEW: LINK WALL HANDLER
+    //  NEW: LINK WALL HANDLER
     // ============================================
 
     const handleLinkWall = (areaWall: Wall) => {
@@ -308,7 +308,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     };
 
     // ============================================
-    // ✨ NEW: UNLINK WALL HANDLERS
+    // NEW: UNLINK WALL HANDLERS
     // ============================================
 
     const handleUnlinkWallClick = (wall: Wall, segmentNumber: number) => {
@@ -335,7 +335,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     };
 
     // ============================================
-    // ✨ NEW: CALCULATE WALL LENGTH
+    // NEW: CALCULATE WALL LENGTH
     // ============================================
 
     const calculateWallLength = (wall: Wall): string => {
@@ -368,7 +368,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
         return formatDiffSummaryVerbose(wallDiff);
     }, [wallDiff]);
 
-    // ✨ NEW: Get selected wall object
+    // NEW: Get selected wall object
     const selectedWall = useMemo(() => {
         return walls.find(w => w.id === selectedWallId) || null;
     }, [walls, selectedWallId]);
@@ -486,7 +486,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                         </div>
 
                         {/* ============================================ */}
-                        {/* ✨ NEW: WALL GRID SECTION                    */}
+                        {/* NEW: WALL GRID SECTION                    */}
                         {/* ============================================ */}
 
                         <div className="mb-4 pt-3 border-top">
@@ -521,7 +521,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                             </div>
                         )}
 
-                        {/* ✨ NEW: MINI INFO DRAWER (Expands below grid) */}
+                        {/* NEW: MINI INFO DRAWER (Expands below grid) */}
                         {selectedWall && (
                             <div
                                 className="mb-3 p-3 rounded border"
@@ -592,33 +592,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Action Buttons */}
-                                <div className="d-flex gap-2">
-                                    <Button
-                                        color="info"
-                                        size="sm"
-                                        isLight
-                                        icon="Visibility"
-                                        onClick={() => {
-                                            // Trigger camera focus (handled by parent)
-                                            console.log('View wall in 3D:', selectedWall.id);
-                                        }}
-                                    >
-                                        View in 3D
-                                    </Button>
-                                    <Button
-                                        color="warning"
-                                        size="sm"
-                                        isLight
-                                        icon="LinkOff"
-                                        onClick={() => handleUnlinkWallClick(
-                                            selectedWall,
-                                            0 // Index no longer needed
-                                        )}
-                                    >
-                                        Unlink
-                                    </Button>
-                                </div>
+
                             </div>
                         )}
                     </CardBody>

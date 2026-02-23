@@ -6,54 +6,27 @@ import FormGroup from '../../../../components/bootstrap/forms/FormGroup';
 import Button from '../../../../components/bootstrap/Button';
 import Icon from '../../../../components/icon/Icon';
 import Spinner from '../../../../components/bootstrap/Spinner';
-import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../../../components/bootstrap/Modal';
-import { useSoundFiles, useAddSoundFile, useDeleteSoundFile } from '../../../../api/sensors.api';
+import { useSoundFiles } from '../../../../api/sensors.api';
 import { SoundFile } from '../../../../types/sensor';
 import useTablestyle from '../../../../hooks/useTablestyles';
 import { debounceIntervalForTable, pageSizeOptions } from '../../../../helpers/constants';
+import { useAudioActions } from './hooks/useAudioActions';
 
 const AudioManagementSection = () => {
     const { data: soundFiles, isLoading } = useSoundFiles();
-    const addSoundMutation = useAddSoundFile();
-    const deleteSoundMutation = useDeleteSoundFile();
     const [searchTerm, setSearchTerm] = useState('');
     const [pageSize, setPageSize] = useState(5);
     const { theme, headerStyles, rowStyles } = useTablestyle();
 
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [soundToDelete, setSoundToDelete] = useState<SoundFile | null>(null);
+    const { addSoundMutation, deleteSoundMutation, handleUpload, handleDeleteSound } =
+        useAudioActions();
 
-    const filteredSounds = soundFiles?.filter(s => {
+    const filteredSounds = soundFiles?.filter((s) => {
         const name = (s.name || '').toLowerCase();
         const fileName = (s.file_name || '').toLowerCase();
         const term = searchTerm.toLowerCase();
         return name.includes(term) || fileName.includes(term);
     });
-
-    const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (!file.name.toLowerCase().endsWith('.wav')) {
-                alert('Please upload a .wav file only.');
-                e.target.value = '';
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('name', file.name);
-            addSoundMutation.mutate(formData, {
-                onSuccess: () => {
-                    e.target.value = '';
-                }
-            });
-        }
-    };
-
-    const handleDelete = (sound: SoundFile) => {
-        setSoundToDelete(sound);
-        setIsDeleteModalOpen(true);
-    };
 
     return (
         <Card stretch>
@@ -73,7 +46,7 @@ const AudioManagementSection = () => {
                                     className='form-control'
                                     accept='.wav,audio/wav'
                                     disabled={addSoundMutation.isPending}
-                                    onChange={handleUpload}
+                                    onChange={(e) => handleUpload(e)}
                                 />
                                 {addSoundMutation.isPending && <Spinner isSmall color='primary' />}
                             </div>
@@ -85,7 +58,9 @@ const AudioManagementSection = () => {
                     <div className='col-md-4'>
                         <FormGroup label='Search Sounds'>
                             <div className='input-group'>
-                                <span className='input-group-text'><Icon icon='Search' /></span>
+                                <span className='input-group-text'>
+                                    <Icon icon='Search' />
+                                </span>
                                 <input
                                     type='text'
                                     className='form-control'
@@ -141,7 +116,7 @@ const AudioManagementSection = () => {
                                                 size='sm'
                                                 icon='Delete'
                                                 isDisable={deleteSoundMutation.isPending}
-                                                onClick={() => handleDelete(rowData)}
+                                                onClick={() => handleDeleteSound(rowData)}
                                             />
                                         ) : null,
                                 },
@@ -168,61 +143,6 @@ const AudioManagementSection = () => {
                         />
                     </ThemeProvider>
                 </div>
-
-                {/* ── Delete Confirmation Modal ── */}
-                <Modal isOpen={isDeleteModalOpen} setIsOpen={setIsDeleteModalOpen} size='sm' isCentered>
-                    <ModalHeader setIsOpen={setIsDeleteModalOpen} className='border-0 pb-0'>
-                        <ModalTitle id='delete-sound-confirm-title' className='text-danger'>
-                            Confirm Deletion
-                        </ModalTitle>
-                    </ModalHeader>
-                    <ModalBody className='text-center py-4'>
-                        <div
-                            className='mx-auto mb-3 d-flex align-items-center justify-content-center'
-                            style={{
-                                width: '60px',
-                                height: '60px',
-                                background: 'rgba(239, 79, 79, 0.1)',
-                                borderRadius: '50%',
-                                color: '#ef4f4f'
-                            }}
-                        >
-                            <Icon icon='DeleteSweep' size='2x' />
-                        </div>
-                        <div className='fw-bold fs-5 mb-2'>Delete sound file?</div>
-                        <div className='text-muted small px-3'>
-                            Are you sure you want to delete <span className='fw-bold text-dark'>{soundToDelete?.name}</span>? This action cannot be undone.
-                        </div>
-                    </ModalBody>
-                    <ModalFooter className='justify-content-center border-0 pt-0 pb-4 gap-2'>
-                        <Button
-                            color='light'
-                            onClick={() => {
-                                setIsDeleteModalOpen(false);
-                                setSoundToDelete(null);
-                            }}
-                            className='px-4'
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            color='danger'
-                            onClick={() => {
-                                if (soundToDelete) {
-                                    deleteSoundMutation.mutate(soundToDelete.id, {
-                                        onSuccess: () => {
-                                            setIsDeleteModalOpen(false);
-                                            setSoundToDelete(null);
-                                        }
-                                    });
-                                }
-                            }}
-                            className='px-4 shadow-sm'
-                        >
-                            Delete File
-                        </Button>
-                    </ModalFooter>
-                </Modal>
             </CardBody>
         </Card>
     );

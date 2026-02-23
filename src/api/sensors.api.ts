@@ -1327,7 +1327,38 @@ export const useAlerts = (filters?: AlertFilters) => {
     });
 };
 
-// Get single alert by ID
+
+export interface AlertPageParams {
+    limit: number;
+    offset: number;
+    search?: string;
+    severity?: string;
+    ordering?: string;
+}
+
+export const fetchAlertsPaginated = async (params: AlertPageParams): Promise<AlertResponse> => {
+    if (USE_MOCK_DATA) {
+        let filtered = [...MOCK_ALERTS];
+        if (params.search) {
+            const s = params.search.toLowerCase();
+            filtered = filtered.filter(a => a.description.toLowerCase().includes(s));
+        }
+        const sliced = filtered.slice(params.offset, params.offset + params.limit);
+        return { results: sliced, count: filtered.length, next: null, previous: null } as AlertResponse;
+    }
+    const urlParams = new URLSearchParams();
+    urlParams.append('limit', params.limit.toString());
+    urlParams.append('offset', params.offset.toString());
+    if (params.severity) urlParams.append('severity', params.severity);
+    if (params.search) urlParams.append('search', params.search);
+    if (params.ordering) urlParams.append('ordering', params.ordering);
+
+    const { data } = await axiosInstance.get(`/alert-management/alerts/?${urlParams.toString()}`);
+    return (Array.isArray(data)
+        ? { results: data, count: data.length, next: null, previous: null }
+        : data) as AlertResponse;
+};
+
 export const useAlert = (alertId: number) => {
     return useQuery({
         queryKey: ['alerts', alertId],
