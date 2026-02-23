@@ -13,6 +13,7 @@ import {
   markEventsAsRead
 } from '../../store/sensorEventsSlice';
 import { Tooltip } from '@mui/material';
+import { getSeverityConfig } from '../../components/alerts/AlertToast';
 
 const Notifications: FC<any> = ({ isOpen, setIsOpen }) => {
   const dispatch = useDispatch();
@@ -88,38 +89,67 @@ const Notifications: FC<any> = ({ isOpen, setIsOpen }) => {
             </div>
           ) : (
             <>
-              {notifications.map((data: any, index: number) => (
-                <div
-                  key={index}
-                  onClick={() => handleNotificationClick(data.id)}
-                  className='cursor-pointer'
-                >
-                  <div className='d-flex gap-3 align-items-center justify-content-between py-4 border-bottom'>
-                    <div className='d-flex gap-3 align-items-center'>
-                      <div className='d-flex align-items-center justify-content-center p-3 rounded-circle'
-                        style={{ backgroundColor: data.type === 'alert' ? '#ffebeb' : '#EBEBEB' }}
-                      >
-                        <Icon
-                          icon={data.type === 'alert' ? 'NotificationsActive' : 'Notifications'}
-                          size='2x'
-                          color={data.type === 'alert' ? 'danger' : 'primary'}
-                        />
-                      </div>
-                      <div>
-                        <small className='fs-5 fw-bold text-dark'>
-                          {data.message || 'New Event'}
-                        </small>
-                        <p className='mt-1 m-0 text-muted' style={{ fontSize: '12px' }}>
-                          Sensor ID: {data.sensor_id || 'Unknown'}
-                        </p>
-                        <p className='m-0 text-muted' style={{ fontSize: '12px' }}>
-                          {data.timestamp ? Moments(data.timestamp, 'relativetime') : 'Just now'}
-                        </p>
+              {notifications.map((data: any, index: number) => {
+                const cfg = getSeverityConfig(data);
+                return (
+                  <div
+                    key={index}
+                    onClick={() => handleNotificationClick(data.id)}
+                    className='cursor-pointer'
+                  >
+                    <div className='d-flex gap-3 align-items-center justify-content-between py-4 border-bottom'>
+                      <div className='d-flex gap-3 align-items-center' style={{ width: '100%' }}>
+                        <div className='d-flex align-items-center justify-content-center p-3 rounded-circle'
+                          style={{ backgroundColor: cfg.bg, border: `1px solid ${cfg.color}33`, minWidth: '50px', height: '50px' }}
+                        >
+                          <span style={{ fontSize: '1.5rem' }}>{cfg.icon}</span>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div className='d-flex justify-content-between align-items-start'>
+                            <span
+                              style={{
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                letterSpacing: '0.8px',
+                                textTransform: 'uppercase',
+                                color: cfg.color,
+                                background: cfg.bg,
+                                padding: '1px 6px',
+                                borderRadius: 4,
+                                marginBottom: '4px',
+                                display: 'inline-block',
+                                border: `1px solid ${cfg.color}22`
+                              }}
+                            >
+                              {cfg.label}
+                            </span>
+                            <small className='text-muted' style={{ fontSize: '11px' }}>
+                              {data.timestamp ? Moments(data.timestamp, 'relativetime') : 'Just now'}
+                            </small>
+                          </div>
+                          <div className='fs-6 fw-bold text-dark' style={{ lineHeight: 1.2 }}>
+                            {data.message || 'New Alert Received'}
+                          </div>
+                          <div className='d-flex gap-2 mt-2 flex-wrap'>
+                            {data.sensor_name && (
+                              <span className='badge bg-light text-dark border' style={{ fontSize: '10px', fontWeight: 500 }}>
+                                <Icon icon='Sensors' size='sm' className='me-1 opacity-50' />
+                                {data.sensor_name}
+                              </span>
+                            )}
+                            {data.area_name && (
+                              <span className='badge bg-light text-dark border' style={{ fontSize: '10px', fontWeight: 500 }}>
+                                <Icon icon='LocationOn' size='sm' className='me-1 opacity-50' />
+                                {data.area_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </>
           )}
         </ModalBody>

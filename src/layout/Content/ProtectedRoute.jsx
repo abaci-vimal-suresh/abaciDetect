@@ -3,8 +3,7 @@ import PropTypes from 'prop-types'; // Import PropTypes
 import WebsocketProvider from '../../WebsocketWrapper/WebSocket';
 
 const ProtectedRoute = ({ element }) => {
-  // return <WebsocketProvider>{element}</WebsocketProvider>
-  return element;
+  return <WebsocketProvider>{element}</WebsocketProvider>;
 };
 
 /* eslint-disable react/forbid-prop-types */

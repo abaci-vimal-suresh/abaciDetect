@@ -10,6 +10,7 @@ import useTablestyle from '../../../hooks/useTablestyles';
 import useDarkMode from '../../../hooks/useDarkMode';
 import { format } from 'date-fns';
 import Label from '../../../components/bootstrap/forms/Label';
+import Swal from 'sweetalert2';
 import {
     useAlertFilters,
     useCreateAlertFilter,
@@ -20,18 +21,15 @@ import AlertFilterForm from './components/AlertFilterForm';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../../components/bootstrap/Modal';
 import { AlertFilter, ALERT_TYPE_CHOICES, ALERT_SOURCE_CHOICES } from '../../../types/sensor';
 import Button from '../../../components/bootstrap/Button';
-import ConfirmDeleteModal from './modals/ConfirmDeleteModal';
 
 const AlertFilterPage = () => {
     const [isManagementFormOpen, setIsManagementFormOpen] = React.useState(false);
     const [editingFilter, setEditingFilter] = React.useState<Partial<AlertFilter> | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = React.useState(false);
     const [selectedDetailFilter, setSelectedDetailFilter] = React.useState<AlertFilter | null>(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
-    const [filterToDelete, setFilterToDelete] = React.useState<AlertFilter | null>(null);
 
     const { theme, headerStyle, rowStyle } = useTablestyle();
-    const { themeStatus } = useDarkMode();
+    const { themeStatus, darkModeStatus } = useDarkMode();
 
     const { data: alertFilters } = useAlertFilters();
     const createFilterMutation = useCreateAlertFilter();
@@ -82,12 +80,25 @@ const AlertFilterPage = () => {
         setEditingFilter(null);
     };
 
-    const handleDeleteConfirm = () => {
-        if (filterToDelete) {
-            deleteFilterMutation.mutate(filterToDelete.id);
-            setIsDeleteModalOpen(false);
-            setFilterToDelete(null);
-        }
+    const handleDeleteFilter = (rowData: AlertFilter) => {
+        Swal.fire({
+            title: 'Delete Filter?',
+            text: `Are you sure you want to delete "${rowData.name}"? This action cannot be undone.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: 'btn btn-danger mx-2',
+                cancelButton: 'btn btn-secondary mx-2',
+            },
+            background: darkModeStatus ? '#1a1a1a' : '#fff',
+            color: darkModeStatus ? '#fff' : '#000',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteFilterMutation.mutate(rowData.id);
+            }
+        });
     };
 
     return (
@@ -203,7 +214,7 @@ const AlertFilterPage = () => {
                                                 />
                                                 <Button
                                                     color='danger' isLight icon='Delete'
-                                                    onClick={() => { setFilterToDelete(rowData); setIsDeleteModalOpen(true); }}
+                                                    onClick={() => handleDeleteFilter(rowData)}
                                                     title='Delete'
                                                     style={{
                                                         width: '36px', height: '36px', borderRadius: '8px', padding: 0,
@@ -365,16 +376,6 @@ const AlertFilterPage = () => {
                             </ModalFooter>
                         </Modal>
 
-                        {/* ── Delete Confirmation ── */}
-                        <ConfirmDeleteModal
-                            isOpen={isDeleteModalOpen}
-                            setIsOpen={setIsDeleteModalOpen}
-                            itemName={filterToDelete?.name}
-                            title='Confirm Deletion'
-                            onConfirm={handleDeleteConfirm}
-                            isPending={deleteFilterMutation.isPending}
-                            confirmLabel='Delete Rule'
-                        />
                     </div>
                 </div>
             </Page>

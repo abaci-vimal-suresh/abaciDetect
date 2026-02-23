@@ -9,7 +9,11 @@ interface AlertRecord {
     originalId: number;
 }
 
-export function useAlertActions() {
+export interface AlertActionsOptions {
+    onSuccess?: () => void;
+}
+
+export function useAlertActions(options?: AlertActionsOptions) {
     const { darkModeStatus } = useDarkMode();
 
     const updateAlertMutation = useUpdateAlert();
@@ -62,6 +66,7 @@ export function useAlertActions() {
         setIsStatusModalOpen(false);
         setSelectedAlert(null);
         setTargetStatus(null);
+        options?.onSuccess?.();
     };
 
     const handleDeleteAlert = (alert: AlertRecord, e?: React.MouseEvent) => {
@@ -82,6 +87,7 @@ export function useAlertActions() {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 await deleteAlertMutation.mutateAsync(alert.originalId);
+                options?.onSuccess?.();
             }
         });
     };
@@ -91,6 +97,7 @@ export function useAlertActions() {
         await createAlertMutation.mutateAsync(newAlertForm as any);
         setIsCreateModalOpen(false);
         setNewAlertForm({ description: '', area: undefined });
+        options?.onSuccess?.();
     };
 
     return {

@@ -68,7 +68,7 @@ const mapApiAlertToRecord = (alert: any): AlertRecord => ({
     remarks: alert.remarks,
     resolved_at: alert.status === 'resolved' ? alert.updated_at : undefined,
     value_reset_time: alert.value_reset_time ?? undefined,
-    source: alert.source,
+    source: alert.source ?? 'Internal',
     alert_actions: alert.alert_actions ?? [],
     recheck_next_trigger: alert.recheck_next_trigger,
 });
@@ -119,7 +119,11 @@ const AlertHistory = () => {
         handleDeleteAlert,
         isCreateModalOpen, setIsCreateModalOpen,
         newAlertForm, setNewAlertForm, handleCreateAlert,
-    } = useAlertActions();
+    } = useAlertActions({
+        onSuccess: () => {
+            tableRef.current?.onQueryChange();
+        },
+    });
 
     // ── API ──
     const { data: trendData } = useAlertTrends({ period: chartTimeRange });
@@ -205,11 +209,10 @@ const AlertHistory = () => {
             filtering: true,
             searchable: false,
             export: true,
-            // ✅ lookup renders as dropdown in filter row
             lookup: { External: 'External', Internal: 'Internal' },
             render: (row: AlertRecord) => (
                 <Badge color={row.source === 'External' ? 'info' : 'secondary'} isLight style={{ fontSize: '0.7rem' }}>
-                    {row.source.toUpperCase()}
+                    {row.source?.toUpperCase() || 'INTERNAL'}
                 </Badge>
             ),
         },
@@ -222,7 +225,6 @@ const AlertHistory = () => {
             searchable: true,
             export: true,
             filterPlaceholder: 'Filter device...',
-            // ✅ customFilterAndSearch to search both sensor and area
             customFilterAndSearch: (term: string, row: AlertRecord) =>
                 `${row.sensor_name} ${row.area_name}`.toLowerCase().includes(term.toLowerCase()),
             render: (row: AlertRecord) => (
@@ -252,7 +254,6 @@ const AlertHistory = () => {
             filtering: true,
             searchable: false,
             export: true,
-            // ✅ lookup renders as dropdown in filter row
             lookup: {
                 active: 'Active',
                 acknowledged: 'Acknowledged',
@@ -272,7 +273,7 @@ const AlertHistory = () => {
             sorting: false,
             filtering: false,
             searchable: false,
-            export: false,                            // ✅ don't export action buttons
+            export: false,
             render: (row: AlertRecord) => {
                 const isDark = themeStatus === 'dark';
                 return (
@@ -462,20 +463,14 @@ const AlertHistory = () => {
                                             paginationPosition: 'bottom',
                                             showFirstLastPageButtons: true,
                                             emptyRowsWhenPaging: false,
-
-                                            // ── Search ──
                                             search: true,
                                             searchAutoFocus: false,
                                             searchFieldAlignment: 'right',
                                             searchFieldVariant: 'outlined',
                                             searchFieldStyle: { borderRadius: '8px', fontSize: '0.85rem' },
                                             debounceInterval: 400,
-
-                                            // ── Filter ──
                                             filtering: showTableFilters,
                                             filterCellStyle: { paddingTop: '4px', paddingBottom: '4px' },
-
-                                            // ── Sorting ──
                                             sorting: true,
                                             thirdSortClick: false,
 

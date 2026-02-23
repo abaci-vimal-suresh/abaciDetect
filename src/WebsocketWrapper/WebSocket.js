@@ -1,7 +1,10 @@
-// @ts-nocheck
+﻿// @ts-nocheck
+import React from 'react';
 import { useState, useRef, useEffect, useContext, useCallback } from 'react';
 import { io } from "socket.io-client";
 import { useDispatch } from 'react-redux';
+import Cookies from 'js-cookie';
+import { authAxios } from '../axiosInstance';
 
 import AuthContext from '../contexts/authContext';
 import { wsUrl } from '../helpers/baseURL';
@@ -14,6 +17,8 @@ import {
 	addSoundEvent,
 } from '../store/sensorEventsSlice';
 import { queryClient, queryKeys } from '../lib/queryClient';
+import { Store } from 'react-notifications-component';
+import { AlertToastTitle, AlertToastBody } from '../components/alerts/AlertToast';
 
 const isDev = process.env.NODE_ENV === 'development';
 const MOCK_SOCKET = false;
@@ -123,12 +128,24 @@ const WebsocketProvider = ({ children }) => {
 	useEffect(() => {
 		if (!user) return;
 
+		// Read token from cookies (same chain as axiosInstance interceptor)
+		// authAxios.defaults.headers.Authorization may not be set yet at mount time
+		const cookieToken =
+			Cookies.get('access_token') ||
+			Cookies.get('token') ||
+			Cookies.get('access') ||
+			(authAxios.defaults.headers.Authorization || '').replace('Bearer ', '');
+
 		const socket = io(wsUrl, {
 			withCredentials: true,
 			transports: ['websocket', 'polling'],
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionAttempts: 5,
+			// Backend reads ?token= from QUERY_STRING
+			query: {
+				token: cookieToken,
+			},
 		});
 
 		socketRef.current = socket;
@@ -137,10 +154,19 @@ const WebsocketProvider = ({ children }) => {
 			if (isDev) console.log('Connected to HALO Sensor Network:', socket.id);
 			setIsOpen(true);
 
-			socket.emit('subscribe', { room: 'sensor_4' });
+			// 1. Broadcast â€” messages to all users
+			socket.emit('subscribe', { room: 'broadcast' });
 
-			if (userData?.username) {
-				socket.emit('subscribe', { room: userData.username });
+			// 2. User-specific â€” messages only to this user
+			if (userData?.id) {
+				socket.emit('subscribe', { room: `user_${userData.id}` });
+				if (isDev) console.log('Subscribed to user room:', `user_${userData.id}`);
+			}
+
+			// 3. Role-based â€” messages to all admins or all viewers
+			if (userData?.role) {
+				socket.emit('subscribe', { room: `role_${userData.role.toLowerCase()}` });
+				if (isDev) console.log('Subscribed to role room:', `role_${userData.role.toLowerCase()}`);
 			}
 
 			// Ping interval
@@ -150,7 +176,7 @@ const WebsocketProvider = ({ children }) => {
 				}
 			}, 30000);
 
-			toast.success('Connected to HALO Sensor Network');
+			showSuccessNotification('Connected to HALO Sensor Network');
 		});
 
 		socket.on('disconnect', (reason) => {
@@ -164,18 +190,55 @@ const WebsocketProvider = ({ children }) => {
 			// toast.error('Failed to connect to sensor network');
 		});
 
-		// Listen for sensor_4 real-time data
-		socket.on('sensor_4', (message) => {
-			if (isDev) console.log('📡 Real-time sensor_4 data received:', message);
-			handleSensorMessages(message);
+		// Broadcast room â€” new alert created
+		socket.on('alert_created', (message) => {
+			if (isDev) console.log('ï¿½ alert_created received:', message);
+			queryClient.invalidateQueries({ queryKey: ['alerts'] });
+
+			// Dispatch to Redux for global persistence and notification center visibility
+			dispatch(addSensorAlert({
+				...message,
+				id: message.id || Date.now(),
+				title: message.sensor_name || 'New Sensor Alert',
+				message: message.description || 'A new alert has been triggered',
+				sensor_id: message.sensor_name || message.sensor || 'Unknown',
+				timestamp: message.timestamp || message.created_at || new Date().toISOString()
+			}));
+
+			Store.addNotification({
+				title: React.createElement(AlertToastTitle, { alert: message }),
+				message: React.createElement(AlertToastBody, { alert: message }),
+				type: 'warning',
+				insert: 'top',
+				container: 'top-right',
+				animationIn: ['animate__animated', 'animate__slideInRight'],
+				animationOut: ['animate__animated', 'animate__fadeOut'],
+				dismiss: { duration: 6000, pauseOnHover: true, onScreen: true, showIcon: true, waitForAnimation: true },
+			});
 		});
+
+		// User-specific events
+		if (userData?.id) {
+			socket.on(`user_${userData.id}`, (message) => {
+				if (isDev) console.log(`ï¿½ user_${userData.id} event:`, message);
+				showNotification('Personal Alert', message?.message || 'You have a new notification', 'info');
+			});
+		}
+
+		// Role-specific events
+		if (userData?.role) {
+			socket.on(`role_${userData.role.toLowerCase()}`, (message) => {
+				if (isDev) console.log(`ðŸ”‘ role_${userData.role.toLowerCase()} event:`, message);
+				showNotification('Role Update', message?.message || 'New role-based notification', 'info');
+			});
+		}
 
 
 
 		// MOCK DATA GENERATOR
 		let mockInterval;
 		if (MOCK_SOCKET) {
-			console.log('⚠️ STARTING MOCK SOCKET DATA GENERATOR');
+			console.log('âš ï¸ STARTING MOCK SOCKET DATA GENERATOR');
 			setIsOpen(true); // Force connection state
 
 			mockInterval = setInterval(() => {
@@ -220,4 +283,5 @@ const WebsocketProvider = ({ children }) => {
 };
 
 export default WebsocketProvider;
+
 
