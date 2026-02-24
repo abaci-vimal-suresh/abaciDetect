@@ -22,7 +22,7 @@ const USE_MOCK_AUTH = USE_MOCK_DATA;
 // ============================================
 
 export interface LoginCredentials {
-    username: string;
+    email: string;
     password: string;
 }
 
@@ -108,8 +108,10 @@ export const autoLoginMock = () => {
 // REACT QUERY HOOKS
 // ============================================
 
-export interface RegisterCredentials extends LoginCredentials {
+export interface RegisterCredentials {
+    username: string;
     email: string;
+    password: string;
 }
 
 import { setMockHasUsers } from './system.api';

@@ -11,15 +11,15 @@ function Moments($date, $type = '') {
 	}
 	const localDate = parsedDate.clone().utc().local();
 	switch ($type) {
-		case 'datetime': // Format with date and 12-hour time
-			return parsedDate.format('YYYY-MM-DD hh:mm A');
-		case 'datetimeseconds': // Format with date and 12-hour time including seconds
-			return parsedDate.format('YYYY-MM-DD hh:mm:ss A');
-		case 'timeseconds': // Format as 24-hour time
-			return parsedDate.format('hh:mm:ss A');
-		case 'time': // Format as 24-hour time
-			return parsedDate.format('hh:mm A');
-		case 'relativetime': // Format with date and 12-hour time
+		case 'datetime': // Format with date and 12-hour time (local timezone)
+			return localDate.format('YYYY-MM-DD hh:mm A');
+		case 'datetimeseconds': // Format with date and 12-hour time including seconds (local timezone)
+			return localDate.format('YYYY-MM-DD hh:mm:ss A');
+		case 'timeseconds': // Format as 12-hour time with seconds (local timezone)
+			return localDate.format('hh:mm:ss A');
+		case 'time': // Format in local browser timezone
+			return localDate.format('hh:mm A');
+		case 'relativetime': // Relative time from now
 			return localDate.fromNow();
 		default: // Default to date-only format
 			return parsedDate.format('YYYY-MM-DD');

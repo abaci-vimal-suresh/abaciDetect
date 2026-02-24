@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
@@ -19,6 +20,8 @@ import AlertDetailModal from './modals/AlertDetailModal';
 import AlertStatusModal from './modals/AlertStatusModal';
 import AlertCreateModal from './modals/AlertCreateModal';
 import { useAlertActions } from './hooks/useAlertActions';
+import { queryClient, queryKeys } from '../../../lib/queryClient';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AlertRecord {
@@ -53,16 +56,20 @@ const mapApiAlertToRecord = (alert: any): AlertRecord => ({
     area_name:
         alert.area_name ??
         (typeof alert.area === 'object' ? alert.area?.name : `Area-${alert.area}`),
-    alert_type: alert.type,
+    alert_type: alert.type ?? 'Unknown',
     severity:
-        alert.type.includes('smoke') ||
-            alert.type.includes('fire') ||
+        alert.type?.includes('smoke') ||
+            alert.type?.includes('fire') ||
             alert.type === 'sensor_offline' ||
             alert.status === 'critical'
             ? 'critical'
-            : alert.status === 'warning' || alert.type.includes('high')
+            : alert.status === 'warning' || alert.type?.includes('high')
                 ? 'warning'
-                : 'info',
+                : alert.severity === 'ERROR' || alert.severity === 'CRITICAL'
+                    ? 'critical'
+                    : alert.severity === 'WARNING'
+                        ? 'warning'
+                        : 'info',
     value: alert.description,
     status: alert.status,
     remarks: alert.remarks,
@@ -95,10 +102,40 @@ const AlertHistory = () => {
     const { themeStatus } = useDarkMode();
     const { theme, headerStyle, rowStyle } = useTablestyle();
     const tableRef = useRef<any>();
+    const location = useLocation();
+
+    // ── Highlight from notification click ──
+    const [highlightedId, setHighlightedId] = useState<number | null>(
+        (location.state as any)?.highlightAlertId ?? null
+    );
+    // Trigger highlight timeout once on mount (if we arrived via notification click)
+    useEffect(() => {
+        if (!highlightedId) return;
+        if (tableRef.current) tableRef.current.onQueryChange();
+        const t = setTimeout(() => setHighlightedId(null), 4000);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Inject highlight keyframe CSS once into the document
+    useEffect(() => {
+        const styleId = 'alert-highlight-style';
+        if (document.getElementById(styleId)) return;
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            @keyframes alertHighlightPulse {
+                0%   { background-color: rgba(245,158,11,0.22); }
+                50%  { background-color: rgba(245,158,11,0.08); }
+                100% { background-color: rgba(245,158,11,0.22); }
+            }
+        `;
+        document.head.appendChild(style);
+    }, []);
 
     // ── Filter & Pagination State ──
-    const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
-    const severityFilterRef = useRef<SeverityFilter>('all');
+    const [severityFilter, setSeverityFilter] = useState<AlertStatus | 'all'>('all');
+    const severityFilterRef = useRef<AlertStatus | 'all'>('all');
     const [chartTimeRange, setChartTimeRange] = useState<ChartTimeRange>('7d');
     const [showTableFilters, setShowTableFilters] = useState(false);
     const [pageSize, setPageSize] = useState(10);
@@ -127,33 +164,41 @@ const AlertHistory = () => {
 
     // ── API ──
     const { data: trendData } = useAlertTrends({ period: chartTimeRange });
-    // useAlerts here is ONLY for the stat cards summary (no pagination needed)
-    const { data: alertsData } = useAlerts({
-        severity: severityFilter !== 'all' ? severityFilter : undefined,
-        limit: 1,   // minimal payload – we only need the counts
-        offset: 0,
-    });
+
+    // Multi-query strategy to get counts for different statuses
+    const { data: activeAlerts } = useAlerts({ status: 'active', limit: 1, offset: 0 });
+    const { data: acknowledgedAlerts } = useAlerts({ status: 'acknowledged', limit: 1, offset: 0 });
+    const { data: resolvedAlerts } = useAlerts({ status: 'resolved', limit: 1, offset: 0 });
+    const { data: allAlertsData } = useAlerts({ limit: 1, offset: 0 });
+
+    // Combined data for triggering table refreshes (WebSocket sync)
+    // We use allAlertsData as the primary trigger for new alerts
+    useEffect(() => {
+        if (allAlertsData && tableRef.current) {
+            tableRef.current.onQueryChange();
+        }
+    }, [allAlertsData]);
+
     const { data: areas } = useAreas();
 
-    const totalCount = alertsData?.count ?? 0;
+    const totalCount = allAlertsData?.count ?? 0;
 
     // Keep severityFilterRef in sync so the remote data callback always reads latest value
     useEffect(() => {
         severityFilterRef.current = severityFilter;
-        // Re-trigger MaterialTable fetch when severity changes
         if (tableRef.current) {
             tableRef.current.onQueryChange();
         }
     }, [severityFilter]);
 
     const stats = useMemo(() => ({
-        total: totalCount,
-        critical: alertsData?.critical_count ?? 0,
-        warning: alertsData?.warning_count ?? 0,
-        resolved: alertsData?.resolved_count ?? 0,
-    }), [alertsData, totalCount]);
+        total: allAlertsData?.count ?? 0,
+        active: activeAlerts?.count ?? 0,
+        acknowledged: acknowledgedAlerts?.count ?? 0,
+        resolved: resolvedAlerts?.count ?? 0,
+    }), [allAlertsData, activeAlerts, acknowledgedAlerts, resolvedAlerts]);
 
-    const handleSeverityFilterClick = (clicked: SeverityFilter) => {
+    const handleSeverityFilterClick = (clicked: AlertStatus | 'all') => {
         setSeverityFilter(prev => (prev === clicked ? 'all' : clicked));
     };
 
@@ -336,10 +381,10 @@ const AlertHistory = () => {
                 <div className='row'>
                     {/* ── Stat Cards ── */}
                     {[
-                        { label: 'Critical Alerts', value: stats.critical, icon: 'ReportProblem', color: 'danger', filterKey: 'critical' as SeverityFilter },
-                        { label: 'Warnings', value: stats.warning, icon: 'Warning', color: 'warning', filterKey: 'warning' as SeverityFilter },
-                        { label: 'Cases Resolved', value: stats.resolved, icon: 'CheckCircle', color: 'success', filterKey: null },
-                        { label: 'Total Records', value: stats.total, icon: 'SignalCellularAlt', color: 'primary', filterKey: 'all' as SeverityFilter },
+                        { label: 'Active Alerts', value: stats.active, icon: 'ReportProblem', color: 'danger', filterKey: 'active' as AlertStatus },
+                        { label: 'Acknowledged', value: stats.acknowledged, icon: 'CheckCircle', color: 'info', filterKey: 'acknowledged' as AlertStatus },
+                        { label: 'Cases Resolved', value: stats.resolved, icon: 'TaskAlt', color: 'success', filterKey: 'resolved' as AlertStatus },
+                        { label: 'Total Records', value: stats.total, icon: 'SignalCellularAlt', color: 'primary', filterKey: 'all' as any },
                     ].map(({ label, value, icon, color, filterKey }) => (
                         <div key={label} className='col-lg-3 col-md-6 mb-4'>
                             <Card
@@ -419,14 +464,21 @@ const AlertHistory = () => {
                                                     const dir = query.orderDirection === 'desc' ? '-' : '';
                                                     ordering = `${dir}${(query.orderBy as any).field}`;
                                                 }
-                                                fetchAlertsPaginated({
+
+                                                const filters = {
                                                     limit: query.pageSize,
                                                     offset: query.page * query.pageSize,
-                                                    severity: severityFilterRef.current !== 'all' ? severityFilterRef.current : undefined,
+                                                    status: severityFilterRef.current !== 'all' ? severityFilterRef.current : undefined,
                                                     search: query.search || undefined,
                                                     ordering,
+                                                };
+
+                                                // Fetch through queryClient to use cache
+                                                queryClient.fetchQuery({
+                                                    queryKey: queryKeys.alerts.list(filters),
+                                                    queryFn: () => fetchAlertsPaginated(filters)
                                                 })
-                                                    .then((response) => {
+                                                    .then((response: any) => {
                                                         resolve({
                                                             data: (response.results ?? []).map(mapApiAlertToRecord),
                                                             page: query.page,
@@ -443,17 +495,29 @@ const AlertHistory = () => {
 
                                         options={{
                                             headerStyle: { ...headerStyle(), fontWeight: 'bold' },
-                                            rowStyle: (rowData: AlertRecord, index: number) => ({
-                                                ...rowStyle(),
-                                                backgroundColor: index % 2 === 0
-                                                    ? undefined
-                                                    : themeStatus === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                                                borderLeft: rowData.severity === 'critical'
-                                                    ? '3px solid #dc3545'
-                                                    : rowData.severity === 'warning'
-                                                        ? '3px solid #fd7e14'
-                                                        : '3px solid transparent',
-                                            }),
+                                            rowStyle: (rowData: AlertRecord, index: number) => {
+                                                const isHighlighted = highlightedId !== null && rowData.originalId === highlightedId;
+                                                return {
+                                                    ...rowStyle(),
+                                                    backgroundColor: isHighlighted
+                                                        ? 'rgba(245, 158, 11, 0.12)'
+                                                        : index % 2 === 0
+                                                            ? undefined
+                                                            : themeStatus === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                                                    borderLeft: isHighlighted
+                                                        ? '4px solid #f59e0b'
+                                                        : rowData.severity === 'critical'
+                                                            ? '3px solid #dc3545'
+                                                            : rowData.severity === 'warning'
+                                                                ? '3px solid #fd7e14'
+                                                                : '3px solid transparent',
+                                                    ...(isHighlighted ? {
+                                                        animation: 'alertHighlightPulse 1.2s ease-in-out 3',
+                                                        outline: '1.5px solid #f59e0b44',
+                                                        outlineOffset: '-1px',
+                                                    } : {}),
+                                                };
+                                            },
 
                                             paging: true,
                                             pageSize,

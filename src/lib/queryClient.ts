@@ -99,4 +99,13 @@ export const queryKeys = {
         latest: (id: string) => [...queryKeys.sensors.details(), id, 'latest'] as const,
         configuration: (id: string) => [...queryKeys.sensors.details(), id, 'configuration'] as const,
     },
+    // Alerts
+    alerts: {
+        all: ['alerts'] as const,
+        lists: () => [...queryKeys.alerts.all, 'list'] as const,
+        list: (filters: any) => [...queryKeys.alerts.lists(), { filters }] as const,
+        details: () => [...queryKeys.alerts.all, 'detail'] as const,
+        detail: (id: string | number) => [...queryKeys.alerts.details(), String(id)] as const,
+        trends: (filters: any) => [...queryKeys.alerts.all, 'trends', { filters }] as const,
+    },
 };

@@ -164,12 +164,10 @@ const Dashboard = () => {
                 </summary>
 
                 <section className='row g-4'>
-                    {/* ── Live Environmental Snapshot Chart (replaces dummy trend chart) ── */}
                     <div className='col-lg-8'>
                         <MetricSnapshotChart />
                     </div>
 
-                    {/* ── Area Overview ── */}
                     <div className='col-lg-4'>
                         <Card stretch className='shadow-sm'>
                             <CardHeader borderSize={1}>

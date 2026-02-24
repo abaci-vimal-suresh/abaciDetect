@@ -7,7 +7,6 @@ import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
 import Card, { CardBody } from '../../../components/bootstrap/Card';
 import Button from '../../../components/bootstrap/Button';
-import Icon from '../../../components/icon/Icon';
 import Badge from '../../../components/bootstrap/Badge';
 import Spinner from '../../../components/bootstrap/Spinner';
 import Modal, { ModalHeader, ModalBody, ModalTitle } from '../../../components/bootstrap/Modal';
@@ -21,6 +20,7 @@ import { getSensorStatusTheme, getSensorStatusLabel, getSensorOnlineLabel } from
 import { formatLastHeartbeat } from '../utils/format.utils';
 import DeviceRegistration from './components/DeviceRegistration';
 import { useSensorActions } from './hooks/useSensorActions';
+import Icon from '../../../components/icon/Icon';
 
 const SensorList = () => {
     const { fullScreenStatus, darkModeStatus } = useContext(ThemeContext);
@@ -190,159 +190,75 @@ const SensorList = () => {
             field: 'actions',
             sorting: false,
             filtering: false,
-            render: (rowData: any) => (
-                <div className='d-flex gap-2 justify-content-start align-items-center'>
-                    <button
-                        className='btn-action'
-                        onClick={() => handleTriggerSensor(rowData)}
-                        disabled={!rowData.ip_address || triggeringId === rowData.id}
-                        title='Trigger Sensor'
-                        style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            border: darkModeStatus
-                                ? 'none'
-                                : '1px solid rgba(255, 207, 82, 0.3)',
-                            background: darkModeStatus ? 'rgba(255, 207, 82, 0.15)' : 'rgba(255, 207, 82, 0.12)',
-                            color: darkModeStatus ? '#ffcf52' : '#d4a521',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: rowData.ip_address ? 'pointer' : 'not-allowed',
-                            transition: 'all 0.2s ease',
-                            opacity: !rowData.ip_address ? 0.5 : 1
-                        }}
-                        onMouseEnter={(e) => {
-                            if (rowData.ip_address) {
-                                e.currentTarget.style.background = darkModeStatus ? 'rgba(255, 207, 82, 0.25)' : 'rgba(255, 207, 82, 0.2)';
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = darkModeStatus
-                                    ? '0 4px 8px rgba(0, 0, 0, 0.3)'
-                                    : '0 4px 8px rgba(255, 207, 82, 0.2)';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(255, 207, 82, 0.15)' : 'rgba(255, 207, 82, 0.12)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                        }}
-                    >
-                        {triggeringId === rowData.id ? (
-                            <Spinner isSmall />
-                        ) : (
-                            <Icon icon='Bolt' size='lg' />
-                        )}
-                    </button>
+            render: (rowData: any) => {
 
-                    <Button
-                        color='info'
-                        isLight
-                        icon='Settings'
-                        tag='a'
-                        to={`/halo/sensors/settings/${rowData.id}`}
-                        title='Settings'
-                        style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            padding: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: darkModeStatus ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)',
-                            border: darkModeStatus
-                                ? 'none'
-                                : '1px solid rgba(77, 105, 250, 0.3)',
-                            color: darkModeStatus ? '#4d69fa' : '#3650d4',
-                            transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e: any) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(77, 105, 250, 0.25)' : 'rgba(77, 105, 250, 0.2)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = darkModeStatus
-                                ? '0 4px 8px rgba(0, 0, 0, 0.3)'
-                                : '0 4px 8px rgba(77, 105, 250, 0.2)';
-                        }}
-                        onMouseLeave={(e: any) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                        }}
-                    />
-
-                    <Button
-                        color='primary'
-                        isLight
-                        icon='Analytics'
-                        tag='a'
-                        to={`/halo/sensors/detail/${rowData.id}`}
-                        title='Details'
-                        style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            padding: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: darkModeStatus ? 'rgba(122, 58, 111, 0.15)' : 'rgba(122, 58, 111, 0.12)',
-                            border: darkModeStatus
-                                ? 'none'
-                                : '1px solid rgba(122, 58, 111, 0.3)',
-                            color: darkModeStatus ? '#a87ca1' : '#7a3a6f',
-                            transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e: any) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(122, 58, 111, 0.25)' : 'rgba(122, 58, 111, 0.2)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = darkModeStatus
-                                ? '0 4px 8px rgba(0, 0, 0, 0.3)'
-                                : '0 4px 8px rgba(122, 58, 111, 0.2)';
-                        }}
-                        onMouseLeave={(e: any) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(122, 58, 111, 0.15)' : 'rgba(122, 58, 111, 0.12)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                        }}
-                    />
-
+                const isInactive = !rowData.is_active;
+                const deleteButton = (
                     <Button
                         color='danger'
                         isLight
                         icon='Delete'
                         onClick={(e: any) => handleDeleteSensor(rowData, e)}
                         title='Delete Sensor'
-                        style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            padding: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: darkModeStatus ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)',
-                            border: darkModeStatus
-                                ? 'none'
-                                : '1px solid rgba(239, 79, 79, 0.3)',
-                            color: darkModeStatus ? '#ef4f4f' : '#cf3b3b',
-                            transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e: any) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(239, 79, 79, 0.25)' : 'rgba(239, 79, 79, 0.2)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = darkModeStatus
-                                ? '0 4px 8px rgba(0, 0, 0, 0.3)'
-                                : '0 4px 8px rgba(239, 79, 79, 0.2)';
-                        }}
-                        onMouseLeave={(e: any) => {
-                            e.currentTarget.style.background = darkModeStatus ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                        }}
                     />
-                </div>
-            )
+                );
+
+                if (isInactive) {
+                    return (
+                        <div className='d-flex gap-2 align-items-center'>
+                            <Button
+                                color='primary'
+                                isLight
+                                icon='PowerSettingsNew'
+                                tag='a'
+                                to={`/halo/sensors/settings/${rowData.id}`}
+                                title='Go to Device Settings to activate this sensor'
+                            >
+                                Activate
+                            </Button>
+
+                            {deleteButton}
+                        </div>
+                    );
+                }
+                return (
+                    <div className='d-flex gap-2 justify-content-start align-items-center'>
+                        {/* Trigger */}
+                        <Button
+                            color='secondary'
+                            isLight
+                            icon={triggeringId === rowData.id ? undefined : 'Bolt'}
+                            onClick={() => handleTriggerSensor(rowData)}
+                            isDisable={!rowData.ip_address || triggeringId === rowData.id}
+                            title='Trigger Sensor'
+                        >
+                            {triggeringId === rowData.id && <Spinner isSmall inButton />}
+                        </Button>
+
+                        {/* Settings */}
+                        <Button
+                            color='info'
+                            isLight
+                            icon='Settings'
+                            tag='a'
+                            to={`/halo/sensors/settings/${rowData.id}`}
+                            title='Settings'
+                        />
+
+                        {/* Details */}
+                        <Button
+                            color='primary'
+                            isLight
+                            icon='Analytics'
+                            tag='a'
+                            to={`/halo/sensors/detail/${rowData.id}`}
+                            title='Details'
+                        />
+
+                        {deleteButton}
+                    </div>
+                );
+            }
         }
     ];
 

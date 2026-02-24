@@ -23,8 +23,12 @@ const sensorEventsSlice = createSlice({
         },
 
         addSensorAlert: (state, action) => {
-            state.alerts.unshift(action.payload);
-            state.unreadCount += 1;
+            const newAlert = {
+                ...action.payload,
+                isRead: false, // Default to unread
+            };
+            state.alerts.unshift(newAlert);
+            state.unreadCount = state.alerts.filter(a => !a.isRead).length;
             // Keep only last 50 alerts
             if (state.alerts.length > 50) {
                 state.alerts = state.alerts.slice(0, 50);
@@ -56,7 +60,19 @@ const sensorEventsSlice = createSlice({
         },
 
         markEventsAsRead: (state) => {
+            state.alerts.forEach(alert => {
+                alert.isRead = true;
+            });
             state.unreadCount = 0;
+        },
+
+        markAlertAsRead: (state, action) => {
+            const alertId = action.payload;
+            const alert = state.alerts.find(a => a.id === alertId);
+            if (alert) {
+                alert.isRead = true;
+            }
+            state.unreadCount = state.alerts.filter(a => !a.isRead).length;
         },
 
         clearAllEvents: (state) => {
@@ -64,6 +80,11 @@ const sensorEventsSlice = createSlice({
             state.alerts = [];
             state.soundEvents = [];
             state.unreadCount = 0;
+        },
+
+        clearReadAlerts: (state) => {
+            state.alerts = state.alerts.filter(alert => !alert.isRead);
+            state.unreadCount = state.alerts.filter(a => !a.isRead).length;
         },
 
         clearOldEvents: (state, action) => {
@@ -87,7 +108,9 @@ export const {
     updateAirQuality,
     addSoundEvent,
     markEventsAsRead,
+    markAlertAsRead,
     clearAllEvents,
+    clearReadAlerts,
     clearOldEvents,
 } = sensorEventsSlice.actions;
 
@@ -97,7 +120,10 @@ export default sensorEventsSlice.reducer;
 // Selectors
 export const selectAllEvents = (state) => state.sensorEventsSlice?.events || [];
 export const selectAllAlerts = (state) => state.sensorEventsSlice?.alerts || [];
-export const selectUnreadCount = (state) => state.sensorEventsSlice?.unreadCount || 0;
+export const selectUnreadCount = (state) => {
+    const alerts = state.sensorEventsSlice?.alerts || [];
+    return alerts.filter(a => !a.isRead).length;
+};
 export const selectSensorStatus = (sensorId) => (state) =>
     state.sensorEventsSlice?.sensorStatuses[sensorId];
 export const selectAirQuality = (sensorId) => (state) =>

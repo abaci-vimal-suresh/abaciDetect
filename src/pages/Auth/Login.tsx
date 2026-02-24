@@ -64,7 +64,7 @@ const Login = () => {
     const handleSignin = (values: any) => {
         loginMutation.mutate(
             {
-                username: values.loginUsername,
+                email: values.loginUsername,
                 password: values.loginPassword,
             },
             {

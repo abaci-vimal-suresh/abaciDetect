@@ -11,10 +11,7 @@ interface MockUser {
   is_active: boolean;
 }
 
-interface LoginCredentials {
-  username: string;
-  password: string;
-}
+import { LoginCredentials } from './api/auth.api';
 
 interface LoginResponse {
   user: MockUser;
@@ -97,8 +94,8 @@ export const mockAuthService = {
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     await delay(800); // Simulate network delay
 
-    const { username, password } = credentials;
-    const user = MOCK_USERS[username];
+    const { username_or_email, password } = credentials;
+    const user = MOCK_USERS[username_or_email];
 
     // Validate credentials
     if (!user) {
@@ -131,7 +128,7 @@ export const mockAuthService = {
     }
 
     // Set session
-    sessionManager.setSession(username);
+    sessionManager.setSession(username_or_email);
 
     console.log('Mock Login Success:', user.username);
 

@@ -1289,7 +1289,7 @@ export const useDeleteUserGroup = () => {
 // Get all alerts with optional filters
 export const useAlerts = (filters?: AlertFilters) => {
     return useQuery({
-        queryKey: ['alerts', filters],
+        queryKey: queryKeys.alerts.list(filters || {}),
         queryFn: async () => {
             if (USE_MOCK_DATA) {
                 let filtered = [...MOCK_ALERTS];
@@ -1333,6 +1333,7 @@ export interface AlertPageParams {
     offset: number;
     search?: string;
     severity?: string;
+    status?: string;
     ordering?: string;
 }
 
@@ -1350,6 +1351,7 @@ export const fetchAlertsPaginated = async (params: AlertPageParams): Promise<Ale
     urlParams.append('limit', params.limit.toString());
     urlParams.append('offset', params.offset.toString());
     if (params.severity) urlParams.append('severity', params.severity);
+    if (params.status) urlParams.append('status', params.status);
     if (params.search) urlParams.append('search', params.search);
     if (params.ordering) urlParams.append('ordering', params.ordering);
 
