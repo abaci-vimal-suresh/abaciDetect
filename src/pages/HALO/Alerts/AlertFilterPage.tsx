@@ -186,47 +186,56 @@ const AlertFilterPage = () => {
                                                     color='primary' isLight icon='Visibility'
                                                     onClick={() => { setSelectedDetailFilter(rowData); setIsDetailModalOpen(true); }}
                                                     title='View Details'
+                                                    size='sm'
                                                     style={{
-                                                        width: '36px', height: '36px', borderRadius: '8px', padding: 0,
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        borderRadius: '8px',
                                                         background: themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)',
                                                         border: themeStatus === 'dark' ? 'none' : '1px solid rgba(77, 105, 250, 0.3)',
                                                         color: themeStatus === 'dark' ? '#4d69fa' : '#3650d4',
-                                                        transition: 'all 0.2s ease'
+                                                        transition: 'all 0.2s ease',
+                                                        padding: '4px 12px'
                                                     }}
                                                     onMouseEnter={(e: any) => { e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.25)' : 'rgba(77, 105, 250, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                                                     onMouseLeave={(e: any) => { e.currentTarget.style.background = themeStatus === 'dark' ? 'rgba(77, 105, 250, 0.15)' : 'rgba(77, 105, 250, 0.12)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                                                />
+                                                >
+                                                    View
+                                                </Button>
                                                 <Button
                                                     color='info' isLight icon='Edit'
                                                     onClick={() => handleOpenEdit(rowData)}
                                                     title='Edit'
+                                                    size='sm'
                                                     style={{
-                                                        width: '36px', height: '36px', borderRadius: '8px', padding: 0,
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        borderRadius: '8px',
                                                         background: themeStatus === 'dark' ? 'rgba(13, 202, 240, 0.15)' : 'rgba(13, 202, 240, 0.12)',
                                                         border: themeStatus === 'dark' ? 'none' : '1px solid rgba(13, 202, 240, 0.3)',
                                                         color: themeStatus === 'dark' ? '#0dcaf0' : '#0aa2c0',
-                                                        transition: 'all 0.2s ease'
+                                                        transition: 'all 0.2s ease',
+                                                        padding: '4px 12px'
                                                     }}
                                                     onMouseEnter={(e: any) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
                                                     onMouseLeave={(e: any) => { e.currentTarget.style.transform = 'translateY(0)'; }}
-                                                />
+                                                >
+                                                    Edit
+                                                </Button>
                                                 <Button
                                                     color='danger' isLight icon='Delete'
                                                     onClick={() => handleDeleteFilter(rowData)}
                                                     title='Delete'
+                                                    size='sm'
                                                     style={{
-                                                        width: '36px', height: '36px', borderRadius: '8px', padding: 0,
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        borderRadius: '8px',
                                                         background: themeStatus === 'dark' ? 'rgba(239, 79, 79, 0.15)' : 'rgba(239, 79, 79, 0.12)',
                                                         border: themeStatus === 'dark' ? 'none' : '1px solid rgba(239, 79, 79, 0.3)',
                                                         color: themeStatus === 'dark' ? '#ef4f4f' : '#cf3b3b',
-                                                        transition: 'all 0.2s ease'
+                                                        transition: 'all 0.2s ease',
+                                                        padding: '4px 12px'
                                                     }}
                                                     onMouseEnter={(e: any) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
                                                     onMouseLeave={(e: any) => { e.currentTarget.style.transform = 'translateY(0)'; }}
-                                                />
+                                                >
+                                                    Delete
+                                                </Button>
                                             </div>
                                         )
                                     }

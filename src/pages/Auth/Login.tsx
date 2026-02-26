@@ -147,12 +147,12 @@ const Login = () => {
                         }}>
                         <div className='col-12'>
                             <div className="mb-4">
-                                <label className="form-label fw-bold small ms-2 opacity-75">Username</label>
+                                <label className="form-label fw-bold small ms-2 opacity-75">Email</label>
                                 <input
                                     type="text"
                                     className={classNames('form-control', { 'is-invalid': formik.touched.loginUsername && formik.errors.loginUsername })}
                                     name="loginUsername"
-                                    placeholder="Username"
+                                    placeholder="Email"
                                     onChange={formik.handleChange}
                                     onBlur={formik.handleBlur}
                                     value={formik.values.loginUsername}

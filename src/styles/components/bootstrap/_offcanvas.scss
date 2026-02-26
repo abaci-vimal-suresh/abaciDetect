@@ -47,6 +47,7 @@
 }
 
 .offcanvas-right-panel {
+
 	// z-index: round($zindex-modal-backdrop - 1);
 	@include dark-mode {
 		background-color: $dark-offcanvas-right-panel-bg-color;

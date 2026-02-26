@@ -58,6 +58,18 @@ export const haloMenu = {
                 text: 'Alert Filter',
                 path: '/halo/alerts/filter',
                 icon: 'FilterAlt',
+            },
+            flow: {
+                id: 'alerts-flow',
+                text: 'Work Flow',
+                path: '/halo/alerts/flow',
+                icon: 'AccountTree',
+            },
+            filtergroups: {
+                id: 'alerts-filter-groups',
+                text: 'Filter Groups',
+                path: '/halo/alerts/groups',
+                icon: 'ViewList',
             }
         },
     },

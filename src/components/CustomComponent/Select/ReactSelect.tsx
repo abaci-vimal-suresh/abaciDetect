@@ -9,7 +9,7 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
         menu: (base) => ({
             ...base,
             maxHeight: "150px",
-            zIndex: 9999,
+            zIndex: 100001,
         }),
         control: (provided, state) => {
             let borderColor = "#F8F9FA"; // default
@@ -42,11 +42,11 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
             ...base,
             maxHeight: "150px",
             backgroundColor: darkModeStatus ? "#212529" : "white",
-            zIndex: 9999
+            zIndex: 100001
         }),
         menuPortal: (base) => ({
             ...base,
-            zIndex: 9999,
+            zIndex: 100001,
         }),
         singleValue: (provided) => ({
             ...provided,
@@ -54,7 +54,7 @@ const ReactSelectWithState = ({ options, value, setValue, isClearable = false, p
         }),
         option: (provided, state) => ({
             ...provided,
-            zIndex: 9999,
+            zIndex: 100001,
             backgroundColor: state.isFocused ? (darkModeStatus ? "#35373C" : "#EFF2F7") : '',
             color: state.isFocused ? (darkModeStatus ? "white" : "black") : (darkModeStatus ? "white" : "inherit"),
             ":active": {

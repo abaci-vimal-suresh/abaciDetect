@@ -72,7 +72,7 @@ const Panel: React.FC<PanelProps> = ({ anchorRef, onClose, children, darkModeSta
 
     const panelStyle: React.CSSProperties = {
         position: 'fixed',
-        zIndex: 9999,
+        zIndex: 100001,
         left: rect.left,
         width: rect.width,
         backgroundColor: darkModeStatus ? '#212529' : '#ffffff',

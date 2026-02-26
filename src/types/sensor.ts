@@ -881,6 +881,19 @@ export interface AlertFilter {
     is_direct_device_alert?: boolean;
     is_custom_alert_filter?: boolean;
     is_active: boolean;
+    group_id?: number; // ✅ NEW: Link filter to a group
+}
+
+export interface AlertFilterGroup {
+    id: number;
+    name: string;
+    description: string;
+    alert_filters: AlertFilter[]; // Nested objects (read)
+    alert_filter_ids?: number[]; // IDs (write)
+    created_by_username?: string;
+    updated_by_username?: string;
+    created_at: string;
+    updated_at: string;
 }
 
 export const ALERT_TYPE_CHOICES = [

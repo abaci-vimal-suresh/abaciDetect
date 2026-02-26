@@ -1,0 +1,199 @@
+.alert-flow-container {
+    width: 100%;
+    height: calc(100vh - 180px);
+    background: #f8f9fa;
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    /* Keep hidden for internal flow clipping, but OffCanvas is now outside */
+}
+
+[data-theme='dark'] .alert-flow-container {
+    background: #121212;
+}
+
+.react-flow__pane {
+    background-color: var(--bs-body-bg);
+}
+
+.react-flow__edge-path {
+    stroke: var(--bs-secondary);
+    stroke-width: 2;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+    stroke-dasharray: 5;
+    animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+    from {
+        stroke-dashoffset: 10;
+    }
+
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.react-flow__controls {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.react-flow__background {
+    background-color: transparent;
+}
+
+/* --- Selection Tray Styling --- */
+.selection-tray-container {
+    background: rgba(var(--bs-light-rgb), 0.05);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(var(--bs-primary-rgb), 0.1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+    position: relative;
+}
+
+[data-theme='dark'] .selection-tray-container {
+    background: rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tray-header-label {
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    font-size: 0.65rem;
+    color: var(--bs-secondary);
+    opacity: 0.6;
+    text-transform: uppercase;
+}
+
+.tray-scroll-container {
+    display: flex;
+    gap: 1.25rem;
+    padding: 0.5rem 0.5rem 1.25rem 0.5rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+}
+
+/* Custom Sleek Scrollbar */
+.tray-scroll-container::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tray-scroll-container::-webkit-scrollbar-track {
+    background: rgba(var(--bs-dark-rgb), 0.02);
+    border-radius: 10px;
+}
+
+.tray-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    border-radius: 10px;
+}
+
+.tray-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--bs-primary-rgb), 0.3);
+}
+
+/* Tray Item Card */
+.tray-item-card {
+    flex: 0 0 auto;
+    width: 250px;
+    background: var(--bs-body-bg);
+    border: 1px solid rgba(var(--bs-border-color-rgb), 0.4);
+    border-radius: 14px;
+    padding: 1.15rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.tray-item-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+/* Card Visual Feedback */
+.tray-item-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter Card Variant */
+.tray-item-card.filter-card:hover {
+    border-color: rgba(var(--bs-info-rgb), 0.4);
+}
+
+.tray-item-card.filter-card:hover::after {
+    background: var(--bs-info);
+}
+
+.tray-item-card.filter-card:hover .card-icon-wrapper {
+    background: rgba(var(--bs-info-rgb), 0.12);
+}
+
+/* Action Card Variant */
+.tray-item-card.action-card:hover {
+    border-color: rgba(var(--bs-danger-rgb), 0.4);
+}
+
+.tray-item-card.action-card:hover::after {
+    background: var(--bs-danger);
+}
+
+.tray-item-card.action-card:hover .card-icon-wrapper {
+    background: rgba(var(--bs-danger-rgb), 0.12);
+}
+
+.card-icon-wrapper {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(var(--bs-light-rgb), 0.1);
+    margin-right: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.card-title-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+}
+
+.card-desc-text {
+    font-size: 0.65rem;
+    opacity: 0.5;
+    line-height: 1.3;
+}
+
+/* Entry Animation */
+@keyframes trayPopIn {
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.selection-tray-active {
+    animation: trayPopIn 0.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}

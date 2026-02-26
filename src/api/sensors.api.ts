@@ -11,7 +11,7 @@ import {
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
     AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
     SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse, N8NAlertPayload,
-    Wall, SoundFile, PaginatedResponse, AlertResponse
+    Wall, SoundFile, PaginatedResponse, AlertResponse, AlertFilterGroup
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 
@@ -1985,5 +1985,117 @@ export const useDeleteWall = () => {
             queryClient.invalidateQueries({ queryKey: ['areas'] });
             queryClient.invalidateQueries({ queryKey: ['sensors'] });
         },
+    });
+};
+
+// ============================================
+// ALERT FILTER GROUPS
+// ============================================
+
+export const useAlertFilterGroups = () => {
+    return useQuery({
+        queryKey: ['alert-filter-groups'],
+        queryFn: async () => {
+            const { data } = await axiosInstance.get('alert-management/alert-filter-groups/');
+            return (Array.isArray(data) ? data : data.results || []) as AlertFilterGroup[];
+        }
+    });
+};
+
+export const useCreateAlertFilterGroup = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (data: Partial<AlertFilterGroup>) => {
+            const response = await axiosInstance.post('/alert-management/alert-filter-groups/', data);
+            return response.data as AlertFilterGroup;
+        },
+        onSuccess: (newGroup) => {
+            queryClient.invalidateQueries({ queryKey: ['alert-filter-groups'] });
+            showSuccessNotification(`Filter Group "${newGroup.name}" created successfully!`);
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || 'Failed to create filter group');
+        }
+    });
+};
+
+export const useUpdateAlertFilterGroup = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: number; data: Partial<AlertFilterGroup> }) => {
+            const response = await axiosInstance.patch(`/alert-management/alert-filter-groups/${id}/`, data);
+            return response.data as AlertFilterGroup;
+        },
+        onSuccess: (updatedGroup) => {
+            queryClient.invalidateQueries({ queryKey: ['alert-filter-groups'] });
+            showSuccessNotification(`Filter Group "${updatedGroup.name}" updated successfully!`);
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || 'Failed to update filter group');
+        }
+    });
+};
+
+export const useDeleteAlertFilterGroup = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            await axiosInstance.delete(`/alert-management/alert-filter-groups/${id}/`);
+            return id;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alert-filter-groups'] });
+            showSuccessNotification('Filter Group deleted successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || 'Failed to delete filter group');
+        }
+    });
+};
+export const useAddFilterToGroup = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async ({ groupId, filterId }: { groupId: number; filterId: number }) => {
+            const response = await axiosInstance.post(`/alert-management/alert-filter-groups/${groupId}/add_filter/`, {
+                filter_id: filterId
+            });
+            return response.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alert-filter-groups'] });
+            showSuccessNotification('Filter added to group successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || 'Failed to add filter to group');
+        }
+    });
+};
+
+export const useRemoveFilterFromGroup = () => {
+    const queryClient = useQueryClient();
+    const { showSuccessNotification, showErrorNotification } = useToasterNotification();
+
+    return useMutation({
+        mutationFn: async ({ groupId, filterId }: { groupId: number; filterId: number }) => {
+            const response = await axiosInstance.post(`/alert-management/alert-filter-groups/${groupId}/remove_filter/`, {
+                filter_id: filterId
+            });
+            return response.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alert-filter-groups'] });
+            showSuccessNotification('Filter removed from group successfully!');
+        },
+        onError: (error: any) => {
+            showErrorNotification(error?.response?.data?.message || 'Failed to remove filter from group');
+        }
     });
 };
