@@ -4,7 +4,7 @@ import axios from 'axios';
 import { authAxios as axiosInstance } from '../axiosInstance';
 import { queryKeys } from '../lib/queryClient';
 import { USE_MOCK_DATA } from '../config';
-import { MOCK_AREAS, MOCK_SENSORS, MOCK_ALERTS, MOCK_ACTIONS, MOCK_WALLS, MOCK_USERS, MOCK_AGGREGATED_DATA } from './mockData';
+import { MOCK_AREAS, MOCK_SENSORS, MOCK_ALERTS, MOCK_ACTIONS, MOCK_WALLS, MOCK_USERS, MOCK_AGGREGATED_DATA, MOCK_ALERT_FILTERS, MOCK_ALERT_FILTER_GROUPS } from './mockData';
 import {
     Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, UserActivity, UserRole, UserGroup,
     UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData,
@@ -1509,6 +1509,20 @@ export const useAlertFilters = (filters?: { search?: string; area_id?: number })
     return useQuery({
         queryKey: ['alertFilters', filters],
         queryFn: async () => {
+            if (USE_MOCK_DATA) {
+                let filtered = [...MOCK_ALERT_FILTERS];
+                if (filters?.area_id) {
+                    filtered = filtered.filter(f => f.area_ids.includes(Number(filters.area_id)));
+                }
+                if (filters?.search) {
+                    const search = filters.search.toLowerCase();
+                    filtered = filtered.filter(f =>
+                        f.name.toLowerCase().includes(search) ||
+                        f.description.toLowerCase().includes(search)
+                    );
+                }
+                return filtered;
+            }
             const params = new URLSearchParams();
             if (filters?.search) params.append('search', filters.search);
             if (filters?.area_id) params.append('area_id', filters.area_id.toString());
@@ -1559,6 +1573,9 @@ export const useCreateAlertFilter = () => {
 
     return useMutation({
         mutationFn: async (filterData: Partial<AlertFilter>) => {
+            if (USE_MOCK_DATA) {
+                return { id: Math.floor(Math.random() * 1000), ...filterData, created_at: new Date().toISOString() } as AlertFilter;
+            }
             const { data } = await axiosInstance.post('/alert-management/alert-filters/', filterData);
             return data as AlertFilter;
         },
@@ -1583,6 +1600,9 @@ export const useUpdateAlertFilter = () => {
 
     return useMutation({
         mutationFn: async ({ id, data }: { id: number; data: Partial<AlertFilter> }) => {
+            if (USE_MOCK_DATA) {
+                return { id, ...data, updated_at: new Date().toISOString() } as AlertFilter;
+            }
             const { data: response } = await axiosInstance.patch(`/alert-management/alert-filters/${id}/`, data);
             return response as AlertFilter;
         },
@@ -1606,6 +1626,7 @@ export const useDeleteAlertFilter = () => {
 
     return useMutation({
         mutationFn: async (id: number) => {
+            if (USE_MOCK_DATA) return { success: true };
             await axiosInstance.delete(`/alert-management/alert-filters/${id}/`);
             return { success: true };
         },
@@ -1996,6 +2017,7 @@ export const useAlertFilterGroups = () => {
     return useQuery({
         queryKey: ['alert-filter-groups'],
         queryFn: async () => {
+            if (USE_MOCK_DATA) return MOCK_ALERT_FILTER_GROUPS;
             const { data } = await axiosInstance.get('alert-management/alert-filter-groups/');
             return (Array.isArray(data) ? data : data.results || []) as AlertFilterGroup[];
         }
@@ -2008,6 +2030,9 @@ export const useCreateAlertFilterGroup = () => {
 
     return useMutation({
         mutationFn: async (data: Partial<AlertFilterGroup>) => {
+            if (USE_MOCK_DATA) {
+                return { id: Math.floor(Math.random() * 1000), ...data, created_at: new Date().toISOString() } as AlertFilterGroup;
+            }
             const response = await axiosInstance.post('/alert-management/alert-filter-groups/', data);
             return response.data as AlertFilterGroup;
         },
@@ -2027,6 +2052,9 @@ export const useUpdateAlertFilterGroup = () => {
 
     return useMutation({
         mutationFn: async ({ id, data }: { id: number; data: Partial<AlertFilterGroup> }) => {
+            if (USE_MOCK_DATA) {
+                return { id, ...data, updated_at: new Date().toISOString() } as AlertFilterGroup;
+            }
             const response = await axiosInstance.patch(`/alert-management/alert-filter-groups/${id}/`, data);
             return response.data as AlertFilterGroup;
         },
@@ -2046,6 +2074,7 @@ export const useDeleteAlertFilterGroup = () => {
 
     return useMutation({
         mutationFn: async (id: number) => {
+            if (USE_MOCK_DATA) return id;
             await axiosInstance.delete(`/alert-management/alert-filter-groups/${id}/`);
             return id;
         },
@@ -2064,6 +2093,7 @@ export const useAddFilterToGroup = () => {
 
     return useMutation({
         mutationFn: async ({ groupId, filterId }: { groupId: number; filterId: number }) => {
+            if (USE_MOCK_DATA) return { success: true };
             const response = await axiosInstance.post(`/alert-management/alert-filter-groups/${groupId}/add_filter/`, {
                 filter_id: filterId
             });
@@ -2085,6 +2115,7 @@ export const useRemoveFilterFromGroup = () => {
 
     return useMutation({
         mutationFn: async ({ groupId, filterId }: { groupId: number; filterId: number }) => {
+            if (USE_MOCK_DATA) return { success: true };
             const response = await axiosInstance.post(`/alert-management/alert-filter-groups/${groupId}/remove_filter/`, {
                 filter_id: filterId
             });

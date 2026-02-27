@@ -1,4 +1,4 @@
-import { Area, Sensor, Alert, Action, Wall, User } from '../types/sensor';
+import { Area, Sensor, Alert, Action, Wall, User, AlertFilter, AlertFilterGroup } from '../types/sensor';
 
 export const MOCK_AREAS: Area[] = [
     {
@@ -225,7 +225,9 @@ export const MOCK_ACTIONS: Action[] = [
         id: 1,
         name: 'Email Admin',
         type: 'email',
-        recipients: [1],
+        recipients: [
+            { id: 1, username: 'admin', email: 'admin@example.com', first_name: 'System', last_name: 'Administrator' }
+        ],
         message_template: 'Alert: {description} triggered on {sensor_name}',
         is_active: true,
         created_at: new Date().toISOString(),
@@ -235,9 +237,134 @@ export const MOCK_ACTIONS: Action[] = [
         id: 2,
         name: 'Push to Security',
         type: 'push_notification',
-        recipients: [2],
+        recipients: [
+            { id: 2, username: 'security_officer', email: 'security@example.com', first_name: 'Security', last_name: 'Officer' }
+        ],
         message_template: 'Security Alert: {description}',
         is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: 3,
+        name: 'Webhook to N8N',
+        type: 'webhook',
+        recipients: [],
+        message_template: 'N8N Trigger: {type}',
+        is_active: true,
+        webhook_url: 'https://n8n.example.com/webhook/123',
+        http_method: 'POST',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    }
+];
+
+export const MOCK_ALERT_FILTERS: AlertFilter[] = [
+    {
+        id: 1,
+        name: 'Critical Temp (Server Room)',
+        description: 'Triggers when temperature exceeds 35°C in Server Room',
+        area_ids: [3],
+        alert_types: ['high_temperature', 'temp_c'],
+        action_for_max: true,
+        action_for_min: false,
+        action_for_threshold: true,
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        is_active: true,
+        action_ids: [1, 2],
+        actions: [MOCK_ACTIONS[0], MOCK_ACTIONS[1]],
+        sensor_config_ids: [1],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: 2,
+        name: 'Night Motion (Lobby)',
+        description: 'Triggers on motion in Lobby East between 10 PM and 6 AM',
+        area_ids: [4],
+        alert_types: ['motion_alert', 'motion'],
+        action_for_threshold: true,
+        action_for_min: false,
+        action_for_max: false,
+        start_time: '22:00',
+        end_time: '06:00',
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        is_active: true,
+        action_ids: [2],
+        actions: [MOCK_ACTIONS[1]],
+        sensor_config_ids: [2],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: 3,
+        name: 'Overlapping Rule (Duplicate)',
+        description: 'THIS WILL CAUSE AN OVERLAP WITH ID 1 (High Temp in Room 3)',
+        area_ids: [3],
+        alert_types: ['high_temperature'],
+        action_for_max: true,
+        action_for_min: false,
+        action_for_threshold: false,
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        is_active: true,
+        action_ids: [3],
+        actions: [MOCK_ACTIONS[2]],
+        sensor_config_ids: [3],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: 4,
+        name: 'Dead Rule (No Actions)',
+        description: 'This rule has no actions and should show as Dead in health bar',
+        area_ids: [1, 2],
+        alert_types: ['sensor_offline'],
+        action_for_threshold: true,
+        action_for_min: false,
+        action_for_max: false,
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        is_active: true,
+        action_ids: [],
+        actions: [],
+        sensor_config_ids: [4],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: 5,
+        name: 'Silent Weekend Rule',
+        description: 'Only triggers on Saturdays and Sundays (Silent on weekdays)',
+        area_ids: [1],
+        alert_types: ['smoke_detected'],
+        action_for_threshold: true,
+        action_for_min: false,
+        action_for_max: false,
+        weekdays: [5, 6], // Saturday, Sunday (0=Mon...6=Sun)
+        is_active: true,
+        action_ids: [1],
+        actions: [MOCK_ACTIONS[0]],
+        sensor_config_ids: [5],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    }
+];
+
+export const MOCK_ALERT_FILTER_GROUPS: AlertFilterGroup[] = [
+    {
+        id: 1,
+        name: 'Main Facility Rules',
+        description: 'General safety rules for the main building',
+        alert_filters: [MOCK_ALERT_FILTERS[0], MOCK_ALERT_FILTERS[1], MOCK_ALERT_FILTERS[3], MOCK_ALERT_FILTERS[4]],
+        alert_filter_ids: [1, 2, 4, 5],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: 2,
+        name: 'Conflict Testing Group',
+        description: 'Group specifically to demonstrate overlapping rule warnings',
+        alert_filters: [MOCK_ALERT_FILTERS[0], MOCK_ALERT_FILTERS[2]],
+        alert_filter_ids: [1, 3],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
     }

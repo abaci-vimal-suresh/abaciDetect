@@ -197,3 +197,88 @@
 .selection-tray-active {
     animation: trayPopIn 0.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
 }
+
+/* --- Pipeline View Styling --- */
+.pipeline-view-container {
+    height: calc(100vh - 180px);
+    /* background: rgba(255, 255, 255, 0.02); */
+    backdrop-filter: blur(10px);
+}
+
+.pipeline-filter-card {
+    transition: all 0.25s ease;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.pipeline-filter-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-color: rgba(var(--bs-primary-rgb), 0.3);
+}
+
+.pipeline-filter-card.active {
+    border-color: var(--bs-primary) !important;
+    background-color: rgba(var(--bs-primary-rgb), 0.08);
+    box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.pipeline-action-card.active {
+    border-color: var(--bs-success) !important;
+    background-color: rgba(var(--bs-success-rgb), 0.08);
+    box-shadow: 0 0 0 3px rgba(var(--bs-success-rgb), 0.2);
+}
+
+.pipeline-connector.active {
+    color: var(--bs-primary);
+    animation: pulse-arrow 1s infinite;
+}
+
+@keyframes pulse-arrow {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scaleX(0.85);
+    }
+}
+
+.pipeline-alert-type-badge.active {
+    animation: glow-badge 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glow-badge {
+    from {
+        box-shadow: 0 0 4px rgba(var(--bs-warning-rgb), 0.4);
+    }
+
+    to {
+        box-shadow: 0 0 12px rgba(var(--bs-warning-rgb), 0.9);
+    }
+}
+
+.transition-all {
+    transition: all 0.2s ease-in-out;
+}
+
+.slide-in {
+    animation: slide-in-top 0.3s ease-out;
+}
+
+@keyframes slide-in-top {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

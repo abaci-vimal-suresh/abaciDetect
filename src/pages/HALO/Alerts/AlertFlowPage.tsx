@@ -36,6 +36,7 @@ import FlowSidePanel from './components/flow/FlowSidePanel';
 import AlertFlowFilterForm from './components/AlertFlowFilterForm';
 import AlertFlowGroupForm from './components/AlertFlowGroupForm';
 import FilterGroupNode from './components/flow/FilterGroupNode';
+import PipelineView from './components/pipeline/PipelineView';
 
 import {
     useAlertFilters,
@@ -136,14 +137,14 @@ const AlertFlowPageContent = ({
     deleteFilterMutation, deleteActionMutation,
     createGroupMutation, updateGroupMutation,
     deleteGroupMutation, addFilterToGroupMutation,
-    removeFilterFromGroupMutation, onEdgesDelete
+    removeFilterFromGroupMutation, onEdgesDelete,
+    selectedNode, setSelectedNode,
+    isSidePanelOpen, setIsSidePanelOpen,
+    handleSaveNodeData
 }: any) => {
     const [searchParams] = useSearchParams();
     const groupIdParam = searchParams.get('groupId');
     const focusedGroupId = groupIdParam ? parseInt(groupIdParam) : null;
-
-    const [selectedNode, setSelectedNode] = useState<any>(null);
-    const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
 
     // Reset nodes when focus changes
     useEffect(() => {
@@ -347,11 +348,76 @@ const AlertFlowPageContent = ({
         [setEdges, alertFilters, filterGroups, updateFilterMutation, addFilterToGroupMutation]
     );
 
-
     const onNodeClick = useCallback((event: React.MouseEvent, node: any) => {
         setSelectedNode(node);
         setIsSidePanelOpen(true);
-    }, []);
+    }, [setSelectedNode, setIsSidePanelOpen]);
+
+    const isRemoveOnly = !!focusedGroupId && (selectedNode?.type === 'filter' || selectedNode?.type === 'action');
+
+    return (
+        <>
+            <div className='alert-flow-container'>
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onEdgesDelete={onEdgesDelete}
+                    onConnect={onConnect}
+                    onNodeClick={onNodeClick}
+                    nodeTypes={nodeTypes}
+                    fitView
+                >
+                    <Background variant={'dots' as any} gap={12} size={1} />
+                    <Controls />
+                    <MiniMap zoomable pannable />
+                </ReactFlow>
+            </div>
+
+            <style>{`
+				.react-flow__attribution {
+					display: none;
+				}
+			`}</style>
+        </>
+    );
+};
+
+const AlertFlowPage = () => {
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+    // Data Hooks
+    const { data: alertFilters } = useAlertFilters();
+    const { data: actions } = useActions();
+    const { data: filterGroups } = useAlertFilterGroups();
+
+    // Mutation Hooks
+    const updateFilterMutation = useUpdateAlertFilter();
+    const updateActionMutation = useUpdateAction();
+    const createFilterMutation = useCreateAlertFilter();
+    const createActionMutation = useCreateAction();
+    const deleteFilterMutation = useDeleteAlertFilter();
+    const deleteActionMutation = useDeleteAction();
+    const createGroupMutation = useCreateAlertFilterGroup();
+    const updateGroupMutation = useUpdateAlertFilterGroup();
+    const deleteGroupMutation = useDeleteAlertFilterGroup();
+    const addFilterToGroupMutation = useAddFilterToGroup();
+    const removeFilterFromGroupMutation = useRemoveFilterFromGroup();
+
+    const groupIdParam = searchParams.get('groupId');
+    const focusedGroupId = groupIdParam ? parseInt(groupIdParam) : null;
+    const focusedGroupName = filterGroups?.find((g: any) => g.id === focusedGroupId)?.name;
+
+    const [activeTray, setActiveTray] = useState<'filter' | 'action' | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'pipeline' | 'canvas'>('pipeline');
+    const [selectedNode, setSelectedNode] = useState<any>(null);
+    const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const handleSaveNodeData = async (data: any) => {
         if (!selectedNode) return;
@@ -401,232 +467,6 @@ const AlertFlowPageContent = ({
         setIsSidePanelOpen(false);
         setSelectedNode(null);
     };
-
-    const isRemoveOnly = !!focusedGroupId && (selectedNode?.type === 'filter' || selectedNode?.type === 'action');
-
-    return (
-        <>
-            <div className='alert-flow-container'>
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onEdgesDelete={onEdgesDelete}
-                    onConnect={onConnect}
-                    onNodeClick={onNodeClick}
-                    nodeTypes={nodeTypes}
-                    fitView
-                >
-                    <Background variant={'dots' as any} gap={12} size={1} />
-                    <Controls />
-                    <MiniMap zoomable pannable />
-                </ReactFlow>
-            </div>
-
-            <FlowSidePanel
-                isOpen={isSidePanelOpen}
-                onClose={() => setIsSidePanelOpen(false)}
-                title={`Configure ${selectedNode?.type === 'filter' ? 'Smart Rule' : selectedNode?.type === 'action' ? 'Action' : selectedNode?.type === 'filterGroup' ? 'Filter Group' : 'Node'}`}
-                icon={<Icon icon={selectedNode?.type === 'filter' ? 'FilterAlt' : selectedNode?.type === 'action' ? 'NotificationsActive' : selectedNode?.type === 'filterGroup' ? 'FolderCopy' : 'Bolt'} />}
-            >
-                {selectedNode?.type === 'filter' && (
-                    <AlertFlowFilterForm
-                        filter={selectedNode.data}
-                        onSave={handleSaveNodeData}
-                        onCancel={() => setIsSidePanelOpen(false)}
-                    />
-                )}
-                {selectedNode?.type === 'action' && (
-                    <div className='p-3'>
-                        <div className='d-flex align-items-center mb-4 p-3 border rounded bg-light bg-opacity-10'>
-                            <Icon icon='NotificationsActive' size='3x' className='text-danger me-3' />
-                            <div>
-                                <h5 className='mb-1'>{selectedNode.data.name}</h5>
-                                <span className='badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 text-uppercase' style={{ fontSize: '0.7rem' }}>
-                                    {selectedNode.data.type || 'Action'}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className='mb-4'>
-                            <label className='form-label small fw-bold text-muted text-uppercase mb-2'>Description</label>
-                            <p className='text-muted small'>
-                                {selectedNode.data.description || 'No description provided for this action.'}
-                            </p>
-                        </div>
-
-                        <div className='alert alert-info py-2 px-3 small border-info border-opacity-25 bg-info bg-opacity-10 d-flex align-items-start'>
-                            <Icon icon='Info' className='me-2 mt-1' />
-                            <span>
-                                Actions are managed in the <strong>Alert Actions</strong> section. You can remove this action from the current workflow below.
-                            </span>
-                        </div>
-                    </div>
-                )}
-                {selectedNode?.type === 'filterGroup' && (
-                    <AlertFlowGroupForm
-                        group={selectedNode.data}
-                        onSave={handleSaveNodeData}
-                        onCancel={() => setIsSidePanelOpen(false)}
-                    />
-                )}
-                {selectedNode?.type === 'trigger' && (
-                    <div className='p-3 text-center'>
-                        <Icon icon='Bolt' size='4x' className='text-warning mb-3' />
-                        <h5>System Trigger</h5>
-                        <p className='text-muted'>
-                            This node represents the event source. You can configure global trigger settings here.
-                        </p>
-                    </div>
-                )}
-
-                {selectedNode?.type !== 'trigger' && (
-                    <div className='mt-4 pt-4 border-top'>
-                        <Button
-                            color='danger'
-                            isOutline
-                            className='w-100 d-flex align-items-center justify-content-center py-2'
-                            onClick={() => {
-                                const isSaved = selectedNode.data.id && typeof selectedNode.data.id === 'number';
-                                if (!isSaved) {
-                                    setNodes((nds: any[]) => nds.filter(n => n.id !== selectedNode.id));
-                                    setEdges((eds: any[]) => eds.filter(e => e.source !== selectedNode.id && e.target !== selectedNode.id));
-                                    setIsSidePanelOpen(false);
-                                    setSelectedNode(null);
-                                    return;
-                                }
-
-                                Swal.fire({
-                                    title: isRemoveOnly ? 'Remove from Group?' : 'Delete Node?',
-                                    text: isRemoveOnly
-                                        ? `Are you sure you want to remove this rule from the group? The rule will still exist in the system library.`
-                                        : `Are you sure you want to delete this ${selectedNode.type}? This will permanently remove it from the system.`,
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: isRemoveOnly ? 'Yes, remove it' : 'Yes, delete it!',
-                                    customClass: {
-                                        confirmButton: 'btn btn-danger mx-2',
-                                        cancelButton: 'btn btn-secondary mx-2',
-                                    },
-                                    buttonsStyling: false,
-                                    background: '#1a1a1a',
-                                    color: '#fff',
-                                }).then(async (result) => {
-                                    if (result.isConfirmed) {
-                                        try {
-                                            const nodeType = selectedNode.type;
-                                            const nodeDataId = selectedNode.data.id;
-
-                                            console.log(`Processing removal for ${nodeType} (ID: ${nodeDataId}), RemoveOnly: ${isRemoveOnly}`);
-
-                                            if (isRemoveOnly && nodeType === 'filter') {
-                                                console.log('Calling removeFilterFromGroupMutation');
-                                                await removeFilterFromGroupMutation.mutateAsync({
-                                                    groupId: Number(focusedGroupId),
-                                                    filterId: Number(nodeDataId)
-                                                });
-                                            } else if (isRemoveOnly && nodeType === 'action') {
-                                                console.log('Unlinking action from filters on canvas');
-                                                const connectedEdges = edges.filter(e => String(e.target) === String(selectedNode.id));
-                                                console.log(`Found ${connectedEdges.length} connected edges`);
-
-                                                const filterIdsToUpdate = connectedEdges
-                                                    .map(e => e.source)
-                                                    .filter(id => id.startsWith('filter-'))
-                                                    .map(id => parseInt(id.replace('filter-', '')));
-
-                                                console.log('Filter IDs to update:', filterIdsToUpdate);
-                                                console.log('Available alert filters:', alertFilters);
-
-                                                for (const filterId of filterIdsToUpdate) {
-                                                    const filterEntity = alertFilters?.find(f => f.id === filterId);
-                                                    if (filterEntity) {
-                                                        let currentActionIds = filterEntity.action_ids || [];
-                                                        if (currentActionIds.length === 0 && filterEntity.actions) {
-                                                            currentActionIds = filterEntity.actions.map((a: any) => a.id);
-                                                        }
-
-                                                        const updatedActionIds = currentActionIds.filter((id: any) => String(id) !== String(nodeDataId));
-
-                                                        if (updatedActionIds.length !== currentActionIds.length) {
-                                                            console.log(`Unlinking action ${nodeDataId} from filter ${filterId}`);
-                                                            await updateFilterMutation.mutateAsync({
-                                                                id: filterId,
-                                                                data: { action_ids: updatedActionIds }
-                                                            });
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                console.log('Performing permanent deletion');
-                                                if (nodeType === 'filter') {
-                                                    await deleteFilterMutation.mutateAsync(Number(nodeDataId));
-                                                } else if (nodeType === 'action') {
-                                                    await deleteActionMutation.mutateAsync(Number(nodeDataId));
-                                                } else if (nodeType === 'filterGroup') {
-                                                    await deleteGroupMutation.mutateAsync(Number(nodeDataId));
-                                                }
-                                            }
-
-                                            setNodes((nds: any[]) => nds.filter(n => n.id !== selectedNode.id));
-                                            setEdges((eds: any[]) => eds.filter(e => e.source !== selectedNode.id && e.target !== selectedNode.id));
-                                            setIsSidePanelOpen(false);
-                                            setSelectedNode(null);
-                                        } catch (err) {
-                                            console.error('Failed to process node removal/deletion:', err);
-                                        }
-                                    }
-                                });
-                            }}
-                        >
-                            <Icon icon={isRemoveOnly ? 'LinkOff' : 'Delete'} className='me-2' />
-                            {isRemoveOnly ? (selectedNode?.type === 'action' ? 'Remove Action' : 'Remove from Group') : 'Delete Node'}
-                        </Button>
-                    </div>
-                )}
-            </FlowSidePanel >
-
-            <style>{`
-				.react-flow__attribution {
-					display: none;
-				}
-			`}</style>
-        </>
-    );
-};
-
-const AlertFlowPage = () => {
-    const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const [nodes, setNodes, onNodesChange] = useNodesState([]);
-    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
-    // Data Hooks
-    const { data: alertFilters } = useAlertFilters();
-    const { data: actions } = useActions();
-    const { data: filterGroups } = useAlertFilterGroups();
-
-    // Mutation Hooks
-    const updateFilterMutation = useUpdateAlertFilter();
-    const updateActionMutation = useUpdateAction();
-    const createFilterMutation = useCreateAlertFilter();
-    const createActionMutation = useCreateAction();
-    const deleteFilterMutation = useDeleteAlertFilter();
-    const deleteActionMutation = useDeleteAction();
-    const createGroupMutation = useCreateAlertFilterGroup();
-    const updateGroupMutation = useUpdateAlertFilterGroup();
-    const deleteGroupMutation = useDeleteAlertFilterGroup();
-    const addFilterToGroupMutation = useAddFilterToGroup();
-    const removeFilterFromGroupMutation = useRemoveFilterFromGroup();
-
-    const groupIdParam = searchParams.get('groupId');
-    const focusedGroupId = groupIdParam ? parseInt(groupIdParam) : null;
-    const focusedGroupName = filterGroups?.find((g: any) => g.id === focusedGroupId)?.name;
-
-    const [activeTray, setActiveTray] = useState<'filter' | 'action' | null>(null);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const scrollRef = useRef<HTMLDivElement>(null);
 
     const handleWheel = (e: React.WheelEvent) => {
         if (scrollRef.current) {
@@ -749,6 +589,26 @@ const AlertFlowPage = () => {
                     />
                 </SubHeaderLeft>
                 <SubHeaderRight>
+                    <div className='d-flex align-items-center gap-2 bg-light bg-opacity-10 p-1 rounded-pill border mx-3'>
+                        <Button
+                            color={viewMode === 'pipeline' ? 'primary' : 'light'}
+                            size='sm'
+                            rounded='pill'
+                            isActive={viewMode === 'pipeline'}
+                            onClick={() => setViewMode('pipeline')}
+                            icon='LinearScale'>
+                            Pipeline
+                        </Button>
+                        <Button
+                            color={viewMode === 'canvas' ? 'primary' : 'light'}
+                            size='sm'
+                            rounded='pill'
+                            isActive={viewMode === 'canvas'}
+                            onClick={() => setViewMode('canvas')}
+                            icon='AccountTree'>
+                            Canvas
+                        </Button>
+                    </div>
                     <Button
                         color='warning'
                         isLight
@@ -905,32 +765,231 @@ const AlertFlowPage = () => {
             )}
 
             <Page container='fluid'>
-                <ReactFlowProvider>
-                    <AlertFlowPageContent
-                        nodes={nodes}
-                        setNodes={setNodes}
-                        onNodesChange={onNodesChange}
-                        edges={edges}
-                        setEdges={setEdges}
-                        onEdgesChange={onEdgesChange}
-                        onEdgesDelete={onEdgesDelete}
-                        alertFilters={alertFilters}
-                        actions={actions}
-                        filterGroups={filterGroups}
-                        updateFilterMutation={updateFilterMutation}
-                        updateActionMutation={updateActionMutation}
-                        createFilterMutation={createFilterMutation}
-                        createActionMutation={createActionMutation}
-                        deleteFilterMutation={deleteFilterMutation}
-                        deleteActionMutation={deleteActionMutation}
-                        createGroupMutation={createGroupMutation}
-                        updateGroupMutation={updateGroupMutation}
-                        deleteGroupMutation={deleteGroupMutation}
-                        addFilterToGroupMutation={addFilterToGroupMutation}
-                        removeFilterFromGroupMutation={removeFilterFromGroupMutation}
+                {viewMode === 'pipeline' ? (
+                    <PipelineView
+                        filterGroups={filterGroups || []}
+                        alertFilters={alertFilters || []}
+                        actions={actions || []}
+                        focusedGroupId={focusedGroupId}
+                        onEditFilter={(filter) => {
+                            const nodeId = `filter-${filter.id}`;
+                            const node = nodes.find(n => n.id === nodeId);
+                            if (node) {
+                                setSelectedNode(node);
+                                setIsSidePanelOpen(true);
+                            } else {
+                                // If not on canvas yet, we can create a virtual node for editing
+                                setSelectedNode({
+                                    id: nodeId,
+                                    type: 'filter',
+                                    data: { ...filter }
+                                });
+                                setIsSidePanelOpen(true);
+                            }
+                        }}
+                        onEditAction={(action) => {
+                            const nodeId = `action-${action.id}`;
+                            const node = nodes.find(n => n.id === nodeId);
+                            if (node) {
+                                setSelectedNode(node);
+                                setIsSidePanelOpen(true);
+                            } else {
+                                setSelectedNode({
+                                    id: nodeId,
+                                    type: 'action',
+                                    data: { ...action }
+                                });
+                                setIsSidePanelOpen(true);
+                            }
+                        }}
                     />
-                </ReactFlowProvider>
+                ) : (
+                    <ReactFlowProvider>
+                        <AlertFlowPageContent
+                            nodes={nodes}
+                            setNodes={setNodes}
+                            onNodesChange={onNodesChange}
+                            edges={edges}
+                            setEdges={setEdges}
+                            onEdgesChange={onEdgesChange}
+                            onEdgesDelete={onEdgesDelete}
+                            alertFilters={alertFilters}
+                            actions={actions}
+                            filterGroups={filterGroups || []}
+                            updateFilterMutation={updateFilterMutation}
+                            updateActionMutation={updateActionMutation}
+                            createFilterMutation={createFilterMutation}
+                            createActionMutation={createActionMutation}
+                            deleteFilterMutation={deleteFilterMutation}
+                            deleteActionMutation={deleteActionMutation}
+                            createGroupMutation={createGroupMutation}
+                            updateGroupMutation={updateGroupMutation}
+                            deleteGroupMutation={deleteGroupMutation}
+                            addFilterToGroupMutation={addFilterToGroupMutation}
+                            removeFilterFromGroupMutation={removeFilterFromGroupMutation}
+                            selectedNode={selectedNode}
+                            setSelectedNode={setSelectedNode}
+                            isSidePanelOpen={isSidePanelOpen}
+                            setIsSidePanelOpen={setIsSidePanelOpen}
+                            handleSaveNodeData={handleSaveNodeData}
+                        />
+                    </ReactFlowProvider>
+                )}
             </Page>
+
+            <FlowSidePanel
+                isOpen={isSidePanelOpen}
+                onClose={() => setIsSidePanelOpen(false)}
+                title={`Configure ${selectedNode?.type === 'filter' ? 'Smart Rule' : selectedNode?.type === 'action' ? 'Action' : selectedNode?.type === 'filterGroup' ? 'Filter Group' : 'Node'}`}
+                icon={<Icon icon={selectedNode?.type === 'filter' ? 'FilterAlt' : selectedNode?.type === 'action' ? 'NotificationsActive' : selectedNode?.type === 'filterGroup' ? 'FolderCopy' : 'Bolt'} />}
+            >
+                {selectedNode?.type === 'filter' && (
+                    <AlertFlowFilterForm
+                        filter={selectedNode.data}
+                        onSave={handleSaveNodeData}
+                        onCancel={() => setIsSidePanelOpen(false)}
+                    />
+                )}
+                {selectedNode?.type === 'action' && (
+                    <div className='p-3'>
+                        <div className='d-flex align-items-center mb-4 p-3 border rounded bg-light bg-opacity-10'>
+                            <Icon icon='NotificationsActive' size='3x' className='text-danger me-3' />
+                            <div>
+                                <h5 className='mb-1'>{selectedNode.data.name}</h5>
+                                <span className='badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 text-uppercase' style={{ fontSize: '0.7rem' }}>
+                                    {selectedNode.data.type || 'Action'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className='mb-4'>
+                            <label className='form-label small fw-bold text-muted text-uppercase mb-2'>Description</label>
+                            <p className='text-muted small'>
+                                {selectedNode.data.description || 'No description provided for this action.'}
+                            </p>
+                        </div>
+
+                        <div className='alert alert-info py-2 px-3 small border-info border-opacity-25 bg-info bg-opacity-10 d-flex align-items-start'>
+                            <Icon icon='Info' className='me-2 mt-1' />
+                            <span>
+                                Actions are managed in the <strong>Alert Actions</strong> section. You can remove this action from the current workflow below.
+                            </span>
+                        </div>
+                    </div>
+                )}
+                {selectedNode?.type === 'filterGroup' && (
+                    <AlertFlowGroupForm
+                        group={selectedNode.data}
+                        onSave={handleSaveNodeData}
+                        onCancel={() => setIsSidePanelOpen(false)}
+                    />
+                )}
+                {selectedNode?.type === 'trigger' && (
+                    <div className='p-3 text-center'>
+                        <Icon icon='Bolt' size='4x' className='text-warning mb-3' />
+                        <h5>System Trigger</h5>
+                        <p className='text-muted'>
+                            This node represents the event source. You can configure global trigger settings here.
+                        </p>
+                    </div>
+                )}
+
+                {selectedNode?.type !== 'trigger' && (
+                    <div className='mt-4 pt-4 border-top'>
+                        <Button
+                            color='danger'
+                            isOutline
+                            className='w-100 d-flex align-items-center justify-content-center py-2'
+                            onClick={() => {
+                                const isSaved = selectedNode.data.id && typeof selectedNode.data.id === 'number';
+                                if (!isSaved) {
+                                    setNodes((nds: any[]) => nds.filter(n => n.id !== selectedNode.id));
+                                    setEdges((eds: any[]) => eds.filter(e => e.source !== selectedNode.id && e.target !== selectedNode.id));
+                                    setIsSidePanelOpen(false);
+                                    setSelectedNode(null);
+                                    return;
+                                }
+
+                                const isRemoveOnly = !!focusedGroupId && (selectedNode?.type === 'filter' || selectedNode?.type === 'action');
+
+                                Swal.fire({
+                                    title: isRemoveOnly ? 'Remove from Group?' : 'Delete Node?',
+                                    text: isRemoveOnly
+                                        ? `Are you sure you want to remove this rule from the group? The rule will still exist in the system library.`
+                                        : `Are you sure you want to delete this ${selectedNode.type}? This will permanently remove it from the system.`,
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: isRemoveOnly ? 'Yes, remove it' : 'Yes, delete it!',
+                                    customClass: {
+                                        confirmButton: 'btn btn-danger mx-2',
+                                        cancelButton: 'btn btn-secondary mx-2',
+                                    },
+                                    buttonsStyling: false,
+                                    background: '#1a1a1a',
+                                    color: '#fff',
+                                }).then(async (result) => {
+                                    if (result.isConfirmed) {
+                                        try {
+                                            const nodeType = selectedNode.type;
+                                            const nodeDataId = selectedNode.data.id;
+
+                                            if (isRemoveOnly && nodeType === 'filter') {
+                                                await removeFilterFromGroupMutation.mutateAsync({
+                                                    groupId: Number(focusedGroupId),
+                                                    filterId: Number(nodeDataId)
+                                                });
+                                            } else if (isRemoveOnly && nodeType === 'action') {
+                                                const connectedEdges = edges.filter(e => String(e.target) === String(selectedNode.id));
+                                                const filterIdsToUpdate = connectedEdges
+                                                    .map(e => e.source)
+                                                    .filter(id => id.startsWith('filter-'))
+                                                    .map(id => parseInt(id.replace('filter-', '')));
+
+                                                for (const filterId of filterIdsToUpdate) {
+                                                    const filterEntity = alertFilters?.find(f => f.id === filterId);
+                                                    if (filterEntity) {
+                                                        let currentActionIds = filterEntity.action_ids || [];
+                                                        if (currentActionIds.length === 0 && filterEntity.actions) {
+                                                            currentActionIds = filterEntity.actions.map((a: any) => a.id);
+                                                        }
+
+                                                        const updatedActionIds = currentActionIds.filter((id: any) => String(id) !== String(nodeDataId));
+
+                                                        if (updatedActionIds.length !== currentActionIds.length) {
+                                                            await updateFilterMutation.mutateAsync({
+                                                                id: filterId,
+                                                                data: { action_ids: updatedActionIds }
+                                                            });
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                if (nodeType === 'filter') {
+                                                    await deleteFilterMutation.mutateAsync(Number(nodeDataId));
+                                                } else if (nodeType === 'action') {
+                                                    await deleteActionMutation.mutateAsync(Number(nodeDataId));
+                                                } else if (nodeType === 'filterGroup') {
+                                                    await deleteGroupMutation.mutateAsync(Number(nodeDataId));
+                                                }
+                                            }
+
+                                            setNodes((nds: any[]) => nds.filter(n => n.id !== selectedNode.id));
+                                            setEdges((eds: any[]) => eds.filter(e => e.source !== selectedNode.id && e.target !== selectedNode.id));
+                                            setIsSidePanelOpen(false);
+                                            setSelectedNode(null);
+                                        } catch (err) {
+                                            console.error('Failed to process node removal/deletion:', err);
+                                        }
+                                    }
+                                });
+                            }}
+                        >
+                            <Icon icon={!!focusedGroupId && (selectedNode?.type === 'filter' || selectedNode?.type === 'action') ? 'LinkOff' : 'Delete'} className='me-2' />
+                            {!!focusedGroupId && (selectedNode?.type === 'filter' || selectedNode?.type === 'action') ? (selectedNode?.type === 'action' ? 'Remove Action' : 'Remove from Group') : 'Delete Node'}
+                        </Button>
+                    </div>
+                )}
+            </FlowSidePanel >
             <CreateGroupModal
                 isOpen={isCreateModalOpen}
                 setIsOpen={setIsCreateModalOpen}
