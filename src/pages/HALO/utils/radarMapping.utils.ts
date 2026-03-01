@@ -1,4 +1,5 @@
 import { Area } from '../../../types/sensor';
+import { SensorReference } from '../../../api/sensors.api';
 
 export const METRIC_MAP: Record<string, { config: string; agg: string; unit: string; label: string }> = {
     temperature: { config: 'temp_c', agg: 'temperature', unit: '°C', label: 'Temperature' },
@@ -111,6 +112,8 @@ export interface ProcessedMetric {
     isAutoConverted?: boolean; // New: Flag for auto-converted units (e.g. pressure)
     minSensorId?: number | null; // ID of the sensor that recorded the min value
     maxSensorId?: number | null; // ID of the sensor that recorded the max value
+    minSensor?: SensorReference | null;
+    maxSensor?: SensorReference | null;
 }
 
 export const buildProcessedMetrics = (
@@ -127,8 +130,12 @@ export const buildProcessedMetrics = (
 
         const rawMin = aggData[`${key}_min`] as number;
         const rawMax = aggData[`${key}_max`] as number;
-        const minSensorId = (aggData as any)[`${key}_min_sensor`] as number | null | undefined;
-        const maxSensorId = (aggData as any)[`${key}_max_sensor`] as number | null | undefined;
+        const minSensor = (aggData as any)[`${key}_min_sensor`] as SensorReference | null | undefined;
+        const maxSensor = (aggData as any)[`${key}_max_sensor`] as SensorReference | null | undefined;
+
+        // Keep IDs for backward compatibility if needed, though they might be objects now
+        const minSensorId = typeof minSensor === 'object' ? minSensor?.sensor_id : minSensor;
+        const maxSensorId = typeof maxSensor === 'object' ? maxSensor?.sensor_id : maxSensor;
         const threshold = config[mapping.config];
 
         const hasThreshold = !!threshold;
@@ -166,8 +173,10 @@ export const buildProcessedMetrics = (
             hasThreshold,
             isScaleMismatch,
             isAutoConverted,
-            minSensorId: minSensorId ?? null,
-            maxSensorId: maxSensorId ?? null,
+            minSensorId: (minSensorId as number) ?? null,
+            maxSensorId: (maxSensorId as number) ?? null,
+            minSensor: (typeof minSensor === 'object' && minSensor !== null) ? minSensor : null,
+            maxSensor: (typeof maxSensor === 'object' && maxSensor !== null) ? maxSensor : null,
         });
 
         return acc;

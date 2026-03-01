@@ -214,7 +214,7 @@ const AlertFlowFilterForm: React.FC<AlertFlowFilterFormProps> = ({ filter, onSav
 
             {/* ── Assignment ── */}
             <div className="col-12">
-                <FormGroup label="Apply to Areas">
+                <FormGroup label="Areas">
                     <MultiSelectDropdown
                         options={areaOptions}
                         value={(formData.area_ids ?? []).map(String)}

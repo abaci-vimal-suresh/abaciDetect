@@ -188,7 +188,7 @@ const MiniGauge: React.FC<{
                                 }}
                             >
                                 <Icon icon="Sensors" className="fs-5" />
-                                Sensor #{metric.minSensorId}
+                                {metric.minSensor?.sensor__name || `Sensor #${metric.minSensorId}`}
                             </button>
                         </div>
                     )}
@@ -208,7 +208,7 @@ const MiniGauge: React.FC<{
                                 }}
                             >
                                 <Icon icon="Sensors" className="fs-5" />
-                                Sensor #{metric.maxSensorId}
+                                {metric.maxSensor?.sensor__name || `Sensor #${metric.maxSensorId}`}
                             </button>
                         </div>
                     )}

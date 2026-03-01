@@ -59,18 +59,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                         )}
                     </div>
 
-                    <div className="d-flex align-items-center justify-content-between p-2 rounded border bg-light bg-opacity-10">
-                        <div className="d-flex align-items-center gap-2">
-                            <Icon
-                                icon={overlappingFilters.length === 0 ? "CheckCircle" : "Error"}
-                                className={overlappingFilters.length === 0 ? "text-success" : "text-danger"}
-                            />
-                            <span className="small">{overlappingFilters.length > 0 ? `${overlappingFilters.length} overlapping rules` : 'No overlapping rules'}</span>
-                        </div>
-                        {overlappingFilters.length > 0 && (
-                            <Badge color="danger" isLight className="cursor-pointer" onClick={() => onEditFilter(overlappingFilters[0])}>Resolve</Badge>
-                        )}
-                    </div>
 
                     <div className="d-flex align-items-center justify-content-between p-2 rounded border bg-light bg-opacity-10">
                         <div className="d-flex align-items-center gap-2">

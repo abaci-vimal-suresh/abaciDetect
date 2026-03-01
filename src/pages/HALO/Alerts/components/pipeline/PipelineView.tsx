@@ -54,7 +54,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({
     };
 
     return (
-        <div className="pipeline-view-container d-flex flex-column h-100 bg-white bg-opacity-10 rounded shadow-lg overflow-hidden border">
+        <div className="pipeline-view-container  d-flex flex-column h-100  bg-opacity-10 rounded shadow-lg overflow-hidden border">
             <HealthBar
                 totalFilters={displayFilters.length}
                 totalActions={displayFilters.reduce((acc, f) => acc + (f.actions?.length || 0), 0)}
@@ -65,8 +65,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({
                 groupName={focusedGroupName}
             />
 
-            <div className="row g-0 flex-grow-1 overflow-hidden">
-                {/* LEFT PANEL - 65% */}
+            <div className="row g-0 flex-grow-1 overflow-hidden p-4">
                 <div className="col-8 border-end overflow-auto h-100 bg-light bg-opacity-10 py-3">
                     <PipelineLeft
                         filters={displayFilters}
@@ -86,9 +85,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({
                         onPathClear={() => setActivePath(null)}
                     />
                 </div>
-
-                {/* RIGHT PANEL - 35% */}
-                <div className="col-4 h-100 bg-white bg-opacity-5">
+                <div className="col-4 h-100">
                     <PipelineRight
                         filterGroups={filterGroups}
                         filters={displayFilters}

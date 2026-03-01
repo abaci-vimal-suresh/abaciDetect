@@ -451,6 +451,11 @@ export const useLatestSensorLog = (sensorId: string | number, options?: { refetc
 };
 
 
+export interface SensorReference {
+    sensor_id: number;
+    sensor__name: string;
+}
+
 export interface AggregatedSensorDataResponse {
     area_ids: number[];
     area_ids_included: number[];
@@ -486,6 +491,32 @@ export interface AggregatedSensorDataResponse {
         noise_max: number | null;
         health_min: number | null;
         health_max: number | null;
+        // Sensor references
+        temperature_min_sensor?: SensorReference | null;
+        temperature_max_sensor?: SensorReference | null;
+        humidity_min_sensor?: SensorReference | null;
+        humidity_max_sensor?: SensorReference | null;
+        light_min_sensor?: SensorReference | null;
+        light_max_sensor?: SensorReference | null;
+        sound_min_sensor?: SensorReference | null;
+        sound_max_sensor?: SensorReference | null;
+        pressure_min_sensor?: SensorReference | null;
+        pressure_max_sensor?: SensorReference | null;
+        tvoc_min_sensor?: SensorReference | null;
+        tvoc_max_sensor?: SensorReference | null;
+        co2_min_sensor?: SensorReference | null;
+        co2_max_sensor?: SensorReference | null;
+        pm1_min_sensor?: SensorReference | null;
+        pm10_min_sensor?: SensorReference | null;
+        pm25_min_sensor?: SensorReference | null;
+        aqi_min_sensor?: SensorReference | null;
+        aqi_max_sensor?: SensorReference | null;
+        movement_min_sensor?: SensorReference | null;
+        movement_max_sensor?: SensorReference | null;
+        noise_min_sensor?: SensorReference | null;
+        noise_max_sensor?: SensorReference | null;
+        health_min_sensor?: SensorReference | null;
+        health_max_sensor?: SensorReference | null;
         [key: string]: any;
     };
 }

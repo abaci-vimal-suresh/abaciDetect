@@ -9,8 +9,8 @@ import {
     addEdge,
     Connection,
     Edge,
-    Panel,
     ReactFlowProvider,
+    Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useSearchParams } from 'react-router-dom';
@@ -21,9 +21,7 @@ import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHea
 import Breadcrumb from '../../../components/bootstrap/Breadcrumb';
 import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
-import Dropdown, { DropdownToggle, DropdownMenu, DropdownItem } from '../../../components/bootstrap/Dropdown';
 import Swal from 'sweetalert2';
-import Modal, { ModalBody, ModalHeader, ModalTitle } from '../../../components/bootstrap/Modal';
 import { useNavigate } from 'react-router-dom';
 
 import TriggerNode from './components/flow/TriggerNode';
@@ -54,6 +52,7 @@ import {
     useAddFilterToGroup,
     useRemoveFilterFromGroup
 } from '../../../api/sensors.api';
+import { ALERT_TYPE_CHOICES } from '../../../types/sensor';
 import './AlertFlow.css';
 
 const nodeTypes = {
@@ -83,50 +82,6 @@ const DEFAULT_NODE_DATA: any = {
     filterGroup: { name: 'New Group', description: '', alert_filter_ids: [], status: 'idle' },
 };
 
-const CreateGroupModal = ({ isOpen, setIsOpen, onSave }: any) => {
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-
-    return (
-        <Modal isOpen={isOpen} setIsOpen={setIsOpen} size='sm' isCentered>
-            <ModalHeader setIsOpen={setIsOpen}>
-                <ModalTitle id='create-group-modal-title'>Create New Filter Group</ModalTitle>
-            </ModalHeader>
-            <ModalBody>
-                <div className='row g-3'>
-                    <div className='col-12'>
-                        <label className='form-label'>Group Name</label>
-                        <input
-                            type='text'
-                            className='form-control'
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder='e.g. Lobby Security'
-                        />
-                    </div>
-                    <div className='col-12'>
-                        <label className='form-label'>Description</label>
-                        <textarea
-                            className='form-control'
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                        />
-                    </div>
-                    <div className='col-12'>
-                        <Button
-                            color='primary'
-                            className='w-100'
-                            onClick={() => onSave({ name, description, alert_filter_ids: [] })}
-                            isDisable={!name}
-                        >
-                            Create & View Flow
-                        </Button>
-                    </div>
-                </div>
-            </ModalBody>
-        </Modal>
-    );
-};
 
 const AlertFlowPageContent = ({
     nodes, setNodes, onNodesChange,
@@ -140,11 +95,23 @@ const AlertFlowPageContent = ({
     removeFilterFromGroupMutation, onEdgesDelete,
     selectedNode, setSelectedNode,
     isSidePanelOpen, setIsSidePanelOpen,
-    handleSaveNodeData
+    handleSaveNodeData,
+    focusedGroupName
 }: any) => {
     const [searchParams] = useSearchParams();
     const groupIdParam = searchParams.get('groupId');
     const focusedGroupId = groupIdParam ? parseInt(groupIdParam) : null;
+
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
+
+    const onGroupCollapse = useCallback((groupId: number, collapsed: boolean) => {
+        setCollapsedGroups(prev => {
+            const next = new Set(prev);
+            if (collapsed) next.add(groupId);
+            else next.delete(groupId);
+            return next;
+        });
+    }, []);
 
     // Reset nodes when focus changes
     useEffect(() => {
@@ -158,7 +125,7 @@ const AlertFlowPageContent = ({
             const initialNodes: any[] = [];
             const initialEdges: any[] = [];
             let globalYOffset = 50;
-            const ROW_HEIGHT = 160;
+            const ROW_HEIGHT = 120;
 
             // 1. Create a map of rules to their groups
             const ruleToGroupMap: Record<number, number> = {};
@@ -173,46 +140,75 @@ const AlertFlowPageContent = ({
             if (focusedGroupId) {
                 const group = (filterGroups || []).find((g: any) => g.id === focusedGroupId);
                 if (group) {
-                    const groupNodeId = `group-${group.id}`;
-                    initialNodes.push({
-                        id: groupNodeId,
-                        type: 'filterGroup',
-                        position: { x: 50, y: 250 },
-                        data: { ...group, status: 'idle' },
-                    });
-
                     const memberFilterIds = group.alert_filter_ids || group.alert_filters?.map((f: any) => f.id) || [];
-                    const memberFilters = alertFilters.filter((f: any) => memberFilterIds.includes(f.id));
+                    // Only show filters that HAVE actions (or are explicitly being worked on)
+                    const memberFilters = alertFilters.filter((f: any) =>
+                        memberFilterIds.includes(f.id)
+                    );
+
+                    // Track unique actions to prevent stacking
+                    const uniqueActionIds = new Set<number>();
+                    const finalActions: any[] = [];
 
                     memberFilters.forEach((filter: any, idx: number) => {
-                        const filterId = `filter-${filter.id}`;
+                        const filterNodeId = `filter-${filter.id}`;
+                        const filterY = 100 + idx * (ROW_HEIGHT + 80);
+
                         initialNodes.push({
-                            id: filterId,
+                            id: filterNodeId,
                             type: 'filter',
-                            position: { x: 450, y: 50 + idx * ROW_HEIGHT },
+                            position: { x: 50, y: filterY },
                             data: { ...filter, status: 'idle' },
                         });
 
-                        initialEdges.push({
-                            id: `e-${groupNodeId}-${filterId}`,
-                            source: groupNodeId,
-                            target: filterId,
-                            animated: true,
+                        // --- Generate Trigger Nodes for each alert type ---
+                        const filterAlertTypes = filter.alert_types || [];
+                        filterAlertTypes.forEach((typeVal: string, tIdx: number) => {
+                            const triggerId = `trigger-${filter.id}-${typeVal}`;
+                            const typeInfo = ALERT_TYPE_CHOICES.find(c => c.value === typeVal);
+
+                            initialNodes.push({
+                                id: triggerId,
+                                type: 'trigger',
+                                position: {
+                                    x: -220,
+                                    y: filterY + (tIdx * 45) - ((filterAlertTypes.length - 1) * 22.5) + 40
+                                },
+                                data: {
+                                    label: typeInfo?.label || typeVal,
+                                    icon: 'NotificationsActive' // Could be specific based on type
+                                },
+                            });
+
+                            initialEdges.push({
+                                id: `e-${triggerId}-${filterNodeId}`,
+                                source: triggerId,
+                                target: filterNodeId,
+                                style: { strokeDasharray: '5,5', stroke: '#888' }
+                            });
                         });
 
-                        // Actions
                         const filterActions = filter.actions || [];
-                        filterActions.forEach((action: any, aIdx: number) => {
-                            const actionId = `action-${action.id}`;
-                            if (!initialNodes.find(n => n.id === actionId)) {
-                                initialNodes.push({
-                                    id: actionId,
-                                    type: 'action',
-                                    position: { x: 850, y: 50 + idx * ROW_HEIGHT + aIdx * 100 },
-                                    data: { ...action, status: 'idle' },
-                                });
+                        filterActions.forEach((action: any) => {
+                            if (!uniqueActionIds.has(action.id)) {
+                                uniqueActionIds.add(action.id);
+                                finalActions.push(action);
                             }
-                            initialEdges.push({ id: `e-${filterId}-${actionId}`, source: filterId, target: actionId });
+                            initialEdges.push({
+                                id: `e-${filterNodeId}-action-${action.id}`,
+                                source: filterNodeId,
+                                target: `action-${action.id}`
+                            });
+                        });
+                    });
+
+                    // Layout unique actions in their own column
+                    finalActions.forEach((action, idx) => {
+                        initialNodes.push({
+                            id: `action-${action.id}`,
+                            type: 'action',
+                            position: { x: 750, y: 100 + idx * (ROW_HEIGHT + 40) },
+                            data: { ...action, status: 'idle' },
                         });
                     });
                 }
@@ -232,7 +228,7 @@ const AlertFlowPageContent = ({
                         id: groupNodeId,
                         type: 'filterGroup',
                         position: { x: 50, y: currentY + (groupMemberFilters.length > 0 ? (groupMemberFilters.length - 1) * ROW_HEIGHT / 2 : 0) },
-                        data: { ...group, status: 'idle' },
+                        data: { ...group, status: 'idle', onCollapse: onGroupCollapse },
                     });
 
                     // Add Member Filters
@@ -255,7 +251,7 @@ const AlertFlowPageContent = ({
                                 initialNodes.push({
                                     id: actionId,
                                     type: 'action',
-                                    position: { x: 850, y: currentY + fIdx * ROW_HEIGHT + aIdx * 100 },
+                                    position: { x: 850, y: currentY + fIdx * ROW_HEIGHT + aIdx * 80 },
                                     data: { ...action, status: 'idle' },
                                 });
                             }
@@ -285,7 +281,7 @@ const AlertFlowPageContent = ({
                             initialNodes.push({
                                 id: actionId,
                                 type: 'action',
-                                position: { x: 450, y: currentY + oIdx * ROW_HEIGHT + aIdx * 100 },
+                                position: { x: 450, y: currentY + oIdx * ROW_HEIGHT + aIdx * 80 },
                                 data: { ...action, status: 'idle' },
                             });
                         }
@@ -355,11 +351,36 @@ const AlertFlowPageContent = ({
 
     const isRemoveOnly = !!focusedGroupId && (selectedNode?.type === 'filter' || selectedNode?.type === 'action');
 
+    const nodesWithCollapse = useMemo(() => {
+        return nodes.map(node => {
+            if (node.type === 'filter') {
+                const filterId = parseInt(node.id.replace('filter-', ''));
+                // Find if this filter belongs to a collapsed group
+                const belongsToCollapsedGroup = Array.from(collapsedGroups).some(groupId => {
+                    const group = filterGroups?.find((g: any) => g.id === groupId);
+                    const memberIds = group?.alert_filter_ids || group?.alert_filters?.map((f: any) => f.id) || [];
+                    return memberIds.includes(filterId);
+                });
+                return {
+                    ...node,
+                    className: belongsToCollapsedGroup ? 'group-member-collapsed' : 'group-member-visible',
+                    style: {
+                        ...node.style,
+                        opacity: belongsToCollapsedGroup ? 0 : 1,
+                        pointerEvents: belongsToCollapsedGroup ? 'none' : 'all',
+                        transition: 'opacity 0.3s ease',
+                    }
+                };
+            }
+            return node;
+        });
+    }, [nodes, collapsedGroups, filterGroups]);
+
     return (
         <>
             <div className='alert-flow-container'>
                 <ReactFlow
-                    nodes={nodes}
+                    nodes={nodesWithCollapse}
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
@@ -369,10 +390,24 @@ const AlertFlowPageContent = ({
                     nodeTypes={nodeTypes}
                     fitView
                 >
+                    {focusedGroupId && focusedGroupName && (
+                        <Panel position="top-left" className="m-0">
+                            <div className="group-canvas-heading d-flex align-items-center bg-white bg-opacity-75 p-3 rounded-bottom-4 shadow-sm border border-primary border-opacity-10" style={{ backdropFilter: 'blur(8px)', borderTop: 'none' }}>
+                                <div className="p-2 bg-primary bg-opacity-10 rounded-circle me-3">
+                                    <Icon icon="FolderOpen" className="text-primary" size="lg" />
+                                </div>
+                                <div>
+                                    <div className="text-muted extra-small text-uppercase fw-bold ls-1 mb-0" style={{ fontSize: '0.65rem' }}>Active Group context</div>
+                                    <h4 className="mb-0 fw-bold text-dark h5">{focusedGroupName}</h4>
+                                </div>
+                            </div>
+                        </Panel>
+                    )}
                     <Background variant={'dots' as any} gap={12} size={1} />
                     <Controls />
                     <MiniMap zoomable pannable />
                 </ReactFlow>
+
             </div>
 
             <style>{`
@@ -412,12 +447,19 @@ const AlertFlowPage = () => {
     const focusedGroupId = groupIdParam ? parseInt(groupIdParam) : null;
     const focusedGroupName = filterGroups?.find((g: any) => g.id === focusedGroupId)?.name;
 
-    const [activeTray, setActiveTray] = useState<'filter' | 'action' | null>(null);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<'pipeline' | 'canvas'>('pipeline');
+    const [activeTray, setActiveTray] = useState<'action' | null>(null);
+    const [viewMode, setViewMode] = useState<'pipeline' | 'canvas'>('canvas');
     const [selectedNode, setSelectedNode] = useState<any>(null);
     const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Contextual view mode management
+    useEffect(() => {
+        if (!focusedGroupId) {
+            setViewMode('pipeline');
+        }
+        setActiveTray(null);
+    }, [focusedGroupId, viewMode]);
 
     const handleSaveNodeData = async (data: any) => {
         if (!selectedNode) return;
@@ -474,20 +516,9 @@ const AlertFlowPage = () => {
         }
     };
 
-    const handleCreateGroup = async (groupData: any) => {
-        try {
-            const newGroup = await createGroupMutation.mutateAsync(groupData);
-            setIsCreateModalOpen(false);
-            setSearchParams({ groupId: newGroup.id.toString() });
-        } catch (err) {
-            console.error('Failed to create group:', err);
-        }
-    };
-
     const onAddExistingNode = useCallback(async (entity: any, type: 'filter' | 'action') => {
         const id = `${type}-${entity.id}`;
 
-        // Check if node already exists
         if (nodes.find(n => n.id === id)) {
             Swal.fire({
                 title: 'Already Added',
@@ -507,7 +538,6 @@ const AlertFlowPage = () => {
         };
         setNodes((nds) => nds.concat(newNode));
 
-        // If in focus mode and adding a filter, visually connect AND persist to backend
         if (focusedGroupId && type === 'filter') {
             const newEdge = {
                 id: `e-add-link-${id}`,
@@ -517,7 +547,6 @@ const AlertFlowPage = () => {
             };
             setEdges((eds) => eds.concat(newEdge));
 
-            // PERSIST TO BACKEND IMMEDIATELY
             try {
                 await addFilterToGroupMutation.mutateAsync({
                     groupId: focusedGroupId,
@@ -589,36 +618,31 @@ const AlertFlowPage = () => {
                     />
                 </SubHeaderLeft>
                 <SubHeaderRight>
-                    <div className='d-flex align-items-center gap-2 bg-light bg-opacity-10 p-1 rounded-pill border mx-3'>
-                        <Button
-                            color={viewMode === 'pipeline' ? 'primary' : 'light'}
-                            size='sm'
-                            rounded='pill'
-                            isActive={viewMode === 'pipeline'}
-                            onClick={() => setViewMode('pipeline')}
-                            icon='LinearScale'>
-                            Pipeline
-                        </Button>
-                        <Button
-                            color={viewMode === 'canvas' ? 'primary' : 'light'}
-                            size='sm'
-                            rounded='pill'
-                            isActive={viewMode === 'canvas'}
-                            onClick={() => setViewMode('canvas')}
-                            icon='AccountTree'>
-                            Canvas
-                        </Button>
-                    </div>
-                    <Button
-                        color='warning'
-                        isLight
-                        className='me-2 btn-neumorphic'
-                        icon='Folder'
-                        onClick={() => setIsCreateModalOpen(true)}
-                    >
-                        Create Group
-                    </Button>
-                    {searchParams.get('groupId') && (
+                    {focusedGroupId && (
+                        <div className='d-flex align-items-center gap-2 bg-light bg-opacity-10 p-1 rounded-pill border mx-3'>
+                            <Button
+                                color={viewMode === 'pipeline' ? 'primary' : 'light'}
+                                size='sm'
+                                rounded='pill'
+                                isActive={viewMode === 'pipeline'}
+                                onClick={() => setViewMode('pipeline')}
+                                icon='LinearScale'
+                            >
+                                Pipeline
+                            </Button>
+                            <Button
+                                color={viewMode === 'canvas' ? 'primary' : 'light'}
+                                size='sm'
+                                rounded='pill'
+                                isActive={viewMode === 'canvas'}
+                                onClick={() => setViewMode('canvas')}
+                                icon='AccountTree'
+                            >
+                                Canvas
+                            </Button>
+                        </div>
+                    )}
+                    {/* {searchParams.get('groupId') && (
                         <Button
                             color='secondary'
                             isLight
@@ -637,19 +661,9 @@ const AlertFlowPage = () => {
                         >
                             Show All
                         </Button>
-                    )}
-                    {focusedGroupId && (
+                    )} */}
+                    {viewMode === 'canvas' && (
                         <>
-                            <Button
-                                className={`btn-neumorphic me-2 ${activeTray === 'filter' ? 'active shadow-none border-info' : ''}`}
-                                color='info'
-                                isLight
-                                icon='FilterAlt'
-                                onClick={() => setActiveTray(activeTray === 'filter' ? null : 'filter')}
-                            >
-                                Existing Filters
-                            </Button>
-
                             <Button
                                 className={`btn-neumorphic me-2 ${activeTray === 'action' ? 'active shadow-none border-danger' : ''}`}
                                 color='danger'
@@ -659,37 +673,36 @@ const AlertFlowPage = () => {
                             >
                                 Existing Actions
                             </Button>
+                            <Button
+                                className='btn-neumorphic'
+                                color='primary'
+                                isLight
+                                icon='FilterAlt'
+                                onClick={() => onAddNode('filter')}
+                            >
+                                Add Filter
+                            </Button>
                         </>
                     )}
-                    <Button
-                        className='btn-neumorphic'
-                        color='primary'
-                        isLight
-                        icon='FilterAlt'
-                        onClick={() => onAddNode('filter')}
-                    >
-                        Add Filter
-                    </Button>
                 </SubHeaderRight>
             </SubHeader>
 
-            {activeTray && (
+            {viewMode === 'canvas' && activeTray === 'action' && (
                 <div className='selection-tray-container selection-tray-active'>
                     <div className='p-3 container-fluid'>
                         <div className='d-flex align-items-center justify-content-between mb-3 px-2'>
                             <div className='d-flex align-items-center'>
-                                <div className={`p-2 rounded-circle me-3 d-flex align-items-center justify-content-center bg-opacity-25 ${activeTray === 'filter' ? 'bg-info' : 'bg-danger'}`}>
+                                <div className='p-2 rounded-circle me-3 d-flex align-items-center justify-content-center bg-opacity-25 bg-danger'>
                                     <Icon
-                                        icon={activeTray === 'filter' ? 'FilterAlt' : 'NotificationsActive'}
-                                        className={activeTray === 'filter' ? 'text-info' : 'text-danger'}
+                                        icon='NotificationsActive'
+                                        className='text-danger'
                                         size='lg'
                                     />
                                 </div>
                                 <div>
                                     <h6 className='tray-header-label mb-0'>
-                                        Available {activeTray === 'filter' ? 'Filters' : 'Actions'}
+                                        Available Actions
                                     </h6>
-
                                 </div>
                             </div>
                             <Button
@@ -707,55 +720,32 @@ const AlertFlowPage = () => {
                             className='tray-scroll-container'
                             onWheel={handleWheel}
                         >
-                            {activeTray === 'filter' ? (
-                                (alertFilters || []).filter(f => !nodes.find(n => n.id === `filter-${f.id}`)).map(filter => (
-                                    <div
-                                        key={filter.id}
-                                        className='tray-item-card filter-card btn-neumorphic'
-                                        onClick={() => onAddExistingNode(filter, 'filter')}
-                                    >
-                                        <div className='d-flex align-items-center mb-3'>
-                                            <div className='card-icon-wrapper bg-light'>
-                                                <Icon icon='FilterAlt' className='text-info' />
-                                            </div>
-                                            <div className='flex-grow-1 overflow-hidden'>
-                                                <div className='card-title-text text-truncate' title={filter.name}>{filter.name}</div>
-                                            </div>
+                            {(actions || []).filter(a => !nodes.find(n => n.id === `action-${a.id}`)).map(action => (
+                                <div
+                                    key={action.id}
+                                    className='tray-item-card action-card'
+                                    onClick={() => onAddExistingNode(action, 'action')}
+                                >
+                                    <div className='d-flex align-items-center mb-3'>
+                                        <div className='card-icon-wrapper bg-light'>
+                                            <Icon icon='NotificationsActive' className='text-danger' />
                                         </div>
-                                        <div className='card-desc-text'>
-                                            {filter.description || 'No description provided for this filter blueprint.'}
+                                        <div className='flex-grow-1 overflow-hidden'>
+                                            <div className='card-title-text text-truncate' title={action.name}>{action.name}</div>
+                                            <span className='badge bg-light text-muted extra-small border' style={{ fontSize: '0.55rem' }}>
+                                                {action.type}
+                                            </span>
                                         </div>
                                     </div>
-                                ))
-                            ) : (
-                                (actions || []).filter(a => !nodes.find(n => n.id === `action-${a.id}`)).map(action => (
-                                    <div
-                                        key={action.id}
-                                        className='tray-item-card action-card'
-                                        onClick={() => onAddExistingNode(action, 'action')}
-                                    >
-                                        <div className='d-flex align-items-center mb-3'>
-                                            <div className='card-icon-wrapper bg-light'>
-                                                <Icon icon='NotificationsActive' className='text-danger' />
-                                            </div>
-                                            <div className='flex-grow-1 overflow-hidden'>
-                                                <div className='card-title-text text-truncate' title={action.name}>{action.name}</div>
-                                                <span className='badge bg-light text-muted extra-small border' style={{ fontSize: '0.55rem' }}>
-                                                    {action.type}
-                                                </span>
-                                            </div>
-                                        </div>
+                                </div>
+                            ))}
 
-                                    </div>
-                                ))
-                            )}
-
-                            {((activeTray === 'filter' ? alertFilters : actions) || []).filter((item: any) => !nodes.find(n => n.id === `${activeTray}-${item.id}`)).length === 0 && (
+                            {(actions || []).filter((action: any) => !nodes.find(n => n.id === `action-${action.id}`)).length === 0 && (
                                 <div className='w-100 p-4 text-center'>
                                     <div className='bg-success bg-opacity-10 p-4 rounded-3 border border-success border-opacity-10 d-inline-block'>
                                         <Icon icon='CheckCircle' size='2x' className='text-success mb-2' />
                                         <div className='text-muted small fw-bold'>Workflow Optimized</div>
-                                        <div className='text-muted extra-small'>All available {activeTray}s are present in your workspace.</div>
+                                        <div className='text-muted extra-small'>All available actions are present in your workspace.</div>
                                     </div>
                                 </div>
                             )}
@@ -763,6 +753,7 @@ const AlertFlowPage = () => {
                     </div>
                 </div>
             )}
+
 
             <Page container='fluid'>
                 {viewMode === 'pipeline' ? (
@@ -832,6 +823,7 @@ const AlertFlowPage = () => {
                             isSidePanelOpen={isSidePanelOpen}
                             setIsSidePanelOpen={setIsSidePanelOpen}
                             handleSaveNodeData={handleSaveNodeData}
+                            focusedGroupName={focusedGroupName}
                         />
                     </ReactFlowProvider>
                 )}
@@ -845,6 +837,7 @@ const AlertFlowPage = () => {
             >
                 {selectedNode?.type === 'filter' && (
                     <AlertFlowFilterForm
+                        key={`filter-${selectedNode.id}`}
                         filter={selectedNode.data}
                         onSave={handleSaveNodeData}
                         onCancel={() => setIsSidePanelOpen(false)}
@@ -879,13 +872,14 @@ const AlertFlowPage = () => {
                 )}
                 {selectedNode?.type === 'filterGroup' && (
                     <AlertFlowGroupForm
+                        key={`group-${selectedNode.id}`}
                         group={selectedNode.data}
                         onSave={handleSaveNodeData}
                         onCancel={() => setIsSidePanelOpen(false)}
                     />
                 )}
                 {selectedNode?.type === 'trigger' && (
-                    <div className='p-3 text-center'>
+                    <div key={`trigger-${selectedNode.id}`} className='p-3 text-center'>
                         <Icon icon='Bolt' size='4x' className='text-warning mb-3' />
                         <h5>System Trigger</h5>
                         <p className='text-muted'>
@@ -990,11 +984,6 @@ const AlertFlowPage = () => {
                     </div>
                 )}
             </FlowSidePanel >
-            <CreateGroupModal
-                isOpen={isCreateModalOpen}
-                setIsOpen={setIsCreateModalOpen}
-                onSave={handleCreateGroup}
-            />
         </PageWrapper>
     );
 };

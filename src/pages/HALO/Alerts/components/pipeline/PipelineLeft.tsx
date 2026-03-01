@@ -35,7 +35,7 @@ const PipelineLeft: React.FC<PipelineLeftProps> = ({
         }}>
             {/* Column A - Inputs */}
             <div className="col-3 border-end border-light border-opacity-10 px-3">
-                <h6 className="text-muted small text-uppercase fw-bold mb-3 border-bottom pb-2">Inputs</h6>
+                <h6 className="text-muted small text-uppercase fw-bold mb-3  pb-2">Inputs</h6>
                 <InputColumn
                     filters={filters}
                     activePathId={activePath?.filterId || null}
@@ -57,7 +57,7 @@ const PipelineLeft: React.FC<PipelineLeftProps> = ({
 
             {/* Column B - Filters */}
             <div className="col-4 border-end border-light border-opacity-10 px-3">
-                <h6 className="text-muted small text-uppercase fw-bold mb-3 border-bottom pb-2">Conditions</h6>
+                <h6 className="text-muted small text-uppercase fw-bold mb-3  pb-2">Conditions</h6>
                 <FilterColumn
                     filters={filters}
                     activePathId={activePath?.filterId || null}
@@ -80,7 +80,7 @@ const PipelineLeft: React.FC<PipelineLeftProps> = ({
 
             {/* Column C - Actions */}
             <div className="col-4 px-3">
-                <h6 className="text-muted small text-uppercase fw-bold mb-3 border-bottom pb-2">Actions</h6>
+                <h6 className="text-muted small text-uppercase fw-bold mb-3  pb-2">Actions</h6>
                 <ActionColumn
                     actions={filters.flatMap(f => f.actions || [])}
                     activeActionIds={activePath?.actionIds || []}

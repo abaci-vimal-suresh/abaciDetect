@@ -17,12 +17,33 @@ export const useFlowHealth = (
             !f.actions || f.actions.length === 0
         );
 
-        const overlappingFilters = alertFilters.filter((f, i) =>
-            alertFilters.some((g, j) => i !== j &&
-                f.alert_types?.some(t => g.alert_types?.includes(t)) &&
-                f.area_ids?.some(a => g.area_ids?.includes(a))
-            )
-        );
+        const overlappingFilters = alertFilters.map(f => {
+            const conflicts: any[] = [];
+
+            alertFilters.forEach((g) => {
+                if (f.id === g.id) return;
+
+                const commonTypes = f.alert_types?.filter(t => g.alert_types?.includes(t)) || [];
+                const commonAreas = f.area_ids?.filter(a => g.area_ids?.includes(a)) || [];
+
+                if (commonTypes.length > 0 && commonAreas.length > 0) {
+                    conflicts.push({
+                        withFilterName: g.name,
+                        types: commonTypes,
+                        areaIds: commonAreas,
+                        // Helper to get area names from the filter's own area_list if available
+                        areaNames: f.area_list
+                            ?.filter((a: any) => commonAreas.includes(a.id))
+                            .map((a: any) => a.name) || []
+                    });
+                }
+            });
+
+            if (conflicts.length > 0) {
+                return { ...f, conflicts };
+            }
+            return null;
+        }).filter(Boolean) as any[];
 
         const silentFilters = alertFilters.filter(f =>
             (f.weekdays?.length ?? 0) > 0 && (

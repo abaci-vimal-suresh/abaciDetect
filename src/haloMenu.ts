@@ -59,12 +59,12 @@ export const haloMenu = {
                 path: '/halo/alerts/filter',
                 icon: 'FilterAlt',
             },
-            flow: {
-                id: 'alerts-flow',
-                text: 'Work Flow',
-                path: '/halo/alerts/flow',
-                icon: 'AccountTree',
-            },
+            // flow: {
+            //     id: 'alerts-flow',
+            //     text: 'Work Flow',
+            //     path: '/halo/alerts/flow',
+            //     icon: 'AccountTree',
+            // },
             filtergroups: {
                 id: 'alerts-filter-groups',
                 text: 'Filter Groups',

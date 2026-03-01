@@ -50,6 +50,7 @@ interface BuildingSceneProps {
     floorSpacing?: number;
     floorOpacity?: number;
     showBoundaries?: boolean;
+    zoomTrigger?: number;
     onSensorClick?: (sensor: Sensor) => void;
     onSensorDrag?: (sensor: Sensor, newCoords: { x_val: number, y_val: number, z_val: number }) => void;
     onWallClick?: (wall: Wall) => void;
@@ -164,6 +165,7 @@ export function BuildingScene({
     blinkingWallIds = [],
     wallDrawMode = false,
     onWallCreated,
+    zoomTrigger = 0,
     wallsByArea = {} // ✨ NEW: Walls passed from parent
 }: BuildingSceneProps) {
     const { controls } = useThree() as any;
@@ -207,7 +209,7 @@ export function BuildingScene({
     // Auto-focus camera on selected sensor
     useEffect(() => {
         if (selectedSensorId && controls && typeof controls.setLookAt === 'function') {
-            const sensor = sensors.find(s => s.id === selectedSensorId);
+            const sensor = sensors.find(s => String(s.id) === String(selectedSensorId));
             if (sensor) {
                 const floorLevel = sensor.floor_level ?? 0;
                 const pos = transformSensorTo3D(sensor, actualCalibration, floorLevel, floorSpacing);
@@ -216,14 +218,23 @@ export function BuildingScene({
                 const ty = pos.y;
                 const tz = pos.z - (actualCalibration.centerZ || 0);
 
+                console.log('BuildingScene: Zooming to sensor', {
+                    name: sensor.name,
+                    id: sensor.id,
+                    pos3D: { x: tx, y: ty, z: tz },
+                    calibration: actualCalibration
+                });
+
                 controls.setLookAt(
                     tx + 15, ty + 10, tz + 15,
                     tx, ty, tz,
                     true
                 );
+            } else {
+                console.warn('BuildingScene: Selected sensor not found in list for zoom', selectedSensorId);
             }
         }
-    }, [selectedSensorId, controls, sensors, actualCalibration, floorSpacing]);
+    }, [selectedSensorId, zoomTrigger, controls, sensors, actualCalibration, floorSpacing]);
 
     const handleFloorLoad = (measuredCal: FloorCalibration) => {
         if (!isCalibrated) {

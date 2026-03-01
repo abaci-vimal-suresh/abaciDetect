@@ -59,7 +59,7 @@ const PipelineRight: React.FC<PipelineRightProps> = ({
                         isActive={activeTab === 'dryrun'}
                         onClick={() => setActiveTab('dryrun')}
                     >
-                        <span className="cursor-pointer small fw-bold text-uppercase">Dry Run</span>
+                        <span className="cursor-pointer small fw-bold text-uppercase">Alert Preview</span>
                     </NavItem>
                 </Nav>
             </div>

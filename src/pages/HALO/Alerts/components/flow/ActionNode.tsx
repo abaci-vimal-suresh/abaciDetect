@@ -1,42 +1,46 @@
 import React, { memo } from 'react';
-import BaseNode from './BaseNode';
+import { Handle, Position } from '@xyflow/react';
 import Icon from '../../../../../components/icon/Icon';
-import Badge from '../../../../../components/bootstrap/Badge';
 
 const ActionNode = ({ data, selected, id }: any) => {
-    const typeMap: any = {
-        'email': { icon: 'Email', color: 'primary', label: 'Email' },
-        'sms': { icon: 'Sms', color: 'success', label: 'SMS' },
-        'webhook': { icon: 'Code', color: 'warning', label: 'Webhook' },
-        'n8n_workflow': { icon: 'SettingsEthernet', color: 'info', label: 'n8n' },
-        'device_notification': { icon: 'Dvr', color: 'danger', label: 'Device' },
-        'push_notification': { icon: 'PhonelinkRing', color: 'secondary', label: 'Push' },
+    const ACTION_TYPE_CONFIG: Record<string, { color: string, icon: string, label: string }> = {
+        email: { color: '#0d6efd', icon: 'Email', label: 'EMAIL' },
+        sms: { color: '#198754', icon: 'Sms', label: 'SMS' },
+        push_notification: { color: '#6f42c1', icon: 'Notifications', label: 'PUSH' },
+        device_notification: { color: '#fd7e14', icon: 'Lightbulb', label: 'DEVICE' },
+        webhook: { color: '#6610f2', icon: 'Webhook', label: 'WEBHOOK' },
+        n8n_workflow: { color: '#20c997', icon: 'AccountTree', label: 'N8N' },
     };
 
-    const config = typeMap[data.type] || { icon: 'Notifications', color: 'primary', label: data.type || 'Action' };
+    const config = ACTION_TYPE_CONFIG[data.type] || { color: '#6c757d', icon: 'Bolt', label: data.type?.toUpperCase() || 'ACTION' };
 
     return (
-        <BaseNode
-            id={id}
-            title={data.name || 'Action Node'}
-            icon={config.icon}
-            color={config.color}
-            selected={selected}
-            outputs={false}
-            status={data.status}
-        >
-            <div className='d-flex flex-column gap-1'>
-                <div className='d-flex justify-content-between align-items-center'>
-                    <Badge color={config.color} isLight className='text-uppercase'>{config.label}</Badge>
-                    {data.is_active === false && <Badge color='warning' isLight>Inactive</Badge>}
+        <div className="action-node-card" style={{
+            borderLeft: `4px solid ${config.color}`,
+            opacity: data.is_active === false ? 0.5 : 1,
+            position: 'relative'
+        }}>
+            <div className="action-node-header">
+                <div className="action-node-icon" style={{ backgroundColor: `${config.color}15` }}>
+                    <Icon icon={config.icon} style={{ color: config.color }} />
                 </div>
-                <div className='small text-muted mt-1 text-truncate'>
-                    {data.type === 'email' ? `To: ${data.recipients?.length || 0} recipients` :
-                        data.type === 'webhook' ? data.webhook_url :
-                            data.description || 'No description'}
-                </div>
+                <span className="action-node-name text-truncate" title={data.name}>
+                    {data.name || 'Action Node'}
+                </span>
             </div>
-        </BaseNode>
+
+            <div className="action-node-type-badge" style={{ backgroundColor: `${config.color}15`, color: config.color }}>
+                {config.label}
+            </div>
+
+            <div className="action-node-body">
+                {data.type === 'email' ? `To: ${data.recipients?.length || 0} recipients` :
+                    data.type === 'webhook' ? data.webhook_url :
+                        data.description || 'No description'}
+            </div>
+
+            <Handle type="target" position={Position.Left} />
+        </div>
     );
 };
 

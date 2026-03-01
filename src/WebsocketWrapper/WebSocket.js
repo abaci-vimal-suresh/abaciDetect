@@ -181,7 +181,17 @@ const WebsocketProvider = ({ children }) => {
 				is_acknowledged_by_user: notifData.is_acknowledged ?? false,
 				created_time: notifData.created_time ?? new Date().toISOString(),
 				updated_time: notifData.updated_time ?? new Date().toISOString(),
+				// Extract sensor_id if possible
+				sensor_id: notifData.sensor_id ?? notifData.sensor ?? (notifData.body ? (notifData.body.match(/Sensor ID:\s*(\d+)/)?.[1]) : null),
+				sensor_name: notifData.sensor_name ?? (notifData.body ? (notifData.body.match(/Sensor:\s*([^|#\n]+)/)?.[1]?.trim()) : null),
 			};
+
+			console.log('WebSocket: Alert Created Event Handled', {
+				id: newNotification.id,
+				sensor_id: newNotification.sensor_id,
+				sensor_name: newNotification.sensor_name,
+				data: notifData
+			});
 
 			// ─── 1. Notification.tsx cache ────────────────────────────────────────────
 

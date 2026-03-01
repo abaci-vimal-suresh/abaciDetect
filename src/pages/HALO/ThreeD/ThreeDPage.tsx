@@ -1,4 +1,5 @@
-import { Suspense, useState, useMemo, useEffect } from 'react';
+import { Suspense, useState, useMemo, useEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { CameraControls, PerspectiveCamera, Environment, Html, Loader } from '@react-three/drei';
@@ -25,6 +26,7 @@ import { MOCK_WALLS } from '../../../api/mockData';
 import { flattenAreas } from './utils/dataTransform';
 import { Wall } from '../../../types/sensor';
 import useToasterNotification from '../../../hooks/useToasterNotification';
+import { selectAllAlerts } from '../../../store/sensorEventsSlice';
 
 import {
     PreviewState,
@@ -69,8 +71,11 @@ const ThreeDPage = () => {
 
     const [wallCreationTrigger, setWallCreationTrigger] = useState(0);
     const [pendingWall, setPendingWall] = useState<Partial<Wall> | null>(null);
+    const [zoomTrigger, setZoomTrigger] = useState(0);
 
     const [calibration, setCalibration] = useState<any>(null);
+    const alerts = useSelector(selectAllAlerts);
+    const lastAlertCountRef = useRef(alerts.length);
 
     const { data: areasData, isLoading: areasLoading } = useAreas();
     const { data: sensorsData, isLoading: sensorsLoading } = useSensors();
@@ -276,6 +281,65 @@ const ThreeDPage = () => {
             }
         }
     }, [selectedSensor]);
+    // Auto-select and zoom on new alert
+    useEffect(() => {
+        // If we have more alerts than before, a new one just arrived
+        if (alerts.length > lastAlertCountRef.current) {
+            const newAlert = alerts[0]; // Alerts are unshifted (newest first)
+            lastAlertCountRef.current = alerts.length;
+
+            console.log('ThreeDPage: New Alert Detected!', {
+                title: newAlert?.title,
+                sensor_id: newAlert?.sensor_id,
+                sensor_name: newAlert?.sensor_name,
+                body: newAlert?.body,
+            });
+
+            if (newAlert) {
+                // Try matching by ID first, then by name as a fallback
+                const sensor = sensors.find(s =>
+                    (newAlert.sensor_id && String(s.id) === String(newAlert.sensor_id)) ||
+                    (newAlert.sensor_name && s.name.toLowerCase() === newAlert.sensor_name.toLowerCase()) ||
+                    (newAlert.body && newAlert.body.toLowerCase().includes(`sensor: ${s.name.toLowerCase()}`))
+                );
+
+                if (sensor) {
+                    const sensorAreaId = typeof sensor.area === 'object' && sensor.area !== null
+                        ? sensor.area.id
+                        : (sensor.area || sensor.area_id);
+
+                    console.log('ThreeDPage: Match found! Auto-selecting:', sensor.name);
+
+                    if (sensorAreaId && !selectedAreaIds.includes(Number(sensorAreaId))) {
+                        setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
+                    }
+
+                    setSelectedSensorId(sensor.id);
+                    setZoomTrigger(prev => prev + 1);
+                    setShowSettingsOverlay(true);
+                    setEditingAreaForWalls(null);
+                    setActiveMetricGroup(null);
+
+                    // Unified preview state setup for camera lookAt
+                    setPreviewState(createSensorPositionPreview(
+                        sensor.id,
+                        sensor.x_val || 0,
+                        sensor.y_val || 0,
+                        sensor.z_val || 0
+                    ));
+                } else {
+                    console.warn('ThreeDPage: No sensor match found for alert', {
+                        extracted_id: newAlert.sensor_id,
+                        extracted_name: newAlert.sensor_name,
+                        available_sensors: sensors.map(s => s.name)
+                    });
+                }
+            }
+        } else {
+            // Keep ref in sync even if alerts are cleared/reduced
+            lastAlertCountRef.current = alerts.length;
+        }
+    }, [alerts, sensors, selectedAreaIds]);
 
 
     const handleWallCreated = (newWall: Partial<Wall>) => {
@@ -584,6 +648,7 @@ const ThreeDPage = () => {
                                     wallDrawMode={wallDrawMode}
                                     onWallCreated={handleWallCreated}
                                     selectedWallId={selectedWallId}
+                                    zoomTrigger={zoomTrigger}
                                     onWallClick={(wall) => {
                                         if (showSettingsOverlay && selectedSensor) {
                                             // Redirect to sensor settings if they are open

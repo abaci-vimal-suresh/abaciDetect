@@ -229,7 +229,7 @@ const AlertFilterForm: React.FC<AlertFilterFormProps> = ({ filter, onSave, onCan
                 <div className="card-body p-3">
                     <div className="row g-3">
                         <div className="col-md-6">
-                            <FormGroup label="Apply to Areas">
+                            <FormGroup label="Areas">
                                 <MultiSelectDropdown
                                     options={areaOptions}
                                     value={(formData.area_ids ?? []).map(String)}

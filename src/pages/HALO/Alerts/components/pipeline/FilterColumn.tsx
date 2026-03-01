@@ -16,6 +16,8 @@ const FilterColumn: React.FC<FilterColumnProps> = ({
     onFilterClick,
     onPathActivate
 }) => {
+    const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
     return (
         <div className="d-flex flex-column gap-4 py-2">
             {filters.map((filter) => {
@@ -31,7 +33,7 @@ const FilterColumn: React.FC<FilterColumnProps> = ({
                             onFilterClick(filter);
                             onPathActivate(filter.id);
                         }}
-                        style={{ minHeight: '140px' }}
+                        style={{ minHeight: '160px' }}
                     >
                         <div className="card-body p-3 d-flex flex-column">
                             <div className="d-flex align-items-center justify-content-between mb-2">
@@ -47,34 +49,45 @@ const FilterColumn: React.FC<FilterColumnProps> = ({
 
                             <div className="border-top border-light my-2 opacity-50"></div>
 
-                            <div className="d-flex gap-2 mb-2">
-                                {filter.action_for_max && (
-                                    <Badge color="success" isLight className="small px-2" style={{ fontSize: '0.65rem' }}>
-                                        <Icon icon="CheckCircle" size="sm" className="me-1" /> Over Max
-                                    </Badge>
-                                )}
-                                {filter.action_for_min && (
-                                    <Badge color="success" isLight className="small px-2" style={{ fontSize: '0.65rem' }}>
-                                        <Icon icon="CheckCircle" size="sm" className="me-1" /> Under Min
-                                    </Badge>
-                                )}
+                            {/* Conditions Info: Where & When */}
+                            <div className="mb-3">
+                                {/* Where: Areas */}
+                                <div className="d-flex flex-wrap gap-1 mb-2">
+                                    {filter.area_list?.map((area) => (
+                                        <span key={area.id} className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 py-1" style={{ fontSize: '0.65rem' }}>
+                                            <Icon icon="LocationOn" size="sm" className="me-1" />
+                                            {area.name}
+                                        </span>
+                                    ))}
+                                </div>
+
+                                {/* When: Schedule */}
+                                <div className="d-flex align-items-center justify-content-between mt-2">
+                                    <div className="d-flex gap-1">
+                                        {DAYS.map((day, idx) => (
+                                            <span
+                                                key={idx}
+                                                className={`d-flex align-items-center justify-content-center rounded-circle small ${(filter.weekdays || []).includes(idx) ? 'bg-primary text-white' : 'bg-light text-muted'}`}
+                                                style={{ width: '14px', height: '14px', fontSize: '9px', fontWeight: 'bold' }}
+                                            >
+                                                {day}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    {filter.start_time && (
+                                        <span className="text-muted" style={{ fontSize: '10px' }}>
+                                            <Icon icon="Schedule" size="sm" className="me-1" />
+                                            {filter.start_time.substring(0, 5)} - {filter.end_time?.substring(0, 5)}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
-                            <div className="small text-muted mb-1 text-truncate">
-                                <Icon icon="LocationOn" size="sm" className="me-1" />
-                                {filter.area_list?.map(a => a.name).join(', ') || 'Global'}
-                            </div>
-
-                            <div className="small text-muted mb-auto text-truncate">
-                                <Icon icon="Groups" size="sm" className="me-1" />
-                                {filter.sensor_groups?.map(g => g.name).join(', ') || 'All Sensors'}
-                            </div>
-
-                            <div className="mt-2 pt-2 border-top border-light d-flex align-items-center justify-content-between align-self-end w-100">
+                            <div className="mt-auto pt-2 border-top border-light d-flex align-items-center justify-content-between w-100">
                                 <span className={`small fw-bold ${actionCount === 0 ? 'text-warning' : 'text-primary'}`}>
                                     <Icon icon="Bolt" size="sm" className="me-1" />
                                     {actionCount} Actions
-                                    {actionCount === 0 && <Icon icon="Warning" size="sm" className="ms-1" />}
+                                    {actionCount === 0 && <Icon icon="Warning" size="sm" className="ms-1 outline-none" />}
                                 </span>
                                 <Icon icon="ArrowForward" size="sm" className={`opacity-50 ${isActive ? 'text-primary opacity-100' : ''}`} />
                             </div>

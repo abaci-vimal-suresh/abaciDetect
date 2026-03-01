@@ -205,6 +205,394 @@
     backdrop-filter: blur(10px);
 }
 
+/* --- Legend Styling --- */
+.canvas-legend {
+    position: absolute;
+    bottom: 180px;
+    left: 16px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    font-size: 0.72rem;
+    color: #555;
+    min-width: 160px;
+}
+
+.canvas-legend-title {
+    font-weight: 700;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.canvas-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.canvas-legend-line-dashed {
+    width: 28px;
+    height: 0;
+    border-top: 2px dashed #9c59b6;
+    flex-shrink: 0;
+}
+
+.canvas-legend-line-solid {
+    width: 28px;
+    height: 0;
+    border-top: 2px solid #555;
+    flex-shrink: 0;
+}
+
+.canvas-legend-line-dotted {
+    width: 28px;
+    height: 0;
+    border-top: 2px dotted #888;
+    flex-shrink: 0;
+}
+
+.canvas-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Filter Node Card */
+.filter-node-card {
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e8e8e8;
+    min-width: 240px;
+    max-width: 280px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    overflow: hidden;
+}
+
+.filter-node-input-strip {
+    background: linear-gradient(135deg, #f0f4ff 0%, #f8f0ff 100%);
+    border-bottom: 1px solid #e8e0f0;
+    padding: 7px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.filter-node-input-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.filter-node-input-icon {
+    font-size: 0.65rem;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.filter-node-input-text {
+    font-size: 0.68rem;
+    color: #6a5a8a;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.filter-node-silent-badge {
+    font-size: 0.6rem;
+    background: #6c757d;
+    color: white;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.filter-node-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.filter-node-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 6px 12px;
+    gap: 6px;
+}
+
+.filter-node-name {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: #1a1a2e;
+    flex: 1;
+    line-height: 1.3;
+}
+
+.filter-node-body {
+    padding: 6px 12px 10px 12px;
+}
+
+.filter-node-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.filter-node-badge {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-weight: 600;
+    background: #e8f4fd;
+    color: #0d6efd;
+    border: 1px solid #b8d9f8;
+}
+
+.filter-node-area {
+    font-size: 0.7rem;
+    color: #888;
+    margin-top: 4px;
+}
+
+.filter-node-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 12px;
+    background: #f8f9fa;
+    border-top: 1px solid #f0f0f0;
+    font-size: 0.68rem;
+    color: #aaa;
+}
+
+/* Action Node Card */
+.action-node-card {
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e8e8e8;
+    min-width: 200px;
+    max-width: 240px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    overflow: hidden;
+}
+
+.action-node-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.action-node-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px 6px 12px;
+}
+
+.action-node-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.action-node-name {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: #1a1a2e;
+    flex: 1;
+}
+
+.action-node-type-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin: 0 12px 6px 12px;
+}
+
+.action-node-body {
+    padding: 4px 12px 10px 12px;
+    font-size: 0.7rem;
+    color: #888;
+}
+
+/* Group Node Body & Health */
+.group-node-body {
+    padding: 8px 14px 12px 14px;
+}
+
+.group-node-count-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 8px;
+}
+
+.group-node-health-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 6px;
+}
+
+.group-node-health-item {
+    font-size: 0.67rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.group-node-health-item.healthy {
+    background: rgba(25, 135, 84, 0.3);
+    color: #a8ffd0;
+    border: 1px solid rgba(25, 135, 84, 0.4);
+}
+
+.group-node-health-item.dead {
+    background: rgba(220, 53, 69, 0.3);
+    color: #ffb3ba;
+    border: 1px solid rgba(220, 53, 69, 0.4);
+}
+
+.group-node-health-item.silent {
+    background: rgba(108, 117, 125, 0.3);
+    color: #d0d3d7;
+    border: 1px solid rgba(108, 117, 125, 0.4);
+}
+
+.group-node-description {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.4;
+    margin-top: 4px;
+}
+
+/* Toggle button inside group node */
+.group-node-toggle-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 2px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+}
+
+.group-node-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+/* Group node header row */
+.group-node-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 6px 14px;
+    gap: 8px;
+}
+
+.group-node-name {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: white;
+    flex: 1;
+    line-height: 1.3;
+}
+
+/* Collapsed state styles */
+.group-node-collapsed {
+    min-width: 220px;
+}
+
+.group-node-collapsed-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px 6px 12px;
+}
+
+.group-node-collapsed-name {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: white;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.group-node-collapsed-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+/* Expanded state wrapper */
+.group-node-expanded {
+    min-width: 210px;
+    max-width: 260px;
+}
+
+/* Hide member filter nodes when parent group is collapsed */
+.react-flow__node.group-member-collapsed {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.3s ease;
+}
+
+.react-flow__node.group-member-visible {
+    opacity: 1;
+    pointer-events: all;
+    transition: opacity 0.3s ease;
+}
+
+/* Group Node Card */
+.group-node-card {
+    border-radius: 12px;
+    min-width: 200px;
+    max-width: 240px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(30, 58, 95, 0.35);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.group-node-card:hover {
+    box-shadow: 0 8px 24px rgba(30, 58, 95, 0.5);
+    transform: translateY(-2px);
+}
+
 .pipeline-filter-card {
     transition: all 0.25s ease;
     cursor: pointer;
@@ -265,6 +653,71 @@
 
 .transition-all {
     transition: all 0.2s ease-in-out;
+}
+
+/* Trigger Node Pill */
+.trigger-node-pill {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.trigger-node-pill:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e0;
+}
+
+.trigger-node-pill.selected {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.trigger-node-icon {
+    color: #4a5568;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trigger-node-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #2d3748;
+    white-space: nowrap;
+}
+
+.trigger-node-handle {
+    background: #cbd5e0 !important;
+    width: 18px !important;
+    height: 18px !important;
+    right: 4px !important;
+}
+
+/* --- React Flow Overrides --- */
+.react-flow__handle {
+    width: 14px !important;
+    height: 14px !important;
+    background: #fff !important;
+    border: 2.5px solid #212529 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+
+
+.react-flow__handle-left {
+    left: -2px !important;
+}
+
+.react-flow__handle-right {
+    right: -2px !important;
 }
 
 .slide-in {

@@ -40,20 +40,11 @@ const ConflictsTab: React.FC<ConflictsTabProps> = ({
                 </div>
             ))}
 
-            {/* Overlapping filters */}
-            {overlappingFilters.map(f => (
-                <div key={`overlap-${f.id}`} className="alert alert-danger border-danger border-opacity-25 bg-danger bg-opacity-10 d-flex gap-3 mb-0">
-                    <Icon icon="Error" className="text-danger mt-1" />
-                    <div className="small">
-                        <strong className="d-block mb-1">{f.name}</strong>
-                        <span>Overlaps with another filter (same alert type + area). This may cause duplicate notifications.</span>
-                    </div>
-                </div>
-            ))}
+
 
             {/* Silent filters */}
             {silentFilters.map(f => (
-                <div key={`silent-${f.id}`} className="alert alert-secondary border-secondary border-opacity-25 bg-secondary bg-opacity-10 d-flex gap-3 mb-0">
+                <div key={`silent-${f.id}`} className="alert alert-secondary border-secondary border-opacity-25 bg-warning bg-opacity-10 d-flex gap-3 mb-0">
                     <Icon icon="NotificationsOff" className="text-secondary mt-1" />
                     <div className="small">
                         <strong className="d-block mb-1">{f.name}</strong>
@@ -64,7 +55,7 @@ const ConflictsTab: React.FC<ConflictsTabProps> = ({
 
             {/* Duplicate recipients */}
             {duplicateRecipients.length > 0 && (
-                <div className="alert alert-info border-info border-opacity-25 bg-info bg-opacity-10 d-flex gap-3 mb-0">
+                <div className="alert alert-info border-info border-opacity-25 bg-warning bg-opacity-10 d-flex gap-3 mb-0">
                     <Icon icon="People" className="text-info mt-1" />
                     <div className="small">
                         <strong className="d-block mb-1">Duplicate Recipients</strong>
