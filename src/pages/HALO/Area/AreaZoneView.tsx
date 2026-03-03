@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Page from '../../../layout/Page/Page';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
@@ -11,13 +11,22 @@ import Badge from '../../../components/bootstrap/Badge';
 import Spinner from '../../../components/bootstrap/Spinner';
 import FormGroup from '../../../components/bootstrap/forms/FormGroup';
 import Input from '../../../components/bootstrap/forms/Input';
+import OffCanvas, {
+    OffCanvasHeader,
+    OffCanvasTitle,
+    OffCanvasBody,
+} from '../../../components/bootstrap/OffCanvas';
+import SensorTrendChart from './components/SensorTrendChart';
 import {
     useAreas,
     useSensors,
     useUsers,
     useUpdateSensor,
     useAggregatedSensorData,
+    fetchSensorData,
 } from '../../../api/sensors.api';
+import { useQueries } from '@tanstack/react-query';
+import { authAxios as axiosInstance } from '../../../axiosInstance';
 import { Area } from '../../../types/sensor';
 import { filterSensors } from '../utils/sensorData.utils';
 import { buildAreaBreadcrumbPath } from '../utils/navigation.utils';
@@ -26,6 +35,7 @@ import {
     getEffectiveConfig,
     buildProcessedMetrics,
     buildEventStatuses,
+    ProcessedMetric,
 } from '../utils/radarMapping.utils';
 
 import MiniGauge from './components/MiniGauge';
@@ -34,7 +44,7 @@ import AddSensorModal from './modals/AddSensorModal';
 import CreateSubAreaModal from './modals/CreateSubAreaModal';
 import { useAreaActions } from './hooks/useAreaActions';
 
-// ── Metric Groups ─────────────────────────────────────────────────────────────
+// ── Constants (module-level — never recreated) ────────────────────────────────
 const METRIC_GROUPS = [
     { key: 'room_conditions', label: 'Room Conditions', icon: 'Thermostat', metricKeys: ['temperature', 'humidity', 'pressure', 'light'] },
     { key: 'air_particles', label: 'Air Dust & Particles', icon: 'Grain', metricKeys: ['pm1', 'pm25', 'pm10'] },
@@ -42,8 +52,31 @@ const METRIC_GROUPS = [
     { key: 'air_quality', label: 'Air Quality Score', icon: 'Shield', metricKeys: ['aqi', 'health'] },
     { key: 'movement', label: 'Activity & Movement', icon: 'DirectionsRun', metricKeys: ['movement'] },
     { key: 'sound', label: 'Sound & Noise', icon: 'VolumeUp', metricKeys: ['noise'] },
-];
+] as const;
 
+const METRIC_TO_API: Record<string, string> = {
+    temperature: 'temperature_c',
+    humidity: 'humidity_percent',
+    pressure: 'pressure_hpa',
+    light: 'light_lux',
+    pm1: 'pm1',
+    pm25: 'pm25',
+    pm10: 'pm10',
+    co: 'co',
+    co2: 'co2_cal',
+    tvoc: 'tvoc',
+    nh3: 'nh3',
+    no2: 'no2',
+    aqi: 'aqi',
+    health: 'health_index',
+    movement: 'movement',
+    noise: 'noise_db',
+};
+
+// Stable empty array so useMemo deps don't change needlessly
+const EMPTY: never[] = [];
+
+// ── Component ─────────────────────────────────────────────────────────────────
 const AreaZoneView = () => {
     const { areaId, subzoneId } = useParams<{ areaId: string; subzoneId?: string }>();
     const navigate = useNavigate();
@@ -54,43 +87,42 @@ const AreaZoneView = () => {
     // ── Data fetching ─────────────────────────────────────────────────────────
     const { data: areas, isLoading: areasLoading } = useAreas();
     const { data: users } = useUsers();
-    const { data: zoneSensors = [], isLoading: sensorsLoading } = useSensors({ areaId: activeId || undefined });
-    const { data: allUnassignedSensors = [] } = useSensors();
+    const { data: zoneSensors = EMPTY, isLoading: sensorsLoading } = useSensors({ areaId: activeId || undefined });
+    const { data: allUnassignedSensors = EMPTY } = useSensors();
     const { data: aggregatedResponse } = useAggregatedSensorData({
-        area_id: activeId ? [Number(activeId)] : [],
+        area_id: activeId ? [Number(activeId)] : EMPTY,
     });
 
     // ── Actions hook ──────────────────────────────────────────────────────────
     const {
-        isSubAreaModalOpen,
-        setIsSubAreaModalOpen,
-        isSensorModalOpen,
-        setIsSensorModalOpen,
-        isEditModalOpen,
-        setIsEditModalOpen,
+        isSubAreaModalOpen, setIsSubAreaModalOpen,
+        isSensorModalOpen, setIsSensorModalOpen,
+        isEditModalOpen, setIsEditModalOpen,
         editingArea,
-        handleCreateSubArea,
-        handleOpenEditModal,
-        handleDeleteArea,
-        handleAddSensor,
-        handleUnassignSensor,
-        createSubAreaMutation,
-        updateSensorMutation
+        handleCreateSubArea, handleOpenEditModal, handleDeleteArea,
+        handleAddSensor, handleUnassignSensor,
+        createSubAreaMutation, updateSensorMutation,
     } = useAreaActions();
 
     // ── UI State ──────────────────────────────────────────────────────────────
-    const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
+    const [activeGroupKey, setActiveGroupKey] = useState<string | null>('room_conditions');
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
     const [isMetricsCollapsed, setIsMetricsCollapsed] = useState(false);
+    const [selectedMetric, setSelectedMetric] = useState<ProcessedMetric | null>(null);
+
+    const activeGroup = useMemo(
+        () => METRIC_GROUPS.find(g => g.key === activeGroupKey),
+        [activeGroupKey]
+    );
 
     // ── Derived area data ─────────────────────────────────────────────────────
     const parentArea = useMemo(() => areas?.find(a => a.id === Number(areaId)), [areas, areaId]);
     const currentZone = useMemo(() => areas?.find(a => a.id === Number(activeId)), [areas, activeId]);
 
     const childSubAreas = useMemo(() => {
-        const ids = currentZone?.subareas || [];
-        if (!areas || ids.length === 0) return [];
+        const ids = currentZone?.subareas || EMPTY;
+        if (!areas || ids.length === 0) return EMPTY;
         return ids.map((id: number) => areas.find(a => a.id === id)).filter((a): a is Area => a !== undefined);
     }, [currentZone, areas]);
 
@@ -128,22 +160,151 @@ const AreaZoneView = () => {
     const aggData = useMemo(() => aggregatedResponse?.aggregated_data || {}, [aggregatedResponse]);
     const hasNoConfig = Object.keys(effectiveConfig).length === 0;
 
-    const allProcessedMetrics = useMemo(
-        () => buildProcessedMetrics(aggData, effectiveConfig),
-        [aggData, effectiveConfig],
+    // FIX: compute each group's metrics ONCE — used for both tab buttons and display
+    const metricsByGroup = useMemo(() =>
+        Object.fromEntries(
+            METRIC_GROUPS.map(g => [g.key, buildProcessedMetrics(aggData, effectiveConfig, g.metricKeys as unknown as string[])])
+        ),
+        [aggData, effectiveConfig]
     );
 
-    const displayedMetrics = useMemo(() => {
-        if (!activeGroupKey) return allProcessedMetrics;
+    // All metrics (for "All" tab) computed from the cached map above
+    const allProcessedMetrics = useMemo(
+        () => Object.values(metricsByGroup).flat(),
+        [metricsByGroup]
+    );
+
+    const displayedMetrics = useMemo(
+        () => activeGroupKey ? (metricsByGroup[activeGroupKey] ?? []) : allProcessedMetrics,
+        [activeGroupKey, metricsByGroup, allProcessedMetrics]
+    );
+
+    // ── Trend queries — LAZY: only fetch keys for the active group ────────────
+    // This is the main perf fix: was fetching ALL 15 metrics, now only 2-5 at a time
+    const activeMetricKeys: string[] = useMemo(() => {
+        if (isMetricsCollapsed) return []; // Don't fetch when metrics panel is hidden
+        if (!activeGroupKey) return Array.from(new Set(METRIC_GROUPS.flatMap(g => [...g.metricKeys])));
         const group = METRIC_GROUPS.find(g => g.key === activeGroupKey);
-        return group ? buildProcessedMetrics(aggData, effectiveConfig, group.metricKeys) : allProcessedMetrics;
-    }, [activeGroupKey, aggData, effectiveConfig, allProcessedMetrics]);
+        return group ? [...group.metricKeys] : [];
+    }, [activeGroupKey, isMetricsCollapsed]);
 
-    // buildEventStatuses used for future event status display
-    const _eventStatuses = useMemo(() => buildEventStatuses(aggData), [aggData]);
+    // STEP 2: Build metricSensorMap from aggregatedResponse
+    const metricSensorMap = useMemo(() => {
+        if (!aggData) return {} as Record<string, any>;
+        const d = aggData;
 
-    // ── Handlers ──────────────────────────────────────────────────────────────
-    const handleChildCardClick = (childId: number) => navigate(`/halo/sensors/areas/${areaId}/subzones/${childId}`);
+        // Helper to extract sensor info for a specific metric prefix
+        const getInfo = (prefix: string) => ({
+            minSensorId: d[`${prefix}_min_sensor`]?.sensor_id,
+            maxSensorId: d[`${prefix}_max_sensor`]?.sensor_id,
+            minSensorName: d[`${prefix}_min_sensor`]?.sensor__name,
+            maxSensorName: d[`${prefix}_max_sensor`]?.sensor__name,
+        });
+
+        return {
+            temperature: getInfo('temperature'),
+            humidity: getInfo('humidity'),
+            pressure: getInfo('pressure'),
+            light: getInfo('light'),
+            co2: getInfo('co2'),
+            tvoc: getInfo('tvoc'),
+            pm1: getInfo('pm1'),
+            pm25: getInfo('pm25'),
+            pm10: getInfo('pm10'),
+            noise: getInfo('noise'),
+            aqi: getInfo('aqi'),
+            health: getInfo('health'),
+            movement: getInfo('movement'),
+            co: getInfo('co'),
+            no2: getInfo('no2'),
+            nh3: getInfo('nh3'),
+        };
+    }, [aggData]);
+
+    // STEP 3: Update trendResults useQueries to fetch specific sensors
+    const trendResults = useQueries({
+        queries: activeMetricKeys.map(mKey => {
+            const sensorInfo = metricSensorMap[mKey];
+            const sensorIds = Array.from(new Set([
+                sensorInfo?.minSensorId,
+                sensorInfo?.maxSensorId
+            ].filter(Boolean))) as number[];
+
+            return {
+                queryKey: ['sensorTrend', mKey, sensorIds.join(',')],
+                queryFn: () => fetchSensorData({
+                    value: METRIC_TO_API[mKey] || mKey,
+                    sensor: sensorIds,
+                }),
+                enabled: !!activeId && !isMetricsCollapsed && sensorIds.length > 0,
+                staleTime: 5 * 60 * 1000,
+                gcTime: 10 * 60 * 1000,
+                refetchInterval: 5 * 60 * 1000,
+                refetchOnWindowFocus: false,
+            };
+        })
+    });
+
+    // STEP 4: Update trendDataMap to build min/max series
+    const trendDataMap = useMemo(() => {
+        const map: Record<string, any> = {};
+
+        activeMetricKeys.forEach((mKey, index) => {
+            const result = trendResults[index]?.data;
+            const sensorInfo = metricSensorMap[mKey];
+
+            if (!result?.data || !sensorInfo) {
+                map[mKey] = null;
+                return;
+            }
+
+            const sensorsWithData = result.data.filter((s: any) => s.data && s.data.length > 0);
+            if (sensorsWithData.length === 0) {
+                map[mKey] = null;
+                return;
+            }
+
+            // Match by sensor_id from aggregated response
+            const minSensorData = sensorsWithData.find((s: any) => s.sensor_id === sensorInfo.minSensorId) || sensorsWithData[0];
+            const maxSensorData = sensorsWithData.find((s: any) => s.sensor_id === sensorInfo.maxSensorId) || sensorsWithData[0];
+
+            const sameSensor = minSensorData.sensor_id === maxSensorData.sensor_id;
+
+            map[mKey] = {
+                minSeries: {
+                    name: sensorInfo.minSensorName || minSensorData.sensor_name,
+                    data: minSensorData.data.map((d: any) => ({
+                        x: new Date(d.recorded_at).getTime(),
+                        y: parseFloat((d.value || 0).toFixed(2))
+                    })).sort((a: any, b: any) => a.x - b.x)
+                },
+                maxSeries: {
+                    name: sensorInfo.maxSensorName || maxSensorData.sensor_name,
+                    data: maxSensorData.data.map((d: any) => ({
+                        x: new Date(d.recorded_at).getTime(),
+                        y: parseFloat((d.value || 0).toFixed(2))
+                    })).sort((a: any, b: any) => a.x - b.x)
+                },
+                timeWindow: result.time_window,
+                sameSensor
+            };
+        });
+
+        return map;
+    }, [activeMetricKeys, trendResults, metricSensorMap]);
+
+    // ── Stable callbacks ──────────────────────────────────────────────────────
+    const handleChildCardClick = useCallback((childId: number) => navigate(`/halo/sensors/areas/${areaId}/subzones/${childId}`), [navigate, areaId]);
+    const handleSensorClick = useCallback((sensorId: number) => navigate(`/halo/sensors/detail/${sensorId}`), [navigate]);
+    const handleClearFilters = useCallback(() => { setSearchTerm(''); setFilterStatus('all'); }, []);
+    const handleToggleMetrics = useCallback(() => setIsMetricsCollapsed(v => !v), []);
+    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value), []);
+    const handleStatusChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as any), []);
+
+    const handleGroupClick = useCallback((key: string, isActive: boolean) => {
+        setActiveGroupKey(isActive ? null : key);
+        setIsMetricsCollapsed(false);
+    }, []);
 
     if (areasLoading || sensorsLoading) {
         return (
@@ -184,8 +345,8 @@ const AreaZoneView = () => {
                 {/* ── Environmental Insights ── */}
                 <Card className='mb-4'>
                     <CardHeader className='bg-transparent border-light border-bottom pb-3'>
-                        <CardTitle tag='h4' className='mb-0'>
-                            <Icon icon='Analytics' className='me-2 text-primary' />
+                        <CardTitle className='d-flex align-items-center gap-2'>
+                            <Icon icon={activeGroup?.icon || 'Assessment'} />
                             Environmental Insights
                         </CardTitle>
                         <CardActions>
@@ -193,28 +354,26 @@ const AreaZoneView = () => {
                                 isNeumorphic
                                 size='sm'
                                 icon={isMetricsCollapsed ? 'KeyboardArrowDown' : 'KeyboardArrowUp'}
-                                onClick={() => setIsMetricsCollapsed(!isMetricsCollapsed)}
+                                onClick={handleToggleMetrics}
                                 title={isMetricsCollapsed ? 'Expand Metrics' : 'Collapse Metrics'}
                             />
                         </CardActions>
                     </CardHeader>
+
                     {!isMetricsCollapsed && (
                         <CardBody className='py-3'>
                             <div className='d-flex flex-wrap gap-2'>
-                                <Button
-                                    isNeumorphic
-                                    onClick={() => { setActiveGroupKey(null); setIsMetricsCollapsed(false); }}
-                                >
+                                <Button isNeumorphic onClick={() => { setActiveGroupKey(null); setIsMetricsCollapsed(false); }}>
                                     All
                                 </Button>
                                 {METRIC_GROUPS.map(g => {
-                                    const gm = buildProcessedMetrics(aggData, effectiveConfig, g.metricKeys);
-                                    if (gm.length === 0) return null;
+                                    // Use pre-computed map — no extra buildProcessedMetrics calls
+                                    if ((metricsByGroup[g.key] ?? []).length === 0) return null;
                                     const isActive = activeGroupKey === g.key;
                                     return (
                                         <Button
                                             key={g.key}
-                                            onClick={() => { setActiveGroupKey(isActive ? null : g.key); setIsMetricsCollapsed(false); }}
+                                            onClick={() => handleGroupClick(g.key, isActive)}
                                             isNeumorphic
                                         >
                                             {g.label}
@@ -224,6 +383,7 @@ const AreaZoneView = () => {
                             </div>
                         </CardBody>
                     )}
+
                     {!isMetricsCollapsed && (
                         <CardBody>
                             {displayedMetrics.length > 0 ? (
@@ -232,7 +392,10 @@ const AreaZoneView = () => {
                                         <div key={metric.key} className='col-6 col-md-4 col-lg-3 col-xl-2'>
                                             <MiniGauge
                                                 metric={metric}
-                                                onSensorClick={(sensorId) => navigate(`/halo/sensors/detail/${sensorId}`)}
+                                                trendData={trendDataMap[metric.key]}
+                                                onSensorClick={handleSensorClick}
+                                                onGaugeClick={() => setSelectedMetric(metric)}
+                                                timeWindow={trendDataMap[metric.key]?.timeWindow || aggregatedResponse?.time_window}
                                             />
                                         </div>
                                     ))}
@@ -257,13 +420,13 @@ const AreaZoneView = () => {
                                         <FormGroup label='Search'>
                                             <div className='input-group'>
                                                 <span className='input-group-text'><Icon icon='Search' /></span>
-                                                <Input type='text' placeholder='Search by name, MAC address, or type...' value={searchTerm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} />
+                                                <Input type='text' placeholder='Search by name, MAC address, or type...' value={searchTerm} onChange={handleSearchChange} />
                                             </div>
                                         </FormGroup>
                                     </div>
                                     <div className='col-md-3'>
                                         <FormGroup label='Status Filter'>
-                                            <select className='form-select' value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}>
+                                            <select className='form-select' value={filterStatus} onChange={handleStatusChange}>
                                                 <option value='all'>All Status</option>
                                                 <option value='active'>Active Only</option>
                                                 <option value='inactive'>Inactive Only</option>
@@ -271,7 +434,7 @@ const AreaZoneView = () => {
                                         </FormGroup>
                                     </div>
                                     <div className='col-md-3'>
-                                        <Button className='w-100' onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}>Clear Filters</Button>
+                                        <Button className='w-100' onClick={handleClearFilters}>Clear Filters</Button>
                                     </div>
                                 </div>
                             </CardBody>
@@ -388,7 +551,6 @@ const AreaZoneView = () => {
                 isPending={updateSensorMutation.isPending}
                 onSubmit={handleAddSensor}
             />
-
             <CreateSubAreaModal
                 isOpen={isSubAreaModalOpen}
                 setIsOpen={setIsSubAreaModalOpen}
@@ -397,12 +559,49 @@ const AreaZoneView = () => {
                 isPending={createSubAreaMutation.isPending}
                 onSubmit={(data) => handleCreateSubArea(data, activeId)}
             />
-
             <EditAreaModal
                 isOpen={isEditModalOpen}
                 setIsOpen={setIsEditModalOpen}
                 area={editingArea}
             />
+
+            {/* Trend Detail Sidebar */}
+            <OffCanvas
+                isOpen={!!selectedMetric}
+                setOpen={() => setSelectedMetric(null)}
+                placement='end'
+                isModalStyle
+                titleId='trend-offcanvas-title'
+                style={{ width: '450px' }}
+            >
+                <OffCanvasHeader setOpen={() => setSelectedMetric(null)}>
+                    <OffCanvasTitle id='trend-offcanvas-title'>
+                        <div className='d-flex align-items-center gap-2'>
+                            <Icon icon={activeGroup?.icon || 'Assessment'} />
+                            <span>{selectedMetric?.label} Trend Analysis</span>
+                        </div>
+                    </OffCanvasTitle>
+                </OffCanvasHeader>
+                <OffCanvasBody>
+                    {selectedMetric && (
+                        <div className='p-2'>
+                            <SensorTrendChart
+                                metricLabel={selectedMetric.label}
+                                unit={selectedMetric.unit}
+                                isLoading={trendResults[activeMetricKeys.indexOf(selectedMetric.key)]?.isLoading}
+                                minSeries={trendDataMap[selectedMetric.key]?.minSeries || { name: 'Min', data: [] }}
+                                maxSeries={trendDataMap[selectedMetric.key]?.maxSeries || { name: 'Max', data: [] }}
+                                sameSensor={trendDataMap[selectedMetric.key]?.sameSensor || false}
+                                sensorsCount={zoneSensors.length}
+                                timeWindow={{
+                                    from: aggregatedResponse?.time_window?.from || '',
+                                    to: aggregatedResponse?.time_window?.to || ''
+                                }}
+                            />
+                        </div>
+                    )}
+                </OffCanvasBody>
+            </OffCanvas>
         </PageWrapper>
     );
 };

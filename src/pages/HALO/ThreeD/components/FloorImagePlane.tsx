@@ -42,6 +42,7 @@ interface FloorImagePlaneProps {
     // Callbacks
     onLoad?: (calibration: any) => void;
     onClick?: (event: any) => void;
+    onDoubleClick?: (event: any) => void;
     onPointerMove?: (event: any) => void;
 }
 
@@ -75,6 +76,7 @@ export function FloorImagePlane({
 
     onLoad,
     onClick,
+    onDoubleClick,
     onPointerMove,
 }: FloorImagePlaneProps) {
     const groupRef = useRef<THREE.Group>(null);
@@ -158,6 +160,7 @@ export function FloorImagePlane({
                 receiveShadow={receiveShadow}
                 userData={{ isFloor: true, areaId: areaId ?? floorLevel }}
                 onClick={onClick}
+                onDoubleClick={onDoubleClick}
                 onPointerMove={onPointerMove}
             >
                 {/*

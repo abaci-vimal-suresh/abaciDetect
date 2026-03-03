@@ -1,12 +1,4 @@
-/**
- * Area Settings Overlay - Wall Management with Grid Cards + Side Drawer
- * 
- * ✨ NEW FEATURES:
- * - Grid layout (4 cards per row)
- * - Side drawer for editing individual walls
- * - Card-based wall selection
- * - Smooth animations
- */
+
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Area, Wall } from '../../../../types/sensor';
@@ -69,7 +61,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
     const [originalWalls, setOriginalWalls] = useState<Wall[]>([]);
     const [isDirty, setIsDirty] = useState(false);
 
-    // ✨ NEW: Selected wall for drawer
+    // NEW: Selected wall for drawer
     const [selectedWallId, setSelectedWallId] = useState<number | string | null>(null);
 
     // Delete confirmation modal
@@ -118,7 +110,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
     }, [externalSelectedWallId, walls]);
 
     // ============================================
-    // ✨ NEW: SYNC FROM 3D DRAG (previewState)
+    //  NEW: SYNC FROM 3D DRAG (previewState)
     // ============================================
 
     useEffect(() => {
@@ -156,7 +148,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
             setWalls(updatedWalls);
             setIsDirty(true);
 
-            // ✨ NEW: Auto-select the newly created wall
+            //  NEW: Auto-select the newly created wall
             setSelectedWallId(newWall.id);
 
             if (onPreviewChange) {
@@ -255,7 +247,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
         setWalls(updatedWalls);
         setIsDirty(true);
 
-        // ✨ NEW: Auto-select the new wall
+        //  NEW: Auto-select the new wall
         setSelectedWallId(newWall.id);
 
         if (onPreviewChange) {
@@ -278,7 +270,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
         setWalls(updatedWalls);
         setIsDirty(true);
 
-        // ✨ NEW: Close drawer if deleted wall was selected
+        //  NEW: Close drawer if deleted wall was selected
         if (selectedWallId === deleteModalWall.wall.id) {
             setSelectedWallId(null);
         }
@@ -291,7 +283,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
     };
 
     // ============================================
-    // ✨ NEW: CALCULATE WALL LENGTH
+    //  NEW: CALCULATE WALL LENGTH
     // ============================================
 
     const calculateWallLength = (wall: Wall): string => {
@@ -325,7 +317,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
         return formatDiffSummaryVerbose(wallDiff);
     }, [wallDiff]);
 
-    // ✨ NEW: Get selected wall object
+    //  NEW: Get selected wall object
     const selectedWall = useMemo(() => {
         return walls.find(w => w.id === selectedWallId) || null;
     }, [walls, selectedWallId]);
@@ -597,7 +589,7 @@ const AreaSettingsOverlay: React.FC<AreaSettingsOverlayProps> = ({
                 showDetails={true}
             />
 
-            {/* ✨ NEW: Animation CSS (add to ThreeDPage.scss) */}
+            {/*  NEW: Animation CSS (add to ThreeDPage.scss) */}
             <style>{`
                 @keyframes slideInFromRight {
                     from {

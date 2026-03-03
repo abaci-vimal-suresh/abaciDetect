@@ -228,7 +228,7 @@ const AreaMain = () => {
             {/* Area Creation Success Modal (Tour only) */}
             <Modal isOpen={isSuccessModalOpen} setIsOpen={setIsSuccessModalOpen} isCentered size='lg'>
                 <ModalHeader setIsOpen={setIsSuccessModalOpen}>
-                    <ModalTitle id='area-success-title'>✨ Area Created Success!</ModalTitle>
+                    <ModalTitle id='area-success-title'> Area Created Success!</ModalTitle>
                 </ModalHeader>
                 <ModalBody className='text-center py-4'>
                     <div className='display-4 text-success mb-3'>

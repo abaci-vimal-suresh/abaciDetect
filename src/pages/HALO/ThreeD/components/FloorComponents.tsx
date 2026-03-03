@@ -17,6 +17,7 @@ interface FloorModelProps {
     centerModel?: boolean;
     modelUrl?: string;
     onClick?: (event: any) => void;
+    onDoubleClick?: (event: any) => void;
     onPointerMove?: (event: any) => void;
 }
 
@@ -31,6 +32,7 @@ export function FloorModel({
     centerModel = false,
     modelUrl = '/floor_tiles.glb',
     onClick,
+    onDoubleClick,
     onPointerMove
 }: FloorModelProps) {
     const [calibrated, setCalibrated] = useState(false);
@@ -125,6 +127,7 @@ export function FloorModel({
                     opacity={opacity}
                     edgeGlowIntensity={0.05}
                     onClick={onClick}
+                    onDoubleClick={onDoubleClick}
                     onPointerMove={onPointerMove}
                 />
             ) : (

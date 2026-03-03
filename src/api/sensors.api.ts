@@ -11,7 +11,8 @@ import {
     UserCreateData, UserUpdateData, Alert, AlertCreateData, AlertUpdateData, AlertFilters, AlertTrendResponse,
     AlertTrendFilters, AlertStatus, AlertType, AlertConfiguration, AlertConfigurationUpdateData,
     SensorUpdatePayload, BackendSensor, BackendSensorReading, AlertFilter, Action, SensorLogResponse, N8NAlertPayload,
-    Wall, SoundFile, PaginatedResponse, AlertResponse, AlertFilterGroup
+    Wall, SoundFile, PaginatedResponse, AlertResponse, AlertFilterGroup,
+    SensorDataResponse
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
 
@@ -2159,5 +2160,113 @@ export const useRemoveFilterFromGroup = () => {
         onError: (error: any) => {
             showErrorNotification(error?.response?.data?.message || 'Failed to remove filter from group');
         }
+    });
+};
+
+// ============================================
+// SENSOR DATA TIME-SERIES API
+// ============================================
+
+export interface SensorDataParams {
+    value: string;
+    area_id?: number[];
+    sensor?: number[];
+    sensor_group?: number[];
+}
+
+export const fetchSensorData = async (params: SensorDataParams) => {
+    if (USE_MOCK_DATA) {
+        // Generate simple mock time-series data
+        const now = new Date();
+        // Helper to get realistic mock values based on metric type
+        const getMockValue = (valType: string) => {
+            if (valType.includes('temperature')) return 22 + Math.random() * 8;
+            if (valType.includes('humidity')) return 40 + Math.random() * 30;
+            if (valType.includes('pressure')) return 1000 + Math.random() * 20;
+            if (valType.includes('co2')) return 400 + Math.random() * 600;
+            if (valType.includes('pm')) return 5 + Math.random() * 50;
+            if (valType.includes('tvoc')) return 50 + Math.random() * 200;
+            if (valType.includes('noise')) return 35 + Math.random() * 45;
+            if (valType.includes('light')) return 300 + Math.random() * 700;
+            return 10 + Math.random() * 90;
+        };
+
+        const mockData = {
+            value: params.value,
+            time_window: {
+                from: new Date(now.getTime() - 30 * 60 * 1000).toISOString(),
+                to: now.toISOString(),
+            },
+            sensors_count: 3,
+            data: [
+                {
+                    sensor_id: 1,
+                    sensor_name: "Lobby Temp 01",
+                    area_id: params.area_id?.[0] || 4,
+                    area_name: "Lobby East",
+                    // Fragmented: 10 mins early + 5 mins late, with a 15-min gap in between
+                    data: [
+                        ...Array.from({ length: 20 }).map((_, i) => ({
+                            value: getMockValue(params.value) * 0.7 + (Math.random() - 0.5) * 0.5,
+                            recorded_at: new Date(now.getTime() - (30 - i * 0.5) * 60 * 1000).toISOString()
+                        })),
+                        ...Array.from({ length: 10 }).map((_, i) => ({
+                            value: getMockValue(params.value) * 0.75 + (Math.random() - 0.5) * 0.5,
+                            recorded_at: new Date(now.getTime() - (5 - i * 0.5) * 60 * 1000).toISOString()
+                        }))
+                    ]
+                },
+                {
+                    sensor_id: 2,
+                    sensor_name: "Server Room Smoke",
+                    area_id: params.area_id?.[0] || 3,
+                    area_name: "Server Room",
+                    // Volatile/Noisy: Points every minute but with high variance
+                    data: Array.from({ length: 30 }).map((_, i) => ({
+                        value: getMockValue(params.value) + (Math.random() - 0.5) * 10,
+                        recorded_at: new Date(now.getTime() - (30 - i) * 60 * 1000).toISOString()
+                    }))
+                },
+                {
+                    sensor_id: 3,
+                    sensor_name: "Lobby Humidity",
+                    area_id: params.area_id?.[0] || 4,
+                    area_name: "Lobby East",
+                    // Steady/Low-frequency: Points every 2 minutes, very little noise
+                    data: Array.from({ length: 15 }).map((_, i) => ({
+                        value: getMockValue(params.value) * 1.3,
+                        recorded_at: new Date(now.getTime() - (30 - i * 2) * 60 * 1000).toISOString()
+                    }))
+                }
+            ]
+        };
+        return mockData as SensorDataResponse;
+    }
+
+    const urlParams = new URLSearchParams();
+    urlParams.append('value', params.value);
+
+    if (params.sensor && params.sensor.length > 0) {
+        // sensor IDs provided — use only sensor, skip area_id
+        urlParams.append('sensor', params.sensor.join(','));
+    } else if (params.area_id && params.area_id.length > 0) {
+        // fallback to area_id only if no sensor IDs
+        urlParams.append('area_id', params.area_id.join(','));
+    }
+
+    if (params.sensor_group && params.sensor_group.length > 0) {
+        urlParams.append('sensor_group', params.sensor_group.join(','));
+    }
+
+    const { data } = await axiosInstance.get(`/data-management/sensor-logs/data/?${urlParams.toString()}`);
+    return data as SensorDataResponse;
+};
+
+export const useSensorData = (params: SensorDataParams) => {
+    return useQuery({
+        queryKey: ['sensorData', params],
+        queryFn: () => fetchSensorData(params),
+        enabled: !!params.value && (!!params.area_id?.length || !!params.sensor?.length || !!params.sensor_group?.length),
+        refetchInterval: 30 * 1000, // Refresh every 30 seconds
     });
 };

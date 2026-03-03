@@ -1,13 +1,3 @@
-/**
- * Wall Segment Component - 3D Rendering
- * 
- * Purpose: Render individual wall segments in 3D scene
- * 
- * ✨ ENHANCEMENTS:
- * - Added isPreview prop for visual distinction (Issue #6)
- * - Added isFocused prop for real-time editing feedback (Issue #8)
- * - Improved visual feedback for different states
- */
 
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -48,8 +38,8 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
     isSelected = false,
     isHovered = false,
     isBlinking = false,
-    isPreview = false, // ✨ NEW
-    isFocused = false, // ✨ NEW
+    isPreview = false,
+    isFocused = false,
     onClick,
     onHover,
     onDrag,
@@ -64,7 +54,7 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
         transformWallTo3D(wall, calibration, floorY),
         [wall, calibration, floorY]);
 
-    // ✨ NEW: Calculate start and end point 3D positions
+    //  NEW: Calculate start and end point 3D positions
     const startPos = useMemo(() => {
         const x = calibration.minX + (wall.r_x1 * calibration.width);
         const z = calibration.minZ + (wall.r_y1 * calibration.depth);
@@ -90,12 +80,12 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
     // Material properties based on wall opacity and color
     const isGlass = (wall.opacity ?? 1) < 0.8;
 
-    // ✨ MODIFIED: Use preview color if in preview mode
+    //  MODIFIED: Use preview color if in preview mode
     const baseColor = isPreview
         ? PREVIEW_WALL_COLOR
         : (wall.color || (isGlass ? '#a5d8ff' : '#ffffff'));
 
-    // ✨ MODIFIED: Lower opacity for preview walls
+    //  MODIFIED: Lower opacity for preview walls
     const opacity = isPreview
         ? PREVIEW_WALL_OPACITY
         : (wall.opacity ?? 0.7);
@@ -104,7 +94,7 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
     // ANIMATION FRAME (BLINKING, FOCUSED)
     // ============================================
 
-    // ✨ MODIFIED: Handle blinking, focused, and preview states
+    //  MODIFIED: Handle blinking, focused, and preview states
     useFrame((state) => {
         if (!materialRef.current) return;
 
@@ -207,7 +197,7 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
             )}
 
 
-            {/* ✨ NEW: Interactive Endpoint Handles (Plane Drag) */}
+            {/*  NEW: Interactive Endpoint Handles (Plane Drag) */}
             {!isPreview && isSelected && (
                 <>
                     {/* START POINT HANDLE */}
@@ -304,7 +294,7 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
                 </>
             )}
 
-            {/* ✨ NEW: Render preview walls without pivot controls */}
+            {/*  NEW: Render preview walls without pivot controls */}
             {isPreview && (
                 <mesh
                     position={position}
@@ -351,7 +341,7 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
 };
 
 /**
- * ✨ NEW: Helper function to check if a wall is in preview state
+ *  NEW: Helper function to check if a wall is in preview state
  * 
  * @param wall - Wall object
  * @returns True if wall is a preview (not saved)
@@ -361,7 +351,7 @@ export function isWallPreview(wall: Wall): boolean {
 }
 
 /**
- * ✨ NEW: Helper function to get wall state description
+ *  NEW: Helper function to get wall state description
  * 
  * @param wall - Wall object
  * @param isPreview - Is in preview mode

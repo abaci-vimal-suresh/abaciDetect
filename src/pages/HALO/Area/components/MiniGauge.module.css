@@ -1,0 +1,303 @@
+/* ═══════════════════════════════════════════════
+   MiniGauge.module.css
+   ═══════════════════════════════════════════════ */
+
+/* ── Flip card container ── */
+.wrapper {
+    perspective: 1200px;
+    height: 260px;
+}
+
+.wrapperNoTrend {
+    perspective: 1200px;
+    height: 215px;
+}
+
+.wrapperClickable {
+    cursor: pointer;
+}
+
+/* ── The flipping card ── */
+.card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+    transform-style: preserve-3d;
+    overflow: visible !important;
+    background: transparent !important;
+    border-radius: 16px !important;
+}
+
+.card.flipped {
+    transform: rotateY(180deg);
+}
+
+/* ── Shared face rules ── */
+.face {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: visible;
+}
+
+/* ── Flip button (top-right corner) ── */
+.flipBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.06);
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    z-index: 2;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.flipBtn:hover {
+    background: rgba(0, 0, 0, 0.12);
+    color: #374151;
+}
+
+.flipBtnBack {
+    background: rgba(0, 0, 0, 0.06);
+    color: #9ca3af;
+}
+
+/* ══════════════════════════════════
+   FRONT FACE
+   ══════════════════════════════════ */
+.front {
+    padding: 14px 10px 0;
+    background: transparent;
+}
+
+.radialWrap {
+    width: 110px;
+    height: 90px;
+    flex-shrink: 0;
+}
+
+.metricLabel {
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 3px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.metricValue {
+    font-size: 1.15rem;
+    font-weight: 900;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.metricUnit {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-left: 2px;
+}
+
+.metricMin {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #6b7280;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.statusPill {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 999px;
+    padding: 3px 12px;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+
+/* Sparkline pushed to bottom */
+.sparklineSection {
+    width: 100%;
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+.sparklineLabels {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 6px;
+    margin-bottom: 1px;
+    font-size: 0.6rem;
+    font-weight: 600;
+}
+
+.sparkMin {
+    color: #10b981;
+}
+
+.sparkMax {
+    color: #fb7185;
+}
+
+.sparkWindow {
+    color: rgba(107, 114, 128, 0.7);
+}
+
+.sparklineChart {
+    height: 48px;
+    width: 100%;
+}
+
+/* ══════════════════════════════════
+   BACK FACE
+   ══════════════════════════════════ */
+.back {
+    transform: rotateY(180deg);
+    padding: 36px 14px 16px;
+    justify-content: flex-start;
+    gap: 0;
+}
+
+.backHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    gap: 4px;
+}
+
+.backTitle {
+    font-size: 0.85rem;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.backSubtitle {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* Sensor rows */
+.sensorRows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    flex: 1;
+    justify-content: center;
+}
+
+.sensorRow {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+.sensorRowLabel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #6b7280;
+    padding: 0 2px;
+}
+
+.sensorRowValue {
+    font-size: 0.82rem;
+    font-weight: 900;
+}
+
+.sensorBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-align: left;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    line-height: 1.2;
+}
+
+
+
+.sensorBtn:active {
+    transform: translateY(0);
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1), inset -1px -1px 3px rgba(255, 255, 255, 0.7);
+}
+
+.sensorBtnMin {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.sensorBtnMax {
+    background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+    color: #9f1239;
+    border: 1px solid #fecdd3;
+}
+
+.sensorBtnIcon {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.sensorBtnText {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sensorBtnArrow {
+    font-size: 0.7rem;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+
+.rowDivider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.06);
+    margin: 2px 0;
+}
+
+.backHint {
+    margin-top: auto;
+    padding-top: 8px;
+    font-size: 0.58rem;
+    color: #d1d5db;
+    text-align: center;
+    letter-spacing: 0.03em;
+}

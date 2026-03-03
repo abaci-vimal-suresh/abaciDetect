@@ -115,6 +115,33 @@ export interface PaginatedResponse<T> {
 
 export interface SensorLogResponse extends PaginatedResponse<SensorLog> { }
 
+export interface SensorDataPoint {
+    value: number;
+    recorded_at: string;
+}
+
+export interface SensorTimeSeriesData {
+    sensor_id: number;
+    sensor_name: string;
+    area_id: number;
+    area_name: string;
+    data: SensorDataPoint[];
+}
+
+export interface SensorDataResponse {
+    area_ids: number[] | null;
+    sensor_ids: number[] | null;
+    sensor_group_ids: number[] | null;
+    value: string;
+    time_window: {
+        from: string;
+        to: string;
+    };
+    sensors_count: number;
+    data: SensorTimeSeriesData[];
+    message?: string;
+}
+
 export interface SensorData {
     ip: string;
     mac: string;

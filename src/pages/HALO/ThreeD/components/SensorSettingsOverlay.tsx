@@ -58,7 +58,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     const [walls, setWalls] = useState<Wall[]>(sensor.walls || []);
     const [originalWalls, setOriginalWalls] = useState<Wall[]>(JSON.parse(JSON.stringify(sensor.walls || [])));
 
-    // ✨ NEW: Selected wall for mini drawer
+    //  NEW: Selected wall for mini drawer
     const [selectedWallId, setSelectedWallId] = useState<number | string | null>(null);
 
     // UI state
@@ -81,7 +81,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     );
 
     // ============================================
-    // ✨ NEW: SYNC FROM 3D DRAG (previewState)
+    //  NEW: SYNC FROM 3D DRAG (previewState)
     // ============================================
 
     useEffect(() => {
@@ -106,7 +106,7 @@ const SensorSettingsOverlay: React.FC<SensorSettingsOverlayProps> = ({
     }, [previewState, sensor.id]);
 
     // ============================================
-    // ✨ NEW: HANDLE EXTERNAL WALL LINK FROM 3D
+    //  NEW: HANDLE EXTERNAL WALL LINK FROM 3D
     // ============================================
 
     useEffect(() => {

@@ -1,7 +1,7 @@
 /**
  * Building Scene - 3D Visualization Component
  * 
- * ✨ MAJOR REFACTORS (Issues #1, #2, #3, #4, #6):
+ *  MAJOR REFACTORS (Issues #1, #2, #3, #4, #6):
  * - Removed duplicate useWalls calls from FloorWallManager (Issue #2)
  * - Added validation to handleFloorClick (Issue #4)
  * - Enhanced wall preview during drawing (Issue #6)
@@ -9,7 +9,7 @@
  * - Better error feedback and user instructions
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Sensor, Area, Wall } from '../../../../types/sensor';
@@ -63,22 +63,22 @@ interface BuildingSceneProps {
     selectedSensorId?: string | number | null;
     setSelectedSensorId?: (id: string | number | null) => void;
     selectedWallId?: string | number | null;
-    previewState?: PreviewState; // ✨ CHANGED: Was previewData, now unified PreviewState
+    previewState?: PreviewState; //  CHANGED: Was previewData, now unified PreviewState
     blinkingWallIds?: (number | string)[];
     wallDrawMode?: boolean;
     onWallCreated?: (wall: Partial<Wall>) => void;
-    wallsByArea?: Record<number, Wall[]>; // ✨ NEW: Walls passed from parent instead of fetching
+    wallsByArea?: Record<number, Wall[]>; //  NEW: Walls passed from parent instead of fetching
 }
 
 /**
- * ✨ REFACTORED: Component to render walls for a specific area
+ *  REFACTORED: Component to render walls for a specific area
  * 
  * BEFORE: Fetched walls internally with useWalls hook
  * AFTER: Receives walls as prop from parent (eliminates duplicate fetching)
  */
 const FloorWallManager = ({
     areaId,
-    walls, // ✨ NEW: Walls passed as prop
+    walls, //  NEW: Walls passed as prop
     calibration,
     floorY,
     selectedWallId,
@@ -87,12 +87,12 @@ const FloorWallManager = ({
     onWallEndpointsUpdate,
     onWallEndpointDragStart,
     onWallEndpointDragEnd,
-    previewState, // ✨ NEW: Unified preview state
+    previewState, //  NEW: Unified preview state
     blinkingWallIds = [],
-    focusedWallId // ✨ NEW: For real-time editing feedback
+    focusedWallId //  NEW: For real-time editing feedback
 }: {
     areaId: number | string;
-    walls: Wall[]; // ✨ NEW: Receives walls instead of fetching
+    walls: Wall[]; //  NEW: Receives walls instead of fetching
     calibration: FloorCalibration;
     floorY: number;
     selectedWallId?: string | number | null;
@@ -101,13 +101,13 @@ const FloorWallManager = ({
     onWallEndpointsUpdate?: (wall: Wall, points: { r_x1?: number, r_y1?: number, r_x2?: number, r_y2?: number }) => void;
     onWallEndpointDragStart?: () => void;
     onWallEndpointDragEnd?: () => void;
-    previewState?: PreviewState; // ✨ NEW
+    previewState?: PreviewState; //  NEW
     blinkingWallIds?: (number | string)[];
-    focusedWallId?: string | number | null; // ✨ NEW
+    focusedWallId?: string | number | null; //  NEW
 }) => {
     const [hoveredWallId, setHoveredWallId] = useState<string | number | null>(null);
 
-    // ✨ MODIFIED: Use preview walls if available
+    //  MODIFIED: Use preview walls if available
     const displayWalls = useMemo(() => {
         // Check if preview state affects this area's walls
         if (isAreaWallsPreview(previewState) && previewState.data.areaId === areaId) {
@@ -129,7 +129,7 @@ const FloorWallManager = ({
                     isSelected={String(selectedWallId) === String(wall.id)}
                     isHovered={hoveredWallId === wall.id}
                     isBlinking={blinkingWallIds.includes(wall.id)}
-                    isFocused={focusedWallId === wall.id} // ✨ NEW
+                    isFocused={focusedWallId === wall.id} //  NEW
                     onClick={onWallClick}
                     onHover={(hovered) => setHoveredWallId(hovered ? wall.id : null)}
                     onDrag={(delta) => onWallDrag?.(wall, delta)}
@@ -161,12 +161,12 @@ export function BuildingScene({
     selectedSensorId,
     setSelectedSensorId,
     selectedWallId,
-    previewState, // ✨ CHANGED: Unified preview state
+    previewState, //  CHANGED: Unified preview state
     blinkingWallIds = [],
     wallDrawMode = false,
     onWallCreated,
     zoomTrigger = 0,
-    wallsByArea = {} // ✨ NEW: Walls passed from parent
+    wallsByArea = {} //  NEW: Walls passed from parent
 }: BuildingSceneProps) {
     const { controls } = useThree() as any;
     const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
@@ -175,26 +175,60 @@ export function BuildingScene({
     const { showNotification } = useToasterNotification();
 
     // ============================================
-    // ✨ WALL DRAWING STATE (Enhanced with validation)
+    //  WALL DRAWING STATE (Enhanced with validation)
     // ============================================
 
-    const [firstPoint, setFirstPoint] = useState<{
+    const [pointChain, setPointChain] = useState<{
         x: number;
         y: number;
         z: number;
         floorY: number;
         areaId: number;
-    } | null>(null);
+    }[]>([]);
+    const pointChainRef = useRef<{
+        x: number;
+        y: number;
+        z: number;
+        floorY: number;
+        areaId: number;
+    }[]>([]);
+
+    const lastClickTime = useRef<number>(0);
+    const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [previewEndPoint, setPreviewEndPoint] = useState<{ x: number, y: number, z: number } | null>(null);
 
     // Reset wall drawing state when mode is disabled
     useEffect(() => {
         if (!wallDrawMode) {
-            setFirstPoint(null);
-            setPreviewEndPoint(null);
+            finishDrawing();
         }
     }, [wallDrawMode]);
+
+    // Keyboard shortcuts for finishing/canceling
+    useEffect(() => {
+        const handleKeyDownInternal = (e: KeyboardEvent) => {
+            if (!wallDrawMode) return;
+
+            if (e.key === 'Enter') {
+                if (pointChain.length > 0) {
+                    showNotification('Chain Finished', 'Finished drawing the wall sequence.', 'success');
+                    finishDrawing();
+                }
+            } else if (e.key === 'Escape') {
+                if (pointChain.length > 0) {
+                    showNotification('Drawing Cancelled', 'Wall sequence cleared.', 'warning');
+                    finishDrawing();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDownInternal);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDownInternal);
+            if (clickTimer.current) clearTimeout(clickTimer.current);
+        };
+    }, [wallDrawMode, pointChain.length]);
 
     // Sync calibration prop
     useEffect(() => {
@@ -246,157 +280,188 @@ export function BuildingScene({
     };
 
     // ============================================
-    // ✨ ENHANCED: Floor Click Handler (Issue #4 - Validation)
+    //  ENHANCED: Floor Click Handler (Issue #4 - Validation)
     // ============================================
 
+    const finishDrawing = () => {
+        setPointChain([]);
+        pointChainRef.current = [];
+        setPreviewEndPoint(null);
+        if (clickTimer.current) {
+            clearTimeout(clickTimer.current);
+            clickTimer.current = null;
+        }
+    };
+
     const handleFloorClick = (event: any) => {
-        console.log('BuildingScene: Floor Click event:', {
-            wallDrawMode,
-            isCalibrated,
-            point3D: event.point,
-            userData: event.object?.userData,
-            firstPointSet: !!firstPoint
-        });
+        const now = Date.now();
+        const timeSinceLast = now - lastClickTime.current;
+        lastClickTime.current = now;
 
-        const canDraw = wallDrawMode && (isCalibrated || (actualCalibration && actualCalibration.width > 0));
-
-        if (!canDraw) {
-            console.log('BuildingScene: Click ignored - mode disabled or no calibration');
+        // If two clicks within 300ms = double click = finish
+        if (timeSinceLast < 300) {
+            console.log('BuildingScene: Double-click detected, finishing chain');
+            if (clickTimer.current) {
+                clearTimeout(clickTimer.current);
+                clickTimer.current = null;
+            }
+            if (pointChainRef.current.length >= 1) {
+                showNotification('Chain Finished', 'Finished drawing the wall sequence.', 'success');
+                finishDrawing();
+            }
             return;
         }
 
-        event.stopPropagation();
+        // Capture event data immediately before the timeout
+        const point3D = { ...event.point };
+        const objectUserData = event.object?.userData;
+        const areaId = objectUserData?.areaId;
 
-        const point3D = event.point;
-        const clickedMesh = event.object;
-        const areaId = clickedMesh.userData?.areaId;
-
-        // ✨ NEW: Validate click (Issue #4)
-        const validation = validateWallClick(point3D, areaId, actualCalibration);
-
-        if (!validation.valid) {
-            showNotification(
-                'Invalid Click',
-                validation.reason || 'Click must be on a floor surface',
-                validation.severity === 'warning' ? 'warning' : 'danger'
-            );
-            console.warn('BuildingScene: Invalid click:', validation.reason);
-            return;
+        // Otherwise delay the single-click logic by 300ms to detect double-click
+        if (clickTimer.current) {
+            clearTimeout(clickTimer.current);
+            clickTimer.current = null;
         }
 
-        // Show warning if present (but allow click to proceed)
-        if (validation.severity === 'warning') {
-            showNotification('Warning', validation.reason || '', 'warning');
-        }
+        clickTimer.current = setTimeout(() => {
+            console.log('BuildingScene: Floor Click (single) event:', {
+                wallDrawMode,
+                isCalibrated,
+                point3D,
+                areaId,
+                pointsInChain: pointChainRef.current.length
+            });
 
-        console.log('BuildingScene: Raycast hit areaId:', areaId);
+            const canDraw = wallDrawMode && (isCalibrated || (actualCalibration && actualCalibration.width > 0));
 
-        if (areaId === undefined) {
-            console.warn('BuildingScene: Clicked floor has no areaId in userData');
-            return;
-        }
+            if (!canDraw || areaId === undefined) return;
 
-        // ============================================
-        // FIRST CLICK: Set first point
-        // ============================================
+            // Validate click
+            const validation = validateWallClick(point3D, areaId, actualCalibration);
 
-        if (!firstPoint) {
-            console.log('BuildingScene: Setting first point at', point3D);
-            setFirstPoint({
+            if (!validation.valid) {
+                showNotification(
+                    'Invalid Click',
+                    validation.reason || 'Click must be on a floor surface',
+                    validation.severity === 'warning' ? 'warning' : 'danger'
+                );
+                return;
+            }
+
+            const newPoint = {
                 x: point3D.x,
                 y: point3D.y,
                 z: point3D.z,
                 floorY: point3D.y,
                 areaId: areaId
-            });
-
-            showNotification(
-                'First Point Set',
-                'Click on the map to set the second point (ESC to cancel)',
-                'info'
-            );
-        }
-
-        // ============================================
-        // SECOND CLICK: Create wall
-        // ============================================
-
-        else {
-            console.log('BuildingScene: Processing second click at', point3D, 'for firstPoint at', firstPoint);
-
-            // ✨ NEW: Validate wall segment (Issue #4)
-            const segmentValidation = validateWallSegment(
-                new THREE.Vector3(firstPoint.x, firstPoint.y, firstPoint.z),
-                new THREE.Vector3(point3D.x, point3D.y, point3D.z),
-                firstPoint.floorY
-            );
-
-            if (!segmentValidation.valid) {
-                showNotification(
-                    'Invalid Wall',
-                    segmentValidation.reason || 'Cannot create wall between these points',
-                    'danger'
-                );
-                console.warn('BuildingScene: Invalid wall segment:', segmentValidation.reason);
-
-                // Reset and allow user to try again
-                setFirstPoint(null);
-                setPreviewEndPoint(null);
-                return;
-            }
-
-            // Show warning if present (but allow wall creation)
-            if (segmentValidation.severity === 'warning') {
-                showNotification('Warning', segmentValidation.reason || '', 'warning');
-            }
-
-            // Create the wall
-            const normalized1 = transform3DToNormalized(
-                { x: firstPoint.x, y: firstPoint.y, z: firstPoint.z },
-                actualCalibration,
-                firstPoint.floorY
-            );
-            const normalized2 = transform3DToNormalized(
-                { x: point3D.x, y: point3D.y, z: point3D.z },
-                actualCalibration,
-                point3D.y
-            );
-
-            console.log('BuildingScene: Normalized coordinates calculated:', { normalized1, normalized2 });
-
-            const newWall: Partial<Wall> = {
-                r_x1: normalized1.x,
-                r_y1: normalized1.y,
-                r_x2: normalized2.x,
-                r_y2: normalized2.y,
-                r_height: DEFAULT_WALL_HEIGHT,
-                r_z_offset: 0,
-                color: DEFAULT_WALL_COLOR,
-                opacity: DEFAULT_WALL_OPACITY,
-                thickness: 0.15,
-                area_ids: [areaId]
             };
 
-            console.log('BuildingScene: Calling onWallCreated with:', newWall);
+            const currentChain = pointChainRef.current;
 
-            showNotification(
-                'Wall Created',
-                'Wall added successfully. Remember to save your changes.',
-                'success'
-            );
+            // SNAP TO CLOSE DETECTION
+            if (currentChain.length > 2) {
+                const firstP = currentChain[0];
+                const dist = Math.sqrt(
+                    Math.pow(newPoint.x - firstP.x, 2) +
+                    Math.pow(newPoint.z - firstP.z, 2)
+                );
 
-            onWallCreated?.(newWall);
-            setFirstPoint(null);
-            setPreviewEndPoint(null);
-        }
+                if (dist < 0.5) {
+                    console.log('BuildingScene: Snapping to close loop');
+                    const lastPoint = currentChain[currentChain.length - 1];
+
+                    const normalized1 = transform3DToNormalized(
+                        { x: lastPoint.x, y: lastPoint.y, z: lastPoint.z },
+                        actualCalibration,
+                        lastPoint.floorY
+                    );
+                    const normalized2 = transform3DToNormalized(
+                        { x: firstP.x, y: firstP.y, z: firstP.z },
+                        actualCalibration,
+                        firstP.floorY
+                    );
+
+                    const closingWall: Partial<Wall> = {
+                        r_x1: normalized1.x,
+                        r_y1: normalized1.y,
+                        r_x2: normalized2.x,
+                        r_y2: normalized2.y,
+                        r_height: DEFAULT_WALL_HEIGHT,
+                        r_z_offset: 0,
+                        color: DEFAULT_WALL_COLOR,
+                        opacity: DEFAULT_WALL_OPACITY,
+                        thickness: 0.15,
+                        area_ids: [areaId]
+                    };
+
+                    onWallCreated?.(closingWall);
+                    showNotification('Loop Closed', 'Wall chain finished successfully.', 'success');
+                    finishDrawing();
+                    return;
+                }
+            }
+
+            // CREATE SEGMENT IF NOT FIRST POINT
+            if (currentChain.length > 0) {
+                const lastPoint = currentChain[currentChain.length - 1];
+
+                const segmentValidation = validateWallSegment(
+                    new THREE.Vector3(lastPoint.x, lastPoint.y, lastPoint.z),
+                    new THREE.Vector3(newPoint.x, newPoint.y, newPoint.z),
+                    lastPoint.floorY
+                );
+
+                if (!segmentValidation.valid) {
+                    showNotification('Invalid Wall', segmentValidation.reason || 'Cannot create wall here', 'danger');
+                    return;
+                }
+
+                const normalized1 = transform3DToNormalized(
+                    { x: lastPoint.x, y: lastPoint.y, z: lastPoint.z },
+                    actualCalibration,
+                    lastPoint.floorY
+                );
+                const normalized2 = transform3DToNormalized(
+                    { x: newPoint.x, y: newPoint.y, z: newPoint.z },
+                    actualCalibration,
+                    newPoint.floorY
+                );
+
+                const newWall: Partial<Wall> = {
+                    r_x1: normalized1.x,
+                    r_y1: normalized1.y,
+                    r_x2: normalized2.x,
+                    r_y2: normalized2.y,
+                    r_height: DEFAULT_WALL_HEIGHT,
+                    r_z_offset: 0,
+                    color: DEFAULT_WALL_COLOR,
+                    opacity: DEFAULT_WALL_OPACITY,
+                    thickness: 0.15,
+                    area_ids: [currentChain[0].areaId]
+                };
+
+                onWallCreated?.(newWall);
+            } else {
+                showNotification(
+                    'Chain Started',
+                    'Click to add next point, double-click or Enter to finish, ESC to cancel',
+                    'info'
+                );
+            }
+
+            // Sync ref and state
+            const updatedChain = [...currentChain, newPoint];
+            pointChainRef.current = updatedChain;
+            setPointChain(updatedChain);
+        }, 300);
     };
 
     // ============================================
-    // ✨ ENHANCED: Pointer Move Handler (Preview)
+    //  ENHANCED: Pointer Move Handler (Preview)
     // ============================================
 
     const handleFloorPointerMove = (event: any) => {
-        const canDraw = wallDrawMode && firstPoint && (isCalibrated || (actualCalibration && actualCalibration.width > 0));
+        const canDraw = wallDrawMode && pointChain.length > 0 && (isCalibrated || (actualCalibration && actualCalibration.width > 0));
 
         if (!canDraw) {
             if (previewEndPoint) setPreviewEndPoint(null);
@@ -405,9 +470,10 @@ export function BuildingScene({
 
         event.stopPropagation();
         const point3D = event.point;
+        const lastPoint = pointChain[pointChain.length - 1];
 
         // Only show preview if on same floor
-        if (Math.abs(point3D.y - firstPoint.floorY) < 0.5) {
+        if (Math.abs(point3D.y - lastPoint.floorY) < 0.5) {
             setPreviewEndPoint({ x: point3D.x, y: point3D.y, z: point3D.z });
         } else {
             if (previewEndPoint) setPreviewEndPoint(null);
@@ -426,7 +492,7 @@ export function BuildingScene({
             .sort((a, b) => (a.floor_level ?? a.offset_z ?? 0) - (b.floor_level ?? b.offset_z ?? 0));
     }, [areas]);
 
-    // ✨ MODIFIED: Merge preview data into sensors
+    //  MODIFIED: Merge preview data into sensors
     const displaySensors = useMemo(() => {
         if (isSensorPositionPreview(previewState)) {
             return sensors.map(s => {
@@ -462,16 +528,18 @@ export function BuildingScene({
     };
 
     // ============================================
-    // ✨ NEW: Calculate preview wall for drawing mode
+    //  NEW: Calculate preview wall for drawing mode
     // ============================================
 
     const previewWall = useMemo(() => {
-        if (!firstPoint || !previewEndPoint || !isCalibrated) return null;
+        if (pointChain.length === 0 || !previewEndPoint || !isCalibrated) return null;
+
+        const lastPoint = pointChain[pointChain.length - 1];
 
         const normalized1 = transform3DToNormalized(
-            { x: firstPoint.x, y: firstPoint.y, z: firstPoint.z },
+            { x: lastPoint.x, y: lastPoint.y, z: lastPoint.z },
             actualCalibration,
-            firstPoint.floorY
+            lastPoint.floorY
         );
         const normalized2 = transform3DToNormalized(
             { x: previewEndPoint.x, y: previewEndPoint.y, z: previewEndPoint.z },
@@ -490,7 +558,7 @@ export function BuildingScene({
             opacity: DEFAULT_WALL_OPACITY,
             thickness: 0.15
         } as Wall;
-    }, [firstPoint, previewEndPoint, actualCalibration, isCalibrated]);
+    }, [pointChain, previewEndPoint, actualCalibration, isCalibrated]);
 
     // ============================================
     // RENDER
@@ -530,11 +598,11 @@ export function BuildingScene({
                             />
                         )}
 
-                        {/* ✨ MODIFIED: Walls from centralized data */}
+                        {/*  MODIFIED: Walls from centralized data */}
                         {isVisible && (
                             <FloorWallManager
                                 areaId={floor.id}
-                                walls={wallsByArea[floor.id] || []} // ✨ NEW: Passed from parent
+                                walls={wallsByArea[floor.id] || []} //  NEW: Passed from parent
                                 calibration={actualCalibration}
                                 floorY={yPosition}
                                 selectedWallId={selectedWallId}
@@ -576,7 +644,7 @@ export function BuildingScene({
                                 position3D.z - (actualCalibration.centerZ || 0)
                             ];
 
-                            // ✨ MODIFIED: Get sensor walls from preview if available
+                            //  MODIFIED: Get sensor walls from preview if available
                             const sensorWalls = (isSensorWallsPreview(previewState) &&
                                 String(previewState.data.sensorId) === String(sensor.id))
                                 ? previewState.data.walls
@@ -631,26 +699,63 @@ export function BuildingScene({
             <gridHelper visible={false} args={[100, 100, '#ede1e1ff', '#1b1616ff']} position={[0, -0.1, 0]} />
 
             {/* ============================================ */}
-            {/* ✨ ENHANCED: Wall Drawing Visual Feedback    */}
+            {/*  ENHANCED: Wall Drawing Visual Feedback    */}
             {/* ============================================ */}
 
-            {wallDrawMode && firstPoint && (
+            {wallDrawMode && pointChain.length > 0 && (
                 <group>
-                    {/* First point marker */}
-                    <mesh
-                        visible={false}
-                        position={[firstPoint.x, firstPoint.y, firstPoint.z]}>
-                        <sphereGeometry args={[FIRST_POINT_MARKER_SIZE, 16, 16]} />
-                        <meshBasicMaterial color={FIRST_POINT_MARKER_COLOR} />
-                    </mesh>
+                    {/* Render all point markers */}
+                    {pointChain.map((p, idx) => (
+                        <mesh key={`marker-${idx}`} position={[p.x, p.y, p.z]}>
+                            <sphereGeometry args={[FIRST_POINT_MARKER_SIZE, 16, 16]} />
+                            <meshBasicMaterial color={FIRST_POINT_MARKER_COLOR} />
+                        </mesh>
+                    ))}
 
-                    {/* ✨ ENHANCED: Full wall preview instead of just a line */}
+                    {/* Render committed segments in current session */}
+                    {pointChain.slice(0, -1).map((p, idx) => {
+                        const nextP = pointChain[idx + 1];
+                        const normalized1 = transform3DToNormalized(
+                            { x: p.x, y: p.y, z: p.z },
+                            actualCalibration,
+                            p.floorY
+                        );
+                        const normalized2 = transform3DToNormalized(
+                            { x: nextP.x, y: nextP.y, z: nextP.z },
+                            actualCalibration,
+                            nextP.floorY
+                        );
+
+                        const sessionWall = {
+                            id: `session-${idx}`,
+                            r_x1: normalized1.x,
+                            r_y1: normalized1.y,
+                            r_x2: normalized2.x,
+                            r_y2: normalized2.y,
+                            r_height: DEFAULT_WALL_HEIGHT,
+                            color: DEFAULT_WALL_COLOR,
+                            opacity: 0.4, // Slightly translucent for visual continuity
+                            thickness: 0.15
+                        } as Wall;
+
+                        return (
+                            <WallSegment
+                                key={`session-segment-${idx}`}
+                                wall={sessionWall}
+                                calibration={actualCalibration}
+                                floorY={p.floorY}
+                                isPreview={true}
+                            />
+                        );
+                    })}
+
+                    {/* Live preview segment */}
                     {previewWall && (
                         <WallSegment
                             wall={previewWall}
                             calibration={actualCalibration}
-                            floorY={firstPoint.floorY}
-                            isPreview={true} // ✨ NEW: Visual distinction
+                            floorY={pointChain[pointChain.length - 1].floorY}
+                            isPreview={true}
                         />
                     )}
                 </group>
