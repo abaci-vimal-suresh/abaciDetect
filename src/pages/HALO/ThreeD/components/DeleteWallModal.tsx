@@ -1,18 +1,3 @@
-/**
- * Delete Wall Confirmation Modal
- * 
- * Purpose: Fixes Issue #10 (no delete confirmation)
- * 
- * Problem:
- * - Clicking trash icon immediately deletes wall
- * - Easy to misclick, especially on mobile
- * - No way to undo accidental deletion
- * 
- * Solution:
- * - Show confirmation modal before deleting
- * - Display wall information
- * - Cancel/Confirm buttons
- */
 
 import React from 'react';
 import Modal, {
@@ -26,65 +11,33 @@ import Icon from '../../../../components/icon/Icon';
 import Badge from '../../../../components/bootstrap/Badge';
 import { Wall } from '../../../../types/sensor';
 
-// ============================================
-// COMPONENT PROPS
-// ============================================
+
 
 interface DeleteWallModalProps {
-    /**
-     * Whether modal is open
-     */
+
     isOpen: boolean;
 
-    /**
-     * Wall to be deleted
-     */
+
     wall: Wall | null;
 
-    /**
-     * Wall segment number for display (e.g., "Segment 3")
-     */
+
     segmentNumber?: number;
 
-    /**
-     * Callback when user confirms deletion
-     */
+
     onConfirm: () => void;
 
-    /**
-     * Callback when user cancels
-     */
+
     onCancel: () => void;
 
-    /**
-     * Optional: Show detailed wall info
-     */
+
     showDetails?: boolean;
 
-    /**
-     * Optional: Custom warning message
-     */
+
     warningMessage?: string;
 }
 
-// ============================================
-// COMPONENT
-// ============================================
 
-/**
- * Confirmation modal for wall deletion
- * 
- * Usage:
- * ```tsx
- * <DeleteWallModal
- *     isOpen={deleteModalOpen}
- *     wall={wallToDelete}
- *     segmentNumber={3}
- *     onConfirm={() => handleDelete(wallToDelete.id)}
- *     onCancel={() => setDeleteModalOpen(false)}
- * />
- * ```
- */
+
 export const DeleteWallModal: React.FC<DeleteWallModalProps> = ({
     isOpen,
     wall,
@@ -224,23 +177,12 @@ export const DeleteWallModal: React.FC<DeleteWallModalProps> = ({
     );
 };
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 
-/**
- * Calculate wall length from normalized coordinates
- * 
- * @param wall - Wall object
- * @returns Formatted length string
- */
 function calculateWallLength(wall: Wall): string {
     const dx = wall.r_x2 - wall.r_x1;
     const dy = wall.r_y2 - wall.r_y1;
     const normalizedLength = Math.sqrt(dx * dx + dy * dy);
 
-    // Assuming typical building is ~30m x 30m
-    // This is an approximation for display purposes
     const estimatedLength = normalizedLength * 30;
 
     if (estimatedLength < 1) {
@@ -250,23 +192,12 @@ function calculateWallLength(wall: Wall): string {
     }
 }
 
-/**
- * Format wall coordinates for display
- * 
- * @param wall - Wall object
- * @returns Formatted coordinate string
- */
+
 export function formatWallCoordinates(wall: Wall): string {
     return `(${wall.r_x1.toFixed(2)}, ${wall.r_y1.toFixed(2)}) → (${wall.r_x2.toFixed(2)}, ${wall.r_y2.toFixed(2)})`;
 }
 
-/**
- * Get wall display name
- * 
- * @param wall - Wall object
- * @param segmentNumber - Optional segment number
- * @returns Display name
- */
+
 export function getWallDisplayName(wall: Wall, segmentNumber?: number): string {
     if (segmentNumber) {
         return `Wall Segment ${segmentNumber}`;
@@ -279,8 +210,5 @@ export function getWallDisplayName(wall: Wall, segmentNumber?: number): string {
     return `Wall ${wall.id}`;
 }
 
-// ============================================
-// EXPORT
-// ============================================
 
 export default DeleteWallModal;

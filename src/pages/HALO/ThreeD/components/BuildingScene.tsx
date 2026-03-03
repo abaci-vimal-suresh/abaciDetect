@@ -1,13 +1,4 @@
-/**
- * Building Scene - 3D Visualization Component
- * 
- *  MAJOR REFACTORS (Issues #1, #2, #3, #4, #6):
- * - Removed duplicate useWalls calls from FloorWallManager (Issue #2)
- * - Added validation to handleFloorClick (Issue #4)
- * - Enhanced wall preview during drawing (Issue #6)
- * - Unified preview state support (Issue #3)
- * - Better error feedback and user instructions
- */
+
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
@@ -70,15 +61,10 @@ interface BuildingSceneProps {
     wallsByArea?: Record<number, Wall[]>; //  NEW: Walls passed from parent instead of fetching
 }
 
-/**
- *  REFACTORED: Component to render walls for a specific area
- * 
- * BEFORE: Fetched walls internally with useWalls hook
- * AFTER: Receives walls as prop from parent (eliminates duplicate fetching)
- */
+
 const FloorWallManager = ({
     areaId,
-    walls, //  NEW: Walls passed as prop
+    walls,
     calibration,
     floorY,
     selectedWallId,
@@ -87,12 +73,12 @@ const FloorWallManager = ({
     onWallEndpointsUpdate,
     onWallEndpointDragStart,
     onWallEndpointDragEnd,
-    previewState, //  NEW: Unified preview state
+    previewState,
     blinkingWallIds = [],
-    focusedWallId //  NEW: For real-time editing feedback
+    focusedWallId
 }: {
     areaId: number | string;
-    walls: Wall[]; //  NEW: Receives walls instead of fetching
+    walls: Wall[];
     calibration: FloorCalibration;
     floorY: number;
     selectedWallId?: string | number | null;
@@ -101,15 +87,13 @@ const FloorWallManager = ({
     onWallEndpointsUpdate?: (wall: Wall, points: { r_x1?: number, r_y1?: number, r_x2?: number, r_y2?: number }) => void;
     onWallEndpointDragStart?: () => void;
     onWallEndpointDragEnd?: () => void;
-    previewState?: PreviewState; //  NEW
+    previewState?: PreviewState;
     blinkingWallIds?: (number | string)[];
-    focusedWallId?: string | number | null; //  NEW
+    focusedWallId?: string | number | null;
 }) => {
     const [hoveredWallId, setHoveredWallId] = useState<string | number | null>(null);
 
-    //  MODIFIED: Use preview walls if available
     const displayWalls = useMemo(() => {
-        // Check if preview state affects this area's walls
         if (isAreaWallsPreview(previewState) && previewState.data.areaId === areaId) {
             return previewState.data.walls;
         }
