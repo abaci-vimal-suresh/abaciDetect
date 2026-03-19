@@ -74,29 +74,29 @@ function buildBezierGeometry(
     const rights: THREE.Vector2[] = pts.map((_, i) => {
         let dx: number, dz: number;
         if (i === 0) { dx = pts[1].x - pts[0].x; dz = pts[1].y - pts[0].y; }
-        else if (i === N - 1) { dx = pts[N-1].x - pts[N-2].x; dz = pts[N-1].y - pts[N-2].y; }
-        else { dx = pts[i+1].x - pts[i-1].x; dz = pts[i+1].y - pts[i-1].y; }
-        const len = Math.sqrt(dx*dx + dz*dz);
+        else if (i === N - 1) { dx = pts[N - 1].x - pts[N - 2].x; dz = pts[N - 1].y - pts[N - 2].y; }
+        else { dx = pts[i + 1].x - pts[i - 1].x; dz = pts[i + 1].y - pts[i - 1].y; }
+        const len = Math.sqrt(dx * dx + dz * dz);
         if (len < 0.0001) return new THREE.Vector2(1, 0);
-        return new THREE.Vector2(dz/len, -dx/len);
+        return new THREE.Vector2(dz / len, -dx / len);
     });
 
     for (let i = 0; i < N; i++) {
         const px = pts[i].x, pz = pts[i].y;
         const rx = rights[i].x, rz = rights[i].y;
-        positions.push(px - rx*halfT, startY, pz - rz*halfT);
-        positions.push(px - rx*halfT, startY + wallHeight, pz - rz*halfT);
-        positions.push(px + rx*halfT, startY, pz + rz*halfT);
-        positions.push(px + rx*halfT, startY + wallHeight, pz + rz*halfT);
+        positions.push(px - rx * halfT, startY, pz - rz * halfT);
+        positions.push(px - rx * halfT, startY + wallHeight, pz - rz * halfT);
+        positions.push(px + rx * halfT, startY, pz + rz * halfT);
+        positions.push(px + rx * halfT, startY + wallHeight, pz + rz * halfT);
         normals.push(-rx, 0, -rz, -rx, 0, -rz, rx, 0, rz, rx, 0, rz);
     }
 
     for (let i = 0; i < N - 1; i++) {
-        const base = i * 4, next = (i+1) * 4;
-        indices.push(base+0, next+0, base+1, next+0, next+1, base+1);
-        indices.push(base+2, base+3, next+2, next+2, base+3, next+3);
-        indices.push(base+1, next+1, base+3, next+1, next+3, base+3);
-        indices.push(base+0, base+2, next+0, next+0, base+2, next+2);
+        const base = i * 4, next = (i + 1) * 4;
+        indices.push(base + 0, next + 0, base + 1, next + 0, next + 1, base + 1);
+        indices.push(base + 2, base + 3, next + 2, next + 2, base + 3, next + 3);
+        indices.push(base + 1, next + 1, base + 3, next + 1, next + 3, base + 3);
+        indices.push(base + 0, base + 2, next + 0, next + 0, base + 2, next + 2);
     }
 
     const geo = new THREE.BufferGeometry();
@@ -192,7 +192,7 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
         // Pass calibration to builders for accurate minX/minZ
         const wallWithCal = { ...wall, calibration };
         return buildArcGeometry(wallWithCal as any, floorW, floorD);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isArc, (wall as any).arc_center_x, (wall as any).arc_radius, floorW, floorD, calibration]);
 
     const bezierGeometry = useMemo(() => {
@@ -200,7 +200,7 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
         // Pass calibration to builders for accurate minX/minZ
         const wallWithCal = { ...wall, calibration };
         return buildBezierGeometry(wallWithCal as any, floorW, floorD);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isBezier, (wall as any).ctrl_x, (wall as any).ctrl_y, wall.r_x1, wall.r_y1, wall.r_x2, wall.r_y2, floorW, floorD, calibration]);
     const materialRef = useRef<THREE.MeshPhysicalMaterial>(null);
     const dragStartProps = useRef<{ r_x1: number, r_y1: number, r_x2: number, r_y2: number } | null>(null);
@@ -294,13 +294,6 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
         );
     });
 
-    // ============================================
-    // RENDER
-    // ============================================
-
-    // ============================================
-    // ARC / BEZIER EARLY RETURNS
-    // ============================================
 
     if (isArc && arcGeometry) {
         return (
@@ -439,17 +432,17 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
                             const interactionVector = new THREE.Vector3();
                             const intersect = e.ray.intersectPlane(plane, interactionVector);
 
-                             if (intersect) {
-                                 // Convert to normalized coordinates
-                                 const nx = calibration.width !== 0 ? (intersect.x + calibration.width / 2) / calibration.width : 0.5;
-                                 const ny = calibration.depth !== 0 ? (intersect.z + calibration.depth / 2) / calibration.depth : 0.5;
- 
-                                 // Clamp to 0-1
-                                 const r_x1 = Math.max(0, Math.min(1, nx));
-                                 const r_y1 = Math.max(0, Math.min(1, ny));
- 
-                                 onUpdateEndpoints?.({ r_x1, r_y1 });
-                             }
+                            if (intersect) {
+                                // Convert to normalized coordinates
+                                const nx = calibration.width !== 0 ? (intersect.x + calibration.width / 2) / calibration.width : 0.5;
+                                const ny = calibration.depth !== 0 ? (intersect.z + calibration.depth / 2) / calibration.depth : 0.5;
+
+                                // Clamp to 0-1
+                                const r_x1 = Math.max(0, Math.min(1, nx));
+                                const r_y1 = Math.max(0, Math.min(1, ny));
+
+                                onUpdateEndpoints?.({ r_x1, r_y1 });
+                            }
                         }}
                     >
                         <sphereGeometry args={[0.2, 16, 16]} />
@@ -485,17 +478,17 @@ export const WallSegment: React.FC<WallSegmentProps> = ({
                             const interactionVector = new THREE.Vector3();
                             const intersect = e.ray.intersectPlane(plane, interactionVector);
 
-                             if (intersect) {
-                                 // Convert to normalized coordinates
-                                 const nx = calibration.width !== 0 ? (intersect.x + calibration.width / 2) / calibration.width : 0.5;
-                                 const ny = calibration.depth !== 0 ? (intersect.z + calibration.depth / 2) / calibration.depth : 0.5;
- 
-                                 // Clamp to 0-1
-                                 const r_x2 = Math.max(0, Math.min(1, nx));
-                                 const r_y2 = Math.max(0, Math.min(1, ny));
- 
-                                 onUpdateEndpoints?.({ r_x2, r_y2 });
-                             }
+                            if (intersect) {
+                                // Convert to normalized coordinates
+                                const nx = calibration.width !== 0 ? (intersect.x + calibration.width / 2) / calibration.width : 0.5;
+                                const ny = calibration.depth !== 0 ? (intersect.z + calibration.depth / 2) / calibration.depth : 0.5;
+
+                                // Clamp to 0-1
+                                const r_x2 = Math.max(0, Math.min(1, nx));
+                                const r_y2 = Math.max(0, Math.min(1, ny));
+
+                                onUpdateEndpoints?.({ r_x2, r_y2 });
+                            }
                         }}
                     >
                         <sphereGeometry args={[0.2, 16, 16]} />

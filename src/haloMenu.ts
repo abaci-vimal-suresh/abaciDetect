@@ -6,6 +6,13 @@ export const haloMenu = {
         icon: 'Dashboard',
         subMenu: null,
     },
+    siteOverview: {
+        id: 'halo-page',
+        text: 'Halo Page',
+        path: '/halo/site-overview',
+        icon: 'Domain',
+        subMenu: null,
+    },
     sensors: {
         id: 'halo-sensors',
         text: 'Sensors',

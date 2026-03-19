@@ -1,0 +1,720 @@
+// ── Panel shell ───────────────────────────────────────────────────────────────
+
+.panel {
+    width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--bs-body-bg);
+    border-left: 1px solid var(--bs-border-color);
+    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.04);
+
+    &.open {
+        width: 290px;
+    }
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--bs-border-color);
+    flex-shrink: 0;
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+}
+
+.panelIconWrap {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.panelTitles {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.panelTitle {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--bs-body-color);
+    white-space: nowrap;
+    letter-spacing: 0.1px;
+}
+
+.panelSubtitle {
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.closeBtn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: rgba(var(--bs-danger-rgb), 0.08);
+        border-color: rgba(var(--bs-danger-rgb), 0.3);
+        color: var(--bs-danger);
+    }
+}
+
+// ── Panel body ────────────────────────────────────────────────────────────────
+
+.panelBody {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+
+    &::-webkit-scrollbar {
+        width: 3px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(var(--bs-primary-rgb), 0.2);
+        border-radius: 2px;
+    }
+}
+
+// ── Section ───────────────────────────────────────────────────────────────────
+
+.section {
+    padding: 14px 15px;
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sectionTitle {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: var(--bs-primary);
+    opacity: 0.75;
+}
+
+// ── Field row ─────────────────────────────────────────────────────────────────
+
+.fieldRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 30px;
+}
+
+.fieldLabel {
+    font-size: 12px;
+    color: var(--bs-secondary-color, var(--bs-gray-600));
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.fieldControl {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+// ── Inputs ────────────────────────────────────────────────────────────────────
+
+.select,
+.input {
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+    border: 1px solid var(--bs-border-color);
+    border-radius: 7px;
+    color: var(--bs-body-color);
+    font-size: 12px;
+    padding: 5px 9px;
+    width: 110px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: var(--bs-font-sans-serif);
+
+    &:focus {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.1);
+    }
+}
+
+.select {
+    width: 130px;
+    cursor: pointer;
+}
+
+.colorRow {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.colorPicker {
+    width: 34px;
+    height: 26px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    padding: 2px;
+    transition: border-color 0.15s;
+
+    &:hover {
+        border-color: var(--bs-primary);
+    }
+}
+
+.colorHex {
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    font-family: monospace;
+}
+
+.sliderRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.slider {
+    flex: 1;
+    accent-color: var(--bs-primary);
+    cursor: pointer;
+    height: 4px;
+}
+
+.sliderVal {
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    font-family: monospace;
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+// ── Mode toggle ───────────────────────────────────────────────────────────────
+
+.modeToggle {
+    display: flex;
+    gap: 3px;
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+    padding: 3px;
+}
+
+.modeBtn {
+    flex: 1;
+    padding: 6px 0;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: var(--bs-font-sans-serif);
+
+    &:hover {
+        color: var(--bs-body-color);
+        background: rgba(var(--bs-primary-rgb), 0.06);
+    }
+
+    &.modeBtnActive {
+        background: var(--bs-primary);
+        color: #fff;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), 0.3);
+    }
+}
+
+// ── Status box ────────────────────────────────────────────────────────────────
+
+.statusBox {
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.statusRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.statusLabel {
+    color: var(--bs-secondary-color, var(--bs-gray-600));
+    font-weight: 500;
+}
+
+.statusVal {
+    color: var(--bs-body-color);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.closedBadge {
+    font-size: 11px;
+    color: var(--bs-success);
+    font-weight: 700;
+    padding-top: 6px;
+    border-top: 1px solid var(--bs-border-color);
+    margin-top: 2px;
+    letter-spacing: 0.2px;
+}
+
+// ── Hint text ─────────────────────────────────────────────────────────────────
+
+.hint {
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    line-height: 1.6;
+}
+
+// ── Action buttons ────────────────────────────────────────────────────────────
+
+.actionStack {
+    padding: 14px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: auto;
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+}
+
+.actionRow {
+    display: flex;
+    gap: 6px;
+}
+
+%btn-base {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    font-family: var(--bs-font-sans-serif);
+    letter-spacing: 0.1px;
+
+    &:disabled {
+        opacity: 0.38;
+        cursor: not-allowed;
+    }
+}
+
+.btnPrimary {
+    @extend %btn-base;
+    background: var(--bs-primary);
+    color: #fff;
+    width: 100%;
+    box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), 0.28);
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.1);
+        box-shadow: 0 4px 14px rgba(var(--bs-primary-rgb), 0.38);
+        transform: translateY(-1px);
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(0);
+    }
+}
+
+.btnOutline {
+    @extend %btn-base;
+    background: transparent;
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+    width: 100%;
+
+    &:hover:not(:disabled) {
+        background: rgba(var(--bs-primary-rgb), 0.08);
+        box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), 0.12);
+    }
+}
+
+.btnSecondary {
+    @extend %btn-base;
+    flex: 1;
+    background: var(--bs-tertiary-bg, var(--bs-gray-200));
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+
+    &:hover:not(:disabled) {
+        background: var(--bs-secondary-bg, var(--bs-gray-300));
+        border-color: rgba(var(--bs-primary-rgb), 0.3);
+    }
+}
+
+.btnDanger {
+    @extend %btn-base;
+    flex: 1;
+    background: rgba(var(--bs-danger-rgb), 0.08);
+    border-color: rgba(var(--bs-danger-rgb), 0.25);
+    color: var(--bs-danger);
+
+    &:hover:not(:disabled) {
+        background: rgba(var(--bs-danger-rgb), 0.15);
+        border-color: var(--bs-danger);
+        box-shadow: 0 2px 8px rgba(var(--bs-danger-rgb), 0.15);
+    }
+}
+
+.btnDangerSm {
+    @extend %btn-base;
+    padding: 4px 10px;
+    font-size: 11px;
+    background: rgba(var(--bs-danger-rgb), 0.08);
+    border-color: rgba(var(--bs-danger-rgb), 0.25);
+    color: var(--bs-danger);
+
+    &:hover {
+        background: rgba(var(--bs-danger-rgb), 0.15);
+    }
+}
+
+.btnGhost {
+    @extend %btn-base;
+    background: transparent;
+    color: var(--bs-secondary-color, var(--bs-gray-600));
+    width: 100%;
+
+    &:hover {
+        color: var(--bs-body-color);
+        background: rgba(var(--bs-primary-rgb), 0.06);
+    }
+}
+
+// ── Image upload ──────────────────────────────────────────────────────────────
+
+.currentPlan {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--bs-border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.planPreview {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    display: block;
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+}
+
+.planActions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 11px;
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.planLabel {
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    font-weight: 500;
+}
+
+.dropzone {
+    border: 1.5px dashed rgba(var(--bs-primary-rgb), 0.3);
+    border-radius: 10px;
+    padding: 22px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: rgba(var(--bs-primary-rgb), 0.02);
+
+    &:hover {
+        border-color: var(--bs-primary);
+        background: rgba(var(--bs-primary-rgb), 0.05);
+        box-shadow: 0 2px 12px rgba(var(--bs-primary-rgb), 0.08);
+    }
+
+    &.dropzoneDragging {
+        border-color: var(--bs-primary);
+        background: rgba(var(--bs-primary-rgb), 0.08);
+        box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.12);
+    }
+}
+
+.dropIcon {
+    font-size: 26px;
+    opacity: 0.6;
+}
+
+.dropText {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--bs-body-color);
+}
+
+.dropSub {
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+}
+
+.errorMsg {
+    font-size: 11px;
+    color: var(--bs-danger);
+    background: rgba(var(--bs-danger-rgb), 0.08);
+    border: 1px solid rgba(var(--bs-danger-rgb), 0.2);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-weight: 500;
+}
+
+// ── Sensor List ──────────────────────────────────────────────────────────────
+
+.haloList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.haloRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+
+    // Subtle glass effect
+    &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+        pointer-events: none;
+    }
+
+    &:hover {
+        border-color: rgba(var(--bs-primary-rgb), 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 
+                    0 0 0 1px rgba(var(--bs-primary-rgb), 0.1);
+        transform: translateY(-2px);
+
+        .haloRemove {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+}
+
+.haloRowOnline {
+    @extend .haloRow;
+    border-left: 3.5px solid var(--bs-success);
+}
+
+.haloRowAlert {
+    @extend .haloRow;
+    border-left: 3.5px solid var(--bs-danger);
+    background: rgba(var(--bs-danger-rgb), 0.03);
+    animation: alert-border-pulse 2s infinite;
+
+    &:hover {
+        background: rgba(var(--bs-danger-rgb), 0.05);
+        border-color: var(--bs-danger);
+    }
+}
+
+@keyframes alert-border-pulse {
+    0%, 100% { border-left-color: var(--bs-danger); }
+    50% { border-left-color: rgba(var(--bs-danger-rgb), 0.4); }
+}
+
+.haloRowOffline {
+    @extend .haloRow;
+    border-left: 3.5px solid var(--bs-secondary-color);
+    opacity: 0.7;
+    filter: grayscale(0.5);
+}
+
+.haloDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 0 8px currentColor;
+
+    &.pulse::after {
+        content: '';
+        position: absolute;
+        inset: -5px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        animation: halo-dot-pulse 1.8s ease-out infinite;
+    }
+}
+
+@keyframes halo-dot-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.4); opacity: 0; }
+}
+
+.haloInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.haloName {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--bs-body-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.haloMeta {
+    font-size: 10px;
+    color: var(--bs-secondary-color);
+    opacity: 0.75;
+    font-family: monospace;
+}
+
+.haloStatusBadge {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.statusOnlineBadge {
+    @extend .haloStatusBadge;
+    color: var(--bs-success);
+    background: rgba(var(--bs-success-rgb), 0.12);
+}
+
+.statusAlertBadge {
+    @extend .haloStatusBadge;
+    color: var(--bs-danger);
+    background: rgba(var(--bs-danger-rgb), 0.15);
+    box-shadow: 0 0 10px rgba(var(--bs-danger-rgb), 0.2);
+}
+
+.statusOfflineBadge {
+    @extend .haloStatusBadge;
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
+}
+
+.haloRemove {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+    color: var(--bs-secondary-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0;
+    transform: translateX(10px);
+
+    &:hover {
+        background: var(--bs-danger);
+        border-color: var(--bs-danger);
+        color: #fff;
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 4px 10px rgba(var(--bs-danger-rgb), 0.3);
+    }
+}
+
+.emptyList {
+    text-align: center;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    background: rgba(var(--bs-primary-rgb), 0.02);
+    border: 1.5px dashed var(--bs-border-color);
+    border-radius: 16px;
+    margin: 10px 0;
+}
+
+.emptyListIcon {
+    font-size: 36px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+}
+
+.emptyListText {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--bs-body-color);
+}
+
+.emptyListSub {
+    font-size: 11px;
+    color: var(--bs-secondary-color);
+    line-height: 1.5;
+}

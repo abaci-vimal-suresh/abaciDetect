@@ -1,0 +1,274 @@
+.sidebar {
+    width: 248px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bs-body-bg);
+    border-right: 1px solid var(--bs-border-color);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.05);
+
+    // Subtle inner depth
+    &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset -10px 0 20px -10px rgba(0,0,0,0.03);
+    }
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.header {
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid var(--bs-border-color);
+    flex-shrink: 0;
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+    position: relative;
+    z-index: 2;
+}
+
+.headerTitle {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--bs-primary);
+    opacity: 0.85;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &::before {
+        content: '';
+        width: 3px;
+        height: 12px;
+        background: var(--bs-primary);
+        border-radius: 4px;
+    }
+}
+
+// ── Body ──────────────────────────────────────────────────────────────────────
+
+.body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px 0;
+    scroll-behavior: smooth;
+
+    &::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(var(--bs-primary-rgb), 0.15);
+        border-radius: 10px;
+        border: 1px solid transparent;
+        background-clip: padding-box;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: rgba(var(--bs-primary-rgb), 0.3);
+        border: 1px solid transparent;
+        background-clip: padding-box;
+    }
+}
+
+// ── Row ───────────────────────────────────────────────────────────────────────
+
+.row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding-left: var(--indent-padding, 14px);
+    padding-right: 14px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+    border-left: 3px solid transparent;
+    margin: 1px 0;
+
+    &:hover {
+        background: rgba(var(--bs-primary-rgb), 0.04);
+        padding-left: calc(var(--indent-padding, 14px) + 4px); 
+        
+        .name {
+            color: var(--bs-body-color);
+        }
+
+        .chevron {
+            color: var(--bs-primary);
+            transform: scale(1.1);
+        }
+    }
+
+    &.selected {
+        background: linear-gradient(90deg, 
+            rgba(var(--bs-primary-rgb), 0.12) 0%, 
+            rgba(var(--bs-primary-rgb), 0.02) 100%
+        );
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05),
+                    inset 0 -1px 0 rgba(0,0,0,0.02);
+        
+        .name {
+            color: var(--bs-primary);
+            font-weight: 700;
+            text-shadow: 0 0 15px rgba(var(--bs-primary-rgb), 0.3);
+        }
+
+        .nodeIcon {
+            filter: drop-shadow(0 0 5px currentColor);
+        }
+    }
+}
+
+// ── Indent guide ──────────────────────────────────────────────────────────────
+
+.indentLine {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1.5px;
+    background: var(--bs-border-color);
+    opacity: 0.3;
+    pointer-events: none;
+    transition: all 0.3s ease;
+
+    // Connect lines when parent is active
+    &.active {
+        background: var(--bs-primary);
+        opacity: 0.6;
+        width: 2px;
+        box-shadow: 0 0 8px rgba(var(--bs-primary-rgb), 0.4);
+    }
+}
+
+// ── Row elements ──────────────────────────────────────────────────────────────
+
+.chevron {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0.6;
+
+    &:hover {
+        opacity: 1;
+    }
+}
+
+.nodeIcon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1;
+    font-size: 12.5px;
+    color: var(--bs-secondary-color, var(--bs-gray-600));
+    transition: all 0.15s ease;
+    letter-spacing: -0.1px;
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+
+.badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.badge {
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), 0.08);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.15);
+    border-radius: 6px;
+    padding: 1px 5px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+
+    &:hover {
+        background: rgba(var(--bs-primary-rgb), 0.15);
+        transform: translateY(-1px);
+    }
+}
+
+.imageDot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 0 3px rgba(6, 214, 160, 0.4));
+    animation: dot-pulse 2s infinite;
+}
+
+@keyframes dot-pulse {
+    0% { opacity: 0.6; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0.6; transform: scale(0.9); }
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+
+.footer {
+    padding: 14px 16px;
+    border-top: 1px solid var(--bs-border-color);
+    flex-shrink: 0;
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+}
+
+.manageBtn {
+    width: 100%;
+    padding: 9px 0;
+    border-radius: 10px;
+    border: 1.5px dashed rgba(var(--bs-primary-rgb), 0.25);
+    background: rgba(var(--bs-primary-rgb), 0.02);
+    color: var(--bs-primary);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.8;
+    letter-spacing: 0.3px;
+
+    &:hover {
+        border-style: solid;
+        border-color: var(--bs-primary);
+        background: var(--bs-primary);
+        color: #fff;
+        opacity: 1;
+        box-shadow: 0 4px 12px rgba(var(--bs-primary-rgb), 0.3);
+        transform: translateY(-2px);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}

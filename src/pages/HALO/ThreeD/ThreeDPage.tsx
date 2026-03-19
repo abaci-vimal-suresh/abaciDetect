@@ -212,16 +212,13 @@ const ThreeDPage = () => {
         const rawAreas = areasData || [];
         const rawSensors = sensorsData || [];
 
-        // In "Site View", we want to render ALL buildings and sensors.
-        // The urlAreaId will still handle initial selection/zoom logic elsewhere,
-        // but we no longer filter the areas/sensors list here.
+
 
         const enrichedSensors = rawSensors.map(s => {
             const sensorAreaId = typeof s.area === 'object' && s.area !== null
                 ? s.area.id
                 : (s.area || s.area_id);
 
-            // Find floor level even in unfiltered list
             const area = rawAreas.find(a => a.id === Number(sensorAreaId));
             const derivedFloor = area?.floor_level ?? area?.offset_z ?? 0;
 
@@ -287,11 +284,9 @@ const ThreeDPage = () => {
             }
         }
     }, [selectedSensor]);
-    // Auto-select and zoom on new alert
     useEffect(() => {
-        // If we have more alerts than before, a new one just arrived
         if (alerts.length > lastAlertCountRef.current) {
-            const newAlert = alerts[0]; // Alerts are unshifted (newest first)
+            const newAlert = alerts[0];
             lastAlertCountRef.current = alerts.length;
 
             console.log('ThreeDPage: New Alert Detected!', {
@@ -302,7 +297,6 @@ const ThreeDPage = () => {
             });
 
             if (newAlert) {
-                // Try matching by ID first, then by name as a fallback
                 const sensor = sensors.find(s =>
                     (newAlert.sensor_id && String(s.id) === String(newAlert.sensor_id)) ||
                     (newAlert.sensor_name && s.name.toLowerCase() === newAlert.sensor_name.toLowerCase()) ||
@@ -326,7 +320,6 @@ const ThreeDPage = () => {
                     setEditingAreaForWalls(null);
                     setActiveMetricGroup(null);
 
-                    // Unified preview state setup for camera lookAt
                     setPreviewState(createSensorPositionPreview(
                         sensor.id,
                         sensor.x_val || 0,
@@ -342,7 +335,6 @@ const ThreeDPage = () => {
                 }
             }
         } else {
-            // Keep ref in sync even if alerts are cleared/reduced
             lastAlertCountRef.current = alerts.length;
         }
     }, [alerts, sensors, selectedAreaIds]);
