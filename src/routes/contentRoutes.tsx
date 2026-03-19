@@ -141,6 +141,7 @@ const RouteConfig: CustomRouteConfig[] = [
 		element: <ThreeDPage />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
+
 	{
 		path: '/halo/system-settings',
 		element: <HaloSystemSettings />,

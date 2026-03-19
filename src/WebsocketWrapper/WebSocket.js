@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import React from 'react';
 import { useState, useRef, useEffect, useContext, useCallback } from 'react';
 import { io } from "socket.io-client";
@@ -170,11 +170,27 @@ const WebsocketProvider = ({ children }) => {
 
 		socket.on('alert_created', (message) => {
 			const notifData = message?.data ?? message;
+			const bodyText = notifData.body ?? '';
+			const msgSection = bodyText.match(/Message:\s*([\s\S]+)/)?.[1] ?? '';
+
+			const parseField = (text, key) => {
+				const m = text.match(new RegExp(`${key}:\\s*([^\\n|]+)`, 'i'));
+				return m?.[1]?.trim() ?? undefined;
+			};
+			const parsePipe = (text, key) => {
+				const m = text.match(new RegExp(`${key}:\\s*([^|\\n]+)`, 'i'));
+				return m?.[1]?.trim() ?? undefined;
+			};
+
+			const curVal = parseFloat(parsePipe(msgSection, 'Value') || '0');
+			const threshVal = parseFloat(parsePipe(msgSection, 'Threshold') || '0');
+			const rawIntensity = threshVal > 0 ? curVal / threshVal : 1.0;
+			const intensity = Math.max(1.0, Math.min(5.0, rawIntensity));
 
 			const newNotification = {
 				id: notifData.notification_id ?? notifData.id ?? Date.now(),
 				title: notifData.title ?? 'New Alert',
-				body: notifData.body ?? '',
+				body: bodyText,
 				type: notifData.type ?? 'ALERT',
 				severity: notifData.severity ?? 'WARNING',
 				severity_display: notifData.severity_display ?? notifData.severity ?? 'Warning',
@@ -182,8 +198,15 @@ const WebsocketProvider = ({ children }) => {
 				created_time: notifData.created_time ?? new Date().toISOString(),
 				updated_time: notifData.updated_time ?? new Date().toISOString(),
 				// Extract sensor_id if possible
-				sensor_id: notifData.sensor_id ?? notifData.sensor ?? (notifData.body ? (notifData.body.match(/Sensor ID:\s*(\d+)/)?.[1]) : null),
-				sensor_name: notifData.sensor_name ?? (notifData.body ? (notifData.body.match(/Sensor:\s*([^|#\n]+)/)?.[1]?.trim()) : null),
+				sensor_id: notifData.sensor_id ?? notifData.sensor ?? (bodyText ? (bodyText.match(/Sensor ID:\s*(\d+)/)?.[1]) : null),
+				sensor_name: notifData.sensor_name ?? (bodyText ? (bodyText.match(/Sensor:\s*([^|#\n]+)/)?.[1]?.trim()) : null),
+				// Enhanced fields for 3D Visualizer
+				event_source: parsePipe(msgSection, 'Event Source') ?? parsePipe(msgSection, 'Source Type') ?? 'Unknown',
+				current_value: curVal,
+				threshold_value: threshVal,
+				intensity: intensity,
+				event_type: parseField(bodyText, 'Type') ?? notifData.title ?? 'Unknown',
+				area_name: parseField(bodyText, 'Area') ?? null,
 			};
 
 			console.log('WebSocket: Alert Created Event Handled', {
@@ -192,6 +215,59 @@ const WebsocketProvider = ({ children }) => {
 				sensor_name: newNotification.sensor_name,
 				data: notifData
 			});
+
+			// ─── 0. Sync Sensor Status in Cache ───────────────────────────────────────
+			const sensorNameLower = newNotification.sensor_name?.toLowerCase();
+			if (sensorNameLower) {
+				const sensorsQueries = queryClient.getQueriesData({ queryKey: queryKeys.sensors.all });
+				for (const [queryKey, oldData] of sensorsQueries) {
+					if (!oldData) continue;
+
+					const updateSensorInList = (list) => {
+						return list.map(s => {
+							if (s.name?.toLowerCase() === sensorNameLower) {
+								return {
+									...s,
+									status: 'critical',
+									alert_severity: newNotification.severity,
+									last_alert_time: new Date().toISOString()
+								};
+							}
+							return s;
+						});
+					};
+
+					const revertSensorInList = (list) => {
+						return list.map(s => {
+							if (s.name?.toLowerCase() === sensorNameLower) {
+								return {
+									...s,
+									status: 'safe'
+								};
+							}
+							return s;
+						});
+					};
+
+					// Apply Critical Status
+					queryClient.setQueryData(queryKey, (old) => {
+						if (!old) return old;
+						if (Array.isArray(old)) return updateSensorInList(old);
+						if (old.results) return { ...old, results: updateSensorInList(old.results) };
+						return old;
+					});
+
+					// Revert after 30 seconds
+					setTimeout(() => {
+						queryClient.setQueryData(queryKey, (old) => {
+							if (!old) return old;
+							if (Array.isArray(old)) return revertSensorInList(old);
+							if (old.results) return { ...old, results: revertSensorInList(old.results) };
+							return old;
+						});
+					}, 30000);
+				}
+			}
 
 			// ─── 1. Notification.tsx cache ────────────────────────────────────────────
 
@@ -215,16 +291,6 @@ const WebsocketProvider = ({ children }) => {
 
 			// ─── 2. AlertHistory.tsx cache ────────────────────────────────────────────
 
-			const parseField = (text, key) => {
-				const m = text.match(new RegExp(`${key}:\\s*([^\\n|]+)`, 'i'));
-				return m?.[1]?.trim() ?? undefined;
-			};
-			const parsePipe = (text, key) => {
-				const m = text.match(new RegExp(`${key}:\\s*([^|\\n]+)`, 'i'));
-				return m?.[1]?.trim() ?? undefined;
-			};
-			const bodyText = notifData.body ?? '';
-			const msgSection = bodyText.match(/Message:\s*([\s\S]+)/)?.[1] ?? '';
 			const parsedAlertId = parseInt(parseField(bodyText, 'Alert ID') ?? '0', 10) || Date.now();
 
 			const rawAlert = {

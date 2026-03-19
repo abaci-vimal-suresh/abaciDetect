@@ -10,6 +10,8 @@ export interface FloorCalibration {
     minY: number;
     centerX: number;
     centerZ: number;
+    isFallback?: boolean;
+    isReady?: boolean;
 }
 
 
@@ -188,6 +190,10 @@ export function transformWallTo3D(
 
     // 5. Calculate rotation (Y-axis)
     const rotationY = -Math.atan2(dz, dx);
+
+    if (wall.id === 'preview') {
+        console.log(`[transformWallTo3D:preview] r_y2(${wall.r_y2.toFixed(4)}) * depth(${calibration.depth.toFixed(2)}) + minZ(${calibration.minZ.toFixed(2)}) -> z2(${z2.toFixed(2)})`);
+    }
 
     return {
         position: [centerX, centerY, centerZ],

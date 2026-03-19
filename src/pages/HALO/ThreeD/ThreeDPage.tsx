@@ -1,13 +1,13 @@
 import { Suspense, useState, useMemo, useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { CameraControls, PerspectiveCamera, Environment, Html, Loader } from '@react-three/drei';
-import { BuildingScene } from './components/BuildingScene';
-import SensorSettingsOverlay from './components/SensorSettingsOverlay';
-import AreaSettingsOverlay from './components/AreaSettingsOverlay';
+import { BuildingScene } from './components/scene/BuildingScene';
+import UnifiedRightPanel from './components/panels/UnifiedRightPanel';
+import BuildingSidebar from './components/panels/BuildingSidebar';
 
-import SensorConfigCards from './components/SensorConfigCards';
+import SensorConfigCards from './components/sensors/SensorConfigCards';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import Card, { CardHeader, CardTitle } from '../../../components/bootstrap/Card';
@@ -15,18 +15,19 @@ import Button from '../../../components/bootstrap/Button';
 import Icon from '../../../components/icon/Icon';
 import Badge from '../../../components/bootstrap/Badge';
 import useDarkMode from '../../../hooks/useDarkMode';
-import AggregateMetricCards from './components/AggregateMetricCards';
-import AggregationFilterPanel from './components/AggregationFilterPanel';
-import MetricIntegratedDashboard from './components/MetricIntegratedDashboard';
+import AggregateMetricCards from './components/dashboards/AggregateMetricCards';
+import AggregationFilterPanel from './components/panels/AggregationFilterPanel';
 import './ThreeDPage.scss';
 
 import { useAreas, useSensors, useCreateWall } from '../../../api/sensors.api';
+import { addSensorAlert, selectAllAlerts } from '../../../store/sensorEventsSlice';
+import { MockAlertPanel } from './components/debug/MockAlertPanel';
+import { Sensor, Area, Wall } from '../../../types/sensor';
 import { USE_MOCK_DATA } from '../../../config';
 import { MOCK_WALLS } from '../../../api/mockData';
 import { flattenAreas } from './utils/dataTransform';
-import { Wall } from '../../../types/sensor';
 import useToasterNotification from '../../../hooks/useToasterNotification';
-import { selectAllAlerts } from '../../../store/sensorEventsSlice';
+import { DEFAULT_WALL_HEIGHT } from '../../../constants/wallDefaults';
 
 import {
     PreviewState,
@@ -35,7 +36,7 @@ import {
     createSensorWallsPreview,
     extractWalls,
     isAreaWallsPreview
-} from '../utils/previewState';
+} from './utils/previewState';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useQuery } from '@tanstack/react-query';
 import { authAxios as axiosInstance } from '../../../axiosInstance';
@@ -44,6 +45,7 @@ const ThreeDPage = () => {
     const { areaId: urlAreaId } = useParams<{ areaId: string }>();
     const { darkModeStatus } = useDarkMode();
     const { showNotification } = useToasterNotification();
+    const dispatch = useDispatch();
 
 
     // UI State
@@ -52,7 +54,9 @@ const ThreeDPage = () => {
     const [showSidebar, setShowSidebar] = useState(true);
     const [sidebarTab, setSidebarTab] = useState<'sensors' | 'filters'>('sensors');
     const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
+    const [showSensorList, setShowSensorList] = useState(false);
     const [activeMetricGroup, setActiveMetricGroup] = useState<any>(null);
+    const [showMockPanel, setShowMockPanel] = useState(false);
 
     // Selection State
     const [selectedSensorId, setSelectedSensorId] = useState<number | string | null>(null);
@@ -67,11 +71,30 @@ const ThreeDPage = () => {
     const [isWallEndpointDragging, setIsWallEndpointDragging] = useState(false);
     const [externalWallToLink, setExternalWallToLink] = useState<Wall | null>(null);
 
+    // Wall drawing settings (single source of truth for the panel)
+    const [wallDrawSettings, setWallDrawSettings] = useState({
+        drawingMode: 'straight' as 'straight' | 'arc',
+        height: 2.4,
+        thickness: 0.15,
+        color: '#8f8f8f',
+        opacity: 0.8,
+    });
+    // Live count mirrors from BuildingScene
+    const [drawPointCount, setDrawPointCount] = useState(0);
+    const [drawArcBufferCount, setDrawArcBufferCount] = useState(0);
+    const [drawCommittedCount, setDrawCommittedCount] = useState(0);
+    // Trigger counters for undo / clear / finish actions
+    const [wallDrawUndoTrigger, setWallDrawUndoTrigger] = useState(0);
+    const [wallDrawClearTrigger, setWallDrawClearTrigger] = useState(0);
+    const [wallDrawFinishTrigger, setWallDrawFinishTrigger] = useState(0);
+    const [wallDrawCloseShapeTrigger, setWallDrawCloseShapeTrigger] = useState(0);
+
     const [previewState, setPreviewState] = useState<PreviewState>(null);
 
     const [wallCreationTrigger, setWallCreationTrigger] = useState(0);
-    const [pendingWall, setPendingWall] = useState<Partial<Wall> | null>(null);
+    const [pendingWalls, setPendingWalls] = useState<Partial<Wall>[] | null>(null);
     const [zoomTrigger, setZoomTrigger] = useState(0);
+    const cameraRef = useRef<any>(null);
 
     const [calibration, setCalibration] = useState<any>(null);
     const alerts = useSelector(selectAllAlerts);
@@ -139,6 +162,8 @@ const ThreeDPage = () => {
                 showNotification('Info', 'Wall drawing cancelled', 'info');
             } else if (showSettingsOverlay) {
                 setShowSettingsOverlay(false);
+            } else if (showSensorList) {
+                setShowSensorList(false);
             } else if (editingAreaForWalls) {
                 setEditingAreaForWalls(null);
             } else if (activeMetricGroup) {
@@ -182,41 +207,22 @@ const ThreeDPage = () => {
     }, [wallDrawMode, showNotification]);
 
 
+
     const { filteredAreas, filteredSensors } = useMemo(() => {
         const rawAreas = areasData || [];
         const rawSensors = sensorsData || [];
 
-        if (!urlAreaId) {
-            return { filteredAreas: rawAreas, filteredSensors: rawSensors };
-        }
+        // In "Site View", we want to render ALL buildings and sensors.
+        // The urlAreaId will still handle initial selection/zoom logic elsewhere,
+        // but we no longer filter the areas/sensors list here.
 
-        const targetId = Number(urlAreaId);
-        const targetBuilding = rawAreas.find(a => a.id === targetId);
-
-        if (!targetBuilding) {
-            return { filteredAreas: [], filteredSensors: [] };
-        }
-
-        const buildingTree = flattenAreas([targetBuilding], rawAreas);
-        const buildingIds = new Set(buildingTree.map(a => a.id));
-
-        const sensorsInBuilding = rawSensors.filter(s => {
+        const enrichedSensors = rawSensors.map(s => {
             const sensorAreaId = typeof s.area === 'object' && s.area !== null
                 ? s.area.id
                 : (s.area || s.area_id);
 
-            const isRelated = buildingIds.has(Number(sensorAreaId));
-            const isPlaced = (s.x_val !== 0 && s.y_val !== 0) && s.x_val !== null && s.y_val !== null;
-
-            return isRelated && isPlaced;
-        });
-
-        const enrichedSensors = sensorsInBuilding.map(s => {
-            const sensorAreaId = typeof s.area === 'object' && s.area !== null
-                ? s.area.id
-                : (s.area || s.area_id);
-
-            const area = buildingTree.find(a => a.id === Number(sensorAreaId));
+            // Find floor level even in unfiltered list
+            const area = rawAreas.find(a => a.id === Number(sensorAreaId));
             const derivedFloor = area?.floor_level ?? area?.offset_z ?? 0;
 
             return {
@@ -226,10 +232,10 @@ const ThreeDPage = () => {
         });
 
         return {
-            filteredAreas: buildingTree,
+            filteredAreas: rawAreas,
             filteredSensors: enrichedSensors
         };
-    }, [areasData, sensorsData, urlAreaId]);
+    }, [areasData, sensorsData]);
 
     const areas = filteredAreas;
     const sensors = filteredSensors;
@@ -347,10 +353,10 @@ const ThreeDPage = () => {
 
         if (editingAreaForWalls) {
             console.log('ThreeDPage: Buffering wall for AreaSettingsOverlay');
-            setPendingWall(newWall);
+            setPendingWalls([newWall]);
             setWallCreationTrigger(prev => prev + 1);
             setTimeout(() => {
-                setPendingWall(null);
+                setPendingWalls(null);
             }, 500);
         } else {
             console.log('ThreeDPage: Creating wall via mutation');
@@ -432,34 +438,113 @@ const ThreeDPage = () => {
         <PageWrapper title='3D Sensor Visualization'>
             <Page container='fluid' className='p-0 h-100'>
                 <div className='threed-page-container d-flex flex-column'>
-                    <Card className='mb-0 rounded-0 border-0 border-bottom'>
-                        <CardHeader className='bg-transparent border-0'>
-                            <div className='d-flex justify-content-between align-items-center'>
-                                <CardTitle className='mb-0'>
-                                    <Icon icon='ViewInAr' className='me-2' />
-                                    3D Building Visualization
-                                    {isLoading && <span className='ms-2 spinner-border spinner-border-sm text-primary' role='status' />}
-                                </CardTitle>
+                    {/* NEW TOPBAR IMPLEMENTATION */}
+                    <div className='topbar'>
+                        <div className='title'>
+                            <button
+                                className={`drawerBtn ${showSidebar ? 'active' : ''}`}
+                                onClick={() => setShowSidebar(s => !s)}
+                                title={showSidebar ? "Hide Explorer" : "Show Explorer"}
+                            >
+                                <Icon icon="ViewSidebar" />
+                            </button>
+                            <span className='ms-2'>3D Building Visualization</span>
+                            {isLoading && <span className='ms-2 spinner-border spinner-border-sm text-primary' role='status' />}
+                        </div>
 
-                                <div className='d-flex gap-2 align-items-center'>
+                        <div className='controls'>
+                            {/* Live Badge */}
+                            <Badge color='success' isLight className='me-2'>
+                                {sensors.length} Sensors Live
+                            </Badge>
 
+                            <div className='divider' />
 
-                                    <Button
-                                        color={showSidebar ? 'primary' : 'light'}
-                                        onClick={() => setShowSidebar(!showSidebar)}
-                                        size='sm'
-                                        icon='FormatListBulleted'
-                                    >
-                                        Sensors
-                                    </Button>
+                            {/* Right Panel Toggles */}
+                            <div className='toolPill'>
+                                <button
+                                    className={`toolBtn ${showSensorList ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setShowSensorList(s => !s);
+                                        if (!showSensorList) {
+                                            setShowSettingsOverlay(false);
+                                            setEditingAreaForWalls(null);
+                                            setActiveMetricGroup(null);
+                                            setShowMockPanel(false);
+                                        }
+                                    }}
+                                    title="Sensor List"
+                                >
+                                    <Icon icon="FormatListBulleted" />
+                                </button>
 
-                                    <Badge color='success' isLight>
-                                        {sensors.length} Sensors
-                                    </Badge>
-                                </div>
+                                <button
+                                    className={`toolBtn ${showSettingsOverlay && selectedSensor ? 'active' : ''}`}
+                                    onClick={() => {
+                                        if (showSettingsOverlay && selectedSensor) {
+                                            setShowSettingsOverlay(false);
+                                        } else if (selectedSensorId) {
+                                            setShowSettingsOverlay(true);
+                                            setShowSensorList(false);
+                                            setEditingAreaForWalls(null);
+                                            setActiveMetricGroup(null);
+                                            setShowMockPanel(false);
+                                        }
+                                    }}
+                                    title="Sensor Settings"
+                                    disabled={!selectedSensorId}
+                                >
+                                    <Icon icon="Videocam" />
+                                </button>
+
+                                <button
+                                    className={`toolBtn ${editingAreaForWalls ? 'active' : ''}`}
+                                    onClick={() => {
+                                        if (editingAreaForWalls) {
+                                            setEditingAreaForWalls(null);
+                                        } else {
+                                            // Fallback to first floor if none selected
+                                            const firstFloor = areas.find(a => a.area_type === 'floor');
+                                            if (firstFloor) setEditingAreaForWalls(firstFloor);
+                                            setShowSettingsOverlay(false);
+                                            setShowSensorList(false);
+                                            setActiveMetricGroup(null);
+                                            setShowMockPanel(false);
+                                        }
+                                    }}
+                                    title="Area Settings"
+                                >
+                                    <Icon icon="Map" />
+                                </button>
+
+                                <button
+                                    className={`toolBtn ${activeMetricGroup ? 'active' : ''}`}
+                                    onClick={() => {
+                                        if (activeMetricGroup) {
+                                            setActiveMetricGroup(null);
+                                        } else {
+                                            setShowSettingsOverlay(false);
+                                            setShowSensorList(false);
+                                            setEditingAreaForWalls(null);
+                                            // Logic to show aggregate metrics if needed
+                                        }
+                                    }}
+                                    title="Analytics"
+                                >
+                                    <Icon icon="Timeline" />
+                                </button>
+
+                                <button
+                                    className={`toolBtn ${showMockPanel ? 'active' : ''}`}
+                                    onClick={() => setShowMockPanel(s => !s)}
+                                    title="Alert Simulator"
+                                    style={{ opacity: 0.6 }}
+                                >
+                                    <Icon icon="BugReport" />
+                                </button>
                             </div>
-                        </CardHeader>
-                    </Card>
+                        </div>
+                    </div>
 
 
                     <div
@@ -470,126 +555,59 @@ const ThreeDPage = () => {
                             <div
                                 className='position-absolute start-0 top-0 h-100'
                                 style={{
-                                    width: '190px',
+                                    width: '240px',
                                     zIndex: 1100,
-                                    pointerEvents: 'auto',
-                                    animation: 'slide-in-left 0.4s ease-out'
+                                    pointerEvents: 'none'
                                 }}
                             >
-                                <style>{`
-                                    @keyframes slide-in-left {
-                                        from { transform: translateX(-100%); opacity: 0; }
-                                        to { transform: translateX(0); opacity: 1; }
-                                    }
-                                    .sidebar-glass-card {
-                                        backdrop-filter: blur(20px);
-                                        background: ${darkModeStatus ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.75)'};
-                                        border-right: 1px solid ${darkModeStatus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.1)'};
-                                        box-shadow: 5px 0 20px rgba(0,0,0,0.2);
-                                    }
-                                `}</style>
-
-                                <div className="sidebar-glass-card h-100 d-flex flex-column">
-                                    <div className='p-0 border-bottom d-flex'>
-                                        <div
-                                            className={`flex-grow-1 p-2 text-center cursor-pointer transition-all ${sidebarTab === 'sensors' ? 'border-bottom border-info border-3 fw-bold text-info' : 'text-muted'}`}
-                                            onClick={() => setSidebarTab('sensors')}
-                                            style={{ fontSize: '0.75rem' }}
-                                        >
-                                            <Icon icon='Sensors' className='me-1' /> Sensors
-                                        </div>
-                                        <div
-                                            className={`flex-grow-1 p-2 text-center cursor-pointer transition-all ${sidebarTab === 'filters' ? 'border-bottom border-info border-3 fw-bold text-info' : 'text-muted'}`}
-                                            onClick={() => setSidebarTab('filters')}
-                                            style={{ fontSize: '0.75rem' }}
-                                        >
-                                            <Icon icon='FilterAlt' className='me-1' /> Filters
-                                        </div>
-                                    </div>
-
-                                    <div className='flex-grow-1 overflow-auto p-2 scrollbar-hidden'>
-                                        {sidebarTab === 'sensors' ? (
-                                            <>
-                                                {Object.keys(sensorsByFloor).sort((a, b) => Number(b) - Number(a)).map(floor => (
-                                                    <div key={floor} className='mb-3'>
-
-                                                        {sensorsByFloor[Number(floor)].map(s => (
-                                                            <div
-                                                                key={s.id}
-                                                                className={`p-2 rounded mb-1 cursor-pointer transition-all ${selectedSensor?.id === s.id ? 'bg-info bg-opacity-25 border border-info border-opacity-50 text-info shadow-sm' : (darkModeStatus ? 'hover-bg-dark text-white text-opacity-75' : 'hover-bg-light text-dark text-opacity-75')}`}
-                                                                onClick={() => {
-                                                                    const sensorAreaId = typeof s.area === 'object' && s.area !== null
-                                                                        ? s.area.id
-                                                                        : (s.area || s.area_id);
-
-                                                                    if (sensorAreaId && !selectedAreaIds.includes(Number(sensorAreaId))) {
-                                                                        setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
-                                                                    }
-                                                                    setSelectedSensorId(s.id);
-                                                                    setShowSettingsOverlay(true);
-                                                                    setEditingAreaForWalls(null);
-                                                                    setActiveMetricGroup(null);
-
-                                                                    // MODIFIED: Use unified preview state
-                                                                    setPreviewState(createSensorPositionPreview(
-                                                                        s.id,
-                                                                        s.x_val || 0,
-                                                                        s.y_val || 0,
-                                                                        s.z_val || 0
-                                                                    ));
-                                                                }}
-                                                                style={{ fontSize: '0.75rem' }}
-                                                            >
-                                                                <div className='d-flex align-items-center justify-content-between mb-1'>
-                                                                    <div className='text-truncate fw-bold'>{s.name}</div>
-                                                                    <Badge
-                                                                        color={s.status === 'safe' || s.status === 'Normal' ? 'success' : s.status === 'warning' || s.status === 'Warning' ? 'warning' : 'danger'}
-                                                                        isLight
-                                                                        style={{ fontSize: '0.7rem' }}
-                                                                    >
-                                                                        {s.status}
-                                                                    </Badge>
-                                                                </div>
-                                                                <div className='d-flex gap-2' style={{ fontSize: '0.75rem', opacity: 0.6 }}>
-                                                                    <span className='font-monospace'>{s.mac_address || 'NO-MAC'}</span>
-                                                                    <span className='ms-auto'>{s.ip_address || 'NO-IP'}</span>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ))}
-                                                {sensors.length === 0 && !isLoading && (
-                                                    <div className='text-center py-4 text-muted small'>
-                                                        No placed sensors in this area
-                                                    </div>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <AggregationFilterPanel
-                                                areas={areas}
-                                                selectedAreaIds={selectedAreaIds}
-                                                onAreaSelectionChange={setSelectedAreaIds}
-                                                selectedGroupIds={selectedGroupIds}
-                                                onGroupSelectionChange={setSelectedGroupIds}
-                                                onShowAllAreas={() => {
-                                                    setSelectedSensorId(null);
-                                                    setShowSettingsOverlay(false);
-                                                    setEditingAreaForWalls(null);
-                                                    setActiveMetricGroup(null);
-                                                    const floorIds = areas.filter(a => a.area_type === 'floor' || a.area_type === 'room').map(a => a.id);
-                                                    setSelectedAreaIds(floorIds);
-                                                }}
-                                                onEditAreaWalls={(area) => {
-                                                    setSelectedSensorId(null);
-                                                    setShowSettingsOverlay(false);
-                                                    setEditingAreaForWalls(area);
-                                                    setSelectedSensorId(null);
-                                                    setActiveMetricGroup(null);
-                                                }}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
+                                <BuildingSidebar
+                                    areas={areas}
+                                    allAreas={areasData || []}
+                                    selectedAreaIds={selectedAreaIds}
+                                    onAreaSelectionChange={setSelectedAreaIds}
+                                    onEditAreaWalls={(area) => {
+                                        setSelectedSensorId(null);
+                                        setShowSettingsOverlay(false);
+                                        setEditingAreaForWalls(area);
+                                        setActiveMetricGroup(null);
+                                    }}
+                                    onShowAllAreas={() => {
+                                        setSelectedSensorId(null);
+                                        setShowSettingsOverlay(false);
+                                        setEditingAreaForWalls(null);
+                                        setActiveMetricGroup(null);
+                                        const allAreaData = areasData || [];
+                                        const floorIds = allAreaData.flatMap((a: any) => {
+                                            const floors = (a.subareas || []).map((sub: any) => {
+                                                if (typeof sub === 'object') return sub.id;
+                                                return sub;
+                                            });
+                                            return floors;
+                                        });
+                                        const directFloors = allAreaData
+                                            .filter((a: any) => a.area_type === 'floor' || a.area_type === 'room')
+                                            .map((a: any) => a.id);
+                                        setSelectedAreaIds(Array.from(new Set([...floorIds, ...directFloors])));
+                                    }}
+                                    onBuildingClick={(building) => {
+                                        // Auto-select all floors of this building
+                                        const buildingFloors = (areasData || []).filter((a: any) =>
+                                            (building.subareas || []).includes(a.id) ||
+                                            a.parent_id === building.id
+                                        );
+                                        if (buildingFloors.length > 0) {
+                                            setSelectedAreaIds(buildingFloors.map((f: any) => f.id));
+                                        }
+                                    }}
+                                    setShowSettingsOverlay={setShowSettingsOverlay}
+                                    setEditingAreaForWalls={setEditingAreaForWalls}
+                                    setActiveMetricGroup={setActiveMetricGroup}
+                                    setSelectedSensorId={setSelectedSensorId}
+                                    darkModeStatus={darkModeStatus}
+                                    isLoading={isLoading}
+                                    showSidebar={showSidebar}
+                                    setShowSidebar={setShowSidebar}
+                                />
                             </div>
                         )}
 
@@ -598,6 +616,7 @@ const ThreeDPage = () => {
                             <Suspense fallback={<Html center><div className='text-white d-flex align-items-center gap-2'><div className='spinner-border spinner-border-sm' /> Initializing 3D Scene...</div></Html>}>
                                 <PerspectiveCamera makeDefault position={[50, 40, 50]} fov={40} />
                                 <CameraControls
+                                    ref={cameraRef}
                                     makeDefault
                                     enabled={!isWallEndpointDragging}
                                     minDistance={1}
@@ -608,8 +627,9 @@ const ThreeDPage = () => {
                                 <BuildingScene
                                     areas={areas}
                                     sensors={sensors}
+                                    alerts={alerts}
                                     visibleAreaIds={selectedAreaIds}
-                                    floorSpacing={4}
+                                    floorSpacing={DEFAULT_WALL_HEIGHT}
                                     floorOpacity={floorOpacity}
                                     showBoundaries={showBoundaries}
                                     selectedSensorId={selectedSensorId}
@@ -647,6 +667,27 @@ const ThreeDPage = () => {
                                     blinkingWallIds={blinkingWallIds}
                                     wallDrawMode={wallDrawMode}
                                     onWallCreated={handleWallCreated}
+                                    onWallsBatchCreated={(walls) => {
+                                        if (editingAreaForWalls) {
+                                            console.log('ThreeDPage: Buffering batch walls for AreaSettingsOverlay', walls.length);
+                                            setPendingWalls(walls);
+                                            setWallCreationTrigger(prev => prev + 1);
+                                            setTimeout(() => setPendingWalls(null), 500);
+                                        } else {
+                                            walls.forEach(wall => {
+                                                console.log('Wall payload to API:', wall);
+                                                createWallMutation.mutate(wall);
+                                            });
+                                        }
+                                        setWallDrawMode(false);
+                                    }}
+                                    wallDrawSettings={wallDrawSettings}
+                                    onPointChainUpdate={setDrawPointCount}
+                                    onArcBufferUpdate={setDrawArcBufferCount}
+                                    onCommittedCountUpdate={setDrawCommittedCount}
+                                    undoTrigger={wallDrawUndoTrigger}
+                                    clearTrigger={wallDrawClearTrigger}
+                                    finishTrigger={wallDrawFinishTrigger}
                                     selectedWallId={selectedWallId}
                                     zoomTrigger={zoomTrigger}
                                     onWallClick={(wall) => {
@@ -682,6 +723,44 @@ const ThreeDPage = () => {
                             </Suspense>
                         </Canvas>
                         <Loader />
+                        {wallDrawMode && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                pointerEvents: 'none',
+                                zIndex: 1300,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '8px',
+                            }}>
+                                <div style={{
+                                    background: 'rgba(240,192,64,0.15)',
+                                    border: '1px solid rgba(240,192,64,0.5)',
+                                    borderRadius: '20px',
+                                    padding: '4px 14px',
+                                    fontSize: '11px',
+                                    color: '#f0c040',
+                                    backdropFilter: 'blur(8px)',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    {wallDrawSettings.drawingMode === 'arc'
+                                        ? drawArcBufferCount === 0
+                                            ? 'Click arc start point'
+                                            : drawArcBufferCount === 1
+                                                ? 'Click arc end point'
+                                                : 'Click point ON the curve'
+                                        : drawPointCount === 0
+                                            ? 'Click to place first point'
+                                            : `${drawCommittedCount} wall${drawCommittedCount !== 1
+                                                ? 's' : ''} — click near start to close`
+                                    }
+                                </div>
+                            </div>
+                        )}
+
 
 
 
@@ -705,62 +784,75 @@ const ThreeDPage = () => {
 
 
 
-                        <div
-                            className='position-absolute end-0 top-0 h-100 p-0'
-                            style={{
-                                width: '190px',
-                                zIndex: 1100,
-                                pointerEvents: 'none'
+                        <UnifiedRightPanel
+                            selectedSensor={showSettingsOverlay ? selectedSensor : null}
+                            editingAreaForWalls={editingAreaForWalls}
+                            activeMetricGroup={activeMetricGroup}
+                            showSensorList={showSensorList}
+                            sensorsByFloor={sensorsByFloor}
+                            onSensorSelect={(s) => {
+                                const sensorAreaId = typeof s.area === 'object' && s.area !== null
+                                    ? s.area.id
+                                    : (s.area || s.area_id);
+
+                                if (sensorAreaId && !selectedAreaIds.includes(Number(sensorAreaId))) {
+                                    setSelectedAreaIds(prev => [...prev, Number(sensorAreaId)]);
+                                }
+                                setSelectedSensorId(s.id);
+                                setShowSettingsOverlay(true);
+                                setShowSensorList(false);
+                                setEditingAreaForWalls(null);
+                                setActiveMetricGroup(null);
+
+                                setPreviewState(createSensorPositionPreview(
+                                    s.id,
+                                    s.x_val || 0,
+                                    s.y_val || 0,
+                                    s.z_val || 0
+                                ));
                             }}
-                        >
-                            {showSettingsOverlay && selectedSensor && (
-                                <SensorSettingsOverlay
-                                    sensor={selectedSensor}
-                                    originalSensor={selectedSensor}
-                                    onClose={() => {
-                                        setShowSettingsOverlay(false);
-                                        setPreviewState(null);
-                                    }}
-                                    onPreviewChange={(changes) => {
-                                        handleSensorPreviewChange(selectedSensor.id, changes);
-                                    }}
-                                    onBlinkingWallsChange={setBlinkingWallIds}
-                                    previewState={previewState}
-                                    externalWallToLink={externalWallToLink}
-                                    onExternalWallLinkHandled={() => setExternalWallToLink(null)}
-                                />
-                            )}
-
-                            {/* SensorDataOverlay removed — live readings now shown in the top dock (SensorConfigCards) */}
-
-                            {editingAreaForWalls && (
-                                <AreaSettingsOverlay
-                                    area={editingAreaForWalls}
-                                    isDrawing={wallDrawMode}
-                                    onToggleDrawing={setWallDrawMode}
-                                    newlyCreatedWall={pendingWall}
-                                    wallCreationTrigger={wallCreationTrigger}
-                                    onClose={() => {
-                                        setEditingAreaForWalls(null);
-                                        setPreviewState(null);
-                                        setWallDrawMode(false);
-                                    }}
-                                    onPreviewChange={(changes) => {
-                                        handleAreaPreviewChange(editingAreaForWalls.id, changes);
-                                    }}
-                                    onBlinkingWallsChange={setBlinkingWallIds}
-                                    externalSelectedWallId={selectedWallId}
-                                    previewState={previewState}
-                                />
-                            )}
-
-                            {activeMetricGroup && (
-                                <MetricIntegratedDashboard
-                                    group={activeMetricGroup}
-                                    onClose={() => setActiveMetricGroup(null)}
-                                />
-                            )}
-                        </div>
+                            onClose={() => {
+                                setShowSettingsOverlay(false);
+                                setEditingAreaForWalls(null);
+                                setActiveMetricGroup(null);
+                                setShowSensorList(false);
+                                setPreviewState(null);
+                                setWallDrawMode(false);
+                                setBlinkingWallIds([]);
+                            }}
+                            previewState={previewState}
+                            onPreviewChange={(changes) => {
+                                if (showSettingsOverlay && selectedSensor) {
+                                    handleSensorPreviewChange(selectedSensor.id, changes);
+                                } else if (editingAreaForWalls) {
+                                    handleAreaPreviewChange(editingAreaForWalls.id, changes);
+                                }
+                            }}
+                            onBlinkingWallsChange={setBlinkingWallIds}
+                            darkModeStatus={darkModeStatus}
+                            externalWallToLink={externalWallToLink}
+                            onExternalWallLinkHandled={() => setExternalWallToLink(null)}
+                            wallDrawMode={wallDrawMode}
+                            onToggleDrawing={setWallDrawMode}
+                            pendingWalls={pendingWalls}
+                            wallCreationTrigger={wallCreationTrigger}
+                            selectedWallId={selectedWallId}
+                            wallDrawSettings={wallDrawSettings}
+                            onDrawSettingsChange={(partial) => setWallDrawSettings(prev => ({ ...prev, ...partial }))}
+                            drawPointCount={drawPointCount}
+                            drawArcBufferCount={drawArcBufferCount}
+                            drawCommittedCount={drawCommittedCount}
+                            onDrawFinish={() => setWallDrawFinishTrigger(prev => prev + 1)}
+                            onDrawUndo={() => setWallDrawUndoTrigger(prev => prev + 1)}
+                            onDrawClear={() => setWallDrawClearTrigger(prev => prev + 1)}
+                        />
+                        {/* Alert Simulator Panel */}
+                        {showMockPanel && !wallDrawMode && (
+                            <MockAlertPanel
+                                sensors={sensorsData || []}
+                                onFire={(alert) => dispatch(addSensorAlert(alert))}
+                            />
+                        )}
                     </div>
                 </div>
             </Page>

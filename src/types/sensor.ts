@@ -297,6 +297,18 @@ export interface Wall {
     area_ids?: number[]; // ✅ IDs of areas this wall is linked to
     created_at?: string;
     updated_at?: string;
+    // Bezier curve control point (normalized 0-1)
+    ctrl_x?: number;
+    ctrl_y?: number;
+    // Arc geometry fields
+    arc_center_x?: number;
+    arc_center_z?: number;
+    arc_radius?: number;
+    arc_start_angle?: number;
+    arc_end_angle?: number;
+    arc_segments?: number;
+    // Shape discriminator
+    wall_shape?: 'straight' | 'bezier' | 'arc';
 }
 export interface Area {
     id: number;
