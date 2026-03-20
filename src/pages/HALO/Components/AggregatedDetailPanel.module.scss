@@ -1,0 +1,403 @@
+// ── Panel shell ───────────────────────────────────────────────────────────────
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    animation: panel-slide-in 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+
+    &::-webkit-scrollbar {
+        width: 3px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(var(--bs-primary-rgb), 0.2);
+        border-radius: 2px;
+    }
+}
+
+@keyframes panel-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+// ── Mini arc gauge row ────────────────────────────────────────────────────────
+
+.gaugeRow {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 14px 10px;
+    border-bottom: 1px solid var(--bs-border-color);
+    background: linear-gradient(to bottom,
+            rgba(var(--bs-primary-rgb), 0.04),
+            transparent);
+    flex-shrink: 0;
+}
+
+.arcGauge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+
+    svg {
+        display: block;
+    }
+}
+
+.arcLabel {
+    font-size: 7.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60px;
+}
+
+// ── Metric list ───────────────────────────────────────────────────────────────
+
+.metricList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex: 1;
+}
+
+// ── Metric card ───────────────────────────────────────────────────────────────
+
+.metricCard {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--bs-border-color);
+    transition: background 0.15s;
+    animation: metric-fade-in 0.4s ease both;
+
+    &:hover {
+        background: rgba(var(--bs-primary-rgb), 0.03);
+    }
+}
+
+@for $i from 1 through 8 {
+    .metricCard:nth-child(#{$i}) {
+        animation-delay: #{$i * 0.04}s;
+    }
+}
+
+@keyframes metric-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.metricStrip {
+    width: 3px;
+    flex-shrink: 0;
+    border-radius: 0;
+    opacity: 0.8;
+}
+
+.metricCardInner {
+    flex: 1;
+    padding: 11px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.metricHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.metricHeadLeft {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.metricLabel {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    color: var(--bs-body-color);
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+
+.statusBadge {
+    font-size: 7.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.badgeNormal {
+    color: var(--bs-success);
+    background: rgba(var(--bs-success-rgb), 0.1);
+    border-color: rgba(var(--bs-success-rgb), 0.25);
+}
+
+.badgeWarning {
+    color: var(--bs-warning);
+    background: rgba(var(--bs-warning-rgb), 0.1);
+    border-color: rgba(var(--bs-warning-rgb), 0.25);
+}
+
+.badgeCritical {
+    color: var(--bs-danger);
+    background: rgba(var(--bs-danger-rgb), 0.1);
+    border-color: rgba(var(--bs-danger-rgb), 0.25);
+    animation: badge-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes badge-blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+// ── Sparkline ─────────────────────────────────────────────────────────────────
+
+.sparklineWrap {
+    flex: 1;
+    height: 22px;
+    min-width: 0;
+    max-width: 100px;
+    opacity: 0.55;
+    transition: opacity 0.2s;
+
+    .metricCard:hover & {
+        opacity: 0.9;
+    }
+}
+
+.sparklineSvg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────────────
+
+.progressTrack {
+    position: relative;
+    height: 4px;
+    background: var(--bs-border-color);
+    border-radius: 3px;
+    overflow: visible;
+}
+
+.progressFill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: -2px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: inherit;
+        box-shadow: 0 0 6px currentColor;
+        transform: translateX(50%);
+    }
+}
+
+.thresholdTick {
+    position: absolute;
+    top: -3px;
+    width: 1.5px;
+    height: 10px;
+    background: var(--bs-warning);
+    opacity: 0.6;
+    border-radius: 1px;
+}
+
+// ── Extremes row ──────────────────────────────────────────────────────────────
+
+.extremesRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.extreme {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.extremeDivider {
+    width: 1px;
+    background: var(--bs-border-color);
+    margin: 0 10px;
+    align-self: stretch;
+    flex-shrink: 0;
+}
+
+.extremeTag {
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+}
+
+.extremeBig {
+    font-size: 20px;
+    font-weight: 800;
+    font-family: 'Poppins', monospace;
+    line-height: 1;
+    letter-spacing: -0.5px;
+    transition: transform 0.2s;
+
+    .metricCard:hover & {
+        transform: scale(1.04);
+    }
+}
+
+// ── Sensor pills ──────────────────────────────────────────────────────────────
+
+.sensorPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), 0.08);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+    border-radius: 20px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: var(--bs-font-sans-serif);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+
+    &:hover {
+        background: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(var(--bs-primary-rgb), 0.3);
+
+        .sensorPillDot {
+            background: #fff !important;
+        }
+    }
+}
+
+.sensorPillHigh {
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        color: #fff !important;
+        background: var(--pill-color, var(--bs-danger)) !important;
+        border-color: var(--pill-color, var(--bs-danger)) !important;
+    }
+}
+
+.sensorPillDot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+
+.footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    font-size: 10px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+.footerIcon {
+    font-size: 12px;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+// ── Section ───────────────────────────────────────────────────────────────────
+
+.section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sectionTitle {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: var(--bs-primary);
+    opacity: 0.8;
+}
+
+.hint {
+    font-size: 10.5px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    line-height: 1.6;
+    padding: 10px 14px;
+}

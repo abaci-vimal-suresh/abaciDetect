@@ -578,3 +578,93 @@ export const MOCK_AGGREGATED_DATA = {
     }
 };
 
+export const MOCK_AGGREGATED_DATA_BY_FLOOR: Record<number, any> = {
+    // ── HQ Campus (id: 1) ─────────────────────────────────────────────────────
+    1: {
+        temperature_min: 19.6, temperature_max: 38.2,
+        humidity_min: 28.4, humidity_max: 62.5,
+        light_min: 80, light_max: 640,
+        pressure_min: 1000.0, pressure_max: 1014.0,
+        sound_min: 28, sound_max: 110,
+        co2_min: 428, co2_max: 1298,
+        tvoc_min: 45, tvoc_max: 342,
+        pm1_min: 2, pm1_max: 18,
+        pm25_min: 3, pm25_max: 28,
+        pm10_min: 5, pm10_max: 45,
+        aqi_min: 16, aqi_max: 118,
+        health_min: 2.2, health_max: 4.7,
+        noise_min: 28, noise_max: 110,
+        motion_min: 2, motion_max: 95,
+        movement_min: 1, movement_max: 90,
+        co_min: 0.3, co_max: 2.1,
+        no2_min: 8, no2_max: 32,
+        nh3_min: 0.0, nh3_max: 0.8,
+    },
+
+    // ── North Block (id: 2) ───────────────────────────────────────────────────
+    2: {
+        temperature_min: 22.4, temperature_max: 38.2,
+        humidity_min: 28.4, humidity_max: 62.5,
+        light_min: 120, light_max: 640,
+        pressure_min: 1012.8, pressure_max: 1014.0,
+        sound_min: 38, sound_max: 71,
+        co2_min: 465, co2_max: 1298,
+        tvoc_min: 55, tvoc_max: 342,
+        pm1_min: 2, pm1_max: 18,
+        pm25_min: 3, pm25_max: 28,
+        pm10_min: 5, pm10_max: 45,
+        aqi_min: 22, aqi_max: 118,
+        health_min: 2.8, health_max: 4.2,
+        noise_min: 38, noise_max: 71,
+        motion_min: 5, motion_max: 88,
+        movement_min: 2, movement_max: 72,
+        co_min: 0.5, co_max: 2.1,
+        no2_min: 8, no2_max: 32,
+        nh3_min: 0.0, nh3_max: 0.8,
+    },
+
+    // ── South Block (id: 3) ───────────────────────────────────────────────────
+    3: {
+        temperature_min: 19.6, temperature_max: 19.6,
+        humidity_min: 55.8, humidity_max: 55.8,
+        light_min: 80, light_max: 80,
+        pressure_min: 1013.8, pressure_max: 1013.8,
+        sound_min: 28, sound_max: 28,
+        co2_min: 428, co2_max: 428,
+        tvoc_min: 45, tvoc_max: 45,
+        pm1_min: 2, pm1_max: 2,
+        pm25_min: 6, pm25_max: 6,
+        pm10_min: 9, pm10_max: 9,
+        aqi_min: 18, aqi_max: 18,
+        health_min: 4.6, health_max: 4.6,
+        noise_min: 28, noise_max: 28,
+        motion_min: 2, motion_max: 2,
+        movement_min: 1, movement_max: 1,
+        co_min: 0.3, co_max: 0.3,
+        no2_min: 9, no2_max: 9,
+        nh3_min: 0.0, nh3_max: 0.0,
+    },
+
+    // ── Tower Block (id: 4) ───────────────────────────────────────────────────
+    4: {
+        temperature_min: 20.8, temperature_max: 25.0,
+        humidity_min: 40.0, humidity_max: 52.0,
+        light_min: 300, light_max: 580,
+        pressure_min: 1000.0, pressure_max: 1013.0,
+        sound_min: 28, sound_max: 110,
+        co2_min: 465, co2_max: 705,
+        tvoc_min: 55, tvoc_max: 110,
+        pm1_min: 2, pm1_max: 6,
+        pm25_min: 3, pm25_max: 10,
+        pm10_min: 5, pm10_max: 16,
+        aqi_min: 16, aqi_max: 55,
+        health_min: 2.2, health_max: 4.7,
+        noise_min: 28, noise_max: 110,
+        motion_min: 8, motion_max: 95,
+        movement_min: 4, movement_max: 90,
+        co_min: 0.3, co_max: 0.9,
+        no2_min: 8, no2_max: 20,
+        nh3_min: 0.0, nh3_max: 0.2,
+    },
+};
+

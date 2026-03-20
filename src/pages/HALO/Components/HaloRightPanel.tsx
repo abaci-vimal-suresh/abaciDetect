@@ -5,6 +5,7 @@ import { UseWallDrawingReturn } from '../Hooks/useWallDrawing';
 import SensorDetailPanel from './SensorDetailPanel';
 import SensorPlacementPanel from './SensorPlacementPanel';
 import { PendingSensor } from '../Hooks/useSensorPlacement';
+import AggregatedDetailPanel from './AggregatedDetailPanel';
 
 export type RightPanelMode =
     | 'wall_draw'
@@ -12,6 +13,7 @@ export type RightPanelMode =
     | 'sensor_place'
     | 'sensor_detail'
     | 'sensor_placement'
+    | 'aggregated_detail'
     | null;
 
 // ── Panel header icons ────────────────────────────────────────────────────────
@@ -638,6 +640,9 @@ const SensorPlacePanel: React.FC<{
 };
 
 
+
+
+
 interface HaloRightPanelProps {
     mode: RightPanelMode;
     selectedFloor: AreaNode | null;
@@ -659,6 +664,11 @@ interface HaloRightPanelProps {
     onPlaceExisting?:    (id: number) => void;
     isPlacing?:          boolean;
     pendingUnplacedId?:  number | null;
+
+    // Aggregated details
+    aggData?:            any;
+    activeMetricGroup? : string | null;
+    onSensorFocus?:      (id: number) => void;
 }
 
 const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
@@ -667,6 +677,7 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
     onAddSensor, onRemoveSensor, onClose,
     selectedSensor, pendingSensor, onConfirmPlacement, onCancelPlacement, 
     onStartPlacing, onPlaceExisting, isPlacing, pendingUnplacedId,
+    aggData, activeMetricGroup, onSensorFocus,
 }) => {
     const isOpen = mode !== null;
 
@@ -700,6 +711,12 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
             title: 'Place Sensor',
             subtitle: selectedFloor?.name ?? '',
             accent: '#06d6a0',
+        },
+        aggregated_detail: {
+            icon: <PanelIcons.Sensor />,
+            title: 'Analytics',
+            subtitle: activeMetricGroup ? activeMetricGroup.toUpperCase() : 'Aggregated',
+            accent: '#facc15',
         },
     };
 
@@ -778,6 +795,14 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
                     pending={pendingSensor}
                     onConfirm={onConfirmPlacement}
                     onCancel={onCancelPlacement ?? (() => { })}
+                />
+            )}
+
+            {mode === 'aggregated_detail' && activeMetricGroup && aggData && onSensorFocus && (
+                <AggregatedDetailPanel
+                    groupKey={activeMetricGroup}
+                    agg={aggData.aggregated_data ?? {}}
+                    onSensorFocus={onSensorFocus}
                 />
             )}
 

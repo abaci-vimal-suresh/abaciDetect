@@ -1,0 +1,367 @@
+.root {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    pointer-events: all;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    animation: root-in 0.4s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+@keyframes root-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+// ── Collapsed state ───────────────────────────────────────────────────────────
+
+.rootCollapsed .bar {
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+}
+
+// ── Toggle handle row ─────────────────────────────────────────────────────────
+
+.handleRow {
+    display: flex;
+    justify-content: center;
+    margin-bottom: -1px; // overlap with bar top border
+    position: relative;
+    z-index: 2;
+}
+
+.handle {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+        background: var(--bs-tertiary-bg, var(--bs-gray-100));
+    }
+}
+
+.handleInner {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 14px;
+}
+
+.handleLabel {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    white-space: nowrap;
+}
+
+// ── Status dots ───────────────────────────────────────────────────────────────
+
+.statusDots {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dotGood {
+    background: var(--bs-success);
+    box-shadow: 0 0 5px var(--bs-success);
+}
+
+.dotWarn {
+    background: var(--bs-warning);
+    box-shadow: 0 0 5px var(--bs-warning);
+}
+
+.dotCrit {
+    background: var(--bs-danger);
+    box-shadow: 0 0 5px var(--bs-danger);
+    animation: dot-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes dot-blink {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}
+
+// ── Chevron ───────────────────────────────────────────────────────────────────
+
+.chevron {
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+}
+
+.chevronUp {
+    transform: rotate(0deg);
+}
+
+.chevronDown {
+    transform: rotate(180deg);
+}
+
+// ── Bar ───────────────────────────────────────────────────────────────────────
+
+.bar {
+    display: flex;
+    align-items: stretch;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0 0 14px 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    // Animate open/close
+    height: auto;
+    opacity: 1;
+    transform: translateY(0);
+    transition: height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.2s ease,
+        transform 0.25s ease;
+    min-width: max-content;
+}
+
+// ── Separator ─────────────────────────────────────────────────────────────────
+
+.sep {
+    width: 1px;
+    background: var(--bs-border-color);
+    flex-shrink: 0;
+    margin: 8px 0;
+    opacity: 0.6;
+}
+
+// ── Segment ───────────────────────────────────────────────────────────────────
+
+.seg {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 10px 16px 11px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: var(--bs-font-sans-serif);
+    min-width: 110px;
+
+    &:hover {
+        background: rgba(var(--bs-primary-rgb), 0.04);
+
+        .segTitle {
+            color: var(--bs-primary);
+        }
+
+        .segIcon {
+            transform: scale(1.15);
+        }
+    }
+
+    // First segment
+    &:first-child {
+        border-radius: 0 0 0 14px;
+    }
+
+    // Last segment
+    &:last-child {
+        border-radius: 0 0 14px 0;
+    }
+
+    &.segActive {
+        background: rgba(var(--bs-primary-rgb), 0.06);
+
+        .segTitle {
+            color: var(--bs-primary);
+            font-weight: 800;
+        }
+    }
+
+    &.segCritical {
+        background: rgba(var(--bs-danger-rgb), 0.03);
+        animation: seg-crit 2.5s ease-in-out infinite;
+    }
+
+    &.segWarn {
+        background: rgba(var(--bs-warning-rgb), 0.025);
+    }
+}
+
+@keyframes seg-crit {
+
+    0%,
+    100% {
+        background: rgba(var(--bs-danger-rgb), 0.03);
+    }
+
+    50% {
+        background: rgba(var(--bs-danger-rgb), 0.07);
+    }
+}
+
+// ── Segment top accent line ───────────────────────────────────────────────────
+
+.segLine {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 0;
+    opacity: 0.7;
+    transition: opacity 0.15s, height 0.15s;
+
+    .seg:hover & {
+        height: 3px;
+        opacity: 1;
+    }
+
+    .segActive & {
+        height: 3px;
+        opacity: 1;
+    }
+}
+
+// ── Segment header row ────────────────────────────────────────────────────────
+
+.segTop {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+}
+
+.segIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.segTitle {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--bs-body-color);
+    transition: color 0.15s;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.segAlert {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: pulse-alert 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-alert {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.4;
+        transform: scale(0.7);
+    }
+}
+
+// ── Metric name row ───────────────────────────────────────────────────────────
+
+.segMetricName {
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.segMetricUnit {
+    opacity: 0.65;
+    font-weight: 400;
+}
+
+// ── Values ────────────────────────────────────────────────────────────────────
+
+.segVals {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    width: 100%;
+}
+
+.segValRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.segValTag {
+    font-size: 7.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.segValNum {
+    font-size: 12px;
+    font-weight: 800;
+    font-family: 'Poppins', monospace;
+    color: var(--bs-body-color);
+    letter-spacing: -0.3px;
+    transition: color 0.15s;
+}
+
+.segEmpty {
+    font-size: 9px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    opacity: 0.45;
+    font-style: italic;
+}

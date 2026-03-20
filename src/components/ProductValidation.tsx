@@ -19,7 +19,7 @@ const ProductValidation: FC<ProductValidationProps> = ({ children }) => {
 
     if (isError || !config) {
 
-        return <HaloPage />;
+        return <ConfigErrorPage />;
     }
 
     if (!config.is_activated) {

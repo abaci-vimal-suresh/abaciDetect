@@ -417,11 +417,11 @@ const DrawingOverlay: React.FC<{
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RaycastFloor: React.FC<{
-	fw: number; fd: number; floorY: number;
-	drawing: UseWallDrawingReturn;
-	isPlacing?: boolean;
-	onSensorPlaced?: (nx: number, ny: number) => void;
-	onUpdatePlacementPreview?: (nx: number, ny: number) => void;
+    fw: number; fd: number; floorY: number;
+    drawing: UseWallDrawingReturn;
+    isPlacing?: boolean;
+    onSensorPlaced?: (nx: number, ny: number) => void;
+    onUpdatePlacementPreview?: (nx: number, ny: number) => void;
 }> = ({ fw, fd, floorY, drawing, isPlacing = false, onSensorPlaced, onUpdatePlacementPreview }) => {
     const isDrawingRef = useRef(false);
     const isClosedRef = useRef(false);
@@ -443,48 +443,48 @@ const RaycastFloor: React.FC<{
     });
 
     return (
-		<mesh
-			rotation={[-Math.PI / 2, 0, 0]}
-			position={[0, floorY + 0.05, 0]}
-			onPointerMove={e => {
-				e.stopPropagation();
-				const { nx, ny } = toNorm((e as any).point);
+        <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, floorY + 0.05, 0]}
+            onPointerMove={e => {
+                e.stopPropagation();
+                const { nx, ny } = toNorm((e as any).point);
 
-				if (isDrawingRef.current && !isClosedRef.current) {
-					drawing.updatePreview(nx, ny);
-				} else if (isPlacing) {
-					onUpdatePlacementPreview?.(nx, ny);
-				}
-			}}
-			onPointerDown={e => {
-				e.stopPropagation();
-				const { nx, ny } = toNorm((e as any).point);
+                if (isDrawingRef.current && !isClosedRef.current) {
+                    drawing.updatePreview(nx, ny);
+                } else if (isPlacing) {
+                    onUpdatePlacementPreview?.(nx, ny);
+                }
+            }}
+            onPointerDown={e => {
+                e.stopPropagation();
+                const { nx, ny } = toNorm((e as any).point);
 
-				if (isPlacing) {
-					onSensorPlaced?.(nx, ny);
-					return;
-				}
+                if (isPlacing) {
+                    onSensorPlaced?.(nx, ny);
+                    return;
+                }
 
-				if (!isDrawingRef.current || isClosedRef.current) return;
+                if (!isDrawingRef.current || isClosedRef.current) return;
 
-				const now = Date.now();
-				const delta = now - lastClickTime.current;
-				lastClickTime.current = now;
+                const now = Date.now();
+                const delta = now - lastClickTime.current;
+                lastClickTime.current = now;
 
-				if (delta < 300) {
-					if (clickTimer.current) {
-						clearTimeout(clickTimer.current);
-						clickTimer.current = null;
-					}
-					drawing.finishDrawing();
-					return;
-				}
-				clickTimer.current = setTimeout(() => {
-					drawing.addPoint(nx, ny);
-					clickTimer.current = null;
-				}, 310);
-			}}
-		>
+                if (delta < 300) {
+                    if (clickTimer.current) {
+                        clearTimeout(clickTimer.current);
+                        clickTimer.current = null;
+                    }
+                    drawing.finishDrawing();
+                    return;
+                }
+                clickTimer.current = setTimeout(() => {
+                    drawing.addPoint(nx, ny);
+                    clickTimer.current = null;
+                }, 310);
+            }}
+        >
             <planeGeometry args={[fw, fd]} />
             <meshBasicMaterial transparent opacity={0}
                 depthWrite={false} colorWrite={false}
@@ -752,172 +752,172 @@ const FloorScene: React.FC<{
     onSensorPlaced, onSensorClick, onUpdatePlacementPreview,
     blinkingWallIds = []
 }) => {
-    const theme = useHaloTheme();
-    const fw = floor.floor_width ?? 20;
-    const fd = floor.floor_depth ?? 15;
+        const theme = useHaloTheme();
+        const fw = floor.floor_width ?? 20;
+        const fd = floor.floor_depth ?? 15;
 
-    // Find which walls belong to selected area
-    const areaWallIds = useMemo(() => {
-        if (!selectedAreaId) return new Set<number | string>();
-        return new Set(
-            walls
-                .filter(w =>
-                    w.sub_area_id === selectedAreaId ||
-                    w.area_id === selectedAreaId
-                )
-                .map(w => w.id)
-        );
-    }, [walls, selectedAreaId]);
+        // Find which walls belong to selected area
+        const areaWallIds = useMemo(() => {
+            if (!selectedAreaId) return new Set<number | string>();
+            return new Set(
+                walls
+                    .filter(w =>
+                        w.sub_area_id === selectedAreaId ||
+                        w.area_id === selectedAreaId
+                    )
+                    .map(w => w.id)
+            );
+        }, [walls, selectedAreaId]);
 
-    return (
-        <group>
-            <SceneLights />
-            <ContactShadows position={[0, -0.01, 0]}
-                opacity={0.3}
-                scale={Math.max(fw, fd) * 2}
-                blur={2} far={10} color="#000820" />
+        return (
+            <group>
+                <SceneLights />
+                <ContactShadows position={[0, -0.01, 0]}
+                    opacity={0.3}
+                    scale={Math.max(fw, fd) * 2}
+                    blur={2} far={10} color="#000820" />
 
-            {/* Floor slab */}
-            <FloorSlab
-                fw={fw} fd={fd} floorY={0}
-                hasImage={!!floor.area_plan} />
-
-            {/* Floor plan image */}
-            {floor.area_plan && (
-                <Suspense fallback={null}>
-                    <FloorPlanImage
-                        url={floor.area_plan}
-                        w={fw} d={fd} />
-                </Suspense>
-            )}
-
-            {/* Floor label */}
-            <Html position={[fw / 2 + 1.5, 0.5, 0]}
-                center distanceFactor={22}
-                style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                <div style={{
-                    background: theme.labelBg,
-                    border: `1px solid ${theme.labelBorder}`,
-                    borderRadius: 6, padding: '4px 10px',
-                    fontSize: 10, fontWeight: 600,
-                    color: theme.labelTextColor, whiteSpace: 'nowrap',
-                    backdropFilter: 'blur(6px)',
-                }}>
-                    {floor.name}
-                    <span style={{ opacity: 0.6, marginLeft: 6 }}>
-                        {fw}m × {fd}m
-                    </span>
-                </div>
-            </Html>
-
-            {/* Walls — alert pulse if area selected */}
-            {walls.map(wall => (
-                <WallSegment
-                    key={wall.id}
-                    wall={wall}
+                {/* Floor slab */}
+                <FloorSlab
                     fw={fw} fd={fd} floorY={0}
-                    isPreview={
-                        typeof wall.id === 'number' && wall.id < 0 &&
-                        drawing.drawnWalls.some(dw => dw.id === wall.id)
-                    }
-                    isAlert={
-                        selectedAreaId !== null &&
-                        areaWallIds.has(wall.id)
-                    }
-                    isSelected={
-                        selectedAreaId === null && false
-                    }
-                    isBlinking={blinkingWallIds.includes(wall.id)}
+                    hasImage={!!floor.area_plan} />
+
+                {/* Floor plan image */}
+                {floor.area_plan && (
+                    <Suspense fallback={null}>
+                        <FloorPlanImage
+                            url={floor.area_plan}
+                            w={fw} d={fd} />
+                    </Suspense>
+                )}
+
+                {/* Floor label */}
+                <Html position={[fw / 2 + 1.5, 0.5, 0]}
+                    center distanceFactor={22}
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                    <div style={{
+                        background: theme.labelBg,
+                        border: `1px solid ${theme.labelBorder}`,
+                        borderRadius: 6, padding: '4px 10px',
+                        fontSize: 10, fontWeight: 600,
+                        color: theme.labelTextColor, whiteSpace: 'nowrap',
+                        backdropFilter: 'blur(6px)',
+                    }}>
+                        {floor.name}
+                        <span style={{ opacity: 0.6, marginLeft: 6 }}>
+                            {fw}m × {fd}m
+                        </span>
+                    </div>
+                </Html>
+
+                {/* Walls — alert pulse if area selected */}
+                {walls.map(wall => (
+                    <WallSegment
+                        key={wall.id}
+                        wall={wall}
+                        fw={fw} fd={fd} floorY={0}
+                        isPreview={
+                            typeof wall.id === 'number' && wall.id < 0 &&
+                            drawing.drawnWalls.some(dw => dw.id === wall.id)
+                        }
+                        isAlert={
+                            selectedAreaId !== null &&
+                            areaWallIds.has(wall.id)
+                        }
+                        isSelected={
+                            selectedAreaId === null && false
+                        }
+                        isBlinking={blinkingWallIds.includes(wall.id)}
+                    />
+                ))}
+
+                {/* Sensor Markers */}
+                {sensors.map(sensor => (
+                    <HaloSensorMarker
+                        key={sensor.id}
+                        sensor={sensor}
+                        fw={fw}
+                        fd={fd}
+                        floorY={0}
+                        isFocused={focusedSensorId === sensor.id}
+                        onClick={clickedSensor => {
+                            setFocusedSensorId(clickedSensor.id);
+                            onSensorClick?.(clickedSensor);
+                        }}
+                    />
+                ))}
+
+                {/* Ghost preview while placing */}
+                {isPlacing && placementPreview && (
+                    <group position={[
+                        placementPreview.nx * fw - fw / 2,
+                        0.05,
+                        placementPreview.ny * fd - fd / 2,
+                    ]}>
+                        {/* Pulsing ring */}
+                        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                            <ringGeometry args={[1.5, 2.0, 48]} />
+                            <meshBasicMaterial
+                                color="#06d6a0"
+                                transparent
+                                opacity={0.5}
+                                depthWrite={false}
+                                side={THREE.DoubleSide}
+                            />
+                        </mesh>
+                        {/* Center dot */}
+                        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                            <circleGeometry args={[0.25, 24]} />
+                            <meshBasicMaterial
+                                color="#06d6a0"
+                                transparent opacity={0.9}
+                                depthWrite={false}
+                            />
+                        </mesh>
+                        {/* Vertical line */}
+                        <mesh position={[0, 1.5, 0]}>
+                            <cylinderGeometry args={[0.03, 0.03, 3.0, 8]} />
+                            <meshBasicMaterial
+                                color="#06d6a0"
+                                transparent opacity={0.4}
+                            />
+                        </mesh>
+                        <Html position={[0, 3.2, 0]} center distanceFactor={20}
+                            style={{ pointerEvents: 'none' }}>
+                            <div style={{
+                                background: 'rgba(6,214,160,0.15)',
+                                border: '1px solid rgba(6,214,160,0.5)',
+                                borderRadius: 6, padding: '2px 10px',
+                                fontSize: 10, fontWeight: 700,
+                                color: '#06d6a0', whiteSpace: 'nowrap',
+                            }}>
+                                Click to place
+                            </div>
+                        </Html>
+                    </group>
+                )}
+
+                <RaycastFloor
+                    fw={fw} fd={fd} floorY={0}
+                    drawing={drawing}
+                    isPlacing={isPlacing}
+                    onSensorPlaced={onSensorPlaced}
+                    onUpdatePlacementPreview={onUpdatePlacementPreview}
                 />
-            ))}
 
-            {/* Sensor Markers */}
-            {sensors.map(sensor => (
-                <HaloSensorMarker
-                    key={sensor.id}
-                    sensor={sensor}
-                    fw={fw}
-                    fd={fd}
-                    floorY={0}
-                    isFocused={focusedSensorId === sensor.id}
-                    onClick={clickedSensor => {
-                        setFocusedSensorId(clickedSensor.id);
-                        onSensorClick?.(clickedSensor);
-                    }}
-                />
-            ))}
+                {/* Drawing overlay */}
+                <DrawingOverlay drawing={drawing} fw={fw} fd={fd} />
 
-            {/* Ghost preview while placing */}
-            {isPlacing && placementPreview && (
-                <group position={[
-                    placementPreview.nx * fw - fw / 2,
-                    0.05,
-                    placementPreview.ny * fd - fd / 2,
-                ]}>
-                    {/* Pulsing ring */}
-                    <mesh rotation={[-Math.PI / 2, 0, 0]}>
-                        <ringGeometry args={[1.5, 2.0, 48]} />
-                        <meshBasicMaterial
-                            color="#06d6a0"
-                            transparent
-                            opacity={0.5}
-                            depthWrite={false}
-                            side={THREE.DoubleSide}
-                        />
-                    </mesh>
-                    {/* Center dot */}
-                    <mesh rotation={[-Math.PI / 2, 0, 0]}>
-                        <circleGeometry args={[0.25, 24]} />
-                        <meshBasicMaterial
-                            color="#06d6a0"
-                            transparent opacity={0.9}
-                            depthWrite={false}
-                        />
-                    </mesh>
-                    {/* Vertical line */}
-                    <mesh position={[0, 1.5, 0]}>
-                        <cylinderGeometry args={[0.03, 0.03, 3.0, 8]} />
-                        <meshBasicMaterial
-                            color="#06d6a0"
-                            transparent opacity={0.4}
-                        />
-                    </mesh>
-                    <Html position={[0, 3.2, 0]} center distanceFactor={20}
-                        style={{ pointerEvents: 'none' }}>
-                        <div style={{
-                            background: 'rgba(6,214,160,0.15)',
-                            border: '1px solid rgba(6,214,160,0.5)',
-                            borderRadius: 6, padding: '2px 10px',
-                            fontSize: 10, fontWeight: 700,
-                            color: '#06d6a0', whiteSpace: 'nowrap',
-                        }}>
-                            Click to place
-                        </div>
-                    </Html>
-                </group>
-            )}
-
-            <RaycastFloor
-                fw={fw} fd={fd} floorY={0}
-                drawing={drawing}
-                isPlacing={isPlacing}
-                onSensorPlaced={onSensorPlaced}
-                onUpdatePlacementPreview={onUpdatePlacementPreview}
-            />
-
-            {/* Drawing overlay */}
-            <DrawingOverlay drawing={drawing} fw={fw} fd={fd} />
-
-            <Grid position={[0, -0.005, 0]}
-                infiniteGrid
-                fadeDistance={Math.max(fw, fd) * 2.5}
-                fadeStrength={4}
-                cellSize={1} sectionSize={5}
-                cellColor={theme.gridCell} sectionColor={theme.gridSec}
-                cellThickness={0.6} sectionThickness={1.2} />
-        </group>
-    );
-};
+                <Grid position={[0, -0.005, 0]}
+                    infiniteGrid
+                    fadeDistance={Math.max(fw, fd) * 2.5}
+                    fadeStrength={4}
+                    cellSize={1} sectionSize={5}
+                    cellColor={theme.gridCell} sectionColor={theme.gridSec}
+                    cellThickness={0.6} sectionThickness={1.2} />
+            </group>
+        );
+    };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN EXPORT — switches between scene levels

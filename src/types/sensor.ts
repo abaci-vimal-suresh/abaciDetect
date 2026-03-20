@@ -191,8 +191,8 @@ export interface Sensor {
     heartbeat_interval?: number;
     subarea_id?: number;
     subarea?: SubArea | null;
-    area?: number | Area | null; // Can be ID or object depending on endpoint
-    walls?: Wall[]; // New: Per-sensor walls (e.g. room boundaries)
+    area?: number | Area | null;
+    walls?: Wall[];
     // Extended sensor data
     device_name?: string;
     timestamp?: string;

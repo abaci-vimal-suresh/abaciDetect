@@ -23,6 +23,9 @@ export interface AreaNode {
     floor_height: number | null;
     area_plan: string | null;
     children?: AreaNode[];
+    sensor_count?: number;
+    person_in_charge_ids?: number[];
+    config_data?: Record<string, { min: number; max: number }>;
 }
 
 // ── Wall ──────────────────────────────────────────────────────────────────────
@@ -41,27 +44,32 @@ export interface AreaWall {
     color: string;
     opacity: number;
     wall_shape?: WallShape;
-    // Arc fields
     arc_center_x?: number;
     arc_center_z?: number;
     arc_radius?: number;
     arc_start_angle?: number;
     arc_end_angle?: number;
     arc_segments?: number;
+    area_ids?: number[];
+    ctrl_x?: number;
+    ctrl_y?: number;
 }
 
 // ── Halo Event Config ─────────────────────────────────────────────────────────
-// One sensor has many event configs — each maps to one of the HALO_EVENTS
 export interface HaloEventConfig {
     id: number;
-    event_id: string;        // e.g. 'Motion', 'CO2cal', 'temp_c'
+    event_id: string;
     enabled: boolean;
     min_value: number;
     threshold: number;
     max_value: number;
-    led_color: number;       // decimal e.g. 0xff0000 = red
-    current_value: number | null;   // latest reading for this event
-    is_triggered: boolean;          // current_value >= threshold
+    led_color: number;
+    led_pattern?: number;
+    led_priority?: number;
+    sound?: string;
+    halo_sensor?: number;
+    current_value: number | null;
+    is_triggered: boolean;
 }
 
 // ── Sensor Latest Log ─────────────────────────────────────────────────────────
@@ -74,6 +82,8 @@ export interface SensorLatestLog {
         light_lux: number | null;
         pressure_hpa: number | null;
         sound_db: number | null;
+        hg_mic?: number | null;
+        lg_mic?: number | null;
     };
     readings_air: {
         co2_eq: number | null;
@@ -109,29 +119,32 @@ export interface SensorNode {
     mac_address: string;
     ip_address: string | null;
 
-    // Status
     online_status: boolean;
-    sensor_status: SensorStatus;   // derived: 'online' | 'offline' | 'alert'
+    sensor_status: SensorStatus;
 
-    // Position on floor — normalized 0.0–1.0
-    // NULL = unplaced, valid number = placed on that floor
-    floor_id: number | null;              // which floor this sensor is placed on
-    area_id?: number | null;              // which room/area this sensor belongs to
-    wall_ids?: (number | string)[];       // explicit list of walls to highlight
-    x_val: number;                 // normalized X within floor_width
-    y_val: number;                 // normalized Y within floor_depth
-    z_val: number;                 // height (0=floor, 1=ceiling)
+    floor_id: number | null;
+    area_id?: number | null;
+    wall_ids?: (number | string)[];
+    x_val: number;
+    y_val: number;
+    z_val: number;
 
-    // Halo visual — derived from worst active event
-    halo_color: string;            // hex — green=online, red=alert, grey=offline
-    halo_radius: number;           // metres — coverage radius
-    halo_intensity: number;        // 0.0–1.0 pulse strength
-
-    // Event configs — subset of HALO_EVENTS this sensor monitors
+    halo_color: string;
+    halo_radius: number;
+    halo_intensity: number;
     event_configs: HaloEventConfig[];
-
-    // Latest sensor readings
     latest_log: SensorLatestLog | null;
+    is_active?: boolean;
+    is_online?: boolean;
+    last_heartbeat?: string | null;
+    sensor_type?: string;
+    description?: string;
+    firmware_version?: string;
+    personnel_in_charge?: string;
+    personnel_contact?: string;
+    personnel_email?: string;
+    sensor_group_ids?: number[];
+    area?: number | null;
 }
 
 export interface SensorHalo {

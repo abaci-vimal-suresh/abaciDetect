@@ -1277,37 +1277,31 @@ export const DUMMY_SENSORS: SensorNode[] = [
                 current_value: 550, is_triggered: false,
             },
             {
-                id: 1204, event_id: 'Humidity', enabled: true,
-                min_value: 20, threshold: 75, max_value: 100,
-                led_color: LED.cyan,
-                current_value: 44.0, is_triggered: false,
-            },
-            {
-                id: 1205, event_id: 'Light', enabled: true,
-                min_value: 0, threshold: 1000, max_value: 2000,
-                led_color: LED.yellow,
-                current_value: 580, is_triggered: false,
+                id: 1204, event_id: 'AQI', enabled: true,
+                min_value: 0, threshold: 100, max_value: 500,
+                led_color: LED.green,
+                current_value: 25, is_triggered: false,
             },
         ],
         latest_log: {
-            recorded_at: new Date(Date.now() - 120000).toISOString(),
+            recorded_at: new Date(Date.now() - 15000).toISOString(),
             readings_environmental: {
                 temperature_c: 22.0,
-                humidity_percent: 44.0,
-                light_lux: 580,
-                pressure_hpa: 1010.0,
-                sound_db: 35,
+                humidity_percent: 48.5,
+                light_lux: 450,
+                pressure_hpa: 1013.2,
+                sound_db: 32,
             },
             readings_air: {
-                co2_eq: 550, co2_cal: 535,
-                tvoc: 78, co: 0.4,
-                nh3: 0.1, no2: 11,
-                pm1: 3, pm25: 5, pm10: 7,
+                co2_eq: 550, co2_cal: 538,
+                tvoc: 95, co: 0.4,
+                nh3: 0.1, no2: 12,
+                pm1: 3, pm25: 6, pm10: 10,
             },
             readings_derived: {
-                aqi: 24,
-                health_index: 4.3,
-                noise_db: 35,
+                aqi: 25,
+                health_index: 4.1,
+                noise_db: 32,
                 motion: 18,
                 gunshot: 0,
                 aggression: 0,
@@ -1317,7 +1311,6 @@ export const DUMMY_SENSORS: SensorNode[] = [
         },
     },
 
-    // Tower Floor 20 (floor_id: 319) — online
     {
         id: 13,
         name: 'HALO-TWR-F20-01',
@@ -1330,8 +1323,8 @@ export const DUMMY_SENSORS: SensorNode[] = [
         y_val: 0.50,
         z_val: 0.85,
         halo_color: '#06d6a0',
-        halo_radius: 6,
-        halo_intensity: 0.28,
+        halo_radius: 5,
+        halo_intensity: 0.35,
         event_configs: [
             {
                 id: 1301, event_id: 'Motion', enabled: true,
@@ -1346,19 +1339,19 @@ export const DUMMY_SENSORS: SensorNode[] = [
                 current_value: 20.8, is_triggered: false,
             },
             {
-                id: 1303, event_id: 'CO2cal', enabled: true,
-                min_value: 400, threshold: 1000, max_value: 2000,
-                led_color: LED.purple,
-                current_value: 480, is_triggered: false,
+                id: 1303, event_id: 'AQI', enabled: true,
+                min_value: 0, threshold: 100, max_value: 500,
+                led_color: LED.green,
+                current_value: 16, is_triggered: false,
             },
         ],
         latest_log: {
-            recorded_at: new Date(Date.now() - 180000).toISOString(),
+            recorded_at: new Date(Date.now() - 10000).toISOString(),
             readings_environmental: {
                 temperature_c: 20.8,
                 humidity_percent: 40.0,
-                light_lux: 520,
-                pressure_hpa: 1000.0,  // lower — higher altitude
+                light_lux: 580,
+                pressure_hpa: 1013.0,
                 sound_db: 28,
             },
             readings_air: {
@@ -1379,183 +1372,113 @@ export const DUMMY_SENSORS: SensorNode[] = [
             others: { help: 0, panic: 0 },
         },
     },
-
-    // ── Unplaced sensors — floor_id: null ─────────────────────────────────────
-
-    {
-        id: 7,
-        name: 'HALO-SPARE-01',
-        mac_address: 'AA:BB:CC:DD:EE:07',
-        ip_address: null,
-        online_status: false,
-        sensor_status: 'offline',
-        floor_id: null,
-        x_val: 0, y_val: 0, z_val: 0,
-        halo_color: '#adb5bd',
-        halo_radius: 5,
-        halo_intensity: 0.15,
-        event_configs: [
-            {
-                id: 701, event_id: 'Motion', enabled: true,
-                min_value: 0, threshold: 60, max_value: 100,
-                led_color: LED.blue,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 702, event_id: 'temp_c', enabled: true,
-                min_value: 15, threshold: 35, max_value: 50,
-                led_color: LED.orange,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 703, event_id: 'CO2cal', enabled: true,
-                min_value: 400, threshold: 1000, max_value: 2000,
-                led_color: LED.purple,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 704, event_id: 'AQI', enabled: true,
-                min_value: 0, threshold: 100, max_value: 500,
-                led_color: LED.green,
-                current_value: null, is_triggered: false,
-            },
-        ],
-        latest_log: null,
-    },
-
-    {
-        id: 8,
-        name: 'HALO-SPARE-02',
-        mac_address: 'AA:BB:CC:DD:EE:08',
-        ip_address: null,
-        online_status: false,
-        sensor_status: 'offline',
-        floor_id: null,
-        x_val: 0, y_val: 0, z_val: 0,
-        halo_color: '#adb5bd',
-        halo_radius: 5,
-        halo_intensity: 0.15,
-        event_configs: [
-            {
-                id: 801, event_id: 'Smoking', enabled: true,
-                min_value: 0, threshold: 50, max_value: 100,
-                led_color: LED.red,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 802, event_id: 'Vape', enabled: true,
-                min_value: 0, threshold: 50, max_value: 100,
-                led_color: LED.purple,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 803, event_id: 'THC', enabled: true,
-                min_value: 0, threshold: 30, max_value: 100,
-                led_color: LED.green,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 804, event_id: 'AQI', enabled: true,
-                min_value: 0, threshold: 100, max_value: 500,
-                led_color: LED.green,
-                current_value: null, is_triggered: false,
-            },
-        ],
-        latest_log: null,
-    },
-
-    {
-        id: 9,
-        name: 'HALO-SPARE-03',
-        mac_address: 'AA:BB:CC:DD:EE:09',
-        ip_address: null,
-        online_status: false,
-        sensor_status: 'offline',
-        floor_id: null,
-        x_val: 0, y_val: 0, z_val: 0,
-        halo_color: '#adb5bd',
-        halo_radius: 5,
-        halo_intensity: 0.15,
-        event_configs: [
-            {
-                id: 901, event_id: 'Gunshot', enabled: true,
-                min_value: 0, threshold: 80, max_value: 100,
-                led_color: LED.red,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 902, event_id: 'Aggression', enabled: true,
-                min_value: 0, threshold: 70, max_value: 100,
-                led_color: LED.orange,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 903, event_id: 'Help', enabled: true,
-                min_value: 0, threshold: 1, max_value: 1,
-                led_color: LED.purple,
-                current_value: null, is_triggered: false,
-            },
-            {
-                id: 904, event_id: 'Panic', enabled: true,
-                min_value: 0, threshold: 1, max_value: 1,
-                led_color: LED.red,
-                current_value: null, is_triggered: false,
-            },
-        ],
-        latest_log: null,
-    },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AGGREGATED STATS (Mock)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const DUMMY_AGGREGATED_DATA = {
+    aggregated_data: {
+        temperature_min: 19.6, temperature_max: 38.2,
+        temperature_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        temperature_max_sensor: { sensor_id: 4, sensor__name: 'HALO-FF-02' },
+
+        humidity_min: 28.4, humidity_max: 62.5,
+        humidity_min_sensor: { sensor_id: 4, sensor__name: 'HALO-FF-02' },
+        humidity_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+
+        light_min: 80, light_max: 640,
+        light_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        light_max_sensor: { sensor_id: 3, sensor__name: 'HALO-FF-01' },
+
+        pressure_min: 1011.5, pressure_max: 1014.0,
+        pressure_min_sensor: { sensor_id: 11, sensor__name: 'HALO-TWR-F5-01' },
+        pressure_max_sensor: { sensor_id: 4, sensor__name: 'HALO-FF-02' },
+
+        sound_min: 28,
+        sound_max: 110,
+        sound_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        sound_max_sensor: { sensor_id: 11, sensor__name: 'HALO-TWR-F5-01' },
+
+        co2_min: 428,
+        co2_max: 1340,
+        co2_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        co2_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+
+        tvoc_min: 45,
+        tvoc_max: 342,
+        tvoc_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        tvoc_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+
+        pm1_min: 2, pm1_max: 18,
+        pm25_min: 3, pm25_max: 28,
+        pm10_min: 5, pm10_max: 45,
+
+        pm1_min_sensor: { sensor_id: 4, sensor__name: 'HALO-FF-02' },
+        pm1_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+        pm25_min_sensor: { sensor_id: 4, sensor__name: 'HALO-FF-02' },
+        pm25_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+        pm10_min_sensor: { sensor_id: 4, sensor__name: 'HALO-FF-02' },
+        pm10_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+
+        aqi_min: 16, aqi_max: 118,
+        aqi_min_sensor: { sensor_id: 13, sensor__name: 'HALO-TWR-F20-01' },
+        aqi_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+
+        health_min: 2.2, health_max: 4.7,
+        health_min_sensor: { sensor_id: 11, sensor__name: 'HALO-TWR-F5-01' },
+        health_max_sensor: { sensor_id: 13, sensor__name: 'HALO-TWR-F20-01' },
+
+        noise_min: 28, noise_max: 110,
+        noise_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        noise_max_sensor: { sensor_id: 11, sensor__name: 'HALO-TWR-F5-01' },
+
+        motion_min: 2, motion_max: 95,
+        movement_min: 1, movement_max: 90,
+
+        motion_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        motion_max_sensor: { sensor_id: 11, sensor__name: 'HALO-TWR-F5-01' },
+        movement_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        movement_max_sensor: { sensor_id: 11, sensor__name: 'HALO-TWR-F5-01' },
+
+        co_min: 0.3, co_max: 2.1,
+        no2_min: 8, no2_max: 32,
+        nh3_min: 0.0, nh3_max: 0.8,
+
+        co_min_sensor: { sensor_id: 6, sensor__name: 'HALO-SB-02' },
+        co_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+        no2_min_sensor: { sensor_id: 4, sensor__name: 'HALO-FF-02' },
+        no2_max_sensor: { sensor_id: 2, sensor__name: 'HALO-GF-02' },
+        nh3_min_sensor: null,
+        nh3_max_sensor: null,
+    },
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function findNodeById(root: AreaNode, id: number): AreaNode | null {
+/**
+ * Recursively find an AreaNode by its ID in the tree
+ */
+export function findNodeById(root: AreaNode, id: number | null): AreaNode | null {
+    if (id === null) return null;
     if (root.id === id) return root;
-    for (const child of root.children ?? []) {
-        const found = findNodeById(child, id);
-        if (found) return found;
+    if (root.children) {
+        for (const child of root.children) {
+            const found = findNodeById(child, id);
+            if (found) return found;
+        }
     }
     return null;
 }
 
-export function getAllFloors(root: AreaNode): AreaNode[] {
-    const floors: AreaNode[] = [];
-    const traverse = (node: AreaNode) => {
-        if (node.area_type === 'Floor') floors.push(node);
-        node.children?.forEach(traverse);
-    };
-    traverse(root);
-    return floors;
-}
-
-export function getAllBuildings(root: AreaNode): AreaNode[] {
-    const buildings: AreaNode[] = [];
-    const traverse = (node: AreaNode) => {
-        if (node.area_type === 'Building') buildings.push(node);
-        node.children?.forEach(traverse);
-    };
-    traverse(root);
-    return buildings;
-}
-
-export function getSensorsForFloor(
-    floorId: number,
-    sensors: SensorNode[],
-): SensorNode[] {
+/**
+ * Filter sensors by floor_id
+ */
+export function getSensorsForFloor(sensors: SensorNode[], floorId: number | null): SensorNode[] {
+    if (floorId === null) return [];
     return sensors.filter(s => s.floor_id === floorId);
 }
-
-export function deriveHaloColor(sensor: SensorNode): string {
-    if (!sensor.online_status) return '#adb5bd';
-    const hasAlert = sensor.event_configs.some(e => e.is_triggered);
-    if (hasAlert) return '#e63946';
-    return '#06d6a0';
-}
-
-export function deriveHaloIntensity(sensor: SensorNode): number {
-    if (!sensor.online_status) return 0.15;
-    const triggered = sensor.event_configs.filter(e => e.is_triggered).length;
-    if (triggered === 0) return 0.3;
-    return Math.min(1.0, 0.6 + triggered * 0.15);
-}
+

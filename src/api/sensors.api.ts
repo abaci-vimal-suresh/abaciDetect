@@ -4,7 +4,11 @@ import axios from 'axios';
 import { authAxios as axiosInstance } from '../axiosInstance';
 import { queryKeys } from '../lib/queryClient';
 import { USE_MOCK_DATA } from '../config';
-import { MOCK_AREAS, MOCK_SENSORS, MOCK_ALERTS, MOCK_ACTIONS, MOCK_WALLS, MOCK_USERS, MOCK_AGGREGATED_DATA, MOCK_ALERT_FILTERS, MOCK_ALERT_FILTER_GROUPS } from './mockData';
+import { 
+    MOCK_AREAS, MOCK_SENSORS, MOCK_ALERTS, MOCK_ACTIONS, MOCK_WALLS, MOCK_USERS, 
+    MOCK_AGGREGATED_DATA, MOCK_ALERT_FILTERS, MOCK_ALERT_FILTER_GROUPS,
+    MOCK_AGGREGATED_DATA_BY_FLOOR 
+} from './mockData';
 import {
     Sensor, Area, SubArea, SensorRegistrationData, SensorConfig, User, UserActivity, UserRole, UserGroup,
     UserGroupCreateData, UserGroupUpdateData, SensorGroup, SensorGroupCreateData, SensorGroupUpdateData,
@@ -15,6 +19,7 @@ import {
     SensorDataResponse
 } from '../types/sensor';
 import useToasterNotification from '../hooks/useToasterNotification';
+
 
 
 export const useUsers = () => {
@@ -530,14 +535,16 @@ export const useAggregatedSensorData = (filters: {
         queryKey: ['aggregatedSensorData', filters],
         queryFn: async () => {
             if (USE_MOCK_DATA) {
-                // Return mock aggregated data
+                const areaId = Array.isArray(filters.area_id) ? Number(filters.area_id[0]) : Number(filters.area_id);
+                const mockData = MOCK_AGGREGATED_DATA_BY_FLOOR[areaId] || MOCK_AGGREGATED_DATA_BY_FLOOR[1] || MOCK_AGGREGATED_DATA.aggregated_data;
+
                 return {
                     area_ids: Array.isArray(filters.area_id) ? filters.area_id.map(Number) : [Number(filters.area_id)],
                     area_ids_included: Array.isArray(filters.area_id) ? filters.area_id.map(Number) : [Number(filters.area_id)],
                     sensor_group_ids: null,
                     sensor_count: 5,
                     time_window: { from: new Date(Date.now() - 3600000).toISOString(), to: new Date().toISOString() },
-                    aggregated_data: MOCK_AGGREGATED_DATA.aggregated_data
+                    aggregated_data: mockData
                 } as unknown as AggregatedSensorDataResponse;
             }
             const { data } = await axiosInstance.get<AggregatedSensorDataResponse>('/data-management/sensor-logs/aggregated_data/', {

@@ -14,6 +14,20 @@ import {
 	HALO_DUMMY_TREE, DUMMY_WALLS, DUMMY_SENSORS,
 	findNodeById, getSensorsForFloor
 } from '../Dummy/dummyData';
+import {
+	useAreas, useSensors, useSensorConfigurations,
+	useLatestSensorLog, useWalls, useCreateWall,
+	useRegisterSensor, useUpdateSensor,
+	useActiveEvents, useHeartbeatStatus,
+	useAggregatedSensorData,
+} from '../../../api/sensors.api';
+import { buildAreaTree } from '../utils/areaUtils';
+import {
+	enrichSensor, adaptEventConfigs, adaptWall, deriveHaloStatus,
+	deriveHaloColor, deriveHaloIntensity
+} from '../utils/sensorUtils';
+import { io, Socket } from 'socket.io-client';
+import { HALO_USE_MOCK } from '../../../config';
 import { useWallDrawing } from '../Hooks/useWallDrawing';
 import { useRef as useThreeRef } from 'react';
 import MockAlertPanel, { HaloAlertPayload } from '../Components/MockAlertPanel';
@@ -21,9 +35,11 @@ import { SensorAlertEmit } from '../ThreeD/components/scene/emits/SensorAlertEmi
 import HaloSidebar from '../Components/HaloSidebar';
 import HaloRightPanel, { RightPanelMode } from '../Components/HaloRightPanel';
 import HaloFloorScene from '../Components/HaloFloorScene';
+import Icon from '../../../components/icon/Icon';
 import { useSensorPlacement } from '../Hooks/useSensorPlacement';
 import SensorDetailPanel from '../Components/SensorDetailPanel';
 import SensorPlacementPanel from '../Components/SensorPlacementPanel';
+import HaloMetricDock from '../Components/HaloMetricDock';
 import styles from './HaloPage.module.scss';
 
 // ── Scene level type ──────────────────────────────────────────────────────────
@@ -60,24 +76,158 @@ const HaloPage: React.FC = () => {
 	const [showSidebar, setShowSidebar] = useState(true);
 	const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(null);
 	const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
+	const [activeMetricGroup, setActiveMetricGroup] = useState<string | null>(null);
 
 	const sensorPlacement = useSensorPlacement();
 	const [selectedSensorId, setSelectedSensorId] = useState<number | null>(null);
 	const [pendingUnplacedId, setPendingUnplacedId] = useState<number | null>(null);
 
+	// ── Data Query ────────────────────────────────────────────────────────────
+	const { data: rawAreas, isLoading: areasLoading } = useAreas();
+	const { data: rawSensors } = useSensors();
+	const { data: rawFloorWalls } = useWalls(selectedFloorId ?? 0);
+	const { mutateAsync: createWallMutation } = useCreateWall();
+	const registerSensorMutation = useRegisterSensor();
+	const updateSensorMutation = useUpdateSensor();
+
+	const { data: activeEvents } = useActiveEvents();
+	const { data: heartbeatStatus } = useHeartbeatStatus();
+
+	const currentAggId = useMemo(() => {
+		if (selectedFloorId) return selectedFloorId;
+		if (selectedBuildingId) return selectedBuildingId;
+		return null; 
+	}, [selectedFloorId, selectedBuildingId]);
+
+	const { data: aggData } = useAggregatedSensorData({
+		area_id: currentAggId ? [currentAggId] : [],
+	});
+
+	const { data: selectedSensorConfigs } = useSensorConfigurations(selectedSensorId ?? 0);
+	const { data: selectedSensorLog } = useLatestSensorLog(selectedSensorId ?? 0);
+
 	// ── Local data state ──────────────────────────────────────────────────────
 	const [wallsByFloor, setWallsByFloor] = useState<Record<number, AreaWall[]>>(DUMMY_WALLS);
 	const [sensors, setSensors] = useState<SensorNode[]>(DUMMY_SENSORS);
-	const [areaTree, setAreaTree] = useState<AreaNode>(HALO_DUMMY_TREE);
 
-	const [showMockPanel, setShowMockPanel] = useState(false);
+	const areaTree = useMemo((): AreaNode => {
+		if (HALO_USE_MOCK || !rawAreas || rawAreas.length === 0) {
+			return HALO_DUMMY_TREE;
+		}
+		return buildAreaTree(rawAreas);
+	}, [rawAreas]);
+
+	useEffect(() => {
+		if (HALO_USE_MOCK || !rawSensors || !areaTree) return;
+		setSensors(rawSensors.map(s => enrichSensor(s, areaTree)));
+	}, [rawSensors, areaTree]);
+
+	const hasAutoSelected = useRef(false);
+
+	// ── Auto-select first building ────────────────────────────────────────────
+	useEffect(() => {
+		if (hasAutoSelected.current || selectedBuildingId || !areaTree?.children?.length) return;
+		
+		const firstBuilding = areaTree.children[0];
+		if (firstBuilding && firstBuilding.id) {
+			setSelectedBuildingId(firstBuilding.id);
+			setSceneLevel('building');
+			hasAutoSelected.current = true;
+		}
+	}, [areaTree, selectedBuildingId]);
+
+	// ── Sync detail data (Configs + Logs) ─────────────────────────────────────
+	useEffect(() => {
+		if (!selectedSensorId || !selectedSensorConfigs) return;
+
+		const configs = adaptEventConfigs(selectedSensorConfigs);
+		const currentSensor = sensors.find(s => s.id === selectedSensorId);
+		if (!currentSensor) return;
+
+		const status = deriveHaloStatus(
+			currentSensor.is_online ?? false,
+			configs
+		);
+
+		setSensors(prev => prev.map(s =>
+			s.id === selectedSensorId
+				? {
+					...s,
+					event_configs: configs,
+					latest_log: selectedSensorLog ?? null,
+					sensor_status: status,
+					halo_color: deriveHaloColor(status),
+					halo_intensity: deriveHaloIntensity(status),
+				}
+				: s
+		));
+	}, [selectedSensorId, selectedSensorConfigs, selectedSensorLog]);
+
+	useEffect(() => {
+		if (HALO_USE_MOCK || !selectedFloorId || !rawFloorWalls) return;
+		const adapted = rawFloorWalls.map(adaptWall);
+		setWallsByFloor(prev => ({
+			...prev,
+			[selectedFloorId]: adapted,
+		}));
+	}, [rawFloorWalls, selectedFloorId]);
+
+	const [showMockPanel, setShowMockPanel] = useState(HALO_USE_MOCK);
 	const [focusedSensorId, setFocusedSensorId] = useState<number | null>(null);
+	const socketRef = useRef<Socket | null>(null);
 	const [activeEmits, setActiveEmits] = useState<{
 		id: number;
 		position: [number, number, number];
 		eventSource: string;
 		intensity: number;
 	}[]>([]);
+
+	// ── Real-time Socket ──────────────────────────────────────────────────────
+	useEffect(() => {
+		if (HALO_USE_MOCK) return;
+
+		// Use environment variable or default to empty string (which uses current host)
+		const wsUrl = (import.meta as any).env?.VITE_WS_URL || '';
+		socketRef.current = io(wsUrl);
+
+		socketRef.current.on('alert', (rawAlert: any) => {
+			handleAlertFired({
+				id: rawAlert.id ?? Date.now(),
+				title: rawAlert.title ?? rawAlert.type,
+				severity: rawAlert.severity ?? 'WARNING',
+				sensor_name: rawAlert.sensor?.name ?? rawAlert.sensor_name,
+				sensor_id: rawAlert.sensor?.id ?? rawAlert.sensor_id,
+				event_source: rawAlert.event_source ?? rawAlert.type,
+				current_value: rawAlert.current_value ?? 0,
+				threshold_value: rawAlert.threshold_value ?? 0,
+				intensity: rawAlert.intensity ?? 1.0,
+				area_name: rawAlert.area?.name ?? rawAlert.area_name,
+				created_time: rawAlert.created_at ?? new Date().toISOString(),
+			});
+		});
+
+		return () => {
+			socketRef.current?.disconnect();
+		};
+	}, [HALO_USE_MOCK]);
+
+	useEffect(() => {
+		if (!activeEvents || HALO_USE_MOCK) return;
+
+		setSensors(prev => prev.map(sensor => ({
+			...sensor,
+			event_configs: sensor.event_configs?.map(cfg => {
+				const active = activeEvents.find(
+					(e: any) => e.sensor_id === sensor.id && e.event_source === cfg.event_id
+				);
+				return {
+					...cfg,
+					is_triggered: !!active,
+					current_value: active?.current_value ?? cfg.current_value,
+				};
+			}) ?? [],
+		})));
+	}, [activeEvents]);
 
 	// ── Camera ref ────────────────────────────────────────────────────────────
 	const cameraControlsRef = useRef<any>(null);
@@ -106,7 +256,7 @@ const HaloPage: React.FC = () => {
 	const placedSensors = useMemo(() =>
 		sensors.filter(s =>
 			s.floor_id !== null &&
-			s.floor_id === selectedFloorId
+			(selectedFloorId ? s.floor_id === selectedFloorId : true)
 		),
 		[sensors, selectedFloorId]
 	);
@@ -223,33 +373,32 @@ const HaloPage: React.FC = () => {
 
 	// ── Image handlers ────────────────────────────────────────────────────────
 
+	// ── Image handlers ────────────────────────────────────────────────────────
+	// TODO: Replace local areaTree patches with useUpdateArea API calls
 	const handleImageUpload = useCallback((floorId: number, objectUrl: string) => {
-		setAreaTree(prev => {
-			const patch = (node: AreaNode): AreaNode => ({
-				...node,
-				area_plan: node.id === floorId ? objectUrl : node.area_plan,
-				children: node.children?.map(patch),
-			});
-			return patch(prev);
-		});
+		console.log('Image upload (local patch disabled):', floorId, objectUrl);
 	}, []);
 
 	const handleImageRemove = useCallback((floorId: number) => {
-		setAreaTree(prev => {
-			const patch = (node: AreaNode): AreaNode => ({
-				...node,
-				area_plan: node.id === floorId ? null : node.area_plan,
-				children: node.children?.map(patch),
-			});
-			return patch(prev);
-		});
+		console.log('Image remove (local patch disabled):', floorId);
 	}, []);
 
 	// ── Wall save ─────────────────────────────────────────────────────────────
 
-	const handleSaveWalls = useCallback(() => {
+	const handleSaveWalls = useCallback(async () => {
 		if (!selectedFloorId) return;
 		if (wallDrawing.drawnWalls.length === 0) return;
+
+		if (!HALO_USE_MOCK) {
+			// Save each drawn wall to API
+			for (const wall of wallDrawing.drawnWalls) {
+				await createWallMutation({
+					...wall,
+					area_ids: [selectedFloorId],
+				});
+			}
+		}
+
 		setWallsByFloor(prev => ({
 			...prev,
 			[selectedFloorId]: [
@@ -258,7 +407,7 @@ const HaloPage: React.FC = () => {
 			],
 		}));
 		wallDrawing.cancelDrawing();
-	}, [selectedFloorId, wallDrawing]);
+	}, [selectedFloorId, wallDrawing, createWallMutation]);
 
 	// ── Sensor handlers ────────────────────────────────────────────────────────
 
@@ -311,11 +460,22 @@ const HaloPage: React.FC = () => {
 	}, [sensorPlacement]);
 
 	// Floor click during placement — called from HaloFloorScene
-	const handleSensorPlaced = useCallback((nx: number, ny: number) => {
+	const handleSensorPlaced = useCallback(async (nx: number, ny: number) => {
 		if (!selectedFloorId) return;
 
 		if (pendingUnplacedId !== null) {
 			// Placing an existing unplaced sensor
+			if (!HALO_USE_MOCK) {
+				await updateSensorMutation.mutateAsync({
+					sensorId: pendingUnplacedId,
+					data: {
+						x_val: nx,
+						y_val: ny,
+						area_id: selectedFloorId,
+					},
+				});
+			}
+
 			setSensors(prev => prev.map(s =>
 				s.id === pendingUnplacedId
 					? {
@@ -323,7 +483,6 @@ const HaloPage: React.FC = () => {
 						floor_id: selectedFloorId,
 						x_val: nx,
 						y_val: ny,
-						z_val: 0.85,
 						online_status: true,
 						sensor_status: 'online' as const,
 						halo_color: '#06d6a0',
@@ -337,25 +496,38 @@ const HaloPage: React.FC = () => {
 			return;
 		}
 
-		// New sensor placement
+		// New sensor placement flow
 		const count = sensors.filter(s => s.floor_id === selectedFloorId).length;
 		sensorPlacement.placeSensor(nx, ny, selectedFloorId, count);
 		setRightPanelMode('sensor_placement');
-	}, [selectedFloorId, sensors, sensorPlacement, pendingUnplacedId]);
+	}, [selectedFloorId, sensors, sensorPlacement, pendingUnplacedId, updateSensorMutation]);
 
 	// Confirm placement
-	const handleConfirmPlacement = useCallback((
+	const handleConfirmPlacement = useCallback(async (
 		name: string, mac: string, events: string[]
 	) => {
 		if (!sensorPlacement.pendingSensor) return;
+
 		const newSensor = sensorPlacement.confirmPlacement(
 			sensorPlacement.pendingSensor, name, mac, events
 		);
+
+		if (!HALO_USE_MOCK) {
+			await registerSensorMutation.mutateAsync({
+				name,
+				mac_address: mac,
+				x_val: newSensor.x_val,
+				y_val: newSensor.y_val,
+				z_val: newSensor.z_val,
+				area_id: selectedFloorId ?? undefined,
+			});
+		}
+
 		setSensors(prev => [...prev, newSensor]);
 		setSelectedSensorId(newSensor.id);
 		setFocusedSensorId(newSensor.id);
 		setRightPanelMode('sensor_detail');
-	}, [sensorPlacement]);
+	}, [sensorPlacement, selectedFloorId, registerSensorMutation]);
 
 	// Cancel placement
 	const handleCancelPlacement = useCallback(() => {
@@ -482,6 +654,17 @@ const HaloPage: React.FC = () => {
 	// ── Camera initial position ───────────────────────────────────────────────
 	const initCamPos: [number, number, number] = [0, 80, 80];
 
+	if (areasLoading && !HALO_USE_MOCK) {
+		return (
+			<div className={styles.page}>
+				<div className={styles.loadingState}>
+					<div className={styles.loader}></div>
+					<span>Loading areas...</span>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className={styles.page}>
 
@@ -492,7 +675,9 @@ const HaloPage: React.FC = () => {
 						className={`${styles.iconBtn} ${showSidebar ? styles.active : ''}`}
 						onClick={() => setShowSidebar(s => !s)}
 						title="Toggle Explorer"
-					>☰</button>
+					>
+						<Icon icon="Menu" />
+					</button>
 					<span className={styles.title}>Halo Sensor Placement</span>
 					{breadcrumb && (
 						<span className={styles.breadcrumb}>— {breadcrumb}</span>
@@ -504,26 +689,26 @@ const HaloPage: React.FC = () => {
 					{(sceneLevel === 'floor' || sceneLevel === 'area') && (
 						<div className={styles.toolPill}>
 							<button
-								className={`${styles.toolBtn}
-                                    ${rightPanelMode === 'wall_draw'
-										? styles.toolActive : ''}`}
+								className={`${styles.toolBtn} ${rightPanelMode === 'wall_draw' ? styles.toolActive : ''}`}
 								onClick={handleWallDrawToggle}
 								title="Draw Walls"
-							>✏️</button>
+							>
+								<Icon icon="Edit" />
+							</button>
 							<button
-								className={`${styles.toolBtn}
-                                    ${rightPanelMode === 'image_upload'
-										? styles.toolActive : ''}`}
+								className={`${styles.toolBtn} ${rightPanelMode === 'image_upload' ? styles.toolActive : ''}`}
 								onClick={handleImageToggle}
 								title="Upload Floor Plan"
-							>🗺️</button>
+							>
+								<Icon icon="Map" />
+							</button>
 							<button
-								className={`${styles.toolBtn}
-                                    ${rightPanelMode === 'sensor_place'
-										? styles.toolActive : ''}`}
+								className={`${styles.toolBtn} ${rightPanelMode === 'sensor_place' ? styles.toolActive : ''}`}
 								onClick={handleSensorToggle}
 								title="Place Sensors"
-							>📡</button>
+							>
+								<Icon icon="Sensors" />
+							</button>
 						</div>
 					)}
 				</div>
@@ -534,7 +719,7 @@ const HaloPage: React.FC = () => {
 						onClick={() => setShowMockPanel(s => !s)}
 						title="Alert Simulator"
 					>
-						🐛
+						<Icon icon="BugReport" />
 					</button>
 					<span className={styles.versionBadge}>v1.0</span>
 				</div>
@@ -629,6 +814,36 @@ const HaloPage: React.FC = () => {
 							/>
 						))}
 					</Canvas>
+					
+					{currentAggId && (
+						<HaloMetricDock
+							areaId={currentAggId}
+							sensors={selectedFloorId 
+								? placedSensors.filter(s => s.floor_id === selectedFloorId)
+								: placedSensors
+							}
+							onGroupSelect={(groupKey) => {
+								setActiveMetricGroup(groupKey);
+								setRightPanelMode('aggregated_detail');
+							}}
+							onSensorFocus={(sensorId) => {
+								const sensor = sensors.find(s => s.id === sensorId);
+								if (!sensor) return;
+								// Focus camera
+								const cc = cameraControlsRef.current;
+								if (cc) {
+									const fw = selectedFloor?.floor_width ?? 20;
+									const fd = selectedFloor?.floor_depth ?? 15;
+									const wx = sensor.x_val * fw - fw / 2;
+									const wz = sensor.y_val * fd - fd / 2;
+									cc.setPosition(wx + 10, 15, wz + 10, true);
+									cc.setTarget(wx, 0, wz, true);
+								}
+								// Open detail panel
+								handleSensorClick(sensor);
+							}}
+						/>
+					)}
 
 					{/* Drawing banner */}
 					{wallDrawing.isDrawing && (
@@ -675,6 +890,23 @@ const HaloPage: React.FC = () => {
 					pendingUnplacedId={pendingUnplacedId}
 					onConfirmPlacement={handleConfirmPlacement}
 					onCancelPlacement={handleCancelPlacement}
+					aggData={aggData}
+					activeMetricGroup={activeMetricGroup}
+					onSensorFocus={(sensorId) => {
+						const sensor = sensors.find(s => s.id === sensorId);
+						if (!sensor) return;
+						// Focus camera
+						const cc = cameraControlsRef.current;
+						if (cc) {
+							const fw = selectedFloor?.floor_width ?? 20;
+							const fd = selectedFloor?.floor_depth ?? 15;
+							const wx = sensor.x_val * fw - fw / 2;
+							const wz = sensor.y_val * fd - fd / 2;
+							cc.setPosition(wx + 10, 15, wz + 10, true);
+							cc.setTarget(wx, 0, wz, true);
+						}
+						handleSensorClick(sensor);
+					}}
 					onClose={() => {
 						setRightPanelMode(null);
 						wallDrawing.cancelDrawing();
@@ -683,6 +915,7 @@ const HaloPage: React.FC = () => {
 						setPendingUnplacedId(null);
 						setSelectedAreaId(null);
 						setBlinkingWallIds([]);
+						setActiveMetricGroup(null);
 					}}
 				/>
 
