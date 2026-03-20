@@ -1,8 +1,9 @@
+// src/pages/halo/Dummy/dummyData.ts
 
 import { AreaNode, AreaWall, SensorNode, SensorLatestLog, HaloEventConfig } from '../Types/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HALO EVENTS — full list
+// HALO EVENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const HALO_EVENTS = [
@@ -17,10 +18,9 @@ export const HALO_EVENTS = [
 export type HaloEventId = typeof HALO_EVENTS[number];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LED COLOR HELPERS
+// LED COLOR CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Decimal LED colors matching old project convention
 const LED = {
     green: 0x00ff00,
     red: 0xff0000,
@@ -33,9 +33,235 @@ const LED = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AREA TREE
-// 2 Buildings — North Block (2 floors) + South Block (1 floor)
+// FLOOR GENERATOR
+// Generates N floor nodes with correct offset_z stacking
 // ─────────────────────────────────────────────────────────────────────────────
+
+function generateFloors(
+    buildingId: number,
+    startFloorId: number,
+    count: number,
+    width: number,
+    depth: number,
+    height: number,
+    areaNames?: string[],   // optional sub-area names for ground floor
+): AreaNode[] {
+    return Array.from({ length: count }, (_, i) => {
+        const isGround = i === 0;
+        const isRoof = i === count - 1;
+        const floorName = isGround ? 'Ground Floor'
+            : isRoof ? 'Roof Level'
+                : `Floor ${i + 1}`;
+
+        const children: AreaNode[] = isGround && areaNames
+            ? areaNames.map((name, ai) => ({
+                id: startFloorId + 1000 + ai,
+                name,
+                area_type: 'Area' as const,
+                parent: startFloorId + i,
+                status: 'Active' as const,
+                capacity: Math.floor((width * depth * 0.4) / areaNames.length),
+                offset_x: 0,
+                offset_y: 0,
+                offset_z: 0,
+                floor_level: null,
+                floor_width: null,
+                floor_depth: null,
+                floor_height: null,
+                area_plan: null,
+                children: [],
+            }))
+            : [];
+
+        return {
+            id: startFloorId + i,
+            name: floorName,
+            area_type: 'Floor' as const,
+            parent: buildingId,
+            status: 'Active' as const,
+            capacity: Math.floor(width * depth * 0.4),
+            offset_x: 0,
+            offset_y: 0,
+            offset_z: i * height,
+            floor_level: i + 1,
+            floor_width: width,
+            floor_depth: depth,
+            floor_height: height,
+            area_plan: null,
+            children,
+        };
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AREA TREE
+// ─────────────────────────────────────────────────────────────────────────────
+
+// North Block floors (2 floors, manual — keep existing IDs)
+const northBlockFloors: AreaNode[] = [
+    {
+        id: 10,
+        name: 'Ground Floor',
+        area_type: 'Floor',
+        parent: 2,
+        status: 'Active',
+        capacity: 100,
+        offset_x: 0, offset_y: 0, offset_z: 0,
+        floor_level: 1,
+        floor_width: 30,
+        floor_depth: 20,
+        floor_height: 3.5,
+        area_plan: null,
+        children: [
+            {
+                id: 100,
+                name: 'Reception',
+                area_type: 'Area',
+                parent: 10,
+                status: 'Active',
+                capacity: 20,
+                offset_x: 0, offset_y: 0, offset_z: 0,
+                floor_level: null, floor_width: null,
+                floor_depth: null, floor_height: null,
+                area_plan: null, children: [],
+            },
+            {
+                id: 101,
+                name: 'Lobby',
+                area_type: 'Area',
+                parent: 10,
+                status: 'Active',
+                capacity: 40,
+                offset_x: 0, offset_y: 0, offset_z: 0,
+                floor_level: null, floor_width: null,
+                floor_depth: null, floor_height: null,
+                area_plan: null, children: [],
+            },
+            {
+                id: 102,
+                name: 'Security Desk',
+                area_type: 'Area',
+                parent: 10,
+                status: 'Active',
+                capacity: 5,
+                offset_x: 0, offset_y: 0, offset_z: 0,
+                floor_level: null, floor_width: null,
+                floor_depth: null, floor_height: null,
+                area_plan: null, children: [],
+            },
+        ],
+    },
+    {
+        id: 11,
+        name: 'First Floor',
+        area_type: 'Floor',
+        parent: 2,
+        status: 'Active',
+        capacity: 150,
+        offset_x: 0, offset_y: 0, offset_z: 3.5,
+        floor_level: 2,
+        floor_width: 30,
+        floor_depth: 20,
+        floor_height: 3.5,
+        area_plan: null,
+        children: [
+            {
+                id: 110,
+                name: 'Open Office',
+                area_type: 'Area',
+                parent: 11,
+                status: 'Active',
+                capacity: 80,
+                offset_x: 0, offset_y: 0, offset_z: 0,
+                floor_level: null, floor_width: null,
+                floor_depth: null, floor_height: null,
+                area_plan: null, children: [],
+            },
+            {
+                id: 111,
+                name: 'Conference Room A',
+                area_type: 'Area',
+                parent: 11,
+                status: 'Active',
+                capacity: 20,
+                offset_x: 0, offset_y: 0, offset_z: 0,
+                floor_level: null, floor_width: null,
+                floor_depth: null, floor_height: null,
+                area_plan: null, children: [],
+            },
+            {
+                id: 112,
+                name: 'Server Room',
+                area_type: 'Area',
+                parent: 11,
+                status: 'Active',
+                capacity: 5,
+                offset_x: 0, offset_y: 0, offset_z: 0,
+                floor_level: null, floor_width: null,
+                floor_depth: null, floor_height: null,
+                area_plan: null, children: [],
+            },
+        ],
+    },
+];
+
+// South Block floors (1 floor, manual — keep existing IDs)
+const southBlockFloors: AreaNode[] = [
+    {
+        id: 20,
+        name: 'Ground Floor',
+        area_type: 'Floor',
+        parent: 3,
+        status: 'Active',
+        capacity: 80,
+        offset_x: 0, offset_y: 0, offset_z: 0,
+        floor_level: 1,
+        floor_width: 25,
+        floor_depth: 18,
+        floor_height: 3.0,
+        area_plan: null,
+        children: [
+            {
+                id: 200,
+                name: 'Canteen',
+                area_type: 'Area',
+                parent: 20,
+                status: 'Active',
+                capacity: 50,
+                offset_x: 0, offset_y: 0, offset_z: 0,
+                floor_level: null, floor_width: null,
+                floor_depth: null, floor_height: null,
+                area_plan: null, children: [],
+            },
+            {
+                id: 201,
+                name: 'Storage',
+                area_type: 'Area',
+                parent: 20,
+                status: 'Active',
+                capacity: 10,
+                offset_x: 0, offset_y: 0, offset_z: 0,
+                floor_level: null, floor_width: null,
+                floor_depth: null, floor_height: null,
+                area_plan: null, children: [],
+            },
+        ],
+    },
+];
+
+// Tower Block — 30 floors generated
+// IDs: building=4, floors start at 300 (300–329)
+// Ground floor sub-areas start at 301000
+const towerFloors = generateFloors(
+    4,      // buildingId
+    300,    // startFloorId — floors will be 300,301,...329
+    30,     // count
+    40,     // floor_width  (metres)
+    35,     // floor_depth  (metres)
+    3.8,    // floor_height (metres) — slightly taller than other buildings
+    // Ground floor area names
+    ['Main Lobby', 'Reception', 'Security Hub', 'Retail A', 'Retail B'],
+);
 
 export const HALO_DUMMY_TREE: AreaNode = {
     id: 1,
@@ -43,13 +269,14 @@ export const HALO_DUMMY_TREE: AreaNode = {
     area_type: 'Site',
     parent: null,
     status: 'Active',
-    capacity: 500,
+    capacity: 5000,
     is_default_top_area: true,
     offset_x: 0, offset_y: 0, offset_z: 0,
     floor_level: null, floor_width: null,
     floor_depth: null, floor_height: null,
     area_plan: null,
     children: [
+        // ── North Block ───────────────────────────────────────────────────────
         {
             id: 2,
             name: 'North Block',
@@ -61,119 +288,10 @@ export const HALO_DUMMY_TREE: AreaNode = {
             floor_level: null, floor_width: null,
             floor_depth: null, floor_height: null,
             area_plan: null,
-            children: [
-                {
-                    id: 10,
-                    name: 'Ground Floor',
-                    area_type: 'Floor',
-                    parent: 2,
-                    status: 'Active',
-                    capacity: 100,
-                    offset_x: 0, offset_y: 0, offset_z: 0,
-                    floor_level: 1,
-                    floor_width: 30,
-                    floor_depth: 20,
-                    floor_height: 3.5,
-                    area_plan: null,
-                    children: [
-                        {
-                            id: 100,
-                            name: 'Reception',
-                            area_type: 'Area',
-                            parent: 10,
-                            status: 'Active',
-                            capacity: 20,
-                            offset_x: 0, offset_y: 0, offset_z: 0,
-                            floor_level: null, floor_width: null,
-                            floor_depth: null, floor_height: null,
-                            area_plan: null,
-                            children: [],
-                        },
-                        {
-                            id: 101,
-                            name: 'Lobby',
-                            area_type: 'Area',
-                            parent: 10,
-                            status: 'Active',
-                            capacity: 40,
-                            offset_x: 0, offset_y: 0, offset_z: 0,
-                            floor_level: null, floor_width: null,
-                            floor_depth: null, floor_height: null,
-                            area_plan: null,
-                            children: [],
-                        },
-                        {
-                            id: 102,
-                            name: 'Security Desk',
-                            area_type: 'Area',
-                            parent: 10,
-                            status: 'Active',
-                            capacity: 5,
-                            offset_x: 0, offset_y: 0, offset_z: 0,
-                            floor_level: null, floor_width: null,
-                            floor_depth: null, floor_height: null,
-                            area_plan: null,
-                            children: [],
-                        },
-                    ],
-                },
-                {
-                    id: 11,
-                    name: 'First Floor',
-                    area_type: 'Floor',
-                    parent: 2,
-                    status: 'Active',
-                    capacity: 150,
-                    offset_x: 0, offset_y: 0, offset_z: 3.5,
-                    floor_level: 2,
-                    floor_width: 30,
-                    floor_depth: 20,
-                    floor_height: 3.5,
-                    area_plan: null,
-                    children: [
-                        {
-                            id: 110,
-                            name: 'Open Office',
-                            area_type: 'Area',
-                            parent: 11,
-                            status: 'Active',
-                            capacity: 80,
-                            offset_x: 0, offset_y: 0, offset_z: 0,
-                            floor_level: null, floor_width: null,
-                            floor_depth: null, floor_height: null,
-                            area_plan: null,
-                            children: [],
-                        },
-                        {
-                            id: 111,
-                            name: 'Conference Room A',
-                            area_type: 'Area',
-                            parent: 11,
-                            status: 'Active',
-                            capacity: 20,
-                            offset_x: 0, offset_y: 0, offset_z: 0,
-                            floor_level: null, floor_width: null,
-                            floor_depth: null, floor_height: null,
-                            area_plan: null,
-                            children: [],
-                        },
-                        {
-                            id: 112,
-                            name: 'Server Room',
-                            area_type: 'Area',
-                            parent: 11,
-                            status: 'Active',
-                            capacity: 5,
-                            offset_x: 0, offset_y: 0, offset_z: 0,
-                            floor_level: null, floor_width: null,
-                            floor_depth: null, floor_height: null,
-                            area_plan: null,
-                            children: [],
-                        },
-                    ],
-                },
-            ],
+            children: northBlockFloors,
         },
+
+        // ── South Block ───────────────────────────────────────────────────────
         {
             id: 3,
             name: 'South Block',
@@ -185,256 +303,380 @@ export const HALO_DUMMY_TREE: AreaNode = {
             floor_level: null, floor_width: null,
             floor_depth: null, floor_height: null,
             area_plan: null,
-            children: [
-                {
-                    id: 20,
-                    name: 'Ground Floor',
-                    area_type: 'Floor',
-                    parent: 3,
-                    status: 'Active',
-                    capacity: 80,
-                    offset_x: 0, offset_y: 0, offset_z: 0,
-                    floor_level: 1,
-                    floor_width: 25,
-                    floor_depth: 18,
-                    floor_height: 3.0,
-                    area_plan: null,
-                    children: [
-                        {
-                            id: 200,
-                            name: 'Canteen',
-                            area_type: 'Area',
-                            parent: 20,
-                            status: 'Active',
-                            capacity: 50,
-                            offset_x: 0, offset_y: 0, offset_z: 0,
-                            floor_level: null, floor_width: null,
-                            floor_depth: null, floor_height: null,
-                            area_plan: null,
-                            children: [],
-                        },
-                        {
-                            id: 201,
-                            name: 'Storage',
-                            area_type: 'Area',
-                            parent: 20,
-                            status: 'Active',
-                            capacity: 10,
-                            offset_x: 0, offset_y: 0, offset_z: 0,
-                            floor_level: null, floor_width: null,
-                            floor_depth: null, floor_height: null,
-                            area_plan: null,
-                            children: [],
-                        },
-                    ],
-                },
-            ],
+            children: southBlockFloors,
+        },
+
+        // ── Tower Block — 30 floors ───────────────────────────────────────────
+        {
+            id: 4,
+            name: 'Tower Block',
+            area_type: 'Building',
+            parent: 1,
+            status: 'Active',
+            capacity: 3000,
+            offset_x: 80,  // placed to the right of South Block
+            offset_y: 0,
+            offset_z: 0,
+            floor_level: null, floor_width: null,
+            floor_depth: null, floor_height: null,
+            area_plan: null,
+            children: towerFloors,
         },
     ],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WALLS
-// Normalized 0.0–1.0 relative to floor_width / floor_depth
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Helper — generate outer boundary walls for any rectangular floor
+function generateOuterWalls(
+    floorId: number,
+    height: number,
+    color: string,
+): AreaWall[] {
+    return [
+        {
+            id: `w-${floorId}-n`,
+            area_id: floorId,
+            r_x1: 0.05, r_y1: 0.05,
+            r_x2: 0.95, r_y2: 0.05,
+            r_height: height, r_z_offset: 0,
+            thickness: 0.2,
+            wall_type: 'outer',
+            color, opacity: 0.85,
+            wall_shape: 'straight',
+        },
+        {
+            id: `w-${floorId}-s`,
+            area_id: floorId,
+            r_x1: 0.05, r_y1: 0.95,
+            r_x2: 0.95, r_y2: 0.95,
+            r_height: height, r_z_offset: 0,
+            thickness: 0.2,
+            wall_type: 'outer',
+            color, opacity: 0.85,
+            wall_shape: 'straight',
+        },
+        {
+            id: `w-${floorId}-w`,
+            area_id: floorId,
+            r_x1: 0.05, r_y1: 0.05,
+            r_x2: 0.05, r_y2: 0.95,
+            r_height: height, r_z_offset: 0,
+            thickness: 0.2,
+            wall_type: 'outer',
+            color, opacity: 0.85,
+            wall_shape: 'straight',
+        },
+        {
+            id: `w-${floorId}-e`,
+            area_id: floorId,
+            r_x1: 0.95, r_y1: 0.05,
+            r_x2: 0.95, r_y2: 0.95,
+            r_height: height, r_z_offset: 0,
+            thickness: 0.2,
+            wall_type: 'outer',
+            color, opacity: 0.85,
+            wall_shape: 'straight',
+        },
+    ];
+}
 
 export const DUMMY_WALLS: Record<number, AreaWall[]> = {
 
-    // ── Floor 10: Ground Floor — North Block ──────────────────────────────────
+    // ── North Block Ground Floor (id: 10) ─────────────────────────────────────
     10: [
-        // Outer perimeter
-        {
-            id: 'w-10-north', area_id: 10,
-            r_x1: 0.05, r_y1: 0.05, r_x2: 0.95, r_y2: 0.05,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#4a90d9', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-10-south', area_id: 10,
-            r_x1: 0.05, r_y1: 0.95, r_x2: 0.95, r_y2: 0.95,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#4a90d9', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-10-west', area_id: 10,
-            r_x1: 0.05, r_y1: 0.05, r_x2: 0.05, r_y2: 0.95,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#4a90d9', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-10-east', area_id: 10,
-            r_x1: 0.95, r_y1: 0.05, r_x2: 0.95, r_y2: 0.95,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#4a90d9', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        // Reception partition — divides left third
+        ...generateOuterWalls(10, 3.5, '#4a90d9'),
+        // Reception partition
         {
             id: 'w-10-p1', area_id: 10, sub_area_id: 100,
-            r_x1: 0.38, r_y1: 0.05, r_x2: 0.38, r_y2: 0.65,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.12,
-            wall_type: 'partition', color: '#7b68ee', opacity: 0.75,
+            r_x1: 0.38, r_y1: 0.05,
+            r_x2: 0.38, r_y2: 0.65,
+            r_height: 3.5, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#7b68ee', opacity: 0.75,
             wall_shape: 'straight',
         },
-        // Security desk partition — bottom right corner
+        // Security desk partition
         {
             id: 'w-10-p2', area_id: 10, sub_area_id: 102,
-            r_x1: 0.70, r_y1: 0.60, r_x2: 0.95, r_y2: 0.60,
-            r_height: 2.0, r_z_offset: 0, thickness: 0.10,
-            wall_type: 'partition', color: '#48cae4', opacity: 0.65,
+            r_x1: 0.70, r_y1: 0.60,
+            r_x2: 0.95, r_y2: 0.60,
+            r_height: 2.0, r_z_offset: 0,
+            thickness: 0.10,
+            wall_type: 'partition',
+            color: '#48cae4', opacity: 0.65,
             wall_shape: 'straight',
         },
         {
             id: 'w-10-p3', area_id: 10, sub_area_id: 102,
-            r_x1: 0.70, r_y1: 0.60, r_x2: 0.70, r_y2: 0.95,
-            r_height: 2.0, r_z_offset: 0, thickness: 0.10,
-            wall_type: 'partition', color: '#48cae4', opacity: 0.65,
+            r_x1: 0.70, r_y1: 0.60,
+            r_x2: 0.70, r_y2: 0.95,
+            r_height: 2.0, r_z_offset: 0,
+            thickness: 0.10,
+            wall_type: 'partition',
+            color: '#48cae4', opacity: 0.65,
             wall_shape: 'straight',
         },
-        // Glass facade — entrance area
+        // Glass facade
         {
             id: 'w-10-glass', area_id: 10,
-            r_x1: 0.38, r_y1: 0.65, r_x2: 0.62, r_y2: 0.65,
-            r_height: 2.8, r_z_offset: 0, thickness: 0.06,
-            wall_type: 'glass', color: '#90c8e0', opacity: 0.35,
+            r_x1: 0.38, r_y1: 0.65,
+            r_x2: 0.62, r_y2: 0.65,
+            r_height: 2.8, r_z_offset: 0,
+            thickness: 0.06,
+            wall_type: 'glass',
+            color: '#90c8e0', opacity: 0.35,
             wall_shape: 'straight',
         },
     ],
 
-    // ── Floor 11: First Floor — North Block ───────────────────────────────────
+    // ── North Block First Floor (id: 11) ──────────────────────────────────────
     11: [
-        // Outer perimeter
-        {
-            id: 'w-11-north', area_id: 11,
-            r_x1: 0.05, r_y1: 0.05, r_x2: 0.95, r_y2: 0.05,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#48cae4', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-11-south', area_id: 11,
-            r_x1: 0.05, r_y1: 0.95, r_x2: 0.95, r_y2: 0.95,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#48cae4', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-11-west', area_id: 11,
-            r_x1: 0.05, r_y1: 0.05, r_x2: 0.05, r_y2: 0.95,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#48cae4', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-11-east', area_id: 11,
-            r_x1: 0.95, r_y1: 0.05, r_x2: 0.95, r_y2: 0.95,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#48cae4', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        // Conference Room A — top right box
+        ...generateOuterWalls(11, 3.5, '#48cae4'),
+        // Conference Room A
         {
             id: 'w-11-conf-s', area_id: 11, sub_area_id: 111,
-            r_x1: 0.60, r_y1: 0.05, r_x2: 0.60, r_y2: 0.45,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.12,
-            wall_type: 'partition', color: '#7b68ee', opacity: 0.8,
+            r_x1: 0.60, r_y1: 0.05,
+            r_x2: 0.60, r_y2: 0.45,
+            r_height: 3.5, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#7b68ee', opacity: 0.8,
             wall_shape: 'straight',
         },
         {
             id: 'w-11-conf-e', area_id: 11, sub_area_id: 111,
-            r_x1: 0.60, r_y1: 0.45, r_x2: 0.95, r_y2: 0.45,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.12,
-            wall_type: 'glass', color: '#90c8e0', opacity: 0.4,
+            r_x1: 0.60, r_y1: 0.45,
+            r_x2: 0.95, r_y2: 0.45,
+            r_height: 3.5, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'glass',
+            color: '#90c8e0', opacity: 0.4,
             wall_shape: 'straight',
         },
-        // Server Room — bottom right tight box
+        // Server Room
         {
             id: 'w-11-srv-n', area_id: 11, sub_area_id: 112,
-            r_x1: 0.72, r_y1: 0.68, r_x2: 0.95, r_y2: 0.68,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.15,
-            wall_type: 'outer', color: '#f4a261', opacity: 0.9,
+            r_x1: 0.72, r_y1: 0.68,
+            r_x2: 0.95, r_y2: 0.68,
+            r_height: 3.5, r_z_offset: 0,
+            thickness: 0.15,
+            wall_type: 'outer',
+            color: '#f4a261', opacity: 0.9,
             wall_shape: 'straight',
         },
         {
             id: 'w-11-srv-w', area_id: 11, sub_area_id: 112,
-            r_x1: 0.72, r_y1: 0.68, r_x2: 0.72, r_y2: 0.95,
-            r_height: 3.5, r_z_offset: 0, thickness: 0.15,
-            wall_type: 'outer', color: '#f4a261', opacity: 0.9,
+            r_x1: 0.72, r_y1: 0.68,
+            r_x2: 0.72, r_y2: 0.95,
+            r_height: 3.5, r_z_offset: 0,
+            thickness: 0.15,
+            wall_type: 'outer',
+            color: '#f4a261', opacity: 0.9,
             wall_shape: 'straight',
         },
     ],
 
-    // ── Floor 20: Ground Floor — South Block ──────────────────────────────────
+    // ── South Block Ground Floor (id: 20) ─────────────────────────────────────
     20: [
-        // Outer perimeter
-        {
-            id: 'w-20-north', area_id: 20,
-            r_x1: 0.05, r_y1: 0.05, r_x2: 0.95, r_y2: 0.05,
-            r_height: 3.0, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#52b788', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-20-south', area_id: 20,
-            r_x1: 0.05, r_y1: 0.95, r_x2: 0.95, r_y2: 0.95,
-            r_height: 3.0, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#52b788', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-20-west', area_id: 20,
-            r_x1: 0.05, r_y1: 0.05, r_x2: 0.05, r_y2: 0.95,
-            r_height: 3.0, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#52b788', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        {
-            id: 'w-20-east', area_id: 20,
-            r_x1: 0.95, r_y1: 0.05, r_x2: 0.95, r_y2: 0.95,
-            r_height: 3.0, r_z_offset: 0, thickness: 0.2,
-            wall_type: 'outer', color: '#52b788', opacity: 0.85,
-            wall_shape: 'straight',
-        },
-        // Canteen divider — horizontal mid wall
+        ...generateOuterWalls(20, 3.0, '#52b788'),
+        // Canteen divider
         {
             id: 'w-20-canteen', area_id: 20, sub_area_id: 200,
-            r_x1: 0.05, r_y1: 0.55, r_x2: 0.70, r_y2: 0.55,
-            r_height: 3.0, r_z_offset: 0, thickness: 0.12,
-            wall_type: 'partition', color: '#52b788', opacity: 0.7,
+            r_x1: 0.05, r_y1: 0.55,
+            r_x2: 0.70, r_y2: 0.55,
+            r_height: 3.0, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#52b788', opacity: 0.7,
             wall_shape: 'straight',
         },
-        // Storage — bottom right box
+        // Storage
         {
             id: 'w-20-stor-n', area_id: 20, sub_area_id: 201,
-            r_x1: 0.70, r_y1: 0.55, r_x2: 0.95, r_y2: 0.55,
-            r_height: 3.0, r_z_offset: 0, thickness: 0.15,
-            wall_type: 'outer', color: '#f4a261', opacity: 0.88,
+            r_x1: 0.70, r_y1: 0.55,
+            r_x2: 0.95, r_y2: 0.55,
+            r_height: 3.0, r_z_offset: 0,
+            thickness: 0.15,
+            wall_type: 'outer',
+            color: '#f4a261', opacity: 0.88,
             wall_shape: 'straight',
         },
         {
             id: 'w-20-stor-w', area_id: 20, sub_area_id: 201,
-            r_x1: 0.70, r_y1: 0.55, r_x2: 0.70, r_y2: 0.95,
-            r_height: 3.0, r_z_offset: 0, thickness: 0.15,
-            wall_type: 'outer', color: '#f4a261', opacity: 0.88,
+            r_x1: 0.70, r_y1: 0.55,
+            r_x2: 0.70, r_y2: 0.95,
+            r_height: 3.0, r_z_offset: 0,
+            thickness: 0.15,
+            wall_type: 'outer',
+            color: '#f4a261', opacity: 0.88,
             wall_shape: 'straight',
         },
+    ],
+
+    // ── Tower Ground Floor (id: 300) ──────────────────────────────────────────
+    300: [
+        ...generateOuterWalls(300, 3.8, '#7a3a6f'),
+        // Main lobby open area — central glass divider
+        {
+            id: 'w-300-glass-1', area_id: 300,
+            r_x1: 0.35, r_y1: 0.10,
+            r_x2: 0.35, r_y2: 0.90,
+            r_height: 3.8, r_z_offset: 0,
+            thickness: 0.06,
+            wall_type: 'glass',
+            color: '#90c8e0', opacity: 0.3,
+            wall_shape: 'straight',
+        },
+        // Retail A box
+        {
+            id: 'w-300-retail-a-n', area_id: 300,
+            r_x1: 0.60, r_y1: 0.10,
+            r_x2: 0.95, r_y2: 0.10,
+            r_height: 3.8, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#a87ca1', opacity: 0.75,
+            wall_shape: 'straight',
+        },
+        {
+            id: 'w-300-retail-a-s', area_id: 300,
+            r_x1: 0.60, r_y1: 0.45,
+            r_x2: 0.95, r_y2: 0.45,
+            r_height: 3.8, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#a87ca1', opacity: 0.75,
+            wall_shape: 'straight',
+        },
+        {
+            id: 'w-300-retail-a-w', area_id: 300,
+            r_x1: 0.60, r_y1: 0.10,
+            r_x2: 0.60, r_y2: 0.45,
+            r_height: 3.8, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#a87ca1', opacity: 0.75,
+            wall_shape: 'straight',
+        },
+        // Retail B box
+        {
+            id: 'w-300-retail-b-n', area_id: 300,
+            r_x1: 0.60, r_y1: 0.55,
+            r_x2: 0.95, r_y2: 0.55,
+            r_height: 3.8, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#a87ca1', opacity: 0.75,
+            wall_shape: 'straight',
+        },
+        {
+            id: 'w-300-retail-b-s', area_id: 300,
+            r_x1: 0.60, r_y1: 0.90,
+            r_x2: 0.95, r_y2: 0.90,
+            r_height: 3.8, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#a87ca1', opacity: 0.75,
+            wall_shape: 'straight',
+        },
+        {
+            id: 'w-300-retail-b-w', area_id: 300,
+            r_x1: 0.60, r_y1: 0.55,
+            r_x2: 0.60, r_y2: 0.90,
+            r_height: 3.8, r_z_offset: 0,
+            thickness: 0.12,
+            wall_type: 'partition',
+            color: '#a87ca1', opacity: 0.75,
+            wall_shape: 'straight',
+        },
+    ],
+
+    // ── Tower Floor 5 (id: 304) ───────────────────────────────────────────────
+    304: [
+        ...generateOuterWalls(304, 3.8, '#7a3a6f'),
+        // Open plan office with meeting pods
+        {
+            id: 'w-304-pod1', area_id: 304,
+            r_x1: 0.10, r_y1: 0.10,
+            r_x2: 0.35, r_y2: 0.10,
+            r_height: 2.4, r_z_offset: 0,
+            thickness: 0.10,
+            wall_type: 'glass',
+            color: '#90c8e0', opacity: 0.4,
+            wall_shape: 'straight',
+        },
+        {
+            id: 'w-304-pod1b', area_id: 304,
+            r_x1: 0.10, r_y1: 0.10,
+            r_x2: 0.10, r_y2: 0.35,
+            r_height: 2.4, r_z_offset: 0,
+            thickness: 0.10,
+            wall_type: 'glass',
+            color: '#90c8e0', opacity: 0.4,
+            wall_shape: 'straight',
+        },
+        {
+            id: 'w-304-pod1c', area_id: 304,
+            r_x1: 0.10, r_y1: 0.35,
+            r_x2: 0.35, r_y2: 0.35,
+            r_height: 2.4, r_z_offset: 0,
+            thickness: 0.10,
+            wall_type: 'glass',
+            color: '#90c8e0', opacity: 0.4,
+            wall_shape: 'straight',
+        },
+        {
+            id: 'w-304-pod1d', area_id: 304,
+            r_x1: 0.35, r_y1: 0.10,
+            r_x2: 0.35, r_y2: 0.35,
+            r_height: 2.4, r_z_offset: 0,
+            thickness: 0.10,
+            wall_type: 'glass',
+            color: '#90c8e0', opacity: 0.4,
+            wall_shape: 'straight',
+        },
+    ],
+
+    // ── Tower Floor 10 (id: 309) ──────────────────────────────────────────────
+    309: [
+        ...generateOuterWalls(309, 3.8, '#7a3a6f'),
+        // Executive floor — large partition
+        {
+            id: 'w-309-exec', area_id: 309,
+            r_x1: 0.50, r_y1: 0.05,
+            r_x2: 0.50, r_y2: 0.95,
+            r_height: 3.8, r_z_offset: 0,
+            thickness: 0.15,
+            wall_type: 'partition',
+            color: '#7a3a6f', opacity: 0.8,
+            wall_shape: 'straight',
+        },
+    ],
+
+    // ── Tower Floor 20 (id: 319) ──────────────────────────────────────────────
+    319: [
+        ...generateOuterWalls(319, 3.8, '#7a3a6f'),
+    ],
+
+    // ── Tower Floor 30 / Roof (id: 329) ──────────────────────────────────────
+    329: [
+        ...generateOuterWalls(329, 1.2, '#7a3a6f'),
+        // Roof parapet — thicker walls, shorter
     ],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SENSOR NODES (Halo Sensors)
-// Each sensor = one physical Halo device on a floor
-// event_configs = subset of HALO_EVENTS this sensor monitors
-// latest_log = simulated live readings
+// SENSORS
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const DUMMY_SENSORS: SensorNode[] = [
 
-    // ── Sensor 1: HALO-GF-01 — Ground Floor North, Reception area ────────────
-    // Status: ONLINE, no triggers
+    // ── North Block Ground Floor (floor_id: 10) ───────────────────────────────
+
     {
         id: 1,
         name: 'HALO-GF-01',
@@ -443,42 +685,50 @@ export const DUMMY_SENSORS: SensorNode[] = [
         online_status: true,
         sensor_status: 'online',
         floor_id: 10,
-        x_val: 0.22,   // left third — reception area
+        area_id: 100,
+        wall_ids: ['w-10-p1', 'w-10-glass'],
+        x_val: 0.22,
         y_val: 0.35,
-        z_val: 0.85,   // near ceiling
-        halo_color: '#06d6a0',   // green
+        z_val: 0.85,
+        halo_color: '#06d6a0',
         halo_radius: 5,
         halo_intensity: 0.4,
         event_configs: [
             {
                 id: 101, event_id: 'Motion', enabled: true,
                 min_value: 0, threshold: 60, max_value: 100,
-                led_color: LED.blue, current_value: 12, is_triggered: false,
+                led_color: LED.blue,
+                current_value: 12, is_triggered: false,
             },
             {
                 id: 102, event_id: 'temp_c', enabled: true,
                 min_value: 15, threshold: 35, max_value: 50,
-                led_color: LED.orange, current_value: 22.4, is_triggered: false,
+                led_color: LED.orange,
+                current_value: 22.4, is_triggered: false,
             },
             {
                 id: 103, event_id: 'Humidity', enabled: true,
                 min_value: 20, threshold: 75, max_value: 100,
-                led_color: LED.cyan, current_value: 48.2, is_triggered: false,
+                led_color: LED.cyan,
+                current_value: 48.2, is_triggered: false,
             },
             {
                 id: 104, event_id: 'CO2cal', enabled: true,
                 min_value: 400, threshold: 1000, max_value: 2000,
-                led_color: LED.purple, current_value: 612, is_triggered: false,
+                led_color: LED.purple,
+                current_value: 612, is_triggered: false,
             },
             {
                 id: 105, event_id: 'AQI', enabled: true,
                 min_value: 0, threshold: 100, max_value: 500,
-                led_color: LED.green, current_value: 34, is_triggered: false,
+                led_color: LED.green,
+                current_value: 34, is_triggered: false,
             },
             {
                 id: 106, event_id: 'Sound', enabled: true,
                 min_value: 0, threshold: 85, max_value: 130,
-                led_color: LED.yellow, current_value: 42, is_triggered: false,
+                led_color: LED.yellow,
+                current_value: 42, is_triggered: false,
             },
         ],
         latest_log: {
@@ -509,8 +759,6 @@ export const DUMMY_SENSORS: SensorNode[] = [
         },
     },
 
-    // ── Sensor 2: HALO-GF-02 — Ground Floor North, Lobby ─────────────────────
-    // Status: ALERT — Motion + CO2 both triggered
     {
         id: 2,
         name: 'HALO-GF-02',
@@ -519,47 +767,56 @@ export const DUMMY_SENSORS: SensorNode[] = [
         online_status: true,
         sensor_status: 'alert',
         floor_id: 10,
-        x_val: 0.72,   // right side — lobby
+        area_id: 101,
+        wall_ids: ['w-10-p2', 'w-10-p3', 'w-10-n', 'w-10-e'],
+        x_val: 0.72,
         y_val: 0.30,
         z_val: 0.85,
-        halo_color: '#e63946',   // red — alert
+        halo_color: '#e63946',
         halo_radius: 6,
         halo_intensity: 1.0,
         event_configs: [
             {
                 id: 201, event_id: 'Motion', enabled: true,
                 min_value: 0, threshold: 60, max_value: 100,
-                led_color: LED.red, current_value: 88, is_triggered: true,
+                led_color: LED.red,
+                current_value: 88, is_triggered: true,
             },
             {
                 id: 202, event_id: 'CO2cal', enabled: true,
                 min_value: 400, threshold: 1000, max_value: 2000,
-                led_color: LED.purple, current_value: 1340, is_triggered: true,
+                led_color: LED.purple,
+                current_value: 1340, is_triggered: true,
             },
             {
                 id: 203, event_id: 'temp_c', enabled: true,
                 min_value: 15, threshold: 35, max_value: 50,
-                led_color: LED.orange, current_value: 28.1, is_triggered: false,
+                led_color: LED.orange,
+                current_value: 28.1, is_triggered: false,
             },
             {
                 id: 204, event_id: 'Aggression', enabled: true,
                 min_value: 0, threshold: 70, max_value: 100,
-                led_color: LED.red, current_value: 15, is_triggered: false,
+                led_color: LED.red,
+                current_value: 15, is_triggered: false,
             },
             {
                 id: 205, event_id: 'Gunshot', enabled: true,
                 min_value: 0, threshold: 80, max_value: 100,
-                led_color: LED.red, current_value: 0, is_triggered: false,
+                led_color: LED.red,
+                current_value: 0, is_triggered: false,
             },
             {
                 id: 206, event_id: 'AQI', enabled: true,
                 min_value: 0, threshold: 100, max_value: 500,
-                led_color: LED.orange, current_value: 118, is_triggered: true,
+                led_color: LED.orange,
+                current_value: 118, is_triggered: true,
             },
             {
                 id: 207, event_id: 'TVOC', enabled: true,
                 min_value: 0, threshold: 500, max_value: 1000,
-                led_color: LED.purple, current_value: 342, is_triggered: false,
+                led_color: LED.purple,
+                current_value: 342, is_triggered: false,
             },
         ],
         latest_log: {
@@ -589,9 +846,6 @@ export const DUMMY_SENSORS: SensorNode[] = [
             others: { help: 0, panic: 0 },
         },
     },
-
-    // ── Sensor 3: HALO-FF-01 — First Floor North, Open Office ────────────────
-    // Status: ONLINE — mild readings
     {
         id: 3,
         name: 'HALO-FF-01',
@@ -600,6 +854,8 @@ export const DUMMY_SENSORS: SensorNode[] = [
         online_status: true,
         sensor_status: 'online',
         floor_id: 11,
+        area_id: 110,
+        wall_ids: ['w-11-n', 'w-11-w', 'w-11-conf-s'],
         x_val: 0.30,
         y_val: 0.55,
         z_val: 0.80,
@@ -610,37 +866,38 @@ export const DUMMY_SENSORS: SensorNode[] = [
             {
                 id: 301, event_id: 'Motion', enabled: true,
                 min_value: 0, threshold: 60, max_value: 100,
-                led_color: LED.blue, current_value: 35, is_triggered: false,
+                led_color: LED.blue,
+                current_value: 35, is_triggered: false,
             },
             {
                 id: 302, event_id: 'temp_c', enabled: true,
                 min_value: 15, threshold: 35, max_value: 50,
-                led_color: LED.orange, current_value: 23.8, is_triggered: false,
+                led_color: LED.orange,
+                current_value: 23.8, is_triggered: false,
             },
             {
                 id: 303, event_id: 'Humidity', enabled: true,
                 min_value: 20, threshold: 75, max_value: 100,
-                led_color: LED.cyan, current_value: 51.0, is_triggered: false,
+                led_color: LED.cyan,
+                current_value: 51.0, is_triggered: false,
             },
             {
                 id: 304, event_id: 'CO2cal', enabled: true,
                 min_value: 400, threshold: 1000, max_value: 2000,
-                led_color: LED.purple, current_value: 820, is_triggered: false,
+                led_color: LED.purple,
+                current_value: 820, is_triggered: false,
             },
             {
                 id: 305, event_id: 'Light', enabled: true,
                 min_value: 0, threshold: 1000, max_value: 2000,
-                led_color: LED.yellow, current_value: 640, is_triggered: false,
+                led_color: LED.yellow,
+                current_value: 640, is_triggered: false,
             },
             {
-                id: 306, event_id: 'Pressure', enabled: true,
-                min_value: 950, threshold: 1050, max_value: 1100,
-                led_color: LED.white, current_value: 1013.5, is_triggered: false,
-            },
-            {
-                id: 307, event_id: 'Health_Index', enabled: true,
+                id: 306, event_id: 'Health_Index', enabled: true,
                 min_value: 0, threshold: 2, max_value: 5,
-                led_color: LED.green, current_value: 3.9, is_triggered: false,
+                led_color: LED.green,
+                current_value: 3.9, is_triggered: false,
             },
         ],
         latest_log: {
@@ -671,8 +928,6 @@ export const DUMMY_SENSORS: SensorNode[] = [
         },
     },
 
-    // ── Sensor 4: HALO-FF-02 — First Floor North, Server Room ────────────────
-    // Status: ALERT — Temperature critical
     {
         id: 4,
         name: 'HALO-FF-02',
@@ -681,6 +936,8 @@ export const DUMMY_SENSORS: SensorNode[] = [
         online_status: true,
         sensor_status: 'alert',
         floor_id: 11,
+        area_id: 112,
+        wall_ids: ['w-11-srv-n', 'w-11-srv-w'],
         x_val: 0.83,
         y_val: 0.82,
         z_val: 0.90,
@@ -691,27 +948,26 @@ export const DUMMY_SENSORS: SensorNode[] = [
             {
                 id: 401, event_id: 'temp_c', enabled: true,
                 min_value: 15, threshold: 30, max_value: 60,
-                led_color: LED.red, current_value: 38.2, is_triggered: true,
+                led_color: LED.red,
+                current_value: 38.2, is_triggered: true,
             },
             {
                 id: 402, event_id: 'Humidity', enabled: true,
                 min_value: 20, threshold: 65, max_value: 100,
-                led_color: LED.cyan, current_value: 28.4, is_triggered: false,
+                led_color: LED.cyan,
+                current_value: 28.4, is_triggered: false,
             },
             {
                 id: 403, event_id: 'CO', enabled: true,
                 min_value: 0, threshold: 9, max_value: 50,
-                led_color: LED.red, current_value: 1.2, is_triggered: false,
+                led_color: LED.red,
+                current_value: 1.2, is_triggered: false,
             },
             {
                 id: 404, event_id: 'Tamper', enabled: true,
                 min_value: 0, threshold: 1, max_value: 1,
-                led_color: LED.orange, current_value: 0, is_triggered: false,
-            },
-            {
-                id: 405, event_id: 'Masking', enabled: true,
-                min_value: 0, threshold: 1, max_value: 1,
-                led_color: LED.orange, current_value: 0, is_triggered: false,
+                led_color: LED.orange,
+                current_value: 0, is_triggered: false,
             },
         ],
         latest_log: {
@@ -742,8 +998,8 @@ export const DUMMY_SENSORS: SensorNode[] = [
         },
     },
 
-    // ── Sensor 5: HALO-SB-01 — South Block, Canteen ──────────────────────────
-    // Status: OFFLINE
+    // ── South Block Ground Floor (floor_id: 20) ───────────────────────────────
+
     {
         id: 5,
         name: 'HALO-SB-01',
@@ -752,44 +1008,37 @@ export const DUMMY_SENSORS: SensorNode[] = [
         online_status: false,
         sensor_status: 'offline',
         floor_id: 20,
+        area_id: 200,
+        wall_ids: ['w-20-canteen', 'w-20-n', 'w-20-w'],
         x_val: 0.35,
         y_val: 0.30,
         z_val: 0.80,
-        halo_color: '#adb5bd',   // grey — offline
+        halo_color: '#adb5bd',
         halo_radius: 5,
         halo_intensity: 0.15,
         event_configs: [
             {
                 id: 501, event_id: 'Motion', enabled: true,
                 min_value: 0, threshold: 60, max_value: 100,
-                led_color: LED.blue, current_value: null, is_triggered: false,
+                led_color: LED.blue,
+                current_value: null, is_triggered: false,
             },
             {
-                id: 502, event_id: 'temp_c', enabled: true,
-                min_value: 15, threshold: 40, max_value: 60,
-                led_color: LED.orange, current_value: null, is_triggered: false,
-            },
-            {
-                id: 503, event_id: 'Smoking', enabled: true,
+                id: 502, event_id: 'Smoking', enabled: true,
                 min_value: 0, threshold: 50, max_value: 100,
-                led_color: LED.red, current_value: null, is_triggered: false,
+                led_color: LED.red,
+                current_value: null, is_triggered: false,
             },
             {
-                id: 504, event_id: 'Vape', enabled: true,
+                id: 503, event_id: 'Vape', enabled: true,
                 min_value: 0, threshold: 50, max_value: 100,
-                led_color: LED.purple, current_value: null, is_triggered: false,
-            },
-            {
-                id: 505, event_id: 'THC', enabled: true,
-                min_value: 0, threshold: 30, max_value: 100,
-                led_color: LED.green, current_value: null, is_triggered: false,
+                led_color: LED.purple,
+                current_value: null, is_triggered: false,
             },
         ],
-        latest_log: null,   // offline — no log
+        latest_log: null,
     },
 
-    // ── Sensor 6: HALO-SB-02 — South Block, Storage ──────────────────────────
-    // Status: ONLINE — very quiet area
     {
         id: 6,
         name: 'HALO-SB-02',
@@ -798,6 +1047,8 @@ export const DUMMY_SENSORS: SensorNode[] = [
         online_status: true,
         sensor_status: 'online',
         floor_id: 20,
+        area_id: 201,
+        wall_ids: ['w-20-stor-n', 'w-20-stor-w', 'w-20-s', 'w-20-e'],
         x_val: 0.82,
         y_val: 0.78,
         z_val: 0.75,
@@ -808,27 +1059,20 @@ export const DUMMY_SENSORS: SensorNode[] = [
             {
                 id: 601, event_id: 'Motion', enabled: true,
                 min_value: 0, threshold: 60, max_value: 100,
-                led_color: LED.blue, current_value: 2, is_triggered: false,
+                led_color: LED.blue,
+                current_value: 2, is_triggered: false,
             },
             {
                 id: 602, event_id: 'temp_c', enabled: true,
                 min_value: 15, threshold: 40, max_value: 60,
-                led_color: LED.orange, current_value: 19.6, is_triggered: false,
+                led_color: LED.orange,
+                current_value: 19.6, is_triggered: false,
             },
             {
-                id: 603, event_id: 'Humidity', enabled: true,
-                min_value: 20, threshold: 80, max_value: 100,
-                led_color: LED.cyan, current_value: 55.8, is_triggered: false,
-            },
-            {
-                id: 604, event_id: 'CO', enabled: true,
-                min_value: 0, threshold: 9, max_value: 50,
-                led_color: LED.red, current_value: 0.3, is_triggered: false,
-            },
-            {
-                id: 605, event_id: 'PM2.5', enabled: true,
+                id: 603, event_id: 'PM2.5', enabled: true,
                 min_value: 0, threshold: 35, max_value: 150,
-                led_color: LED.yellow, current_value: 6.2, is_triggered: false,
+                led_color: LED.yellow,
+                current_value: 6.2, is_triggered: false,
             },
         ],
         latest_log: {
@@ -857,6 +1101,408 @@ export const DUMMY_SENSORS: SensorNode[] = [
             },
             others: { help: 0, panic: 0 },
         },
+    },
+
+    // ── Tower Block sensors ───────────────────────────────────────────────────
+    // Ground floor (floor_id: 300)
+    {
+        id: 10,
+        name: 'HALO-TWR-GF-01',
+        mac_address: 'AA:BB:CC:DD:FF:01',
+        ip_address: '192.168.2.101',
+        online_status: true,
+        sensor_status: 'online',
+        floor_id: 300,
+        x_val: 0.20,
+        y_val: 0.50,
+        z_val: 0.85,
+        halo_color: '#06d6a0',
+        halo_radius: 6,
+        halo_intensity: 0.38,
+        event_configs: [
+            {
+                id: 1001, event_id: 'Motion', enabled: true,
+                min_value: 0, threshold: 60, max_value: 100,
+                led_color: LED.blue,
+                current_value: 55, is_triggered: false,
+            },
+            {
+                id: 1002, event_id: 'temp_c', enabled: true,
+                min_value: 15, threshold: 35, max_value: 50,
+                led_color: LED.orange,
+                current_value: 21.2, is_triggered: false,
+            },
+            {
+                id: 1003, event_id: 'CO2cal', enabled: true,
+                min_value: 400, threshold: 1000, max_value: 2000,
+                led_color: LED.purple,
+                current_value: 720, is_triggered: false,
+            },
+            {
+                id: 1004, event_id: 'AQI', enabled: true,
+                min_value: 0, threshold: 100, max_value: 500,
+                led_color: LED.green,
+                current_value: 42, is_triggered: false,
+            },
+        ],
+        latest_log: {
+            recorded_at: new Date(Date.now() - 20000).toISOString(),
+            readings_environmental: {
+                temperature_c: 21.2,
+                humidity_percent: 52.0,
+                light_lux: 420,
+                pressure_hpa: 1013.0,
+                sound_db: 58,
+            },
+            readings_air: {
+                co2_eq: 720, co2_cal: 705,
+                tvoc: 110, co: 0.6,
+                nh3: 0.1, no2: 15,
+                pm1: 5, pm25: 9, pm10: 14,
+            },
+            readings_derived: {
+                aqi: 42,
+                health_index: 3.8,
+                noise_db: 58,
+                motion: 55,
+                gunshot: 0,
+                aggression: 0,
+                movement: 38,
+            },
+            others: { help: 0, panic: 0 },
+        },
+    },
+
+    // Tower Floor 5 (floor_id: 304) — alert state
+    {
+        id: 11,
+        name: 'HALO-TWR-F5-01',
+        mac_address: 'AA:BB:CC:DD:FF:02',
+        ip_address: '192.168.2.102',
+        online_status: true,
+        sensor_status: 'alert',
+        floor_id: 304,
+        x_val: 0.25,
+        y_val: 0.25,
+        z_val: 0.85,
+        halo_color: '#e63946',
+        halo_radius: 6,
+        halo_intensity: 0.95,
+        event_configs: [
+            {
+                id: 1101, event_id: 'Gunshot', enabled: true,
+                min_value: 0, threshold: 80, max_value: 100,
+                led_color: LED.red,
+                current_value: 92, is_triggered: true,
+            },
+            {
+                id: 1102, event_id: 'Aggression', enabled: true,
+                min_value: 0, threshold: 70, max_value: 100,
+                led_color: LED.red,
+                current_value: 85, is_triggered: true,
+            },
+            {
+                id: 1103, event_id: 'Motion', enabled: true,
+                min_value: 0, threshold: 60, max_value: 100,
+                led_color: LED.blue,
+                current_value: 95, is_triggered: true,
+            },
+            {
+                id: 1104, event_id: 'Sound', enabled: true,
+                min_value: 0, threshold: 85, max_value: 130,
+                led_color: LED.yellow,
+                current_value: 110, is_triggered: true,
+            },
+        ],
+        latest_log: {
+            recorded_at: new Date(Date.now() - 5000).toISOString(),
+            readings_environmental: {
+                temperature_c: 25.0,
+                humidity_percent: 45.0,
+                light_lux: 300,
+                pressure_hpa: 1011.5,
+                sound_db: 110,
+            },
+            readings_air: {
+                co2_eq: 650, co2_cal: 635,
+                tvoc: 88, co: 0.9,
+                nh3: 0.2, no2: 20,
+                pm1: 6, pm25: 10, pm10: 16,
+            },
+            readings_derived: {
+                aqi: 55,
+                health_index: 2.2,
+                noise_db: 110,
+                motion: 95,
+                gunshot: 92,
+                aggression: 85,
+                movement: 90,
+            },
+            others: { help: 1, panic: 1 },
+        },
+    },
+
+    // Tower Floor 10 (floor_id: 309) — online
+    {
+        id: 12,
+        name: 'HALO-TWR-F10-01',
+        mac_address: 'AA:BB:CC:DD:FF:03',
+        ip_address: '192.168.2.103',
+        online_status: true,
+        sensor_status: 'online',
+        floor_id: 309,
+        x_val: 0.28,
+        y_val: 0.55,
+        z_val: 0.85,
+        halo_color: '#06d6a0',
+        halo_radius: 7,
+        halo_intensity: 0.30,
+        event_configs: [
+            {
+                id: 1201, event_id: 'Motion', enabled: true,
+                min_value: 0, threshold: 60, max_value: 100,
+                led_color: LED.blue,
+                current_value: 18, is_triggered: false,
+            },
+            {
+                id: 1202, event_id: 'temp_c', enabled: true,
+                min_value: 15, threshold: 35, max_value: 50,
+                led_color: LED.orange,
+                current_value: 22.0, is_triggered: false,
+            },
+            {
+                id: 1203, event_id: 'CO2cal', enabled: true,
+                min_value: 400, threshold: 1000, max_value: 2000,
+                led_color: LED.purple,
+                current_value: 550, is_triggered: false,
+            },
+            {
+                id: 1204, event_id: 'Humidity', enabled: true,
+                min_value: 20, threshold: 75, max_value: 100,
+                led_color: LED.cyan,
+                current_value: 44.0, is_triggered: false,
+            },
+            {
+                id: 1205, event_id: 'Light', enabled: true,
+                min_value: 0, threshold: 1000, max_value: 2000,
+                led_color: LED.yellow,
+                current_value: 580, is_triggered: false,
+            },
+        ],
+        latest_log: {
+            recorded_at: new Date(Date.now() - 120000).toISOString(),
+            readings_environmental: {
+                temperature_c: 22.0,
+                humidity_percent: 44.0,
+                light_lux: 580,
+                pressure_hpa: 1010.0,
+                sound_db: 35,
+            },
+            readings_air: {
+                co2_eq: 550, co2_cal: 535,
+                tvoc: 78, co: 0.4,
+                nh3: 0.1, no2: 11,
+                pm1: 3, pm25: 5, pm10: 7,
+            },
+            readings_derived: {
+                aqi: 24,
+                health_index: 4.3,
+                noise_db: 35,
+                motion: 18,
+                gunshot: 0,
+                aggression: 0,
+                movement: 10,
+            },
+            others: { help: 0, panic: 0 },
+        },
+    },
+
+    // Tower Floor 20 (floor_id: 319) — online
+    {
+        id: 13,
+        name: 'HALO-TWR-F20-01',
+        mac_address: 'AA:BB:CC:DD:FF:04',
+        ip_address: '192.168.2.104',
+        online_status: true,
+        sensor_status: 'online',
+        floor_id: 319,
+        x_val: 0.50,
+        y_val: 0.50,
+        z_val: 0.85,
+        halo_color: '#06d6a0',
+        halo_radius: 6,
+        halo_intensity: 0.28,
+        event_configs: [
+            {
+                id: 1301, event_id: 'Motion', enabled: true,
+                min_value: 0, threshold: 60, max_value: 100,
+                led_color: LED.blue,
+                current_value: 8, is_triggered: false,
+            },
+            {
+                id: 1302, event_id: 'temp_c', enabled: true,
+                min_value: 15, threshold: 35, max_value: 50,
+                led_color: LED.orange,
+                current_value: 20.8, is_triggered: false,
+            },
+            {
+                id: 1303, event_id: 'CO2cal', enabled: true,
+                min_value: 400, threshold: 1000, max_value: 2000,
+                led_color: LED.purple,
+                current_value: 480, is_triggered: false,
+            },
+        ],
+        latest_log: {
+            recorded_at: new Date(Date.now() - 180000).toISOString(),
+            readings_environmental: {
+                temperature_c: 20.8,
+                humidity_percent: 40.0,
+                light_lux: 520,
+                pressure_hpa: 1000.0,  // lower — higher altitude
+                sound_db: 28,
+            },
+            readings_air: {
+                co2_eq: 480, co2_cal: 465,
+                tvoc: 55, co: 0.3,
+                nh3: 0.0, no2: 8,
+                pm1: 2, pm25: 3, pm10: 5,
+            },
+            readings_derived: {
+                aqi: 16,
+                health_index: 4.7,
+                noise_db: 28,
+                motion: 8,
+                gunshot: 0,
+                aggression: 0,
+                movement: 4,
+            },
+            others: { help: 0, panic: 0 },
+        },
+    },
+
+    // ── Unplaced sensors — floor_id: null ─────────────────────────────────────
+
+    {
+        id: 7,
+        name: 'HALO-SPARE-01',
+        mac_address: 'AA:BB:CC:DD:EE:07',
+        ip_address: null,
+        online_status: false,
+        sensor_status: 'offline',
+        floor_id: null,
+        x_val: 0, y_val: 0, z_val: 0,
+        halo_color: '#adb5bd',
+        halo_radius: 5,
+        halo_intensity: 0.15,
+        event_configs: [
+            {
+                id: 701, event_id: 'Motion', enabled: true,
+                min_value: 0, threshold: 60, max_value: 100,
+                led_color: LED.blue,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 702, event_id: 'temp_c', enabled: true,
+                min_value: 15, threshold: 35, max_value: 50,
+                led_color: LED.orange,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 703, event_id: 'CO2cal', enabled: true,
+                min_value: 400, threshold: 1000, max_value: 2000,
+                led_color: LED.purple,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 704, event_id: 'AQI', enabled: true,
+                min_value: 0, threshold: 100, max_value: 500,
+                led_color: LED.green,
+                current_value: null, is_triggered: false,
+            },
+        ],
+        latest_log: null,
+    },
+
+    {
+        id: 8,
+        name: 'HALO-SPARE-02',
+        mac_address: 'AA:BB:CC:DD:EE:08',
+        ip_address: null,
+        online_status: false,
+        sensor_status: 'offline',
+        floor_id: null,
+        x_val: 0, y_val: 0, z_val: 0,
+        halo_color: '#adb5bd',
+        halo_radius: 5,
+        halo_intensity: 0.15,
+        event_configs: [
+            {
+                id: 801, event_id: 'Smoking', enabled: true,
+                min_value: 0, threshold: 50, max_value: 100,
+                led_color: LED.red,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 802, event_id: 'Vape', enabled: true,
+                min_value: 0, threshold: 50, max_value: 100,
+                led_color: LED.purple,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 803, event_id: 'THC', enabled: true,
+                min_value: 0, threshold: 30, max_value: 100,
+                led_color: LED.green,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 804, event_id: 'AQI', enabled: true,
+                min_value: 0, threshold: 100, max_value: 500,
+                led_color: LED.green,
+                current_value: null, is_triggered: false,
+            },
+        ],
+        latest_log: null,
+    },
+
+    {
+        id: 9,
+        name: 'HALO-SPARE-03',
+        mac_address: 'AA:BB:CC:DD:EE:09',
+        ip_address: null,
+        online_status: false,
+        sensor_status: 'offline',
+        floor_id: null,
+        x_val: 0, y_val: 0, z_val: 0,
+        halo_color: '#adb5bd',
+        halo_radius: 5,
+        halo_intensity: 0.15,
+        event_configs: [
+            {
+                id: 901, event_id: 'Gunshot', enabled: true,
+                min_value: 0, threshold: 80, max_value: 100,
+                led_color: LED.red,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 902, event_id: 'Aggression', enabled: true,
+                min_value: 0, threshold: 70, max_value: 100,
+                led_color: LED.orange,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 903, event_id: 'Help', enabled: true,
+                min_value: 0, threshold: 1, max_value: 1,
+                led_color: LED.purple,
+                current_value: null, is_triggered: false,
+            },
+            {
+                id: 904, event_id: 'Panic', enabled: true,
+                min_value: 0, threshold: 1, max_value: 1,
+                led_color: LED.red,
+                current_value: null, is_triggered: false,
+            },
+        ],
+        latest_log: null,
     },
 ];
 
@@ -895,12 +1541,11 @@ export function getAllBuildings(root: AreaNode): AreaNode[] {
 
 export function getSensorsForFloor(
     floorId: number,
-    sensors: SensorNode[]
+    sensors: SensorNode[],
 ): SensorNode[] {
     return sensors.filter(s => s.floor_id === floorId);
 }
 
-// Derive halo color from worst active event
 export function deriveHaloColor(sensor: SensorNode): string {
     if (!sensor.online_status) return '#adb5bd';
     const hasAlert = sensor.event_configs.some(e => e.is_triggered);
@@ -908,10 +1553,9 @@ export function deriveHaloColor(sensor: SensorNode): string {
     return '#06d6a0';
 }
 
-// Derive halo intensity from triggered event count
 export function deriveHaloIntensity(sensor: SensorNode): number {
     if (!sensor.online_status) return 0.15;
     const triggered = sensor.event_configs.filter(e => e.is_triggered).length;
-    if (triggered === 0) return 0.3 + Math.random() * 0.1;
+    if (triggered === 0) return 0.3;
     return Math.min(1.0, 0.6 + triggered * 0.15);
 }

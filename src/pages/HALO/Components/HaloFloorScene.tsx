@@ -149,11 +149,13 @@ const WallSegment: React.FC<{
     isPreview?: boolean;
     isSelected?: boolean;
     isAlert?: boolean;
+    isBlinking?: boolean;
 }> = ({
     wall, fw, fd, floorY,
     isPreview = false,
     isSelected = false,
     isAlert = false,
+    isBlinking = false,
 }) => {
         const meshRef = useRef<THREE.Mesh>(null);
         const isArc = wall.wall_shape === 'arc' || wall.arc_center_x != null;
@@ -181,6 +183,10 @@ const WallSegment: React.FC<{
                 // Selected area walls pulse strongly
                 mat.emissiveIntensity =
                     0.6 + Math.abs(Math.sin(t * 4.0)) * 1.8;
+            } else if (isBlinking) {
+                // Fast yellow blink
+                mat.emissiveIntensity =
+                    0.45 + (Math.sin(t * 12.0) > 0 ? 2.5 : 0);
             } else if (isSelected) {
                 mat.emissiveIntensity =
                     0.3 + Math.abs(Math.sin(t * 2.0)) * 0.5;
@@ -205,25 +211,31 @@ const WallSegment: React.FC<{
             ? '#f0c040'
             : isAlert
                 ? '#e63946'
-                : isSelected
-                    ? '#ffec80'
-                    : wall.color;
+                : isBlinking
+                    ? '#facc15'
+                    : isSelected
+                        ? '#ffec80'
+                        : wall.color;
 
         const emissive = isPreview
             ? '#f0c040'
             : isAlert
                 ? '#e63946'
-                : isSelected
-                    ? '#f0c040'
-                    : '#000000';
+                : isBlinking
+                    ? '#facc15'
+                    : isSelected
+                        ? '#f0c040'
+                        : '#000000';
 
         const emissiveIntensity = isPreview
             ? 0.5
             : isAlert
                 ? 1.0
-                : isSelected
-                    ? 0.3
-                    : 0;
+                : isBlinking
+                    ? 1.5
+                    : isSelected
+                        ? 0.3
+                        : 0;
 
         const material = (
             <meshStandardMaterial
@@ -232,7 +244,7 @@ const WallSegment: React.FC<{
                 emissiveIntensity={emissiveIntensity}
                 transparent
                 opacity={
-                    isPreview || isAlert
+                    isPreview || isAlert || isBlinking
                         ? Math.max(wall.opacity, 0.8)
                         : wall.opacity
                 }
@@ -405,9 +417,12 @@ const DrawingOverlay: React.FC<{
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RaycastFloor: React.FC<{
-    fw: number; fd: number; floorY: number;
-    drawing: UseWallDrawingReturn;
-}> = ({ fw, fd, floorY, drawing }) => {
+	fw: number; fd: number; floorY: number;
+	drawing: UseWallDrawingReturn;
+	isPlacing?: boolean;
+	onSensorPlaced?: (nx: number, ny: number) => void;
+	onUpdatePlacementPreview?: (nx: number, ny: number) => void;
+}> = ({ fw, fd, floorY, drawing, isPlacing = false, onSensorPlaced, onUpdatePlacementPreview }) => {
     const isDrawingRef = useRef(false);
     const isClosedRef = useRef(false);
     const lastClickTime = useRef(0);
@@ -428,37 +443,48 @@ const RaycastFloor: React.FC<{
     });
 
     return (
-        <mesh
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, floorY + 0.01, 0]}
-            onPointerMove={e => {
-                if (!isDrawingRef.current || isClosedRef.current) return;
-                e.stopPropagation();
-                const { nx, ny } = toNorm((e as any).point);
-                drawing.updatePreview(nx, ny);
-            }}
-            onPointerDown={e => {
-                if (!isDrawingRef.current || isClosedRef.current) return;
-                e.stopPropagation();
-                const { nx, ny } = toNorm((e as any).point);
-                const now = Date.now();
-                const delta = now - lastClickTime.current;
-                lastClickTime.current = now;
+		<mesh
+			rotation={[-Math.PI / 2, 0, 0]}
+			position={[0, floorY + 0.05, 0]}
+			onPointerMove={e => {
+				e.stopPropagation();
+				const { nx, ny } = toNorm((e as any).point);
 
-                if (delta < 300) {
-                    if (clickTimer.current) {
-                        clearTimeout(clickTimer.current);
-                        clickTimer.current = null;
-                    }
-                    drawing.finishDrawing();
-                    return;
-                }
-                clickTimer.current = setTimeout(() => {
-                    drawing.addPoint(nx, ny);
-                    clickTimer.current = null;
-                }, 310);
-            }}
-        >
+				if (isDrawingRef.current && !isClosedRef.current) {
+					drawing.updatePreview(nx, ny);
+				} else if (isPlacing) {
+					onUpdatePlacementPreview?.(nx, ny);
+				}
+			}}
+			onPointerDown={e => {
+				e.stopPropagation();
+				const { nx, ny } = toNorm((e as any).point);
+
+				if (isPlacing) {
+					onSensorPlaced?.(nx, ny);
+					return;
+				}
+
+				if (!isDrawingRef.current || isClosedRef.current) return;
+
+				const now = Date.now();
+				const delta = now - lastClickTime.current;
+				lastClickTime.current = now;
+
+				if (delta < 300) {
+					if (clickTimer.current) {
+						clearTimeout(clickTimer.current);
+						clickTimer.current = null;
+					}
+					drawing.finishDrawing();
+					return;
+				}
+				clickTimer.current = setTimeout(() => {
+					drawing.addPoint(nx, ny);
+					clickTimer.current = null;
+				}, 310);
+			}}
+		>
             <planeGeometry args={[fw, fd]} />
             <meshBasicMaterial transparent opacity={0}
                 depthWrite={false} colorWrite={false}
@@ -539,7 +565,9 @@ const SiteScene: React.FC<{
     sensors: SensorNode[];
     focusedSensorId: number | null;
     setFocusedSensorId: (id: number | null) => void;
-}> = ({ areaTree, wallsByFloor, sensors, focusedSensorId, setFocusedSensorId }) => {
+    onSensorClick?: (sensor: SensorNode) => void;
+    blinkingWallIds?: (number | string)[];
+}> = ({ areaTree, wallsByFloor, sensors, focusedSensorId, setFocusedSensorId, onSensorClick, blinkingWallIds = [] }) => {
     const buildings = (areaTree.children ?? []).filter(
         c => c.area_type === 'Building'
     );
@@ -568,6 +596,8 @@ const SiteScene: React.FC<{
                         sensors={sensors}
                         focusedSensorId={focusedSensorId}
                         setFocusedSensorId={setFocusedSensorId}
+                        onSensorClick={onSensorClick}
+                        blinkingWallIds={blinkingWallIds}
                     />
                 </group>
             ))}
@@ -592,7 +622,9 @@ const BuildingScene: React.FC<{
     sensors: SensorNode[];
     focusedSensorId: number | null;
     setFocusedSensorId: (id: number | null) => void;
-}> = ({ building, wallsByFloor, sensors, focusedSensorId, setFocusedSensorId }) => {
+    onSensorClick?: (sensor: SensorNode) => void;
+    blinkingWallIds?: (number | string)[];
+}> = ({ building, wallsByFloor, sensors, focusedSensorId, setFocusedSensorId, onSensorClick, blinkingWallIds = [] }) => {
     const floors = (building.children ?? [])
         .filter(c => c.area_type === 'Floor')
         .sort((a, b) => (a.floor_level ?? 0) - (b.floor_level ?? 0));
@@ -633,7 +665,9 @@ const BuildingScene: React.FC<{
                                 key={wall.id}
                                 wall={wall}
                                 fw={fw} fd={fd}
-                                floorY={fy} />
+                                floorY={fy}
+                                isBlinking={blinkingWallIds.includes(wall.id)}
+                            />
                         ))}
 
                         {/* Sensor Markers */}
@@ -649,6 +683,7 @@ const BuildingScene: React.FC<{
                                     isFocused={focusedSensorId === sensor.id}
                                     onClick={clickedSensor => {
                                         setFocusedSensorId(clickedSensor.id);
+                                        onSensorClick?.(clickedSensor);
                                     }}
                                 />
                             ))}
@@ -704,7 +739,19 @@ const FloorScene: React.FC<{
     selectedAreaId: number | null;
     focusedSensorId: number | null;
     setFocusedSensorId: (id: number | null) => void;
-}> = ({ floor, walls, sensors, drawing, selectedAreaId, focusedSensorId, setFocusedSensorId }) => {
+    isPlacing?: boolean;
+    placementPreview?: { nx: number; ny: number } | null;
+    onSensorPlaced?: (nx: number, ny: number) => void;
+    onSensorClick?: (sensor: SensorNode) => void;
+    onUpdatePlacementPreview?: (nx: number, ny: number) => void;
+    blinkingWallIds?: (number | string)[];
+}> = ({
+    floor, walls, sensors, drawing, selectedAreaId,
+    focusedSensorId, setFocusedSensorId,
+    isPlacing = false, placementPreview = null,
+    onSensorPlaced, onSensorClick, onUpdatePlacementPreview,
+    blinkingWallIds = []
+}) => {
     const theme = useHaloTheme();
     const fw = floor.floor_width ?? 20;
     const fd = floor.floor_depth ?? 15;
@@ -780,6 +827,7 @@ const FloorScene: React.FC<{
                     isSelected={
                         selectedAreaId === null && false
                     }
+                    isBlinking={blinkingWallIds.includes(wall.id)}
                 />
             ))}
 
@@ -794,17 +842,71 @@ const FloorScene: React.FC<{
                     isFocused={focusedSensorId === sensor.id}
                     onClick={clickedSensor => {
                         setFocusedSensorId(clickedSensor.id);
+                        onSensorClick?.(clickedSensor);
                     }}
                 />
             ))}
 
-            {/* Drawing overlay */}
-            <DrawingOverlay drawing={drawing} fw={fw} fd={fd} />
+            {/* Ghost preview while placing */}
+            {isPlacing && placementPreview && (
+                <group position={[
+                    placementPreview.nx * fw - fw / 2,
+                    0.05,
+                    placementPreview.ny * fd - fd / 2,
+                ]}>
+                    {/* Pulsing ring */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                        <ringGeometry args={[1.5, 2.0, 48]} />
+                        <meshBasicMaterial
+                            color="#06d6a0"
+                            transparent
+                            opacity={0.5}
+                            depthWrite={false}
+                            side={THREE.DoubleSide}
+                        />
+                    </mesh>
+                    {/* Center dot */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                        <circleGeometry args={[0.25, 24]} />
+                        <meshBasicMaterial
+                            color="#06d6a0"
+                            transparent opacity={0.9}
+                            depthWrite={false}
+                        />
+                    </mesh>
+                    {/* Vertical line */}
+                    <mesh position={[0, 1.5, 0]}>
+                        <cylinderGeometry args={[0.03, 0.03, 3.0, 8]} />
+                        <meshBasicMaterial
+                            color="#06d6a0"
+                            transparent opacity={0.4}
+                        />
+                    </mesh>
+                    <Html position={[0, 3.2, 0]} center distanceFactor={20}
+                        style={{ pointerEvents: 'none' }}>
+                        <div style={{
+                            background: 'rgba(6,214,160,0.15)',
+                            border: '1px solid rgba(6,214,160,0.5)',
+                            borderRadius: 6, padding: '2px 10px',
+                            fontSize: 10, fontWeight: 700,
+                            color: '#06d6a0', whiteSpace: 'nowrap',
+                        }}>
+                            Click to place
+                        </div>
+                    </Html>
+                </group>
+            )}
 
-            {/* Raycast floor */}
             <RaycastFloor
                 fw={fw} fd={fd} floorY={0}
-                drawing={drawing} />
+                drawing={drawing}
+                isPlacing={isPlacing}
+                onSensorPlaced={onSensorPlaced}
+                onUpdatePlacementPreview={onUpdatePlacementPreview}
+            />
+
+            {/* Drawing overlay */}
+            <DrawingOverlay drawing={drawing} fw={fw} fd={fd} />
 
             <Grid position={[0, -0.005, 0]}
                 infiniteGrid
@@ -833,13 +935,21 @@ interface HaloFloorSceneProps {
     drawing: UseWallDrawingReturn;
     focusedSensorId: number | null;
     setFocusedSensorId: (id: number | null) => void;
+    isPlacing?: boolean;
+    placementPreview?: { nx: number; ny: number } | null;
+    onSensorPlaced?: (nx: number, ny: number) => void;
+    onSensorClick?: (sensor: SensorNode) => void;
+    onUpdatePlacementPreview?: (nx: number, ny: number) => void;
+    blinkingWallIds?: (number | string)[];
 }
 
 const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
-    sceneLevel, areaTree,
-    selectedBuilding, selectedFloor, selectedAreaId,
-    wallsByFloor, activeWalls, sensors, drawing,
-    focusedSensorId, setFocusedSensorId,
+    sceneLevel, areaTree, selectedBuilding, selectedFloor, selectedAreaId,
+    wallsByFloor, activeWalls, sensors,
+    drawing, focusedSensorId, setFocusedSensorId,
+    isPlacing = false, placementPreview = null,
+    onSensorPlaced, onSensorClick, onUpdatePlacementPreview,
+    blinkingWallIds = []
 }) => {
     switch (sceneLevel) {
 
@@ -851,6 +961,7 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
                     sensors={sensors}
                     focusedSensorId={focusedSensorId}
                     setFocusedSensorId={setFocusedSensorId}
+                    onSensorClick={onSensorClick}
                 />
             );
 
@@ -862,6 +973,7 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
                     sensors={sensors}
                     focusedSensorId={focusedSensorId}
                     setFocusedSensorId={setFocusedSensorId}
+                    onSensorClick={onSensorClick}
                 />
             );
             return (
@@ -871,6 +983,7 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
                     sensors={sensors}
                     focusedSensorId={focusedSensorId}
                     setFocusedSensorId={setFocusedSensorId}
+                    onSensorClick={onSensorClick}
                 />
             );
 
@@ -883,6 +996,7 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
                     sensors={sensors}
                     focusedSensorId={focusedSensorId}
                     setFocusedSensorId={setFocusedSensorId}
+                    onSensorClick={onSensorClick}
                 />
             );
             return (
@@ -896,6 +1010,12 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
                     selectedAreaId={selectedAreaId}
                     focusedSensorId={focusedSensorId}
                     setFocusedSensorId={setFocusedSensorId}
+                    onSensorClick={onSensorClick}
+                    isPlacing={isPlacing}
+                    placementPreview={placementPreview}
+                    onSensorPlaced={onSensorPlaced}
+                    onUpdatePlacementPreview={onUpdatePlacementPreview}
+                    blinkingWallIds={blinkingWallIds}
                 />
             );
 
@@ -907,6 +1027,8 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
                     sensors={sensors}
                     focusedSensorId={focusedSensorId}
                     setFocusedSensorId={setFocusedSensorId}
+                    onSensorClick={onSensorClick}
+                    blinkingWallIds={blinkingWallIds}
                 />
             );
     }

@@ -1,13 +1,17 @@
-
 import React, { useState, useRef } from 'react';
 import { AreaNode, AreaWall, SensorHalo, SensorNode } from '../Types/types';
 import styles from './HaloRightPanel.module.scss';
 import { UseWallDrawingReturn } from '../Hooks/useWallDrawing';
+import SensorDetailPanel from './SensorDetailPanel';
+import SensorPlacementPanel from './SensorPlacementPanel';
+import { PendingSensor } from '../Hooks/useSensorPlacement';
 
 export type RightPanelMode =
     | 'wall_draw'
     | 'image_upload'
     | 'sensor_place'
+    | 'sensor_detail'
+    | 'sensor_placement'
     | null;
 
 // ── Panel header icons ────────────────────────────────────────────────────────
@@ -410,65 +414,213 @@ const ImageUploadPanel: React.FC<{
 // ────────────────────────────────────────────────────────────────────────────
 
 const SensorPlacePanel: React.FC<{
-    sensors: SensorNode[];
-    onRemove: (id: number) => void;
-}> = ({ sensors, onRemove }) => {
-    const statusRowClass = (status: string) => {
-        if (status === 'alert') return styles.haloRowAlert;
-        if (status === 'offline') return styles.haloRowOffline;
-        return styles.haloRowOnline;
-    };
+    sensors:          SensorNode[];   // placed on this floor
+    unplacedSensors:  SensorNode[];   // floor_id = null
+    onRemove:         (id: number) => void;
+    onStartPlacing?:  () => void;     // add brand new
+    onPlaceExisting?: (id: number) => void; // place existing unplaced
+    isPlacing?:       boolean;
+    pendingUnplacedId?: number | null;
+}> = ({
+    sensors, unplacedSensors, onRemove,
+    onStartPlacing, onPlaceExisting,
+    isPlacing, pendingUnplacedId,
+}) => {
 
     const statusBadgeClass = (status: string) => {
-        if (status === 'alert') return styles.statusAlertBadge;
+        if (status === 'alert')   return styles.statusAlertBadge;
         if (status === 'offline') return styles.statusOfflineBadge;
         return styles.statusOnlineBadge;
     };
 
+    const statusRowClass = (status: string) => {
+        if (status === 'alert')   return styles.haloRowAlert;
+        if (status === 'offline') return styles.haloRowOffline;
+        return styles.haloRowOnline;
+    };
+
     const statusColor = (status: string) => {
-        if (status === 'alert') return 'var(--bs-danger)';
+        if (status === 'alert')   return 'var(--bs-danger)';
         if (status === 'offline') return 'var(--bs-secondary-color)';
         return 'var(--bs-success)';
     };
 
     return (
         <div className={styles.panelBody}>
-            <Section title="Placed Sensors">
+
+            {/* ── Add new sensor button / placing hint ──────────────────── */}
+            <div className={styles.section}>
+                {!isPlacing ? (
+                    <button
+                        className={styles.addSensorBtn}
+                        onClick={onStartPlacing}
+                    >
+                        <span className={styles.addSensorIcon}>＋</span>
+                        <div className={styles.addSensorText}>
+                            <span className={styles.addSensorTitle}>
+                                Add New Sensor
+                            </span>
+                            <span className={styles.addSensorSub}>
+                                Click to activate placement mode
+                            </span>
+                        </div>
+                        <span className={styles.addSensorArrow}>→</span>
+                    </button>
+                ) : (
+                    <div className={styles.placingHintCard}>
+                        <div className={styles.placingHintTop}>
+                            <span className={styles.placingDot} />
+                            <span className={styles.placingTitle}>
+                                {pendingUnplacedId
+                                    ? `Placing: ${unplacedSensors.find(
+                                        s => s.id === pendingUnplacedId
+                                      )?.name ?? 'Sensor'}`
+                                    : 'Placement Active'
+                                }
+                            </span>
+                        </div>
+                        <p className={styles.placingDesc}>
+                            Move your mouse over the floor.
+                            Click anywhere to drop the sensor.
+                        </p>
+                        <div className={styles.placingSteps}>
+                            <div className={styles.placingStep}>
+                                <span className={styles.stepNum}>1</span>
+                                Hover floor to preview
+                            </div>
+                            <div className={styles.placingStep}>
+                                <span className={styles.stepNum}>2</span>
+                                Click to place
+                            </div>
+                            <div className={styles.placingStep}>
+                                <span className={styles.stepNum}>3</span>
+                                {pendingUnplacedId
+                                    ? 'Sensor placed immediately'
+                                    : 'Name it and assign events'}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Unplaced sensors — ready to deploy ───────────────────── */}
+            {unplacedSensors.length > 0 && (
+                <Section title={`Unplaced Sensors (${unplacedSensors.length})`}>
+                    <div className={styles.haloList}>
+                        {unplacedSensors.map(s => {
+                            const isPending = pendingUnplacedId === s.id;
+                            return (
+                                <div
+                                    key={s.id}
+                                    className={`${styles.unplacedRow}
+                                        ${isPending ? styles.unplacedRowActive : ''}`}
+                                >
+                                    {/* Left — sensor info */}
+                                    <div className={styles.unplacedLeft}>
+                                        <div className={styles.unplacedIconWrap}>
+                                            <span className={styles.unplacedIcon}>
+                                                📡
+                                            </span>
+                                        </div>
+                                        <div className={styles.haloInfo}>
+                                            <span className={styles.haloName}>
+                                                {s.name}
+                                            </span>
+                                            <span className={styles.haloMeta}>
+                                                {s.mac_address}
+                                            </span>
+                                            {/* Events preview */}
+                                            <div className={styles.eventTags}>
+                                                {s.event_configs
+                                                    .slice(0, 3)
+                                                    .map(e => (
+                                                        <span
+                                                            key={e.id}
+                                                            className={styles.eventTag}
+                                                        >
+                                                            {e.event_id}
+                                                        </span>
+                                                    ))}
+                                                {s.event_configs.length > 3 && (
+                                                    <span className={styles.eventTagMore}>
+                                                        +{s.event_configs.length - 3}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right — place button */}
+                                    {!isPlacing ? (
+                                        <button
+                                            className={styles.placeBtn}
+                                            onClick={() => onPlaceExisting?.(s.id)}
+                                            title="Place on floor"
+                                        >
+                                            <span className={styles.placeBtnIcon}>
+                                                📍
+                                            </span>
+                                            <span className={styles.placeBtnText}>
+                                                Place
+                                            </span>
+                                        </button>
+                                    ) : isPending ? (
+                                        <div className={styles.pendingIndicator}>
+                                            <span className={styles.pendingDot} />
+                                            Placing…
+                                        </div>
+                                    ) : (
+                                        <div className={styles.waitingIndicator}>
+                                            Wait
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Section>
+            )}
+
+            {/* ── Placed sensors on this floor ─────────────────────────── */}
+            <Section title={`Placed Here (${sensors.length})`}>
                 {sensors.length === 0 ? (
                     <div className={styles.emptyList}>
                         <div className={styles.emptyListIcon}>📡</div>
-                        <div className={styles.emptyListText}>No sensors placed</div>
+                        <div className={styles.emptyListText}>
+                            No sensors placed
+                        </div>
                         <div className={styles.emptyListSub}>
-                            Sensors placed on this floor<br />will appear here.
+                            Use Add New or place an<br />
+                            unplaced sensor above.
                         </div>
                     </div>
                 ) : (
                     <div className={styles.haloList}>
                         {sensors.map(s => (
-                            <div key={s.id} className={statusRowClass(s.sensor_status)}>
-                                {/* Status dot with pulse for alert */}
+                            <div
+                                key={s.id}
+                                className={statusRowClass(s.sensor_status)}
+                            >
                                 <div
-                                    className={`${styles.haloDot} ${s.sensor_status === 'alert' ? styles.pulse : ''}`}
+                                    className={`${styles.haloDot}
+                                        ${s.sensor_status === 'alert'
+                                            ? styles.pulse : ''}`}
                                     style={{
                                         background: statusColor(s.sensor_status),
-                                        color: statusColor(s.sensor_status)
+                                        color:      statusColor(s.sensor_status),
                                     }}
                                 />
-
-                                {/* Info */}
                                 <div className={styles.haloInfo}>
-                                    <span className={styles.haloName}>{s.name}</span>
+                                    <span className={styles.haloName}>
+                                        {s.name}
+                                    </span>
                                     <span className={styles.haloMeta}>
                                         {s.x_val?.toFixed(2)}, {s.y_val?.toFixed(2)}
                                     </span>
                                 </div>
-
-                                {/* Status badge */}
                                 <span className={statusBadgeClass(s.sensor_status)}>
                                     {s.sensor_status}
                                 </span>
-
-                                {/* Remove */}
                                 <button
                                     className={styles.haloRemove}
                                     onClick={() => onRemove(s.id)}
@@ -481,39 +633,43 @@ const SensorPlacePanel: React.FC<{
                     </div>
                 )}
             </Section>
-
-            <div className={styles.hint}>
-                Sensor placement on floor coming in next step.
-            </div>
         </div>
     );
 };
 
-// ────────────────────────────────────────────────────────────────────────────
-// UNIFIED RIGHT PANEL
-// ────────────────────────────────────────────────────────────────────────────
 
 interface HaloRightPanelProps {
     mode: RightPanelMode;
     selectedFloor: AreaNode | null;
     drawing: UseWallDrawingReturn;
     sensors: SensorNode[];
+    unplacedSensors?:    SensorNode[];
     onSaveWalls: () => void;
     onImageUpload: (floorId: number, url: string) => void;
     onImageRemove: (floorId: number) => void;
     onAddSensor: (sensor: SensorNode) => void;
     onRemoveSensor: (id: number) => void;
     onClose: () => void;
+
+    selectedSensor?: SensorNode | null;
+    pendingSensor?: PendingSensor | null;
+    onConfirmPlacement?: (name: string, mac: string, events: string[]) => void;
+    onCancelPlacement?: () => void;
+    onStartPlacing?:     () => void;
+    onPlaceExisting?:    (id: number) => void;
+    isPlacing?:          boolean;
+    pendingUnplacedId?:  number | null;
 }
 
 const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
-    mode, selectedFloor, drawing, sensors,
+    mode, selectedFloor, drawing, sensors, unplacedSensors,
     onSaveWalls, onImageUpload, onImageRemove,
     onAddSensor, onRemoveSensor, onClose,
+    selectedSensor, pendingSensor, onConfirmPlacement, onCancelPlacement, 
+    onStartPlacing, onPlaceExisting, isPlacing, pendingUnplacedId,
 }) => {
     const isOpen = mode !== null;
 
-    // Panel header config
     const headerConfig = {
         wall_draw: {
             icon: <PanelIcons.Wall />,
@@ -529,9 +685,21 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
         },
         sensor_place: {
             icon: <PanelIcons.Sensor />,
-            title: 'Sensor Placement',
+            title: 'Inventory',
             subtitle: selectedFloor?.name ?? '',
             accent: '#4a90d9',
+        },
+        sensor_detail: {
+            icon: <PanelIcons.Sensor />,
+            title: 'Sensor Detail',
+            subtitle: selectedSensor?.name ?? '',
+            accent: '#06d6a0',
+        },
+        sensor_placement: {
+            icon: <PanelIcons.Sensor />,
+            title: 'Place Sensor',
+            subtitle: selectedFloor?.name ?? '',
+            accent: '#06d6a0',
         },
     };
 
@@ -592,7 +760,24 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
             {mode === 'sensor_place' && (
                 <SensorPlacePanel
                     sensors={sensors}
+                    unplacedSensors={unplacedSensors ?? []}
                     onRemove={onRemoveSensor}
+                    onStartPlacing={onStartPlacing}
+                    onPlaceExisting={onPlaceExisting}
+                    isPlacing={isPlacing}
+                    pendingUnplacedId={pendingUnplacedId}
+                />
+            )}
+
+            {mode === 'sensor_detail' && selectedSensor && (
+                <SensorDetailPanel sensor={selectedSensor} />
+            )}
+
+            {mode === 'sensor_placement' && pendingSensor && onConfirmPlacement && (
+                <SensorPlacementPanel
+                    pending={pendingSensor}
+                    onConfirm={onConfirmPlacement}
+                    onCancel={onCancelPlacement ?? (() => { })}
                 />
             )}
 

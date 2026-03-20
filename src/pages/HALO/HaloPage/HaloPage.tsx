@@ -21,6 +21,9 @@ import { SensorAlertEmit } from '../ThreeD/components/scene/emits/SensorAlertEmi
 import HaloSidebar from '../Components/HaloSidebar';
 import HaloRightPanel, { RightPanelMode } from '../Components/HaloRightPanel';
 import HaloFloorScene from '../Components/HaloFloorScene';
+import { useSensorPlacement } from '../Hooks/useSensorPlacement';
+import SensorDetailPanel from '../Components/SensorDetailPanel';
+import SensorPlacementPanel from '../Components/SensorPlacementPanel';
 import styles from './HaloPage.module.scss';
 
 // ── Scene level type ──────────────────────────────────────────────────────────
@@ -56,6 +59,11 @@ const HaloPage: React.FC = () => {
 	// ── Panel state ───────────────────────────────────────────────────────────
 	const [showSidebar, setShowSidebar] = useState(true);
 	const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(null);
+	const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
+
+	const sensorPlacement = useSensorPlacement();
+	const [selectedSensorId, setSelectedSensorId] = useState<number | null>(null);
+	const [pendingUnplacedId, setPendingUnplacedId] = useState<number | null>(null);
 
 	// ── Local data state ──────────────────────────────────────────────────────
 	const [wallsByFloor, setWallsByFloor] = useState<Record<number, AreaWall[]>>(DUMMY_WALLS);
@@ -88,6 +96,24 @@ const HaloPage: React.FC = () => {
 	const selectedArea = useMemo(() =>
 		selectedAreaId ? findNodeById(areaTree, selectedAreaId) : null,
 		[selectedAreaId, areaTree]
+	);
+
+	const selectedSensor = useMemo(() =>
+		sensors.find(s => s.id === selectedSensorId) ?? null,
+		[sensors, selectedSensorId]
+	);
+
+	const placedSensors = useMemo(() =>
+		sensors.filter(s =>
+			s.floor_id !== null &&
+			s.floor_id === selectedFloorId
+		),
+		[sensors, selectedFloorId]
+	);
+
+	const unplacedSensors = useMemo(() =>
+		sensors.filter(s => s.floor_id === null),
+		[sensors]
 	);
 
 	// ── Wall drawing hook ─────────────────────────────────────────────────────
@@ -184,7 +210,9 @@ const HaloPage: React.FC = () => {
 		setSceneLevel('floor');
 		setRightPanelMode(null);
 		wallDrawing.cancelDrawing();
-	}, [wallDrawing]);
+		sensorPlacement.cancelPlacing();
+		setSelectedSensorId(null);
+	}, [wallDrawing, sensorPlacement]);
 
 	const handleSelectArea = useCallback((id: number) => {
 		setSelectedAreaId(prev => prev === id ? null : id);
@@ -240,7 +268,100 @@ const HaloPage: React.FC = () => {
 
 	const handleRemoveSensor = useCallback((id: number) => {
 		setSensors(prev => prev.filter(s => s.id !== id));
+		if (selectedSensorId === id) setSelectedSensorId(null);
+	}, [selectedSensorId]);
+
+	// Sensor click handler — passed down to HaloFloorScene
+	const handleSensorClick = useCallback((sensor: SensorNode) => {
+		setSelectedSensorId(sensor.id);
+		setRightPanelMode('sensor_detail');
+		setFocusedSensorId(sensor.id);
+
+		// Sync with area and walls
+		if (sensor.area_id) {
+			setSelectedAreaId(sensor.area_id);
+		}
+		if (sensor.wall_ids) {
+			setBlinkingWallIds(sensor.wall_ids);
+		} else {
+			setBlinkingWallIds([]);
+		}
 	}, []);
+
+	// Sensor placement tool toggle
+	const handleSensorPlaceToggle = useCallback(() => {
+		if (!selectedFloorId) return;
+		sensorPlacement.cancelPlacing();
+		setRightPanelMode(prev =>
+			prev === 'sensor_place' ? null : 'sensor_place'
+		);
+		wallDrawing.cancelDrawing();
+	}, [selectedFloorId, sensorPlacement, wallDrawing]);
+
+	// handler — called when user clicks an unplaced sensor card
+	const handleStartPlacingFromPanel = useCallback(() => {
+		setPendingUnplacedId(null);
+		sensorPlacement.startPlacing();
+		// Keep panel open — user needs to see the ghost instruction
+	}, [sensorPlacement]);
+
+	const handleStartPlacingSpecific = useCallback((sensorId: number) => {
+		setPendingUnplacedId(sensorId);
+		sensorPlacement.startPlacing();
+	}, [sensorPlacement]);
+
+	// Floor click during placement — called from HaloFloorScene
+	const handleSensorPlaced = useCallback((nx: number, ny: number) => {
+		if (!selectedFloorId) return;
+
+		if (pendingUnplacedId !== null) {
+			// Placing an existing unplaced sensor
+			setSensors(prev => prev.map(s =>
+				s.id === pendingUnplacedId
+					? {
+						...s,
+						floor_id: selectedFloorId,
+						x_val: nx,
+						y_val: ny,
+						z_val: 0.85,
+						online_status: true,
+						sensor_status: 'online' as const,
+						halo_color: '#06d6a0',
+						halo_intensity: 0.35,
+					}
+					: s
+			));
+			setPendingUnplacedId(null);
+			sensorPlacement.cancelPlacing();
+			setRightPanelMode('sensor_place');
+			return;
+		}
+
+		// New sensor placement
+		const count = sensors.filter(s => s.floor_id === selectedFloorId).length;
+		sensorPlacement.placeSensor(nx, ny, selectedFloorId, count);
+		setRightPanelMode('sensor_placement');
+	}, [selectedFloorId, sensors, sensorPlacement, pendingUnplacedId]);
+
+	// Confirm placement
+	const handleConfirmPlacement = useCallback((
+		name: string, mac: string, events: string[]
+	) => {
+		if (!sensorPlacement.pendingSensor) return;
+		const newSensor = sensorPlacement.confirmPlacement(
+			sensorPlacement.pendingSensor, name, mac, events
+		);
+		setSensors(prev => [...prev, newSensor]);
+		setSelectedSensorId(newSensor.id);
+		setFocusedSensorId(newSensor.id);
+		setRightPanelMode('sensor_detail');
+	}, [sensorPlacement]);
+
+	// Cancel placement
+	const handleCancelPlacement = useCallback(() => {
+		sensorPlacement.cancelPending();
+		setRightPanelMode(null);
+	}, [sensorPlacement]);
 
 	// ── Alert handler — called by MockAlertPanel ──────────────────────────────────
 
@@ -336,12 +457,8 @@ const HaloPage: React.FC = () => {
 	}, [selectedFloorId, wallDrawing]);
 
 	const handleSensorToggle = useCallback(() => {
-		if (!selectedFloorId) return;
-		wallDrawing.cancelDrawing();
-		setRightPanelMode(prev =>
-			prev === 'sensor_place' ? null : 'sensor_place'
-		);
-	}, [selectedFloorId, wallDrawing]);
+		handleSensorPlaceToggle();
+	}, [handleSensorPlaceToggle]);
 
 	// ── Active walls for current floor ────────────────────────────────────────
 
@@ -492,6 +609,12 @@ const HaloPage: React.FC = () => {
 								drawing={wallDrawing}
 								focusedSensorId={focusedSensorId}
 								setFocusedSensorId={setFocusedSensorId}
+								isPlacing={sensorPlacement.isPlacing}
+								placementPreview={sensorPlacement.preview}
+								onSensorPlaced={handleSensorPlaced}
+								onSensorClick={handleSensorClick}
+								onUpdatePlacementPreview={sensorPlacement.updatePreview}
+								blinkingWallIds={blinkingWallIds}
 							/>
 						</Suspense>
 
@@ -517,6 +640,19 @@ const HaloPage: React.FC = () => {
 						</div>
 					)}
 
+					{sensorPlacement.isPlacing && (
+						<div className={styles.drawingBanner} style={{
+							background: 'rgba(6, 214, 160, 0.12)',
+							borderColor: 'rgba(6, 214, 160, 0.45)',
+							color: '#06d6a0',
+						}}>
+							📡 Sensor Placement Mode
+							<span className={styles.drawingHint}>
+								Move mouse over floor · Click to place sensor
+							</span>
+						</div>
+					)}
+
 				</div>
 
 				{/* Right panel */}
@@ -524,19 +660,29 @@ const HaloPage: React.FC = () => {
 					mode={rightPanelMode}
 					selectedFloor={selectedFloor}
 					drawing={wallDrawing}
-					sensors={sensors.filter(s =>
-						selectedFloorId
-							? s.floor_id === selectedFloorId
-							: false
-					)}
+					sensors={placedSensors}
+					unplacedSensors={unplacedSensors}
 					onSaveWalls={handleSaveWalls}
 					onImageUpload={handleImageUpload}
 					onImageRemove={handleImageRemove}
+					onStartPlacing={handleStartPlacingFromPanel}
+					onPlaceExisting={handleStartPlacingSpecific}
 					onAddSensor={handleAddSensor}
 					onRemoveSensor={handleRemoveSensor}
+					selectedSensor={selectedSensor}
+					pendingSensor={sensorPlacement.pendingSensor}
+					isPlacing={sensorPlacement.isPlacing}
+					pendingUnplacedId={pendingUnplacedId}
+					onConfirmPlacement={handleConfirmPlacement}
+					onCancelPlacement={handleCancelPlacement}
 					onClose={() => {
 						setRightPanelMode(null);
 						wallDrawing.cancelDrawing();
+						sensorPlacement.cancelPlacing();
+						sensorPlacement.cancelPending();
+						setPendingUnplacedId(null);
+						setSelectedAreaId(null);
+						setBlinkingWallIds([]);
 					}}
 				/>
 

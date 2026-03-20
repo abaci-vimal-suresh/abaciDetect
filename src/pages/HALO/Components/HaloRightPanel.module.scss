@@ -718,3 +718,311 @@
     color: var(--bs-secondary-color);
     line-height: 1.5;
 }
+
+// ── Add sensor button ─────────────────────────────────────────────────────────
+
+.addSensorBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(var(--bs-primary-rgb), 0.04);
+    border: 1.5px dashed rgba(var(--bs-primary-rgb), 0.35);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: left;
+    font-family: var(--bs-font-sans-serif);
+
+    &:hover {
+        background: rgba(var(--bs-primary-rgb), 0.08);
+        border-color: var(--bs-primary);
+        border-style: solid;
+        box-shadow: 0 3px 12px rgba(var(--bs-primary-rgb), 0.12);
+        transform: translateY(-1px);
+    }
+}
+
+.addSensorIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.25);
+    color: var(--bs-primary);
+    font-size: 18px;
+    font-weight: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.addSensorText {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.addSensorTitle {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--bs-primary);
+}
+
+.addSensorSub {
+    font-size: 10px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    font-weight: 400;
+}
+
+.addSensorArrow {
+    font-size: 14px;
+    color: var(--bs-primary);
+    opacity: 0.5;
+    flex-shrink: 0;
+    transition: all 0.15s;
+
+    .addSensorBtn:hover & {
+        opacity: 1;
+        transform: translateX(3px);
+    }
+}
+
+// ── Placing hint card ─────────────────────────────────────────────────────────
+
+.placingHintCard {
+    background: rgba(6, 214, 160, 0.06);
+    border: 1px solid rgba(6, 214, 160, 0.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.placingHintTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.placingDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #06d6a0;
+    box-shadow: 0 0 8px #06d6a0;
+    flex-shrink: 0;
+    animation: placing-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes placing-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(1.4); }
+}
+
+.placingTitle {
+    font-size: 12px;
+    font-weight: 700;
+    color: #06d6a0;
+}
+
+.placingDesc {
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+    line-height: 1.55;
+    margin: 0;
+}
+
+.placingSteps {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(6, 214, 160, 0.15);
+}
+
+.placingStep {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-gray-500));
+}
+
+.stepNum {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(6, 214, 160, 0.15);
+    border: 1px solid rgba(6, 214, 160, 0.3);
+    color: #06d6a0;
+    font-size: 9px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+// ── Unplaced sensor rows ──────────────────────────────────────────────────────
+
+.unplacedRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bs-tertiary-bg, var(--bs-gray-100));
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: default;
+    position: relative;
+
+    &:hover {
+        border-color: rgba(var(--bs-primary-rgb), 0.35);
+        background: rgba(var(--bs-primary-rgb), 0.04);
+        transform: translateY(-1px);
+    }
+}
+
+.unplacedRowActive {
+    border-color: var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), 0.08);
+    box-shadow: 0 4px 15px rgba(var(--bs-primary-rgb), 0.12);
+
+    &::before {
+        content: '';
+        position: absolute;
+        left: -1px;
+        top: 10px;
+        bottom: 10px;
+        width: 3px;
+        background: var(--bs-primary);
+        border-radius: 0 4px 4px 0;
+    }
+}
+
+.unplacedLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.unplacedIconWrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+
+    .unplacedRowActive & {
+        border-color: rgba(var(--bs-primary-rgb), 0.3);
+        color: var(--bs-primary);
+    }
+}
+
+.unplacedIcon {
+    font-size: 18px;
+}
+
+// ── Event tags ────────────────────────────────────────────────────────────────
+
+.eventTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.eventTag {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--bs-secondary-color);
+    background: rgba(var(--bs-primary-rgb), 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.eventTagMore {
+    @extend .eventTag;
+    background: var(--bs-tertiary-bg);
+    opacity: 0.6;
+}
+
+// ── Place button ──────────────────────────────────────────────────────────────
+
+.placeBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bs-primary);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 6px rgba(var(--bs-primary-rgb), 0.25);
+
+    &:hover {
+        filter: brightness(1.1);
+        transform: scale(1.05);
+        box-shadow: 0 4px 10px rgba(var(--bs-primary-rgb), 0.35);
+    }
+
+    &:active {
+        transform: scale(0.98);
+    }
+}
+
+.placeBtnIcon {
+    font-size: 13px;
+}
+
+.placeBtnText {
+    font-size: 11px;
+    font-weight: 700;
+}
+
+// ── Placement indicators ──────────────────────────────────────────────────────
+
+.pendingIndicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--bs-primary);
+    padding: 6px 10px;
+}
+
+.pendingDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    animation: placing-pulse 1s infinite;
+}
+
+.waitingIndicator {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+    opacity: 0.4;
+    padding: 0 10px;
+}

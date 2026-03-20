@@ -114,7 +114,10 @@ export interface SensorNode {
     sensor_status: SensorStatus;   // derived: 'online' | 'offline' | 'alert'
 
     // Position on floor — normalized 0.0–1.0
-    floor_id: number;              // which floor this sensor is placed on
+    // NULL = unplaced, valid number = placed on that floor
+    floor_id: number | null;              // which floor this sensor is placed on
+    area_id?: number | null;              // which room/area this sensor belongs to
+    wall_ids?: (number | string)[];       // explicit list of walls to highlight
     x_val: number;                 // normalized X within floor_width
     y_val: number;                 // normalized Y within floor_depth
     z_val: number;                 // height (0=floor, 1=ceiling)
