@@ -1,30 +1,30 @@
 import React, { lazy, useContext } from 'react';
 import { Navigate } from 'react-router-dom';
 import AuthContext from '../contexts/authContext';
-import DeviceSettings from '../pages/HALO/Settings/DeviceSettings';
+import DeviceSettings from '../pages/settings/DeviceSettings';
 // HALO IoT Pages
-const HaloDashboard = lazy(() => import('../pages/HALO/Dashboard/Dashboard'));
-const HaloSensorList = lazy(() => import('../pages/HALO/Sensors/SensorList'));
-const HaloAlertHistory = lazy(() => import('../pages/HALO/Alerts/AlertHistory'));
-const HaloAlertFilter = lazy(() => import('../pages/HALO/Alerts/AlertFilterPage'));
-const HaloAlertActions = lazy(() => import('../pages/HALO/Alerts/AlertActionPage'));
-const HaloAlertFlow = lazy(() => import('../pages/HALO/Alerts/AlertFlowPage'));
-const HaloAlertFilterGroups = lazy(() => import('../pages/HALO/Alerts/AlertFilterGroupPage'));
-const HaloFirmwareUpdate = lazy(() => import('../pages/HALO/Sensors/FirmwareUpdate'));
-const HaloSensorIndividualDetail = lazy(() => import('../pages/HALO/Sensors/SensorIndividualDetail'));
-const HaloSettings = lazy(() => import('../pages/HALO/Settings/DeviceSettings'));
-const HaloAreaMain = lazy(() => import('../pages/HALO/Area/AreaMain'));
-const HaloAreaZoneView = lazy(() => import('../pages/HALO/Area/AreaZoneView'));
-const HaloSensorGroupManager = lazy(() => import('../pages/HALO/Sensors/SensorGroupManager'));
-const ThreeDPage = lazy(() => import('../pages/HALO/ThreeD/ThreeDPage'));
+const HaloDashboard = lazy(() => import('../pages/Dashboard/Dashboard'));
+const HaloSensorList = lazy(() => import('../pages/Sensors/SensorList'));
+const HaloAlertHistory = lazy(() => import('../pages/Alerts/AlertHistory'));
+const HaloAlertFilter = lazy(() => import('../pages/Alerts/AlertFilterPage'));
+const HaloAlertActions = lazy(() => import('../pages/Alerts/AlertActionPage'));
+const HaloAlertFlow = lazy(() => import('../pages/Alerts/AlertFlowPage'));
+const HaloAlertFilterGroups = lazy(() => import('../pages/Alerts/AlertFilterGroupPage'));
+const HaloFirmwareUpdate = lazy(() => import('../pages/Sensors/FirmwareUpdate'));
+const HaloSensorIndividualDetail = lazy(() => import('../pages/Sensors/SensorIndividualDetail'));
+const HaloSettings = lazy(() => import('../pages/settings/DeviceSettings'));
+const HaloAreaMain = lazy(() => import('../pages/Area/AreaMain'));
+const HaloAreaZoneView = lazy(() => import('../pages/Area/AreaZoneView'));
+const HaloSensorGroupManager = lazy(() => import('../pages/Sensors/SensorGroupManager'));
+const ThreeDPage = lazy(() => import('../pages/ThreeD_old/ThreeDPage'));
 const HaloSystemSettings = lazy(() => import('../pages/settings/HaloSettings'));
-const HaloSensorMonitoringDashboard = lazy(() => import('../pages/HALO/Sensors/SensorMonitoringDashboard'));
-const HaloPage = lazy(() => import('../pages/HALO/HaloPage/HaloPage'));
+const HaloSensorMonitoringDashboard = lazy(() => import('../pages/Sensors/SensorMonitoringDashboard'));
+const HaloPage = lazy(() => import('../pages/IoTVisualizer/HaloPage'));
 // User Pages
 const Profile = lazy(() => import('../pages/Profile/Index'));
-const UserListPage = lazy(() => import('../pages/HALO/Users/UserListPage'));
-const UserDetailPage = lazy(() => import('../pages/HALO/Users/UserDetailPage'));
-const UserGroupsPage = lazy(() => import('../pages/HALO/UserGroups/UserGroupsPage'));
+const UserListPage = lazy(() => import('../pages/Users/UserListPage'));
+const UserDetailPage = lazy(() => import('../pages/Users/UserDetailPage'));
+const UserGroupsPage = lazy(() => import('../pages/UserGroups/UserGroupsPage'));
 
 const RootRedirect = () => {
 	const { userData } = useContext(AuthContext);
