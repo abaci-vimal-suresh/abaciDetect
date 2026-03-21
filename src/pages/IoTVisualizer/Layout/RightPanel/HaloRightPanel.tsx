@@ -6,6 +6,7 @@ import { UseWallDrawingReturn } from '../../hooks/useWallDrawing';
 import { PendingSensor } from '../../../Sensors/hooks/useSensorPlacement';
 import SensorDetailPanel from '../../../Sensors/components/Details/SensorDetailPanel';
 import SensorPlacementPanel from '../../../Sensors/components/Placement/SensorPlacementPanel';
+import Icon from '../../../../components/icon/Icon';
 
 export type RightPanelMode =
     | 'wall_draw'
@@ -237,7 +238,8 @@ const WallDrawPanel: React.FC<{
                     </div>
                     {isShapeClosed && (
                         <div className={styles.closedBadge}>
-                            ✅ Shape closed — ready to save
+                            <Icon icon="CheckCircle" color="success" className="me-2" />
+                            Shape closed — ready to save
                         </div>
                     )}
                 </div>
@@ -377,7 +379,9 @@ const ImageUploadPanel: React.FC<{
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                 >
-                    <span className={styles.dropIcon}>🗺️</span>
+                    <span className={styles.dropIcon}>
+                        <Icon icon="Map" size="lg" />
+                    </span>
                     <span className={styles.dropText}>
                         {floor.area_plan
                             ? 'Drop to replace'
@@ -400,7 +404,10 @@ const ImageUploadPanel: React.FC<{
                 </div>
 
                 {error && (
-                    <div className={styles.errorMsg}>⚠ {error}</div>
+                    <div className={styles.errorMsg}>
+                        <Icon icon="Warning" className="me-2" />
+                        {error}
+                    </div>
                 )}
 
                 <div className={styles.hint}>
@@ -457,7 +464,9 @@ const SensorPlacePanel: React.FC<{
                             className={styles.addSensorBtn}
                             onClick={onStartPlacing}
                         >
-                            <span className={styles.addSensorIcon}>＋</span>
+                            <span className={styles.addSensorIcon}>
+                                <Icon icon="Add" />
+                            </span>
                             <div className={styles.addSensorText}>
                                 <span className={styles.addSensorTitle}>
                                     Add New Sensor
@@ -521,7 +530,7 @@ const SensorPlacePanel: React.FC<{
                                         <div className={styles.unplacedLeft}>
                                             <div className={styles.unplacedIconWrap}>
                                                 <span className={styles.unplacedIcon}>
-                                                    📡
+                                                    <Icon icon="Sensors" />
                                                 </span>
                                             </div>
                                             <div className={styles.haloInfo}>
@@ -560,7 +569,7 @@ const SensorPlacePanel: React.FC<{
                                                 title="Place on floor"
                                             >
                                                 <span className={styles.placeBtnIcon}>
-                                                    📍
+                                                    <Icon icon="Place" />
                                                 </span>
                                                 <span className={styles.placeBtnText}>
                                                     Place
@@ -587,7 +596,9 @@ const SensorPlacePanel: React.FC<{
                 <Section title={`Placed Here (${sensors.length})`}>
                     {sensors.length === 0 ? (
                         <div className={styles.emptyList}>
-                            <div className={styles.emptyListIcon}>📡</div>
+                            <div className={styles.emptyListIcon}>
+                                <Icon icon="Sensors" size="2x" />
+                            </div>
                             <div className={styles.emptyListText}>
                                 No sensors placed
                             </div>

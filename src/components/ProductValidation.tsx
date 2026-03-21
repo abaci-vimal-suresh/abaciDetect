@@ -4,7 +4,7 @@ import AbaciLoader from './AbaciLoader/AbaciLoader';
 import ActivationPage from '../pages/Auth/ActivationPage';
 import SuperAdminPage from '../pages/Auth/SuperAdminPage';
 import ConfigErrorPage from '../pages/Auth/ConfigErrorPage';
-import HaloPage from '../pages/HaloPage';
+
 
 interface ProductValidationProps {
     children: ReactNode;

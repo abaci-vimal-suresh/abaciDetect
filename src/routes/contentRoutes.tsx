@@ -19,7 +19,7 @@ const HaloSensorGroupManager = lazy(() => import('../pages/Sensors/SensorGroupMa
 const ThreeDPage = lazy(() => import('../pages/ThreeD_old/ThreeDPage'));
 const HaloSystemSettings = lazy(() => import('../pages/settings/HaloSettings'));
 const HaloSensorMonitoringDashboard = lazy(() => import('../pages/Sensors/SensorMonitoringDashboard'));
-const HaloPage = lazy(() => import('../pages/IoTVisualizer/HaloPage'));
+const DigitalTwinPage = lazy(() => import('../pages/IoTVisualizer/DigitalTwinPage'));
 // User Pages
 const Profile = lazy(() => import('../pages/Profile/Index'));
 const UserListPage = lazy(() => import('../pages/Users/UserListPage'));
@@ -139,7 +139,7 @@ const RouteConfig: CustomRouteConfig[] = [
 	},
 	{
 		path: '/halo/site-overview',
-		element: <HaloPage />,
+		element: <DigitalTwinPage />,
 		allowedTo: ['Admin', 'Viewer'],
 	},
 	{

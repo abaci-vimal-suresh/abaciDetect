@@ -7,8 +7,8 @@ export const haloMenu = {
         subMenu: null,
     },
     siteOverview: {
-        id: 'halo-page',
-        text: 'Halo Page',
+        id: 'digital-twin',
+        text: 'Digital Twin',
         path: '/halo/site-overview',
         icon: 'Domain',
         subMenu: null,

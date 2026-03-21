@@ -1,6 +1,6 @@
 import React from 'react';
 import { AreaNode, AreaWall, SensorNode } from '../Types/types';
-import { SceneLevel } from '../HaloPage';
+import { SceneLevel } from '../DigitalTwinPage';
 import { UseWallDrawingReturn } from '../hooks/useWallDrawing';
 
 // ── Modular Scenes ────────────────────────────────────────────────────────────

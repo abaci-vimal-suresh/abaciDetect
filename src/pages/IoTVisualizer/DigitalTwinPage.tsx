@@ -1,4 +1,4 @@
-// src/pages/halo/HaloPage.tsx
+// src/pages/IoTVisualizer/DigitalTwinPage.tsx
 
 import React, {
 	useState, useCallback, useRef, useMemo, useEffect, Suspense
@@ -40,13 +40,13 @@ import SensorDetailPanel from '../Sensors/components/Details/SensorDetailPanel';
 import SensorPlacementPanel from '../Sensors/components/Placement/SensorPlacementPanel';
 import HaloMetricDock from './Analytics/MetricDock/HaloMetricDock';
 import ZoomOnlyWhenLocked from './Interaction/ZoomOnlyWhenLocked';
-import styles from './HaloPage.module.scss';
+import styles from './DigitalTwinPage.module.scss';
 
 // ── Scene level type ──────────────────────────────────────────────────────────
 export type SceneLevel = 'site' | 'building' | 'floor' | 'area';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-const HaloPage: React.FC = () => {
+const DigitalTwinPage: React.FC = () => {
 
 	// ── Selection state ───────────────────────────────────────────────────────
 	const [selectedBuildingId, setSelectedBuildingId] = useState<number | null>(null);
@@ -660,7 +660,7 @@ const HaloPage: React.FC = () => {
 					>
 						<Icon icon="Menu" />
 					</button>
-					<span className={styles.title}>Halo Sensor Placement</span>
+					<span className={styles.title}>Digital Twin</span>
 					{breadcrumb && (
 						<span className={styles.breadcrumb}>— {breadcrumb}</span>
 					)}
@@ -913,4 +913,4 @@ const HaloPage: React.FC = () => {
 	);
 };
 
-export default HaloPage;
+export default DigitalTwinPage;
