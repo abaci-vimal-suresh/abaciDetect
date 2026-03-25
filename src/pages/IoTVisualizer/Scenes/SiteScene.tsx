@@ -44,14 +44,22 @@ const SiteScene: React.FC<SiteSceneProps> = ({
                 opacity={0.25} scale={300} blur={2}
                 far={10} color="#000820" />
 
-            {buildings.map(building => (
+            {buildings.map((building, idx) => {
+                // If all buildings share the same offset (all zero / not configured),
+                // auto-spread them so they don't overlap.
+                const allSameOffset = buildings.every(
+                    b => (b.offset_x ?? 0) === 0 && (b.offset_y ?? 0) === 0
+                );
+                const autoSpread = 40; // metres between buildings when auto-laid out
+                const wx = allSameOffset
+                    ? idx * autoSpread - ((buildings.length - 1) * autoSpread) / 2
+                    : (building.offset_x ?? 0);
+                const wz = allSameOffset ? 0 : (building.offset_y ?? 0);
+
+                return (
                 <group
                     key={building.id}
-                    position={[
-                        building.offset_x ?? 0,
-                        0,
-                        building.offset_y ?? 0,
-                    ]}
+                    position={[wx, 0, wz]}
                 >
                     <BuildingScene
                         building={building}
@@ -63,7 +71,8 @@ const SiteScene: React.FC<SiteSceneProps> = ({
                         blinkingWallIds={blinkingWallIds}
                     />
                 </group>
-            ))}
+                );
+            })}
 
             <Grid position={[0, -0.01, 0]}
                 infiniteGrid fadeDistance={300} fadeStrength={5}

@@ -1,6 +1,7 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
+import { Line } from '@react-three/drei';
 import { AreaWall } from '../Types/types';
 
 // ── BEZIER GEOMETRY BUILDER ───────────────────────────────────────────────────
@@ -161,6 +162,7 @@ interface WallSegmentProps {
     isBlinking?: boolean;
     onClick?: (wall: AreaWall) => void;
     onHover?: (hovered: boolean) => void;
+    onWallPatch?: (patch: Partial<AreaWall>) => void;
 }
 
 const WallSegment: React.FC<WallSegmentProps> = ({
@@ -171,8 +173,39 @@ const WallSegment: React.FC<WallSegmentProps> = ({
     isBlinking = false,
     onClick,
     onHover,
+    onWallPatch,
 }) => {
     const meshRef = useRef<THREE.Mesh>(null);
+    const { camera, gl } = useThree();
+    const [isDraggingCtrl, setIsDraggingCtrl] = useState(false);
+
+    // Drag logic — raw canvas pointer events while dragging bezier control point
+    useEffect(() => {
+        if (!isDraggingCtrl || !onWallPatch) return;
+        const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(floorY));
+        const raycaster = new THREE.Raycaster();
+        const target = new THREE.Vector3();
+
+        const onMove = (e: PointerEvent) => {
+            const rect = gl.domElement.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera({ x, y } as any, camera);
+            if (raycaster.ray.intersectPlane(dragPlane, target)) {
+                const nx = Math.max(0, Math.min(1, (target.x + fw / 2) / fw));
+                const ny = Math.max(0, Math.min(1, (target.z + fd / 2) / fd));
+                onWallPatch({ ctrl_x: nx, ctrl_y: ny });
+            }
+        };
+        const onUp = () => setIsDraggingCtrl(false);
+
+        gl.domElement.addEventListener('pointermove', onMove);
+        gl.domElement.addEventListener('pointerup', onUp);
+        return () => {
+            gl.domElement.removeEventListener('pointermove', onMove);
+            gl.domElement.removeEventListener('pointerup', onUp);
+        };
+    }, [isDraggingCtrl, camera, gl, fw, fd, floorY, onWallPatch]);
 
     const isArc = wall.wall_shape === 'arc' || wall.arc_center_x != null;
     const isBezier = !isArc && (wall.wall_shape === 'bezier' || wall.ctrl_x != null);
@@ -273,17 +306,60 @@ const WallSegment: React.FC<WallSegmentProps> = ({
     // Bezier
     if (isBezier) {
         if (!bezierGeo) return null;
+
+        const bx1 = wall.r_x1 * fw - fw / 2;
+        const bz1 = wall.r_y1 * fd - fd / 2;
+        const bx2 = wall.r_x2 * fw - fw / 2;
+        const bz2 = wall.r_y2 * fd - fd / 2;
+        const ctrlNx = wall.ctrl_x ?? (wall.r_x1 + wall.r_x2) / 2;
+        const ctrlNy = wall.ctrl_y ?? (wall.r_y1 + wall.r_y2) / 2;
+        const ctrlWx = ctrlNx * fw - fw / 2;
+        const ctrlWz = ctrlNy * fd - fd / 2;
+        const ctrlY = baseY + (wall.r_height ?? 3.0) / 2;
+
         return (
-            <mesh
-                ref={meshRef}
-                geometry={bezierGeo}
-                position={[0, baseY, 0]}
-                castShadow receiveShadow
-                renderOrder={10}
-                {...eventHandlers}
-            >
-                {material}
-            </mesh>
+            <group>
+                <mesh
+                    ref={meshRef}
+                    geometry={bezierGeo}
+                    position={[0, baseY, 0]}
+                    castShadow receiveShadow
+                    renderOrder={10}
+                    {...eventHandlers}
+                >
+                    {material}
+                </mesh>
+
+                {/* Bezier control point drag handle — only when selected */}
+                {isSelected && onWallPatch && (
+                    <>
+                        {/* Dashed lines from endpoints to control point */}
+                        <Line
+                            points={[[bx1, baseY + 0.15, bz1], [ctrlWx, baseY + 0.15, ctrlWz]]}
+                            color="#f0c040" lineWidth={1.2} dashed dashSize={0.2} gapSize={0.12}
+                            renderOrder={11}
+                        />
+                        <Line
+                            points={[[bx2, baseY + 0.15, bz2], [ctrlWx, baseY + 0.15, ctrlWz]]}
+                            color="#f0c040" lineWidth={1.2} dashed dashSize={0.2} gapSize={0.12}
+                            renderOrder={11}
+                        />
+                        {/* Draggable control point sphere */}
+                        <mesh
+                            position={[ctrlWx, ctrlY, ctrlWz]}
+                            renderOrder={12}
+                            onPointerDown={(e) => { e.stopPropagation(); setIsDraggingCtrl(true); }}
+                        >
+                            <sphereGeometry args={[0.22, 14, 14]} />
+                            <meshStandardMaterial
+                                color="#f0c040"
+                                emissive="#f0c040"
+                                emissiveIntensity={isDraggingCtrl ? 1.5 : 0.8}
+                            />
+                        </mesh>
+                    </>
+                )}
+            </group>
         );
     }
 

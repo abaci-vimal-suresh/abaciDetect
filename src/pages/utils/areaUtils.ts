@@ -50,11 +50,11 @@ export function buildAreaTree(areas: Area[]): AreaNode {
         autoStackFloors(floors);
     });
 
-    // Single root → return directly
-    if (roots.length === 1) return roots[0];
+    // Single root that IS already a Site → return directly
+    if (roots.length === 1 && roots[0].area_type === 'Site') return roots[0];
 
-    // Multiple roots (e.g. multiple buildings with no parent) →
-    // wrap in a virtual Site node so the tree always has one root
+    // Single non-Site root (e.g. one Building with no site parent), or
+    // multiple roots → wrap in a virtual Site node so the tree always has one root
     return {
         id: 0,
         name: 'Site',

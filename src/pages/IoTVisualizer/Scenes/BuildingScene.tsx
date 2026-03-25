@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { ContactShadows, Grid, Html } from '@react-three/drei';
 import { AreaNode, AreaWall, SensorNode } from '../Types/types';
-import FloorSlab, { useHaloTheme } from '../Base/FloorSlab';
+import { useHaloTheme } from '../Base/FloorSlab';
 import FloorPlanImage from '../Base/FloorPlanImage';
 import WallSegment from '../Elements/WallSegment';
 import HaloSensorMarker from '../../Sensors/components/Marker/HaloSensorMarker';
@@ -39,7 +39,6 @@ const BuildingScene: React.FC<BuildingSceneProps> = ({
 
                 return (
                     <group key={floor.id}>
-                        <FloorSlab fw={fw} fd={fd} floorY={fy} />
 
                         {floor.area_plan && (
                             <Suspense fallback={null}>

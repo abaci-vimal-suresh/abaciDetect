@@ -1,45 +1,48 @@
 // src/pages/IoTVisualizer/DigitalTwinPage.tsx
 
 import React, {
-	useState, useCallback, useRef, useMemo, useEffect, Suspense
+	useState, useCallback, useRef, useMemo, useEffect, Suspense, lazy
 } from 'react';
 import { Canvas } from '@react-three/fiber';
 import {
 	CameraControls, PerspectiveCamera,
 	GizmoHelper, GizmoViewcube, Environment
 } from '@react-three/drei';
-import { AreaNode, AreaWall, SensorHalo, SensorNode } from './Types/types';
+import { AreaNode, AreaWall, SensorNode } from './Types/types';
 import {
 	HALO_DUMMY_TREE, DUMMY_WALLS, DUMMY_SENSORS, DUMMY_AGGREGATED_BY_FLOOR,
-	findNodeById, getSensorsForFloor
+	findNodeById,
 } from '../Dummy/dummyData';
+import { useQueryClient } from '@tanstack/react-query';
 import {
 	useAreas, useSensors, useSensorConfigurations,
 	useLatestSensorLog, useWalls, useCreateWall, useUpdateWall, useDeleteWall,
 	useRegisterSensor, useUpdateSensor,
-	useAggregatedSensorData,
+	useAggregatedSensorData, useUpdateArea, fetchWallsForArea,
 } from '../../api/sensors.api';
 import { buildAreaTree } from '../utils/areaUtils';
 import {
 	enrichSensor, adaptEventConfigs, adaptWall, deriveHaloStatus,
 	deriveHaloColor, deriveHaloIntensity
 } from '../utils/sensorUtils';
-import { io, Socket } from 'socket.io-client';
 import { HALO_USE_MOCK } from '../../config';
 import { useWallDrawing } from './hooks/useWallDrawing';
-import { useRef as useThreeRef } from 'react';
-import MockAlertPanel, { HaloAlertPayload } from '../../shared/Alerts/MockAlertPanel/MockAlertPanel';
+import { HaloAlertPayload } from '../../shared/Alerts/MockAlertPanel/MockAlertPanel';
 import { SensorAlertEmit } from '../ThreeD_old/components/scene/emits/SensorAlertEmit';
-import HaloSidebar from './Layout/Sidebar/HaloSidebar';
-import HaloRightPanel, { RightPanelMode } from './Layout/RightPanel/HaloRightPanel';
-import HaloFloorScene from './Scenes/HaloFloorScene';
 import Icon from '../../components/icon/Icon';
 import { useSensorPlacement } from '../Sensors/hooks/useSensorPlacement';
-import SensorDetailPanel from '../Sensors/components/Details/SensorDetailPanel';
-import SensorPlacementPanel from '../Sensors/components/Placement/SensorPlacementPanel';
-import HaloMetricDock from './Analytics/MetricDock/HaloMetricDock';
 import ZoomOnlyWhenLocked from './Interaction/ZoomOnlyWhenLocked';
 import styles from './DigitalTwinPage.module.scss';
+import { RightPanelMode } from './Layout/RightPanel/HaloRightPanel';
+
+// ── Lazy-loaded heavy components (split into separate chunks) ─────────────────
+const HaloSidebar      = lazy(() => import('./Layout/Sidebar/HaloSidebar'));
+const HaloRightPanel   = lazy(() => import('./Layout/RightPanel/HaloRightPanel'));
+const HaloFloorScene   = lazy(() => import('./Scenes/HaloFloorScene'));
+const HaloMetricDock   = lazy(() => import('./Analytics/MetricDock/HaloMetricDock'));
+const MockAlertPanel   = lazy(() => import('../../shared/Alerts/MockAlertPanel/MockAlertPanel'));
+const SensorDetailPanel    = lazy(() => import('../Sensors/components/Details/SensorDetailPanel'));
+const SensorPlacementPanel = lazy(() => import('../Sensors/components/Placement/SensorPlacementPanel'));
 
 // ── Scene level type ──────────────────────────────────────────────────────────
 export type SceneLevel = 'site' | 'building' | 'floor' | 'area';
@@ -65,14 +68,17 @@ const DigitalTwinPage: React.FC = () => {
 	const [pendingUnplacedId, setPendingUnplacedId] = useState<number | null>(null);
 
 	// ── Data Query ────────────────────────────────────────────────────────────
+	const queryClient = useQueryClient();
 	const { data: rawAreas, isLoading: areasLoading } = useAreas();
-	const { data: rawSensors } = useSensors();
+	// Sensors are only needed once we're inside a building/floor — skip on site overview
+	const { data: rawSensors } = useSensors({}, { enabled: HALO_USE_MOCK || sceneLevel !== 'site' });
 	const { data: rawFloorWalls } = useWalls(selectedFloorId ?? 0);
 	const { mutateAsync: createWallMutation } = useCreateWall();
 	const { mutateAsync: updateWallMutation } = useUpdateWall();
 	const { mutateAsync: deleteWallMutation } = useDeleteWall();
 	const registerSensorMutation = useRegisterSensor();
 	const updateSensorMutation = useUpdateSensor();
+	const { mutateAsync: updateAreaMutation, isPending: isAreaUpdating } = useUpdateArea();
 
 	const currentAggId = useMemo(() => {
 		if (selectedFloorId) return selectedFloorId;
@@ -102,8 +108,10 @@ const DigitalTwinPage: React.FC = () => {
 	);
 
 	// ── Local data state ──────────────────────────────────────────────────────
-	const [wallsByFloor, setWallsByFloor] = useState<Record<number, AreaWall[]>>(DUMMY_WALLS);
-	const [sensors, setSensors] = useState<SensorNode[]>(DUMMY_SENSORS);
+	const [wallsByFloor, setWallsByFloor] = useState<Record<number, AreaWall[]>>(
+		HALO_USE_MOCK ? DUMMY_WALLS : {}
+	);
+	const [sensors, setSensors] = useState<SensorNode[]>(HALO_USE_MOCK ? DUMMY_SENSORS : []);
 
 	const areaTree = useMemo((): AreaNode => {
 		if (HALO_USE_MOCK || !rawAreas || rawAreas.length === 0) {
@@ -169,7 +177,7 @@ const DigitalTwinPage: React.FC = () => {
 
 	const [showMockPanel, setShowMockPanel] = useState(HALO_USE_MOCK);
 	const [focusedSensorId, setFocusedSensorId] = useState<number | null>(null);
-	const socketRef = useRef<Socket | null>(null);
+	const socketRef = useRef<any>(null);
 	const [activeEmits, setActiveEmits] = useState<{
 		id: number;
 		position: [number, number, number];
@@ -195,6 +203,23 @@ const DigitalTwinPage: React.FC = () => {
 		selectedBuildingId ? findNodeById(areaTree, selectedBuildingId) : null,
 		[selectedBuildingId, areaTree]
 	);
+
+	// Prefetch walls for all floors of the selected building so they appear
+	// immediately in building view without waiting for a floor to be clicked.
+	useEffect(() => {
+		if (HALO_USE_MOCK || !selectedBuilding) return;
+		const floors = (selectedBuilding.children ?? []).filter(
+			c => c.area_type === 'Floor'
+		);
+		if (floors.length === 0) return;
+		Promise.all(floors.map(f => fetchWallsForArea(f.id)))
+			.then(results => {
+				const updates: Record<number, AreaWall[]> = {};
+				floors.forEach((f, i) => { updates[f.id] = results[i].map(adaptWall); });
+				setWallsByFloor(prev => ({ ...prev, ...updates }));
+			})
+			.catch(() => { /* silently ignore */ });
+	}, [selectedBuilding]);
 
 	const selectedFloor = useMemo(() =>
 		selectedFloorId ? findNodeById(areaTree, selectedFloorId) : null,
@@ -237,7 +262,7 @@ const DigitalTwinPage: React.FC = () => {
 		const cc = cameraControlsRef.current;
 		if (!cc) return;
 
-		if (wallDrawing.isDrawing) {
+		if (wallDrawing.isDrawing || rightPanelMode === 'wall_edit') {
 			const fw = selectedFloor?.floor_width ?? 20;
 			const fd = selectedFloor?.floor_depth ?? 15;
 			const maxDim = Math.max(fw, fd);
@@ -287,7 +312,7 @@ const DigitalTwinPage: React.FC = () => {
 				cc.setTarget(0, 0, 0, true);
 				break;
 		}
-	}, [sceneLevel, wallDrawing.isDrawing, selectedFloor, selectedBuilding]);
+	}, [sceneLevel, wallDrawing.isDrawing, rightPanelMode, selectedFloor, selectedBuilding]);
 
 	// ── Sidebar handlers ──────────────────────────────────────────────────────
 
@@ -331,14 +356,18 @@ const DigitalTwinPage: React.FC = () => {
 
 
 	// ── Image handlers ────────────────────────────────────────────────────────
-	// TODO: Replace local areaTree patches with useUpdateArea API calls
-	const handleImageUpload = useCallback((floorId: number, objectUrl: string) => {
-		console.log('Image upload (local patch disabled):', floorId, objectUrl);
-	}, []);
+	const handleImageUpload = useCallback(async (floorId: number, file: File) => {
+		if (HALO_USE_MOCK) return;
+		const formData = new FormData();
+		formData.append('area_plan', file);
+		await updateAreaMutation({ areaId: floorId, data: formData });
+		// queryClient invalidation in useUpdateArea will refresh areaTree automatically
+	}, [updateAreaMutation]);
 
-	const handleImageRemove = useCallback((floorId: number) => {
-		console.log('Image remove (local patch disabled):', floorId);
-	}, []);
+	const handleImageRemove = useCallback(async (floorId: number) => {
+		if (HALO_USE_MOCK) return;
+		await updateAreaMutation({ areaId: floorId, data: { area_plan: null } });
+	}, [updateAreaMutation]);
 
 	// ── Wall save ─────────────────────────────────────────────────────────────
 
@@ -423,6 +452,18 @@ const DigitalTwinPage: React.FC = () => {
 		setRightPanelMode('wall_edit');
 		wallDrawing.cancelDrawing();
 	}, [wallDrawing]);
+
+	// Live-patch a wall in state (used by bezier drag handle — no API call)
+	const handleWallPatch = useCallback((wallId: number | string, patch: Partial<AreaWall>) => {
+		if (!selectedFloorId) return;
+		setWallsByFloor(prev => ({
+			...prev,
+			[selectedFloorId]: (prev[selectedFloorId] ?? []).map(w =>
+				w.id === wallId ? { ...w, ...patch } : w
+			),
+		}));
+		setSelectedWall(prev => prev?.id === wallId ? { ...prev, ...patch } : prev);
+	}, [selectedFloorId]);
 
 	// Sensor placement tool toggle
 	const handleSensorPlaceToggle = useCallback(() => {
@@ -716,7 +757,8 @@ const DigitalTwinPage: React.FC = () => {
 
 				{/* Sidebar */}
 				{showSidebar && (
-					<HaloSidebar
+					<Suspense fallback={null}>
+						<HaloSidebar
 						root={areaTree}
 						selectedBuildingId={selectedBuildingId}
 						selectedFloorId={selectedFloorId}
@@ -725,7 +767,8 @@ const DigitalTwinPage: React.FC = () => {
 						onSelectBuilding={handleSelectBuilding}
 						onSelectFloor={handleSelectFloor}
 						onSelectArea={handleSelectArea}
-					/>
+						/>
+					</Suspense>
 				)}
 
 				{/* Canvas */}
@@ -753,7 +796,7 @@ const DigitalTwinPage: React.FC = () => {
 							maxDistance={300}
 							dollyToCursor
 						/>
-						<ZoomOnlyWhenLocked locked={wallDrawing.isDrawing} />
+						<ZoomOnlyWhenLocked locked={wallDrawing.isDrawing || rightPanelMode === 'wall_edit'} />
 						<GizmoHelper
 							alignment="bottom-right"
 							margin={[80, 80]}
@@ -789,6 +832,7 @@ const DigitalTwinPage: React.FC = () => {
 								blinkingWallIds={blinkingWallIds}
 								onWallClick={handleWallClick}
 								selectedWallId={selectedWall?.id ?? null}
+								onWallPatch={handleWallPatch}
 							/>
 						</Suspense>
 
@@ -805,6 +849,7 @@ const DigitalTwinPage: React.FC = () => {
 					</Canvas>
 
 					{currentAggId && (
+						<Suspense fallback={null}>
 						<HaloMetricDock
 							areaId={currentAggId}
 							sensors={selectedFloorId
@@ -832,6 +877,7 @@ const DigitalTwinPage: React.FC = () => {
 								handleSensorClick(sensor);
 							}}
 						/>
+					</Suspense>
 					)}
 
 					{/* Drawing banner */}
@@ -860,6 +906,7 @@ const DigitalTwinPage: React.FC = () => {
 				</div>
 
 				{/* Right panel */}
+				<Suspense fallback={null}>
 				<HaloRightPanel
 					mode={rightPanelMode}
 					selectedFloor={selectedFloor}
@@ -869,9 +916,11 @@ const DigitalTwinPage: React.FC = () => {
 					onSaveWalls={handleSaveWalls}
 					onDeleteWall={handleDeleteWall}
 					onUpdateWall={handleUpdateWall}
+					onWallPatch={handleWallPatch}
 					selectedWall={selectedWall}
 					onImageUpload={handleImageUpload}
 					onImageRemove={handleImageRemove}
+					isImageUploading={isAreaUpdating}
 					onStartPlacing={handleStartPlacingFromPanel}
 					onPlaceExisting={handleStartPlacingSpecific}
 					onAddSensor={handleAddSensor}
@@ -911,13 +960,16 @@ const DigitalTwinPage: React.FC = () => {
 			setSelectedWall(null);
 					}}
 				/>
+			</Suspense>
 
 				{showMockPanel && (
-					<MockAlertPanel
-						sensors={sensors}
-						onFire={handleAlertFired}
-						onClose={() => setShowMockPanel(false)}
-					/>
+					<Suspense fallback={null}>
+						<MockAlertPanel
+							sensors={sensors}
+							onFire={handleAlertFired}
+							onClose={() => setShowMockPanel(false)}
+						/>
+					</Suspense>
 				)}
 			</div>
 		</div>

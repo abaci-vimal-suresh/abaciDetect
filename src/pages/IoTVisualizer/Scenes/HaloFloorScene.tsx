@@ -30,6 +30,7 @@ interface HaloFloorSceneProps {
     blinkingWallIds?: (number | string)[];
     onWallClick?: (wall: AreaWall) => void;
     selectedWallId?: number | string | null;
+    onWallPatch?: (wallId: number | string, patch: Partial<AreaWall>) => void;
 }
 
 /**
@@ -43,7 +44,7 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
     isPlacing = false, placementPreview = null,
     onSensorPlaced, onSensorClick, onUpdatePlacementPreview,
     blinkingWallIds = [],
-    onWallClick, selectedWallId,
+    onWallClick, selectedWallId, onWallPatch,
 }) => {
     switch (sceneLevel) {
 
@@ -116,6 +117,7 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
                     blinkingWallIds={blinkingWallIds}
                     onWallClick={onWallClick}
                     selectedWallId={selectedWallId}
+                    onWallPatch={onWallPatch}
                 />
             );
 

@@ -6,7 +6,7 @@ import Icon from '../../../components/icon/Icon';
 import Spinner from '../../../components/bootstrap/Spinner';
 import { useRegisterSensor, useAreas } from '../../../api/sensors.api';
 import { SensorRegistrationData, Area } from '../../../types/sensor';
-import '../../../../styles/pages/deviceregistration.scss';
+import '../../../styles/pages/deviceregistration.scss';
 
 interface IDeviceRegistrationProps {
     onSuccess: () => void;

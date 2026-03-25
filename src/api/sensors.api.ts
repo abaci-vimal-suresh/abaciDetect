@@ -303,9 +303,10 @@ export const useSensors = (filters?: {
     sensor_type?: string;
     is_online?: boolean;
     search?: string;
-}) => {
+}, options?: { enabled?: boolean }) => {
     return useQuery({
         queryKey: queryKeys.sensors.list(filters || {}),
+        enabled: options?.enabled !== false,
         queryFn: async () => {
             if (USE_MOCK_DATA) {
                 let filtered = [...MOCK_SENSORS];
@@ -589,7 +590,8 @@ export const useAggregatedSensorData = (filters: {
             });
             return data;
         },
-        enabled: !!filters.area_id || !!filters.sensor_group_id
+        enabled: (Array.isArray(filters.area_id) ? filters.area_id.length > 0 : !!filters.area_id) ||
+                 (Array.isArray(filters.sensor_group_id) ? filters.sensor_group_id.length > 0 : !!filters.sensor_group_id)
     });
 };
 
@@ -1997,6 +1999,17 @@ export const useSyncHaloConfigs = () => {
 
 
 
+
+export const fetchWallsForArea = async (areaId: number): Promise<Wall[]> => {
+    if (USE_MOCK_DATA) {
+        return MOCK_WALLS.filter(w => w.area_ids?.includes(areaId));
+    }
+    const { data } = await axiosInstance.get<{ results: Wall[] }>(
+        `/administration/walls/byarea/`,
+        { params: { area_id: areaId } }
+    );
+    return data.results || [];
+};
 
 export const useWalls = (areaId: string | number) => {
     return useQuery({

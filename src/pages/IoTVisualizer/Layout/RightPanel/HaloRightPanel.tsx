@@ -314,9 +314,10 @@ const WallDrawPanel: React.FC<{
 
 const ImageUploadPanel: React.FC<{
     floor: AreaNode;
-    onUpload: (floorId: number, objectUrl: string) => void;
+    onUpload: (floorId: number, file: File) => void;
     onRemove: (floorId: number) => void;
-}> = ({ floor, onUpload, onRemove }) => {
+    isUploading?: boolean;
+}> = ({ floor, onUpload, onRemove, isUploading }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -331,8 +332,7 @@ const ImageUploadPanel: React.FC<{
             setError('File too large — max 15 MB.');
             return;
         }
-        const url = URL.createObjectURL(file);
-        onUpload(floor.id, url);
+        onUpload(floor.id, file);
     };
 
     const handleDrop = (e: React.DragEvent) => {
@@ -361,6 +361,7 @@ const ImageUploadPanel: React.FC<{
                             <button
                                 className={styles.btnDangerSm}
                                 onClick={() => onRemove(floor.id)}
+                                disabled={isUploading}
                             >
                                 <PanelIcons.Trash /> Remove
                             </button>
@@ -371,25 +372,26 @@ const ImageUploadPanel: React.FC<{
                 {/* Drop zone */}
                 <div
                     className={`${styles.dropzone}
-                        ${isDragging ? styles.dropzoneDragging : ''}`}
+                        ${isDragging ? styles.dropzoneDragging : ''}
+                        ${isUploading ? styles.dropzoneDisabled : ''}`}
                     onDragOver={e => {
+                        if (isUploading) return;
                         e.preventDefault();
                         setIsDragging(true);
                     }}
                     onDragLeave={() => setIsDragging(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
+                    onDrop={isUploading ? undefined : handleDrop}
+                    onClick={() => !isUploading && fileInputRef.current?.click()}
+                    style={isUploading ? { pointerEvents: 'none', opacity: 0.5 } : {}}
                 >
                     <span className={styles.dropIcon}>
                         <Icon icon="Map" size="lg" />
                     </span>
                     <span className={styles.dropText}>
-                        {floor.area_plan
-                            ? 'Drop to replace'
-                            : 'Drop image here'}
+                        {isUploading ? 'Uploading…' : floor.area_plan ? 'Drop to replace' : 'Drop image here'}
                     </span>
                     <span className={styles.dropSub}>
-                        or click to browse
+                        {isUploading ? 'Please wait' : 'or click to browse'}
                     </span>
                     <input
                         ref={fileInputRef}
@@ -679,18 +681,21 @@ const WallEditPanel: React.FC<{
         <div className={styles.panelBody}>
 
             <Section title="Shape">
-                <span style={{
-                    display: 'inline-block',
-                    padding: '2px 10px',
-                    borderRadius: 4,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    border: `1px solid ${shapeColor[shape] ?? 'rgba(255,255,255,0.3)'}`,
-                    color: shapeColor[shape] ?? 'inherit',
-                    textTransform: 'capitalize',
-                }}>
-                    {shape}
-                </span>
+                <div className={styles.modeToggle}>
+                    {(['straight', 'arc', 'bezier'] as const).map(s => (
+                        <button
+                            key={s}
+                            onClick={() => onUpdate({
+                                wall_shape: s,
+                                ...(s !== 'bezier' ? { ctrl_x: undefined, ctrl_y: undefined } : {}),
+                            })}
+                            className={`${styles.modeBtn} ${shape === s ? styles.modeBtnActive : ''}`}
+                            style={shape === s ? { borderColor: shapeColor[s], color: shapeColor[s] } : {}}
+                        >
+                            {s === 'straight' ? '━' : s === 'arc' ? '〜' : '⌒'} {s}
+                        </button>
+                    ))}
+                </div>
             </Section>
 
             <Section title="Properties">
@@ -755,6 +760,22 @@ const WallEditPanel: React.FC<{
                 </div>
             </Section>
 
+            {shape === 'bezier' && (
+                <Section title="Bezier Control Point">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {(['ctrl_x', 'ctrl_y'] as const).map(key => (
+                            <div key={key} style={{ fontSize: 11 }}>
+                                <span style={{ opacity: 0.55, marginRight: 4 }}>{key}</span>
+                                <span>{((wall[key] as number) ?? 0).toFixed(3)}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ fontSize: 10, opacity: 0.45, marginTop: 4 }}>
+                        Drag the control point in the scene to adjust the curve.
+                    </div>
+                </Section>
+            )}
+
             {saveError && (
                 <div className={styles.errorMsg}>
                     <Icon icon="Warning" className="me-2" /> {saveError}
@@ -787,8 +808,10 @@ interface HaloRightPanelProps {
     onSaveWalls: () => void;
     onDeleteWall?: (wallId: number | string) => void;
     onUpdateWall?: (wallId: number | string, patch: Partial<AreaWall>) => void;
-    onImageUpload: (floorId: number, url: string) => void;
+    onWallPatch?: (wallId: number | string, patch: Partial<AreaWall>) => void;
+    onImageUpload: (floorId: number, file: File) => void;
     onImageRemove: (floorId: number) => void;
+    isImageUploading?: boolean;
     onAddSensor: (sensor: SensorNode) => void;
     onRemoveSensor: (id: number) => void;
     onClose: () => void;
@@ -811,7 +834,7 @@ interface HaloRightPanelProps {
 
 const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
     mode, selectedFloor, drawing, sensors, unplacedSensors,
-    onSaveWalls, onDeleteWall, onUpdateWall, onImageUpload, onImageRemove,
+    onSaveWalls, onDeleteWall, onUpdateWall, onWallPatch, onImageUpload, onImageRemove, isImageUploading,
     onAddSensor, onRemoveSensor, onClose,
     selectedSensor, pendingSensor, onConfirmPlacement, onCancelPlacement,
     onStartPlacing, onPlaceExisting, isPlacing, pendingUnplacedId,
@@ -830,6 +853,12 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
         if (selectedWall) setEditWall({ ...selectedWall });
         setEditError(null);
     }, [selectedWall?.id]);
+
+    // Sync ctrl_x/ctrl_y/wall_shape when updated externally on the same wall
+    useEffect(() => {
+        if (!selectedWall) return;
+        setEditWall(prev => prev ? { ...prev, ctrl_x: selectedWall.ctrl_x, ctrl_y: selectedWall.ctrl_y, wall_shape: selectedWall.wall_shape } : prev);
+    }, [selectedWall?.ctrl_x, selectedWall?.ctrl_y, selectedWall?.wall_shape]);
 
     const handleWallSave = async () => {
         if (!editWall || !onUpdateWall) return;
@@ -946,7 +975,11 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
             {mode === 'wall_edit' && editWall && (
                 <WallEditPanel
                     wall={editWall}
-                    onUpdate={patch => setEditWall(prev => prev ? { ...prev, ...patch } : prev)}
+                    onUpdate={patch => {
+                        setEditWall(prev => prev ? { ...prev, ...patch } : prev);
+                        // Live-update the scene (no API call) so shape/bezier reflects immediately
+                        if (onWallPatch) onWallPatch(editWall.id, patch);
+                    }}
                     onSave={handleWallSave}
                     onDelete={handleWallDelete}
                     onClose={onClose}
@@ -960,6 +993,7 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
                     floor={selectedFloor}
                     onUpload={onImageUpload}
                     onRemove={onImageRemove}
+                    isUploading={isImageUploading}
                 />
             )}
 
