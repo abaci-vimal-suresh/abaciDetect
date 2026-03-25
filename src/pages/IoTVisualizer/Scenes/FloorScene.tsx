@@ -25,6 +25,8 @@ interface FloorSceneProps {
     onSensorClick?: (sensor: SensorNode) => void;
     onUpdatePlacementPreview?: (nx: number, ny: number) => void;
     blinkingWallIds?: (number | string)[];
+    onWallClick?: (wall: AreaWall) => void;
+    selectedWallId?: number | string | null;
 }
 
 const FloorScene: React.FC<FloorSceneProps> = ({
@@ -32,7 +34,8 @@ const FloorScene: React.FC<FloorSceneProps> = ({
     focusedSensorId, setFocusedSensorId,
     isPlacing = false, placementPreview = null,
     onSensorPlaced, onSensorClick, onUpdatePlacementPreview,
-    blinkingWallIds = []
+    blinkingWallIds = [],
+    onWallClick, selectedWallId,
 }) => {
     const theme = useHaloTheme();
     const fw = floor.floor_width ?? 20;
@@ -101,8 +104,14 @@ const FloorScene: React.FC<FloorSceneProps> = ({
                         selectedAreaId !== null &&
                         areaWallIds.has(wall.id)
                     }
-                    isSelected={false}
+                    isSelected={wall.id === selectedWallId}
                     isBlinking={blinkingWallIds.includes(wall.id)}
+                    onClick={
+                        // only clickable for saved walls (positive id), not while drawing
+                        !drawing.isDrawing && typeof wall.id === 'number' && wall.id > 0
+                            ? onWallClick
+                            : undefined
+                    }
                 />
             ))}
 

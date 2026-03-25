@@ -22,7 +22,8 @@ export function enrichSensor(
         sensor_status: isOnline ? 'online' : 'offline',
         floor_id: floorId,
         area_id: areaId,
-        wall_ids: s.wall_ids ?? [],
+        wall_ids: (s as any).walls?.map((w: any) => w.id) ?? [],
+        sensor_group_ids: (s as any).sensor_groups?.map((g: any) => g.id) ?? [],
         x_val: s.x_val ?? 0,
         y_val: s.y_val ?? 0,
         z_val: s.z_val ?? 0.85,
@@ -52,9 +53,9 @@ export function resolveFloorId(
 export function adaptWall(w: any): AreaWall {
     return {
         ...w,
-        area_id: w.area_ids?.[0] ?? w.area_id,
-        sub_area_id: w.area_ids?.[1] ?? w.sub_area_id,
-        wall_type: w.wall_type ?? 'outer',
+        area_id: w.area_id ?? w.area_ids?.[0],
+        sub_area_id: w.sub_area_id ?? null,
+        wall_shape: w.wall_shape ?? 'straight',
         r_z_offset: w.r_z_offset ?? 0,
         r_height: w.r_height ?? 3.0,
         thickness: w.thickness ?? 0.18,

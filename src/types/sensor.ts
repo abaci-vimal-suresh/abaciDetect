@@ -285,30 +285,28 @@ export interface SensorPlacementPayload {
 
 export interface Wall {
     id: number | string;
-    r_x1: number; // Normalized 0-1
-    r_y1: number; // Normalized 0-1
-    r_x2: number; // Normalized 0-1
-    r_y2: number; // Normalized 0-1
-    r_height?: number; // Meter height (e.g. 2.4)
-    r_z_offset?: number; // Vertical lift
+    area_id?: number;
+    area_ids?: number[];
+    sub_area_id?: number | null;
+    r_x1: number;
+    r_y1: number;
+    r_x2: number;
+    r_y2: number;
+    r_height?: number;
+    r_z_offset?: number;
+    thickness?: number;
+    wall_shape?: 'straight' | 'arc' | 'bezier';
     color?: string;
     opacity?: number;
-    thickness?: number;
-    area_ids?: number[]; // ✅ IDs of areas this wall is linked to
+    arc_center_x?: number | null;
+    arc_center_z?: number | null;
+    arc_radius?: number | null;
+    arc_start_angle?: number | null;
+    arc_end_angle?: number | null;
+    ctrl_x?: number | null;
+    ctrl_y?: number | null;
     created_at?: string;
     updated_at?: string;
-    // Bezier curve control point (normalized 0-1)
-    ctrl_x?: number;
-    ctrl_y?: number;
-    // Arc geometry fields
-    arc_center_x?: number;
-    arc_center_z?: number;
-    arc_radius?: number;
-    arc_start_angle?: number;
-    arc_end_angle?: number;
-    arc_segments?: number;
-    // Shape discriminator
-    wall_shape?: 'straight' | 'bezier' | 'arc';
 }
 export interface Area {
     id: number;

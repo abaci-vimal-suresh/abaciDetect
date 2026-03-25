@@ -487,8 +487,17 @@ export interface AggregatedSensorDataResponse {
         co2_min: number | null;
         co2_max: number | null;
         pm1_min: number | null;
-        pm10_min: number | null;
+        pm1_max: number | null;
         pm25_min: number | null;
+        pm25_max: number | null;
+        pm10_min: number | null;
+        pm10_max: number | null;
+        nh3_min: number | null;
+        nh3_max: number | null;
+        no2_min: number | null;
+        no2_max: number | null;
+        co_min: number | null;
+        co_max: number | null;
         aqi_min: number | null;
         aqi_max: number | null;
         movement_min: number | null;
@@ -497,6 +506,14 @@ export interface AggregatedSensorDataResponse {
         noise_max: number | null;
         health_min: number | null;
         health_max: number | null;
+        acc_x_min: number | null;
+        acc_x_max: number | null;
+        acc_y_min: number | null;
+        acc_y_max: number | null;
+        acc_z_min: number | null;
+        acc_z_max: number | null;
+        panic_min: number | null;
+        panic_max: number | null;
         // Sensor references
         temperature_min_sensor?: SensorReference | null;
         temperature_max_sensor?: SensorReference | null;
@@ -513,8 +530,17 @@ export interface AggregatedSensorDataResponse {
         co2_min_sensor?: SensorReference | null;
         co2_max_sensor?: SensorReference | null;
         pm1_min_sensor?: SensorReference | null;
-        pm10_min_sensor?: SensorReference | null;
+        pm1_max_sensor?: SensorReference | null;
         pm25_min_sensor?: SensorReference | null;
+        pm25_max_sensor?: SensorReference | null;
+        pm10_min_sensor?: SensorReference | null;
+        pm10_max_sensor?: SensorReference | null;
+        nh3_min_sensor?: SensorReference | null;
+        nh3_max_sensor?: SensorReference | null;
+        no2_min_sensor?: SensorReference | null;
+        no2_max_sensor?: SensorReference | null;
+        co_min_sensor?: SensorReference | null;
+        co_max_sensor?: SensorReference | null;
         aqi_min_sensor?: SensorReference | null;
         aqi_max_sensor?: SensorReference | null;
         movement_min_sensor?: SensorReference | null;
@@ -523,6 +549,14 @@ export interface AggregatedSensorDataResponse {
         noise_max_sensor?: SensorReference | null;
         health_min_sensor?: SensorReference | null;
         health_max_sensor?: SensorReference | null;
+        acc_x_min_sensor?: SensorReference | null;
+        acc_x_max_sensor?: SensorReference | null;
+        acc_y_min_sensor?: SensorReference | null;
+        acc_y_max_sensor?: SensorReference | null;
+        acc_z_min_sensor?: SensorReference | null;
+        acc_z_max_sensor?: SensorReference | null;
+        panic_min_sensor?: SensorReference | null;
+        panic_max_sensor?: SensorReference | null;
         [key: string]: any;
     };
 }

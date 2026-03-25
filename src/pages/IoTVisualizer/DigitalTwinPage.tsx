@@ -10,14 +10,13 @@ import {
 } from '@react-three/drei';
 import { AreaNode, AreaWall, SensorHalo, SensorNode } from './Types/types';
 import {
-	HALO_DUMMY_TREE, DUMMY_WALLS, DUMMY_SENSORS,
+	HALO_DUMMY_TREE, DUMMY_WALLS, DUMMY_SENSORS, DUMMY_AGGREGATED_BY_FLOOR,
 	findNodeById, getSensorsForFloor
 } from '../Dummy/dummyData';
 import {
 	useAreas, useSensors, useSensorConfigurations,
-	useLatestSensorLog, useWalls, useCreateWall,
+	useLatestSensorLog, useWalls, useCreateWall, useUpdateWall, useDeleteWall,
 	useRegisterSensor, useUpdateSensor,
-	useActiveEvents, useHeartbeatStatus,
 	useAggregatedSensorData,
 } from '../../api/sensors.api';
 import { buildAreaTree } from '../utils/areaUtils';
@@ -58,6 +57,7 @@ const DigitalTwinPage: React.FC = () => {
 	const [showSidebar, setShowSidebar] = useState(true);
 	const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(null);
 	const [blinkingWallIds, setBlinkingWallIds] = useState<(number | string)[]>([]);
+	const [selectedWall, setSelectedWall] = useState<AreaWall | null>(null);
 	const [activeMetricGroup, setActiveMetricGroup] = useState<string | null>(null);
 
 	const sensorPlacement = useSensorPlacement();
@@ -69,11 +69,10 @@ const DigitalTwinPage: React.FC = () => {
 	const { data: rawSensors } = useSensors();
 	const { data: rawFloorWalls } = useWalls(selectedFloorId ?? 0);
 	const { mutateAsync: createWallMutation } = useCreateWall();
+	const { mutateAsync: updateWallMutation } = useUpdateWall();
+	const { mutateAsync: deleteWallMutation } = useDeleteWall();
 	const registerSensorMutation = useRegisterSensor();
 	const updateSensorMutation = useUpdateSensor();
-
-	const { data: activeEvents } = useActiveEvents();
-	const { data: heartbeatStatus } = useHeartbeatStatus();
 
 	const currentAggId = useMemo(() => {
 		if (selectedFloorId) return selectedFloorId;
@@ -81,12 +80,26 @@ const DigitalTwinPage: React.FC = () => {
 		return null;
 	}, [selectedFloorId, selectedBuildingId]);
 
-	const { data: aggData } = useAggregatedSensorData({
+	const { data: rawAggData } = useAggregatedSensorData({
 		area_id: currentAggId ? [currentAggId] : [],
 	});
 
-	const { data: selectedSensorConfigs } = useSensorConfigurations(selectedSensorId ?? 0);
-	const { data: selectedSensorLog } = useLatestSensorLog(selectedSensorId ?? 0);
+	// When in mock mode, serve per-floor dummy aggregated data
+	const aggData = useMemo(() => {
+		if (HALO_USE_MOCK) {
+			return (currentAggId ? DUMMY_AGGREGATED_BY_FLOOR[currentAggId] : null)
+				?? DUMMY_AGGREGATED_BY_FLOOR[10]; // fallback to NB Ground Floor
+		}
+		return rawAggData ?? null;
+	}, [HALO_USE_MOCK, rawAggData, currentAggId]);
+
+	// Sensor config + log — only fetched in live mode (mock sensors already have full event_configs)
+	const { data: selectedSensorConfigs } = useSensorConfigurations(
+		!HALO_USE_MOCK ? (selectedSensorId ?? 0) : 0
+	);
+	const { data: selectedSensorLog } = useLatestSensorLog(
+		!HALO_USE_MOCK ? (selectedSensorId ?? 0) : 0
+	);
 
 	// ── Local data state ──────────────────────────────────────────────────────
 	const [wallsByFloor, setWallsByFloor] = useState<Record<number, AreaWall[]>>(DUMMY_WALLS);
@@ -118,9 +131,9 @@ const DigitalTwinPage: React.FC = () => {
 		}
 	}, [areaTree, selectedBuildingId]);
 
-	// ── Sync detail data (Configs + Logs) ─────────────────────────────────────
+	// ── Sync detail data (Configs + Logs) — live mode only ────────────────────
 	useEffect(() => {
-		if (!selectedSensorId || !selectedSensorConfigs) return;
+		if (HALO_USE_MOCK || !selectedSensorId || !selectedSensorConfigs) return;
 
 		const configs = adaptEventConfigs(selectedSensorConfigs);
 		const currentSensor = sensors.find(s => s.id === selectedSensorId);
@@ -164,52 +177,15 @@ const DigitalTwinPage: React.FC = () => {
 		intensity: number;
 	}[]>([]);
 
-	// ── Real-time Socket ──────────────────────────────────────────────────────
-	useEffect(() => {
-		if (HALO_USE_MOCK) return;
-
-		// Use environment variable or default to empty string (which uses current host)
-		const wsUrl = (import.meta as any).env?.VITE_WS_URL || '';
-		socketRef.current = io(wsUrl);
-
-		socketRef.current.on('alert', (rawAlert: any) => {
-			handleAlertFired({
-				id: rawAlert.id ?? Date.now(),
-				title: rawAlert.title ?? rawAlert.type,
-				severity: rawAlert.severity ?? 'WARNING',
-				sensor_name: rawAlert.sensor?.name ?? rawAlert.sensor_name,
-				sensor_id: rawAlert.sensor?.id ?? rawAlert.sensor_id,
-				event_source: rawAlert.event_source ?? rawAlert.type,
-				current_value: rawAlert.current_value ?? 0,
-				threshold_value: rawAlert.threshold_value ?? 0,
-				intensity: rawAlert.intensity ?? 1.0,
-				area_name: rawAlert.area?.name ?? rawAlert.area_name,
-				created_time: rawAlert.created_at ?? new Date().toISOString(),
-			});
-		});
-
-		return () => {
-			socketRef.current?.disconnect();
-		};
-	}, [HALO_USE_MOCK]);
-
-	useEffect(() => {
-		if (!activeEvents || HALO_USE_MOCK) return;
-
-		setSensors(prev => prev.map(sensor => ({
-			...sensor,
-			event_configs: sensor.event_configs?.map(cfg => {
-				const active = activeEvents.find(
-					(e: any) => e.sensor_id === sensor.id && e.event_source === cfg.event_id
-				);
-				return {
-					...cfg,
-					is_triggered: !!active,
-					current_value: active?.current_value ?? cfg.current_value,
-				};
-			}) ?? [],
-		})));
-	}, [activeEvents]);
+	// ── Real-time Socket ─────────────────────────────────────────────────────
+	// TODO: re-enable when WebSocket backend is ready
+	// useEffect(() => {
+	// 	if (HALO_USE_MOCK) return;
+	// 	const wsUrl = (import.meta as any).env?.VITE_WS_URL || '';
+	// 	socketRef.current = io(wsUrl);
+	// 	socketRef.current.on('alert', (rawAlert: any) => { ... });
+	// 	return () => { socketRef.current?.disconnect(); };
+	// }, [HALO_USE_MOCK]);
 
 	// ── Camera ref ────────────────────────────────────────────────────────────
 	const cameraControlsRef = useRef<any>(null);
@@ -353,7 +329,6 @@ const DigitalTwinPage: React.FC = () => {
 		wallDrawing.cancelDrawing();
 	}, [wallDrawing]);
 
-	// ── Image handlers ────────────────────────────────────────────────────────
 
 	// ── Image handlers ────────────────────────────────────────────────────────
 	// TODO: Replace local areaTree patches with useUpdateArea API calls
@@ -391,6 +366,30 @@ const DigitalTwinPage: React.FC = () => {
 		wallDrawing.cancelDrawing();
 	}, [selectedFloorId, wallDrawing, createWallMutation]);
 
+	const handleDeleteWall = useCallback(async (wallId: number | string) => {
+		if (!selectedFloorId) return;
+		if (!HALO_USE_MOCK) {
+			await deleteWallMutation(wallId);
+		}
+		setWallsByFloor(prev => ({
+			...prev,
+			[selectedFloorId]: (prev[selectedFloorId] ?? []).filter(w => w.id !== wallId),
+		}));
+	}, [selectedFloorId, deleteWallMutation]);
+
+	const handleUpdateWall = useCallback(async (wallId: number | string, patch: Partial<AreaWall>) => {
+		if (!selectedFloorId) return;
+		if (!HALO_USE_MOCK) {
+			await updateWallMutation({ wallId, data: patch });
+		}
+		setWallsByFloor(prev => ({
+			...prev,
+			[selectedFloorId]: (prev[selectedFloorId] ?? []).map(w =>
+				w.id === wallId ? { ...w, ...patch } : w
+			),
+		}));
+	}, [selectedFloorId, updateWallMutation]);
+
 	// ── Sensor handlers ────────────────────────────────────────────────────────
 
 	const handleAddSensor = useCallback((s: SensorNode) => {
@@ -418,6 +417,12 @@ const DigitalTwinPage: React.FC = () => {
 			setBlinkingWallIds([]);
 		}
 	}, []);
+
+	const handleWallClick = useCallback((wall: AreaWall) => {
+		setSelectedWall(wall);
+		setRightPanelMode('wall_edit');
+		wallDrawing.cancelDrawing();
+	}, [wallDrawing]);
 
 	// Sensor placement tool toggle
 	const handleSensorPlaceToggle = useCallback(() => {
@@ -782,6 +787,8 @@ const DigitalTwinPage: React.FC = () => {
 								onSensorClick={handleSensorClick}
 								onUpdatePlacementPreview={sensorPlacement.updatePreview}
 								blinkingWallIds={blinkingWallIds}
+								onWallClick={handleWallClick}
+								selectedWallId={selectedWall?.id ?? null}
 							/>
 						</Suspense>
 
@@ -860,6 +867,9 @@ const DigitalTwinPage: React.FC = () => {
 					sensors={placedSensors}
 					unplacedSensors={unplacedSensors}
 					onSaveWalls={handleSaveWalls}
+					onDeleteWall={handleDeleteWall}
+					onUpdateWall={handleUpdateWall}
+					selectedWall={selectedWall}
 					onImageUpload={handleImageUpload}
 					onImageRemove={handleImageRemove}
 					onStartPlacing={handleStartPlacingFromPanel}
@@ -898,6 +908,7 @@ const DigitalTwinPage: React.FC = () => {
 						setSelectedAreaId(null);
 						setBlinkingWallIds([]);
 						setActiveMetricGroup(null);
+			setSelectedWall(null);
 					}}
 				/>
 

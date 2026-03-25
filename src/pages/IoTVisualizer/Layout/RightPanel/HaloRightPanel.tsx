@@ -1,7 +1,7 @@
 import { AreaNode, AreaWall, SensorHalo, SensorNode } from '../../Types/types';
 import styles from './HaloRightPanel.module.scss';
 import AggregatedDetailPanel from '../../Analytics/AggregatedDetail/AggregatedDetailPanel';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { UseWallDrawingReturn } from '../../hooks/useWallDrawing';
 import { PendingSensor } from '../../../Sensors/hooks/useSensorPlacement';
 import SensorDetailPanel from '../../../Sensors/components/Details/SensorDetailPanel';
@@ -10,6 +10,7 @@ import Icon from '../../../../components/icon/Icon';
 
 export type RightPanelMode =
     | 'wall_draw'
+    | 'wall_edit'
     | 'image_upload'
     | 'sensor_place'
     | 'sensor_detail'
@@ -654,6 +655,129 @@ const SensorPlacePanel: React.FC<{
 
 
 
+// ────────────────────────────────────────────────────────────────────────────
+// WALL EDIT PANEL
+// ────────────────────────────────────────────────────────────────────────────
+
+const WallEditPanel: React.FC<{
+    wall: AreaWall;
+    onUpdate: (patch: Partial<AreaWall>) => void;
+    onSave: () => void;
+    onDelete: () => void;
+    onClose: () => void;
+    isSaving: boolean;
+    saveError: string | null;
+}> = ({ wall, onUpdate, onSave, onDelete, onClose, isSaving, saveError }) => {
+    const shapeColor: Record<string, string> = {
+        straight: 'rgba(255,255,255,0.45)',
+        arc: '#48cae4',
+        bezier: '#f0c040',
+    };
+    const shape = wall.wall_shape ?? 'straight';
+
+    return (
+        <div className={styles.panelBody}>
+
+            <Section title="Shape">
+                <span style={{
+                    display: 'inline-block',
+                    padding: '2px 10px',
+                    borderRadius: 4,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    border: `1px solid ${shapeColor[shape] ?? 'rgba(255,255,255,0.3)'}`,
+                    color: shapeColor[shape] ?? 'inherit',
+                    textTransform: 'capitalize',
+                }}>
+                    {shape}
+                </span>
+            </Section>
+
+            <Section title="Properties">
+                <FieldRow label="Height (m)">
+                    <input
+                        type="number" step="0.1" min="0.1"
+                        className={styles.input}
+                        value={wall.r_height ?? 3.0}
+                        onChange={e => onUpdate({ r_height: parseFloat(e.target.value) || 0 })}
+                    />
+                </FieldRow>
+                <FieldRow label="Thickness (m)">
+                    <input
+                        type="number" step="0.05" min="0.05"
+                        className={styles.input}
+                        value={wall.thickness ?? 0.18}
+                        onChange={e => onUpdate({ thickness: parseFloat(e.target.value) || 0 })}
+                    />
+                </FieldRow>
+                <FieldRow label="Z Offset (m)">
+                    <input
+                        type="number" step="0.1" min="0"
+                        className={styles.input}
+                        value={wall.r_z_offset ?? 0}
+                        onChange={e => onUpdate({ r_z_offset: parseFloat(e.target.value) || 0 })}
+                    />
+                </FieldRow>
+                <FieldRow label="Color">
+                    <div className={styles.colorRow}>
+                        <input
+                            type="color"
+                            className={styles.colorPicker}
+                            value={wall.color ?? '#4a90d9'}
+                            onChange={e => onUpdate({ color: e.target.value })}
+                        />
+                        <span className={styles.colorHex}>{wall.color ?? '#4a90d9'}</span>
+                    </div>
+                </FieldRow>
+                <FieldRow label="Opacity">
+                    <div className={styles.sliderRow}>
+                        <input
+                            type="range" min="0" max="1" step="0.05"
+                            className={styles.slider}
+                            value={wall.opacity ?? 0.85}
+                            onChange={e => onUpdate({ opacity: parseFloat(e.target.value) })}
+                        />
+                        <span className={styles.sliderVal}>
+                            {(wall.opacity ?? 0.85).toFixed(2)}
+                        </span>
+                    </div>
+                </FieldRow>
+            </Section>
+
+            <Section title="Endpoints">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    {(['r_x1', 'r_y1', 'r_x2', 'r_y2'] as const).map(key => (
+                        <div key={key} style={{ fontSize: 11 }}>
+                            <span style={{ opacity: 0.55, marginRight: 4 }}>{key}</span>
+                            <span>{(wall[key] as number ?? 0).toFixed(3)}</span>
+                        </div>
+                    ))}
+                </div>
+            </Section>
+
+            {saveError && (
+                <div className={styles.errorMsg}>
+                    <Icon icon="Warning" className="me-2" /> {saveError}
+                </div>
+            )}
+
+            <div className={styles.actionStack}>
+                <div className={styles.actionRow}>
+                    <button className={styles.btnGhost} onClick={onClose} disabled={isSaving}>
+                        Cancel
+                    </button>
+                    <button className={styles.btnDanger} onClick={onDelete} disabled={isSaving} title="Delete wall">
+                        <PanelIcons.Trash />
+                    </button>
+                </div>
+                <button className={styles.btnPrimary} onClick={onSave} disabled={isSaving}>
+                    <PanelIcons.Check /> {isSaving ? 'Saving…' : 'Save Wall'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 interface HaloRightPanelProps {
     mode: RightPanelMode;
     selectedFloor: AreaNode | null;
@@ -661,11 +785,14 @@ interface HaloRightPanelProps {
     sensors: SensorNode[];
     unplacedSensors?: SensorNode[];
     onSaveWalls: () => void;
+    onDeleteWall?: (wallId: number | string) => void;
+    onUpdateWall?: (wallId: number | string, patch: Partial<AreaWall>) => void;
     onImageUpload: (floorId: number, url: string) => void;
     onImageRemove: (floorId: number) => void;
     onAddSensor: (sensor: SensorNode) => void;
     onRemoveSensor: (id: number) => void;
     onClose: () => void;
+    selectedWall?: AreaWall | null;
 
     selectedSensor?: SensorNode | null;
     pendingSensor?: PendingSensor | null;
@@ -684,13 +811,46 @@ interface HaloRightPanelProps {
 
 const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
     mode, selectedFloor, drawing, sensors, unplacedSensors,
-    onSaveWalls, onImageUpload, onImageRemove,
+    onSaveWalls, onDeleteWall, onUpdateWall, onImageUpload, onImageRemove,
     onAddSensor, onRemoveSensor, onClose,
     selectedSensor, pendingSensor, onConfirmPlacement, onCancelPlacement,
     onStartPlacing, onPlaceExisting, isPlacing, pendingUnplacedId,
     aggData, activeMetricGroup, onSensorFocus,
+    selectedWall,
 }) => {
     const isOpen = mode !== null;
+
+    // Wall edit local state
+    const [editWall, setEditWall] = useState<AreaWall | null>(null);
+    const [editSaving, setEditSaving] = useState(false);
+    const [editError, setEditError] = useState<string | null>(null);
+
+    // Sync when selectedWall changes (new wall selected)
+    useEffect(() => {
+        if (selectedWall) setEditWall({ ...selectedWall });
+        setEditError(null);
+    }, [selectedWall?.id]);
+
+    const handleWallSave = async () => {
+        if (!editWall || !onUpdateWall) return;
+        setEditSaving(true);
+        setEditError(null);
+        try {
+            const { id, ...patch } = editWall;
+            await onUpdateWall(id, patch);
+            onClose();
+        } catch (e: any) {
+            setEditError(e?.response?.data?.detail ?? e?.message ?? 'Save failed');
+        } finally {
+            setEditSaving(false);
+        }
+    };
+
+    const handleWallDelete = async () => {
+        if (!editWall || !onDeleteWall) return;
+        onDeleteWall(editWall.id);
+        onClose();
+    };
 
     const headerConfig = {
         wall_draw: {
@@ -698,6 +858,12 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
             title: 'Draw Walls',
             subtitle: selectedFloor?.name ?? '',
             accent: '#7b68ee',
+        },
+        wall_edit: {
+            icon: <PanelIcons.Wall />,
+            title: 'Edit Wall',
+            subtitle: editWall ? `#${editWall.id}` : '',
+            accent: '#f0c040',
         },
         image_upload: {
             icon: <PanelIcons.Image />,
@@ -774,6 +940,18 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
                 <WallDrawPanel
                     drawing={drawing}
                     onSaveWalls={onSaveWalls}
+                />
+            )}
+
+            {mode === 'wall_edit' && editWall && (
+                <WallEditPanel
+                    wall={editWall}
+                    onUpdate={patch => setEditWall(prev => prev ? { ...prev, ...patch } : prev)}
+                    onSave={handleWallSave}
+                    onDelete={handleWallDelete}
+                    onClose={onClose}
+                    isSaving={editSaving}
+                    saveError={editError}
                 />
             )}
 

@@ -28,6 +28,8 @@ interface HaloFloorSceneProps {
     onSensorClick?: (sensor: SensorNode) => void;
     onUpdatePlacementPreview?: (nx: number, ny: number) => void;
     blinkingWallIds?: (number | string)[];
+    onWallClick?: (wall: AreaWall) => void;
+    selectedWallId?: number | string | null;
 }
 
 /**
@@ -40,7 +42,8 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
     drawing, focusedSensorId, setFocusedSensorId,
     isPlacing = false, placementPreview = null,
     onSensorPlaced, onSensorClick, onUpdatePlacementPreview,
-    blinkingWallIds = []
+    blinkingWallIds = [],
+    onWallClick, selectedWallId,
 }) => {
     switch (sceneLevel) {
 
@@ -111,6 +114,8 @@ const HaloFloorScene: React.FC<HaloFloorSceneProps> = ({
                     onSensorPlaced={onSensorPlaced}
                     onUpdatePlacementPreview={onUpdatePlacementPreview}
                     blinkingWallIds={blinkingWallIds}
+                    onWallClick={onWallClick}
+                    selectedWallId={selectedWallId}
                 />
             );
 
