@@ -1,142 +1,241 @@
 import React, { useState } from 'react';
-import { PendingSensor } from '../../../../hooks/useSensorPlacement';
-import { HALO_EVENTS } from '../../../Dummy/dummyData';
+import { PendingSensor } from '../../hooks/useSensorPlacement';
 import styles from './SensorPlacementPanel.module.scss';
 
-// Default events pre-selected for new sensors
-const DEFAULT_SELECTED = ['Motion', 'temp_c', 'Humidity', 'CO2cal', 'AQI'];
+const SENSOR_TYPES = ['HALO_3C', 'HALO_SMART', 'HALO_IOT', 'HALO_CUSTOM'] as const;
+
+export interface SensorFormData {
+    name: string;
+    sensor_type: string;
+    description: string;
+    mac_address: string;
+    ip_address: string;
+    username: string;
+    password: string;
+    x_val: number;
+    y_val: number;
+    z_val: number;
+    z_max: number;
+}
 
 interface SensorPlacementPanelProps {
     pending: PendingSensor;
-    onConfirm: (name: string, mac: string, events: string[]) => void;
+    onConfirm: (data: SensorFormData) => void;
     onCancel: () => void;
 }
 
 const SensorPlacementPanel: React.FC<SensorPlacementPanelProps> = ({
     pending, onConfirm, onCancel,
 }) => {
-    const [name, setName] = useState(pending.name);
-    const [mac, setMac] = useState('');
-    const [selectedEvents, setSelectedEvents] = useState<string[]>(DEFAULT_SELECTED);
-    const [showAllEvents, setShowAllEvents] = useState(false);
+    const [form, setForm] = useState<SensorFormData>({
+        name: pending.name,
+        sensor_type: 'HALO_3C',
+        description: '',
+        mac_address: '',
+        ip_address: '',
+        username: '',
+        password: '',
+        x_val: parseFloat(pending.nx.toFixed(4)),
+        y_val: parseFloat(pending.ny.toFixed(4)),
+        z_val: 0.85,
+        z_max: 1.0,
+    });
 
-    const toggleEvent = (ev: string) => {
-        setSelectedEvents(prev =>
-            prev.includes(ev)
-                ? prev.filter(e => e !== ev)
-                : [...prev, ev]
-        );
-    };
+    const set = <K extends keyof SensorFormData>(key: K, value: SensorFormData[K]) =>
+        setForm(prev => ({ ...prev, [key]: value }));
 
-    const visibleEvents = showAllEvents
-        ? HALO_EVENTS
-        : HALO_EVENTS.slice(0, 12);
+    const isValid = form.name.trim().length > 0 && form.mac_address.trim().length > 0;
 
     return (
         <div className={styles.panel}>
 
-            {/* ── Placement confirmed banner ────────────────────────────────── */}
+            {/* ── Banner ───────────────────────────────────────────────────────── */}
             <div className={styles.banner}>
-                <span className={styles.bannerIcon}>📍</span>
+                <span className={styles.bannerIcon}>📡</span>
                 <div className={styles.bannerText}>
-                    <span className={styles.bannerTitle}>Sensor Placed</span>
+                    <span className={styles.bannerTitle}>Register New Sensor</span>
                     <span className={styles.bannerSub}>
-                        {pending.nx.toFixed(3)}, {pending.ny.toFixed(3)}
+                        Dropped at ({pending.nx.toFixed(3)}, {pending.ny.toFixed(3)})
                     </span>
                 </div>
-                <div
-                    className={styles.bannerCoords}
-                    style={{
-                        background: 'rgba(var(--bs-success-rgb), 0.1)',
-                        color: 'var(--bs-success)',
-                        border: '1px solid rgba(var(--bs-success-rgb), 0.25)'
-                    }}
-                >
-                    ✓ On floor
+                <div className={styles.bannerCoords} style={{
+                    background: 'rgba(var(--bs-success-rgb), 0.1)',
+                    color: 'var(--bs-success)',
+                    border: '1px solid rgba(var(--bs-success-rgb), 0.25)',
+                }}>
+                    ✓ Placed
                 </div>
             </div>
 
-            {/* ── Name ─────────────────────────────────────────────────────── */}
+            {/* ── Identity ─────────────────────────────────────────────────────── */}
             <div className={styles.section}>
                 <div className={styles.sectionTitle}>Identity</div>
 
                 <div className={styles.field}>
-                    <label className={styles.label}>Sensor Name</label>
+                    <label className={styles.label}>
+                        Sensor Name <span className={styles.required}>*</span>
+                    </label>
                     <input
-                        type="text"
                         className={styles.input}
-                        value={name}
-                        onChange={e => setName(e.target.value)}
+                        value={form.name}
+                        onChange={e => set('name', e.target.value)}
                         placeholder="e.g. HALO-LOBBY-01"
                         autoFocus
                     />
                 </div>
 
                 <div className={styles.field}>
+                    <label className={styles.label}>Sensor Type</label>
+                    <select
+                        className={styles.input}
+                        value={form.sensor_type}
+                        onChange={e => set('sensor_type', e.target.value)}
+                    >
+                        {SENSOR_TYPES.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className={styles.field}>
                     <label className={styles.label}>
-                        MAC Address
-                        <span className={styles.optional}>(optional)</span>
+                        Description <span className={styles.optional}>(optional)</span>
                     </label>
                     <input
-                        type="text"
                         className={styles.input}
-                        value={mac}
-                        onChange={e => setMac(e.target.value)}
-                        placeholder="AA:BB:CC:DD:EE:FF"
-                        maxLength={17}
+                        value={form.description}
+                        onChange={e => set('description', e.target.value)}
+                        placeholder="e.g. Lobby entrance monitor"
                     />
                 </div>
             </div>
 
-            {/* ── Event selection ───────────────────────────────────────────── */}
+            {/* ── Network ──────────────────────────────────────────────────────── */}
             <div className={styles.section}>
-                <div className={styles.sectionTitle}>
-                    Monitor Events
-                    <span className={styles.eventCount}>
-                        {selectedEvents.length} selected
-                    </span>
+                <div className={styles.sectionTitle}>Network</div>
+
+                <div className={styles.field}>
+                    <label className={styles.label}>
+                        MAC Address <span className={styles.required}>*</span>
+                    </label>
+                    <input
+                        className={styles.input}
+                        value={form.mac_address}
+                        onChange={e => set('mac_address', e.target.value)}
+                        placeholder="AA:BB:CC:DD:EE:FF"
+                        maxLength={17}
+                    />
                 </div>
 
-                <div className={styles.eventGrid}>
-                    {(visibleEvents as readonly string[]).map(ev => {
-                        const active = selectedEvents.includes(ev);
-                        return (
-                            <button
-                                key={ev}
-                                className={`${styles.eventChip}
-                                    ${active ? styles.eventChipActive : ''}`}
-                                onClick={() => toggleEvent(ev)}
-                            >
-                                {ev}
-                            </button>
-                        );
-                    })}
+                <div className={styles.field}>
+                    <label className={styles.label}>
+                        IP Address <span className={styles.optional}>(optional)</span>
+                    </label>
+                    <input
+                        className={styles.input}
+                        value={form.ip_address}
+                        onChange={e => set('ip_address', e.target.value)}
+                        placeholder="192.168.1.100"
+                    />
                 </div>
 
-                <button
-                    className={styles.showMoreBtn}
-                    onClick={() => setShowAllEvents(s => !s)}
-                >
-                    {showAllEvents
-                        ? '▲ Show less'
-                        : `▼ Show all ${HALO_EVENTS.length} events`}
-                </button>
+                <div className={styles.twoCol}>
+                    <div className={styles.field}>
+                        <label className={styles.label}>Username</label>
+                        <input
+                            className={styles.input}
+                            value={form.username}
+                            onChange={e => set('username', e.target.value)}
+                            placeholder="admin"
+                            autoComplete="off"
+                        />
+                    </div>
+                    <div className={styles.field}>
+                        <label className={styles.label}>Password</label>
+                        <input
+                            className={styles.input}
+                            type="password"
+                            value={form.password}
+                            onChange={e => set('password', e.target.value)}
+                            placeholder="••••••••"
+                            autoComplete="new-password"
+                        />
+                    </div>
+                </div>
             </div>
 
-            {/* ── Actions ───────────────────────────────────────────────────── */}
+            {/* ── Position ─────────────────────────────────────────────────────── */}
+            <div className={styles.section}>
+                <div className={styles.sectionTitle}>
+                    Position
+                    <span className={styles.posHint}>editable</span>
+                </div>
+
+                <div className={styles.twoCol}>
+                    <div className={styles.field}>
+                        <label className={styles.label}>X (0–1)</label>
+                        <input
+                            className={styles.input}
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            max="1"
+                            value={form.x_val}
+                            onChange={e => set('x_val', parseFloat(e.target.value) || 0)}
+                        />
+                    </div>
+                    <div className={styles.field}>
+                        <label className={styles.label}>Y (0–1)</label>
+                        <input
+                            className={styles.input}
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            max="1"
+                            value={form.y_val}
+                            onChange={e => set('y_val', parseFloat(e.target.value) || 0)}
+                        />
+                    </div>
+                </div>
+
+                <div className={styles.twoCol}>
+                    <div className={styles.field}>
+                        <label className={styles.label}>Z Height</label>
+                        <input
+                            className={styles.input}
+                            type="number"
+                            step="0.05"
+                            min="0"
+                            max="1"
+                            value={form.z_val}
+                            onChange={e => set('z_val', parseFloat(e.target.value) || 0)}
+                        />
+                    </div>
+                    <div className={styles.field}>
+                        <label className={styles.label}>Z Max</label>
+                        <input
+                            className={styles.input}
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={form.z_max}
+                            onChange={e => set('z_max', parseFloat(e.target.value) || 0)}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Actions ───────────────────────────────────────────────────────── */}
             <div className={styles.actions}>
-                <button
-                    className={styles.cancelBtn}
-                    onClick={onCancel}
-                >
+                <button className={styles.cancelBtn} onClick={onCancel}>
                     Cancel
                 </button>
                 <button
                     className={styles.confirmBtn}
-                    onClick={() => onConfirm(name, mac, selectedEvents)}
-                    disabled={!name.trim() || selectedEvents.length === 0}
+                    onClick={() => onConfirm(form)}
+                    disabled={!isValid}
                 >
-                    ✓ Place Sensor
+                    ✓ Register Sensor
                 </button>
             </div>
         </div>

@@ -28,6 +28,8 @@ interface FloorSceneProps {
     onWallClick?: (wall: AreaWall) => void;
     selectedWallId?: number | string | null;
     onWallPatch?: (wallId: number | string, patch: Partial<AreaWall>) => void;
+    selectedSensorId?: number | null;
+    onSensorDrag?: (sensorId: number, nx: number, ny: number) => void;
 }
 
 const FloorScene: React.FC<FloorSceneProps> = ({
@@ -37,6 +39,7 @@ const FloorScene: React.FC<FloorSceneProps> = ({
     onSensorPlaced, onSensorClick, onUpdatePlacementPreview,
     blinkingWallIds = [],
     onWallClick, selectedWallId, onWallPatch,
+    selectedSensorId, onSensorDrag,
 }) => {
     const theme = useHaloTheme();
     const fw = floor.floor_width ?? 20;

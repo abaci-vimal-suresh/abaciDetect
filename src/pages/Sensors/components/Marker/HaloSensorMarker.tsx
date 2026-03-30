@@ -3,7 +3,7 @@
 import React, { useRef, useMemo, Suspense } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, Html } from '@react-three/drei';
+import { useGLTF, Html, PivotControls } from '@react-three/drei';
 import { SensorNode } from '../../../IoTVisualizer/Types/types';
 
 // ── Preload ───────────────────────────────────────────────────────────────────
@@ -233,11 +233,13 @@ interface HaloSensorMarkerProps {
     fd: number;    // floor_depth in metres
     floorY: number;    // Y position of this floor
     isFocused: boolean;
+    isSelected?: boolean;
     onClick?: (sensor: SensorNode) => void;
+    onDrag?: (nx: number, ny: number) => void;
 }
 
 const HaloSensorMarker: React.FC<HaloSensorMarkerProps> = ({
-    sensor, fw, fd, floorY, isFocused, onClick,
+    sensor, fw, fd, floorY, isFocused, isSelected, onClick, onDrag,
 }) => {
     // Denormalize to world position
     const wx = sensor.x_val * fw - fw / 2;
@@ -249,6 +251,20 @@ const HaloSensorMarker: React.FC<HaloSensorMarkerProps> = ({
     const isOffline = sensor.sensor_status === 'offline';
     const pulse = sensor.halo_intensity;
 
+    // Reset PivotControls when sensor position is saved (key changes)
+    const pivotKey = `${sensor.id}-${sensor.x_val.toFixed(4)}-${sensor.y_val.toFixed(4)}`;
+
+    const handlePivotDrag = (local: THREE.Matrix4) => {
+        if (!onDrag) return;
+        const offset = new THREE.Vector3();
+        offset.setFromMatrixPosition(local);
+        const newWx = wx + offset.x;
+        const newWz = wz + offset.z;
+        const nx = Math.max(0.001, Math.min(0.999, (newWx + fw / 2) / fw));
+        const ny = Math.max(0.001, Math.min(0.999, (newWz + fd / 2) / fd));
+        onDrag(nx, ny);
+    };
+
     return (
         <group
             position={[wx, 0, wz]}
@@ -257,40 +273,55 @@ const HaloSensorMarker: React.FC<HaloSensorMarkerProps> = ({
                 onClick?.(sensor);
             }}
         >
-            {/* Halo ring on floor */}
-            <group position={[0, floorY + 0.05, 0]}>
-                <HaloRing
-                    radius={sensor.halo_radius}
-                    color={color}
-                    intensity={pulse}
-                    isOffline={isOffline}
-                    isAlert={isAlert}
-                />
-            </group>
-
-            {/* Hemi sphere model at sensor height */}
-            <group position={[0, wy, 0]}>
-                <Suspense fallback={
-                    <mesh>
-                        <sphereGeometry args={[0.3, 12, 12]} />
-                        <meshBasicMaterial color={color} transparent opacity={0.6} />
-                    </mesh>
-                }>
-                    <HemiSphereModel
+            <PivotControls
+                key={pivotKey}
+                anchor={[0, 0, 0]}
+                depthTest={false}
+                scale={1.5}
+                lineWidth={2}
+                fixed={true}
+                disableRotations={true}
+                disableAxes={false}
+                disableSliders={true}
+                visible={isSelected}
+                activeAxes={[true, false, true]}
+                onDrag={handlePivotDrag}
+            >
+                {/* Halo ring on floor */}
+                <group position={[0, floorY + 0.05, 0]}>
+                    <HaloRing
+                        radius={sensor.halo_radius}
                         color={color}
-                        pulse={pulse}
-                        isAlert={isAlert}
+                        intensity={pulse}
                         isOffline={isOffline}
+                        isAlert={isAlert}
                     />
-                </Suspense>
+                </group>
 
-                {/* Label */}
-                <SensorLabel
-                    sensor={sensor}
-                    color={color}
-                    isFocused={isFocused}
-                />
-            </group>
+                {/* Hemi sphere model at sensor height */}
+                <group position={[0, wy, 0]}>
+                    <Suspense fallback={
+                        <mesh>
+                            <sphereGeometry args={[0.3, 12, 12]} />
+                            <meshBasicMaterial color={color} transparent opacity={0.6} />
+                        </mesh>
+                    }>
+                        <HemiSphereModel
+                            color={color}
+                            pulse={pulse}
+                            isAlert={isAlert}
+                            isOffline={isOffline}
+                        />
+                    </Suspense>
+
+                    {/* Label */}
+                    <SensorLabel
+                        sensor={sensor}
+                        color={color}
+                        isFocused={isFocused}
+                    />
+                </group>
+            </PivotControls>
         </group>
     );
 };

@@ -20,7 +20,7 @@ import AlertDetailModal from './modals/AlertDetailModal';
 import AlertStatusModal from './modals/AlertStatusModal';
 import AlertCreateModal from './modals/AlertCreateModal';
 import { useAlertActions } from './hooks/useAlertActions';
-import { queryClient, queryKeys } from '../../../lib/queryClient';
+import { queryClient, queryKeys } from '../../lib/queryClient';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────

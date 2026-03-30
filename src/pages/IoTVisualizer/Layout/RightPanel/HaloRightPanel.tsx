@@ -1,11 +1,13 @@
 import { AreaNode, AreaWall, SensorHalo, SensorNode } from '../../Types/types';
 import styles from './HaloRightPanel.module.scss';
 import AggregatedDetailPanel from '../../Analytics/AggregatedDetail/AggregatedDetailPanel';
-import { useRef, useState, useEffect } from 'react';
+import { useAreas } from '../../../../api/sensors.api';
+import { getEffectiveConfig } from '../../../utils/radarMapping.utils';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { UseWallDrawingReturn } from '../../hooks/useWallDrawing';
 import { PendingSensor } from '../../../Sensors/hooks/useSensorPlacement';
 import SensorDetailPanel from '../../../Sensors/components/Details/SensorDetailPanel';
-import SensorPlacementPanel from '../../../Sensors/components/Placement/SensorPlacementPanel';
+import SensorPlacementPanel, { SensorFormData } from '../../../Sensors/components/Placement/SensorPlacementPanel';
 import Icon from '../../../../components/icon/Icon';
 
 export type RightPanelMode =
@@ -112,10 +114,77 @@ const WallDrawPanel: React.FC<{
         drawingMode, setDrawingMode,
         settings, updateSettings,
         anchorPoints, drawnWalls,
-        isShapeClosed,
-        finishDrawing, cancelDrawing,
+        isShapeClosed, isDrawing,
+        startDrawing, finishDrawing, cancelDrawing,
         removeLastWall, clearAll,
     } = drawing;
+
+    // ── Idle state — not yet drawing ──────────────────────────────────────────
+    if (!isDrawing) {
+        return (
+            <div className={styles.panelBody}>
+                <Section title="Wall Settings">
+                    <div className={styles.hint} style={{ marginBottom: 8 }}>
+                        Configure wall properties below, then start drawing on the floor.
+                    </div>
+
+                    <FieldRow label="Type">
+                        <select
+                            className={styles.select}
+                            value={settings.wall_type}
+                            onChange={e => updateSettings({ wall_type: e.target.value as any })}
+                        >
+                            <option value="outer">Outer</option>
+                            <option value="partition">Partition</option>
+                            <option value="glass">Glass</option>
+                        </select>
+                    </FieldRow>
+
+                    <FieldRow label="Height (m)">
+                        <input type="number" className={styles.input}
+                            value={settings.height} step={0.1} min={0.1}
+                            onChange={e => updateSettings({ height: parseFloat(e.target.value) || 0 })}
+                        />
+                    </FieldRow>
+
+                    <FieldRow label="Thickness (m)">
+                        <input type="number" className={styles.input}
+                            value={settings.thickness} step={0.05} min={0.05}
+                            onChange={e => updateSettings({ thickness: parseFloat(e.target.value) || 0 })}
+                        />
+                    </FieldRow>
+
+                    <FieldRow label="Color">
+                        <div className={styles.colorRow}>
+                            <input type="color" className={styles.colorPicker}
+                                value={settings.color}
+                                onChange={e => updateSettings({ color: e.target.value })}
+                            />
+                            <span className={styles.colorHex}>{settings.color}</span>
+                        </div>
+                    </FieldRow>
+
+                    <FieldRow label="Opacity">
+                        <div className={styles.sliderRow}>
+                            <input type="range" className={styles.slider}
+                                min={0} max={1} step={0.05} value={settings.opacity}
+                                onChange={e => updateSettings({ opacity: parseFloat(e.target.value) })}
+                            />
+                            <span className={styles.sliderVal}>
+                                {(settings.opacity * 100).toFixed(0)}%
+                            </span>
+                        </div>
+                    </FieldRow>
+                </Section>
+
+                <div className={styles.actionStack}>
+                    <button className={styles.btnPrimary} onClick={startDrawing}>
+                        ✏ Draw Walls
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.panelBody}>
@@ -428,7 +497,7 @@ const ImageUploadPanel: React.FC<{
 const SensorPlacePanel: React.FC<{
     sensors: SensorNode[];   // placed on this floor
     unplacedSensors: SensorNode[];   // floor_id = null
-    onRemove: (id: number) => void;
+    onRemove: (id: number) => Promise<void>;
     onStartPlacing?: () => void;     // add brand new
     onPlaceExisting?: (id: number) => void; // place existing unplaced
     isPlacing?: boolean;
@@ -640,9 +709,9 @@ const SensorPlacePanel: React.FC<{
                                     <button
                                         className={styles.haloRemove}
                                         onClick={() => onRemove(s.id)}
-                                        title="Remove sensor"
+                                        title="Unplace sensor"
                                     >
-                                        <PanelIcons.Trash />
+                                        <PanelIcons.Undo />
                                     </button>
                                 </div>
                             ))}
@@ -813,20 +882,26 @@ interface HaloRightPanelProps {
     onImageRemove: (floorId: number) => void;
     isImageUploading?: boolean;
     onAddSensor: (sensor: SensorNode) => void;
-    onRemoveSensor: (id: number) => void;
+    onUnplaceSensor: (id: number) => Promise<void>;
     onClose: () => void;
     selectedWall?: AreaWall | null;
 
     selectedSensor?: SensorNode | null;
     pendingSensor?: PendingSensor | null;
-    onConfirmPlacement?: (name: string, mac: string, events: string[]) => void;
+    onConfirmPlacement?: (data: SensorFormData) => void;
     onCancelPlacement?: () => void;
     onStartPlacing?: () => void;
     onPlaceExisting?: (id: number) => void;
     isPlacing?: boolean;
     pendingUnplacedId?: number | null;
 
+    linkedWallIds?: (number | string)[];
+    activeWalls?: AreaWall[];
+    onUnlinkWall?: (wallId: number | string) => void;
+    onSaveWallLinks?: () => Promise<void>;
+
     // Aggregated details
+    areaId?: number | null;
     aggData?: any;
     activeMetricGroup?: string | null;
     onSensorFocus?: (id: number) => void;
@@ -835,18 +910,39 @@ interface HaloRightPanelProps {
 const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
     mode, selectedFloor, drawing, sensors, unplacedSensors,
     onSaveWalls, onDeleteWall, onUpdateWall, onWallPatch, onImageUpload, onImageRemove, isImageUploading,
-    onAddSensor, onRemoveSensor, onClose,
+    onAddSensor, onUnplaceSensor, onClose,
     selectedSensor, pendingSensor, onConfirmPlacement, onCancelPlacement,
     onStartPlacing, onPlaceExisting, isPlacing, pendingUnplacedId,
-    aggData, activeMetricGroup, onSensorFocus,
+    areaId, aggData, activeMetricGroup, onSensorFocus,
     selectedWall,
+    linkedWallIds, activeWalls, onUnlinkWall, onSaveWallLinks,
 }) => {
     const isOpen = mode !== null;
+
+    // Dynamic area config for metric color thresholds
+    const { data: areas } = useAreas();
+    const configData = useMemo(() => {
+        const area = areas?.find(a => a.id === areaId);
+        return getEffectiveConfig(area, areas);
+    }, [areas, areaId]);
 
     // Wall edit local state
     const [editWall, setEditWall] = useState<AreaWall | null>(null);
     const [editSaving, setEditSaving] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
+
+    // Wall links save state
+    const [isSavingWallLinks, setIsSavingWallLinks] = useState(false);
+
+    const handleSaveWallLinks = async () => {
+        if (!onSaveWallLinks) return;
+        setIsSavingWallLinks(true);
+        try {
+            await onSaveWallLinks();
+        } finally {
+            setIsSavingWallLinks(false);
+        }
+    };
 
     // Sync when selectedWall changes (new wall selected)
     useEffect(() => {
@@ -1001,7 +1097,7 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
                 <SensorPlacePanel
                     sensors={sensors}
                     unplacedSensors={unplacedSensors ?? []}
-                    onRemove={onRemoveSensor}
+                    onRemove={onUnplaceSensor}
                     onStartPlacing={onStartPlacing}
                     onPlaceExisting={onPlaceExisting}
                     isPlacing={isPlacing}
@@ -1010,7 +1106,58 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
             )}
 
             {mode === 'sensor_detail' && selectedSensor && (
-                <SensorDetailPanel sensor={selectedSensor} />
+                <>
+                    <SensorDetailPanel sensor={selectedSensor} />
+
+                    {/* ── Linked Walls ────────────────────────────────────── */}
+                    <div className={styles.section}>
+                        <div className={styles.sectionTitle}>Linked Walls</div>
+                        <div className={styles.hint}>
+                            Click a wall in the 3D scene to link or unlink it.
+                        </div>
+
+                        {(!linkedWallIds || linkedWallIds.length === 0) ? (
+                            <div className={styles.wallLinkEmpty}>
+                                No walls linked — click a wall to add one.
+                            </div>
+                        ) : (
+                            <div className={styles.wallLinkList}>
+                                {linkedWallIds.map(wid => {
+                                    const wall = activeWalls?.find(w => w.id === wid);
+                                    return (
+                                        <div key={String(wid)} className={styles.wallLinkRow}>
+                                            <div className={styles.wallLinkInfo}>
+                                                <span className={styles.wallLinkLabel}>Wall #{wid}</span>
+                                                {wall && (
+                                                    <span className={styles.wallLinkCoords}>
+                                                        ({wall.r_x1.toFixed(2)}, {wall.r_y1.toFixed(2)}) → ({wall.r_x2.toFixed(2)}, {wall.r_y2.toFixed(2)})
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <button
+                                                className={styles.wallLinkUnlink}
+                                                onClick={() => onUnlinkWall?.(wid)}
+                                                title="Unlink wall"
+                                            >
+                                                <PanelIcons.Close />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <button
+                            className={styles.btnPrimary}
+                            onClick={handleSaveWallLinks}
+                            disabled={isSavingWallLinks}
+                            style={{ marginTop: 4 }}
+                        >
+                            <PanelIcons.Check />
+                            {isSavingWallLinks ? 'Saving…' : 'Save Wall Links'}
+                        </button>
+                    </div>
+                </>
             )}
 
             {mode === 'sensor_placement' && pendingSensor && onConfirmPlacement && (
@@ -1026,6 +1173,7 @@ const HaloRightPanel: React.FC<HaloRightPanelProps> = ({
                     groupKey={activeMetricGroup}
                     agg={aggData.aggregated_data ?? {}}
                     onSensorFocus={onSensorFocus}
+                    configData={configData}
                 />
             )}
 

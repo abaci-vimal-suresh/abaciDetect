@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import styles from './AggregatedDetailPanel.module.scss';
 import { METRIC_GROUPS } from '../../../utils/sensorUtils';
+import { METRIC_MAP, ConfigData, normalizeMetric, getStatusColor } from '../../../utils/radarMapping.utils';
 
 const Sparkline: React.FC<{ min: number; max: number; color?: string }> = ({
     min, max, color = 'currentColor',
@@ -124,20 +125,11 @@ export interface AggregatedDetailPanelProps {
     groupKey: string;
     agg: Record<string, any>;
     onSensorFocus: (id: number) => void;
+    configData?: ConfigData;
 }
 
-// Rough thresholds for normalization
-const METRIC_THRESHOLDS: Record<string, number> = {
-    temperature: 40, humidity: 80, pressure: 1020, light: 1000,
-    co2: 1500, tvoc: 600, co: 10, no2: 50, nh3: 25,
-    pm1: 50, pm25: 75, pm10: 150,
-    aqi: 200, health: 5,
-    noise: 100, sound: 100,
-    motion: 100, movement: 100,
-};
-
 const AggregatedDetailPanel: React.FC<AggregatedDetailPanelProps> = ({
-    groupKey, agg, onSensorFocus,
+    groupKey, agg, onSensorFocus, configData = {},
 }) => {
     const group = METRIC_GROUPS.find(g => g.key === groupKey);
     if (!group) return null;
@@ -156,14 +148,16 @@ const AggregatedDetailPanel: React.FC<AggregatedDetailPanelProps> = ({
             const minRef = agg[`${metricKey}_min_sensor`] as any;
             const maxRef = agg[`${metricKey}_max_sensor`] as any;
 
-            const threshold = METRIC_THRESHOLDS[metricKey] ?? 100;
             const maxNum = maxVal ?? 0;
-            const pct = Math.min(100, (maxNum / threshold) * 100);
+            const mapping = METRIC_MAP[metricKey];
+            const thresholdEntry = mapping ? configData[mapping.config] : undefined;
+            const pct = thresholdEntry
+                ? Math.min(100, Math.max(0, normalizeMetric(maxNum, thresholdEntry.min, thresholdEntry.max)))
+                : Math.min(100, (maxNum / 100) * 100); // fallback: treat 100 as max
 
-            const color =
-                pct > 90 ? 'var(--bs-danger)' :
-                    pct > 65 ? 'var(--bs-warning)' :
-                        'var(--bs-success)';
+            const color = getStatusColor(
+                thresholdEntry ? normalizeMetric(maxNum, thresholdEntry.min, thresholdEntry.max) : pct,
+            );
 
             return {
                 key: metricKey,
@@ -174,7 +168,7 @@ const AggregatedDetailPanel: React.FC<AggregatedDetailPanelProps> = ({
                 maxNum,
                 pct,
                 color,
-                threshold,
+                threshold: thresholdEntry?.max ?? 100,
                 minSensorId: minRef?.sensor_id ?? null,
                 minSensorName: minRef?.sensor__name ?? null,
                 maxSensorId: maxRef?.sensor_id ?? null,

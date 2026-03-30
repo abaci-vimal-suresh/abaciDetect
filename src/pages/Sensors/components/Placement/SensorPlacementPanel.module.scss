@@ -234,6 +234,37 @@
     }
 }
 
+// ── Two-column grid ───────────────────────────────────────────────────────────
+
+.twoCol {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+// ── Required / optional markers ───────────────────────────────────────────────
+
+.required {
+    color: var(--bs-danger);
+    font-size: 11px;
+    margin-left: 2px;
+}
+
+// ── Position section hint ─────────────────────────────────────────────────────
+
+.posHint {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--bs-success);
+    background: rgba(var(--bs-success-rgb), 0.1);
+    border: 1px solid rgba(var(--bs-success-rgb), 0.25);
+    border-radius: 8px;
+    padding: 1px 7px;
+    text-transform: none;
+    letter-spacing: 0;
+    opacity: 1;
+}
+
 .confirmBtn {
     flex: 2;
     padding: 9px 0;

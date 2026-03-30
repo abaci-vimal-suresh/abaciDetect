@@ -65,6 +65,7 @@ export function useThresholdActions({
             setFormData({
                 sensor_name: selectedConfig.sensor_name || '',
                 event_id: selectedConfig.event_id || '',
+                bn_instance: selectedConfig.bn_instance,
                 min_value: selectedConfig.min_value,
                 max_value: selectedConfig.max_value,
                 threshold: selectedConfig.threshold,
@@ -267,12 +268,11 @@ export function useThresholdActions({
 
         const sourceMappingKey = SENSOR_KEY_TO_EVENT_SOURCE_KEY[formData.sensor_name || ''] || eventName;
         const autoSource = eventSources[sourceMappingKey] || eventSources[eventName] || '';
-        const bnInstance = 1000 + parseInt(Date.now().toString().slice(-5));
-
         const payload = {
             halo_sensor: parseInt(deviceId),
             event_id: eventName,
-            bn_instance: bnInstance,
+            // Only send bn_instance when creating — on updates the API rejects it even if unchanged
+            ...(isCreatingNew && { bn_instance: 1000 + parseInt(Date.now().toString().slice(-5)) }),
             enabled: formData.enabled ?? true,
             threshold: formData.threshold,
             min_value: formData.min_value,
@@ -281,7 +281,7 @@ export function useThresholdActions({
             led_pattern: formData.led_pattern,
             led_priority: formData.led_priority,
             relay1: formData.relay1,
-            source: autoSource,
+            ...(autoSource && { source: autoSource }),
             conditions: '',
             pause_minutes: formData.pause_minutes,
             sound: formData.sound || '',

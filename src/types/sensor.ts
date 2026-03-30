@@ -416,6 +416,7 @@ export interface SensorRegistrationData {
     username?: string;
     password?: string;
     area_id?: number;
+    area?: number;
     x_val?: number;  // ✅ X coordinate (0-1)
     y_val?: number;  // ✅ Y coordinate (0-1)
     z_val?: number;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { SensorNode, HaloEventConfig, SensorLatestLog } from '../../../IoTVisualizer/Types/types';
 import styles from './SensorDetailPanel.module.scss';
 
@@ -121,18 +121,8 @@ interface SensorDetailPanelProps {
     onClose?: () => void;
 }
 
-const SensorDetailPanel: React.FC<SensorDetailPanelProps> = ({ sensor, latestLog, onClose }) => {
-    const [configsExpanded, setConfigsExpanded] = useState(false);
-
+const SensorDetailPanel: React.FC<SensorDetailPanelProps> = ({ sensor, latestLog }) => {
     const triggered = sensor.event_configs.filter(e => e.is_triggered);
-    const important = sensor.event_configs.filter(e =>
-        !e.is_triggered &&
-        ['Motion', 'temp_c', 'Humidity', 'CO2cal', 'AQI', 'Sound'].includes(e.event_id)
-    );
-    const rest = sensor.event_configs.filter(e =>
-        !e.is_triggered &&
-        !['Motion', 'temp_c', 'Humidity', 'CO2cal', 'AQI', 'Sound'].includes(e.event_id)
-    );
 
     const log = latestLog ?? sensor.latest_log;
     const statusColor = STATUS_COLORS[sensor.sensor_status];
@@ -178,9 +168,9 @@ const SensorDetailPanel: React.FC<SensorDetailPanelProps> = ({ sensor, latestLog
                 </div>
             </div>
 
-            {/* ── Position ─────────────────────────────────────────────────── */}
+            {/* ── Spatial Coordinates ──────────────────────────────────────── */}
             <div className={styles.section}>
-                <div className={styles.sectionTitle}>Position</div>
+                <div className={styles.sectionTitle}>Spatial Coordinates</div>
                 <div className={styles.posGrid}>
                     <div className={styles.posItem}>
                         <span className={styles.posLabel}>X</span>
@@ -217,18 +207,6 @@ const SensorDetailPanel: React.FC<SensorDetailPanelProps> = ({ sensor, latestLog
                     </div>
                     <div className={styles.eventList}>
                         {triggered.map(cfg => (
-                            <EventRow key={cfg.id} config={cfg} />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* ── Key metrics — always visible ─────────────────────────────── */}
-            {important.length > 0 && (
-                <div className={styles.section}>
-                    <div className={styles.sectionTitle}>Key Metrics</div>
-                    <div className={styles.eventList}>
-                        {important.map(cfg => (
                             <EventRow key={cfg.id} config={cfg} />
                         ))}
                     </div>
@@ -330,29 +308,6 @@ const SensorDetailPanel: React.FC<SensorDetailPanelProps> = ({ sensor, latestLog
                 </div>
             )}
 
-            {/* ── All configs — collapsed accordion ────────────────────────── */}
-            {rest.length > 0 && (
-                <div className={styles.section}>
-                    <button
-                        className={styles.accordionToggle}
-                        onClick={() => setConfigsExpanded(e => !e)}
-                    >
-                        <span>All Configurations ({rest.length})</span>
-                        <span className={`${styles.accordionChevron}
-                            ${configsExpanded ? styles.open : ''}`}>
-                            ▾
-                        </span>
-                    </button>
-
-                    {configsExpanded && (
-                        <div className={styles.eventList}>
-                            {rest.map(cfg => (
-                                <EventRow key={cfg.id} config={cfg} />
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 };

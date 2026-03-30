@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { SensorNode } from '../../Types/types';
 import styles from './HaloMetricDock.module.scss';
-import { useAggregatedSensorData } from '../../../../api/sensors.api';
+import { useAggregatedSensorData, useAreas } from '../../../../api/sensors.api';
 import { METRIC_GROUPS } from '../../../utils/sensorUtils';
+import { METRIC_MAP, getEffectiveConfig, normalizeMetric } from '../../../utils/radarMapping.utils';
 
 interface HaloMetricDockProps {
     areaId: number | null;
@@ -83,6 +84,16 @@ const HaloMetricDock: React.FC<HaloMetricDockProps> = ({
     });
     const agg = aggData?.aggregated_data ?? {};
 
+    const { data: areas } = useAreas();
+    const currentArea = useMemo(
+        () => areas?.find(a => a.id === areaId),
+        [areas, areaId],
+    );
+    const configData = useMemo(
+        () => getEffectiveConfig(currentArea, areas),
+        [currentArea, areas],
+    );
+
     const enrichedGroups = useMemo(() => METRIC_GROUPS.map(group => {
         const minVal = agg[`${group.representative}_min`];
         const maxVal = agg[`${group.representative}_max`];
@@ -91,12 +102,18 @@ const HaloMetricDock: React.FC<HaloMetricDockProps> = ({
             maxVal != null && !isNaN(Number(maxVal));
 
         const maxNum = hasData ? Number(maxVal) : 0;
+
+        // Use dynamic threshold from area config_data if available
+        const metricMapping = METRIC_MAP[group.representative];
+        const threshold = metricMapping ? configData[metricMapping.config] : undefined;
+        const normalized = threshold
+            ? normalizeMetric(maxNum, threshold.min, threshold.max)
+            : null;
+
         const healthLevel: 'good' | 'warn' | 'critical' =
-            (group.key === 'aqi' && maxNum > 100) ? 'critical' :
-                (group.key === 'air' && maxNum > 1000) ? 'critical' :
-                    (group.key === 'sound' && maxNum > 85) ? 'critical' :
-                        (group.key === 'aqi' && maxNum > 50) ? 'warn' :
-                            (group.key === 'environment' && maxNum > 35) ? 'warn' : 'good';
+            normalized !== null
+                ? normalized >= 90 ? 'critical' : normalized >= 70 ? 'warn' : 'good'
+                : 'good'; // no config → default to good (no false alarms)
 
         return {
             ...group,
@@ -105,7 +122,7 @@ const HaloMetricDock: React.FC<HaloMetricDockProps> = ({
             maxVal: hasData ? Number(maxVal).toFixed(1) : null,
             healthLevel,
         };
-    }), [agg]);
+    }), [agg, configData]);
 
     if (!areaId || isLoading) return null;
 
